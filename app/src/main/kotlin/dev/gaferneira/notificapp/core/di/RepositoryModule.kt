@@ -1,0 +1,38 @@
+package dev.gaferneira.notificapp.core.di
+
+import dagger.Binds
+import dagger.Module
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import dev.gaferneira.notificapp.core.data.repository.NotificationRepositoryImpl
+import dev.gaferneira.notificapp.core.data.repository.RuleRepositoryImpl
+import dev.gaferneira.notificapp.core.data.repository.SelectedAppRepositoryImpl
+import dev.gaferneira.notificapp.domain.repository.NotificationRepository
+import dev.gaferneira.notificapp.domain.repository.RuleRepository
+import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
+
+/**
+ * Dagger module for binding repository interfaces to their implementations.
+ */
+@Module
+@InstallIn(SingletonComponent::class)
+internal abstract class RepositoryModule {
+
+    /**
+     * Binds SelectedAppRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindSelectedAppRepository(impl: SelectedAppRepositoryImpl): SelectedAppRepository
+
+    /**
+     * Binds NotificationRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
+
+    /**
+     * Binds RuleRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindRuleRepository(impl: RuleRepositoryImpl): RuleRepository
+}

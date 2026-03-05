@@ -1,0 +1,107 @@
+<resources>
+    <string name="app_name">Notificapp</string>
+    <string name="title_activity_main">MainActivity</string>
+
+    <!-- Rule Editor -->
+    <string name="rule_editor_title">Advanced Trainer</string>
+    <string name="rule_editor_save">Save Rule</string>
+    <string name="rule_editor_global_rule">Global Rule</string>
+    <string name="rule_editor_global_rule_desc">Apply to notifications from all apps</string>
+    <string name="rule_editor_name">Rule Name</string>
+    <string name="rule_editor_name_hint">e.g., Purchase extraction</string>
+    <string name="rule_editor_description">Description (optional)</string>
+    <string name="rule_editor_description_hint">What does this rule do?</string>
+    <string name="rule_editor_matching_logic">MATCHING LOGIC</string>
+    <string name="rule_editor_condition">Condition</string>
+    <string name="rule_editor_operator">Operator</string>
+    <string name="rule_editor_value">Value</string>
+    <string name="rule_editor_value_hint">e.g., Your purchase</string>
+    <string name="rule_editor_action">ACTION</string>
+    <string name="rule_editor_action_save_data">Save extracted data</string>
+    <string name="rule_editor_action_delete">Delete notification</string>
+    <string name="rule_editor_data_extraction">DATA EXTRACTION</string>
+    <string name="rule_editor_add_field">Add Field</string>
+    <string name="rule_editor_test_extraction">Test Extraction</string>
+    <string name="rule_editor_notification_sample">NOTIFICATION SAMPLE</string>
+    <string name="rule_editor_no_fields">No extraction fields configured. Add a field to extract data from notifications.</string>
+
+    <!-- Add Field -->
+    <string name="add_field_title">Add Field</string>
+    <string name="add_field_add">Add</string>
+    <string name="add_field_save">Save Field</string>
+    <string name="add_field_cancel">Cancel</string>
+    <string name="add_field_name">Field Name</string>
+    <string name="add_field_name_hint">e.g., Amount</string>
+    <string name="add_field_extraction_method">Extraction Method</string>
+    <string name="add_field_preview_result">Preview Result</string>
+    <string name="add_field_preview_none">Configure the extraction method to see a preview</string>
+    <string name="add_field_preview_success">EXTRACTED VALUE</string>
+    <string name="add_field_preview_error">Preview failed</string>
+    <string name="add_field_sample_text">NOTIFICATION SAMPLE</string>
+
+    <!-- Method Types -->
+    <string name="method_fixed_position">Fixed position</string>
+    <string name="method_fixed_position_desc">Extract characters from position X to Y</string>
+    <string name="method_text_between_anchors">Text between anchors</string>
+    <string name="method_text_between_anchors_desc">Extract text between two marker strings</string>
+    <string name="method_regex">Regex pattern</string>
+    <string name="method_regex_desc">Use regular expression with capture groups</string>
+    <string name="method_text_after_keyword">Text after keyword</string>
+    <string name="method_text_after_keyword_desc">Extract everything after a specific word</string>
+    <string name="method_text_before_keyword">Text before keyword</string>
+    <string name="method_text_before_keyword_desc">Extract everything before a specific word</string>
+    <string name="method_line_extraction">Line extraction</string>
+    <string name="method_line_extraction_desc">Extract a specific line by number</string>
+    <string name="method_split_by_delimiter">Split by delimiter</string>
+    <string name="method_split_by_delimiter_desc">Split by comma/space and take Nth part</string>
+    <string name="method_json_path">JSON path</string>
+    <string name="method_json_path_desc">Extract from JSON using dot notation</string>
+    <string name="method_smart_amount">Smart amount detection</string>
+    <string name="method_smart_amount_desc">Auto-detect currency amounts in text</string>
+    <string name="method_smart_date">Smart date detection</string>
+    <string name="method_smart_date_desc">Auto-detect dates in various formats</string>
+
+    <!-- Field Configuration Labels -->
+    <string name="config_start_index">Start Index</string>
+    <string name="config_end_index">End Index</string>
+    <string name="config_start_anchor">Start Anchor</string>
+    <string name="config_start_anchor_hint">e.g., of</string>
+    <string name="config_end_anchor">End Anchor</string>
+    <string name="config_end_anchor_hint">e.g., at</string>
+    <string name="config_regex_pattern">Regex Pattern</string>
+    <string name="config_regex_pattern_hint">e.g., ([\d,.]+) (\w+)</string>
+    <string name="config_capture_group">Capture Group</string>
+    <string name="config_keyword">Keyword</string>
+    <string name="config_after_keyword_hint">e.g., Total:</string>
+    <string name="config_before_keyword_hint">e.g., was</string>
+    <string name="config_line_number">Line Number</string>
+    <string name="config_delimiter">Delimiter</string>
+    <string name="config_delimiter_hint">e.g., , or space</string>
+    <string name="config_take_index">Take Index (0-based)</string>
+    <string name="config_json_path">JSON Path</string>
+    <string name="config_json_path_hint">e.g., data.amount or items.0.name</string>
+
+    <!-- Validation Messages -->
+    <string name="error_field_required">This field is required</string>
+    <string name="error_rule_name_required">Rule name is required</string>
+    <string name="error_matching_value_required">Matching pattern is required</string>
+    <string name="error_field_name_required">Field name is required</string>
+    <string name="error_start_anchor_required">Start anchor is required</string>
+    <string name="error_end_anchor_required">End anchor is required</string>
+    <string name="error_regex_pattern_required">Pattern is required</string>
+    <string name="error_keyword_required">Keyword is required</string>
+    <string name="error_json_path_required">JSON path is required</string>
+
+    <!-- UI Actions -->
+    <string name="action_back">Back</string>
+    <string name="action_delete">Remove field</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_retry">Retry</string>
+
+    <!-- Success/Error Messages -->
+    <string name="success_rule_saved">Rule saved successfully</string>
+    <string name="error_saving_rule">Failed to save rule</string>
+    <string name="error_loading_rule">Failed to load rule</string>
+    <string name="error_test_extraction">No sample notification available</string>
+    <string name="error_fix_validation">Please fix validation errors</string>
+</resources>

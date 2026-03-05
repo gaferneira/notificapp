@@ -1,0 +1,8 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme for Compose app - uses Material3 -->
+    <style name="Theme.Notificapp" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Window attributes for edge-to-edge -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
