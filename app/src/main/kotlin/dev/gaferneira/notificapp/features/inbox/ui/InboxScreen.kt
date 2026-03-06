@@ -51,8 +51,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
+import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
+import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
+import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEffect
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEvent
 import dev.gaferneira.notificapp.features.inbox.contract.InboxUiState
@@ -63,7 +67,7 @@ import dev.gaferneira.notificapp.features.inbox.viewmodel.InboxViewModel
 @Composable
 fun InboxScreen(
     modifier: Modifier = Modifier,
-    onNavigate: (InboxEffect) -> Unit = {},
+    navigateTo: (Screen, NavOptions?) -> Unit,
     viewModel: InboxViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -71,13 +75,23 @@ fun InboxScreen(
     // Handle effects
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
-            onNavigate(effect)
+            when (effect) {
+                is InboxEffect.NavigateToNotificationDetail -> {
+                    navigateTo(Screen.NotificationDetails(effect.notificationId), null)
+                }
+
+                is InboxEffect.ShowError -> {
+                }
+                InboxEffect.ShowPermissionRequired -> {
+                }
+            }
         }
     }
 
     InboxScreenContent(
         uiState = uiState,
         onEvent = viewModel::onEvent,
+        navigateTo = navigateTo,
         modifier = modifier,
     )
 }
@@ -87,6 +101,7 @@ fun InboxScreen(
 private fun InboxScreenContent(
     uiState: InboxUiState,
     onEvent: (InboxEvent) -> Unit,
+    navigateTo: (Screen, NavOptions?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -116,6 +131,12 @@ private fun InboxScreenContent(
                         )
                     }
                 },
+            )
+        },
+        bottomBar = {
+            MainBottomNav(
+                selectedDestination = AppDestinations.INBOX,
+                navigateTo = navigateTo,
             )
         },
     ) { paddingValues ->

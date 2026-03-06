@@ -31,7 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionType
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
 
 /**
  * The "Do" section showing configured actions.
@@ -39,7 +40,7 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
  */
 @Composable
 fun DoSection(
-    actions: List<RuleEditorContract.ActionUiModel>,
+    actions: List<ActionUiModel>,
     onToggleAction: (String, Boolean) -> Unit,
     onRemoveAction: (String) -> Unit,
     onEditAction: (String) -> Unit,
@@ -77,16 +78,16 @@ fun DoSection(
 
 @Composable
 private fun ActionCard(
-    action: RuleEditorContract.ActionUiModel,
+    action: ActionUiModel,
     onToggle: () -> Unit,
     onRemove: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val icon = when (action.type) {
-        RuleEditorContract.ActionType.SAVE_DATA -> Icons.AutoMirrored.Filled.List
-        RuleEditorContract.ActionType.DELETE_NOTIFICATION -> Icons.Default.Delete
-        RuleEditorContract.ActionType.CREATE_ALARM -> Icons.Default.Alarm
+        ActionType.SAVE_DATA -> Icons.AutoMirrored.Filled.List
+        ActionType.DELETE_NOTIFICATION -> Icons.Default.Delete
+        ActionType.CREATE_ALARM -> Icons.Default.Alarm
     }
 
     Card(
@@ -161,14 +162,14 @@ private fun DoSectionPreview() {
     NotificappTheme {
         DoSection(
             actions = listOf(
-                RuleEditorContract.ActionUiModel(
+                ActionUiModel(
                     id = "1",
-                    type = RuleEditorContract.ActionType.SAVE_DATA,
+                    type = ActionType.SAVE_DATA,
                     isEnabled = true,
                 ),
-                RuleEditorContract.ActionUiModel(
+                ActionUiModel(
                     id = "2",
-                    type = RuleEditorContract.ActionType.CREATE_ALARM,
+                    type = ActionType.CREATE_ALARM,
                     isEnabled = false,
                 ),
             ),

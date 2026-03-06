@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.features.ruleeditor.contract
 
 import dev.gaferneira.notificapp.domain.model.ExtractionField
 import dev.gaferneira.notificapp.domain.model.Notification
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ExtractionFieldUiModel
 
 /**
  * MVI Contract for the Rule Editor screen.
@@ -39,8 +41,6 @@ object RuleEditorContract {
         val extractionFields: List<ExtractionFieldUiModel> = emptyList(),
         /** Sample notification for testing */
         val sampleNotification: Notification? = null,
-        /** Test extraction results */
-        val testResults: Map<String, TestResult> = emptyMap(),
         /** Whether currently loading */
         val isLoading: Boolean = false,
         /** Error message if any */
@@ -51,10 +51,13 @@ object RuleEditorContract {
         val isMatchingLogicSheetVisible: Boolean = false,
         /** Whether action bottom sheet is visible */
         val isActionSheetVisible: Boolean = false,
+        val isFieldSheetVisible: Boolean = false,
         /** ID of the trigger currently being edited in the bottom sheet, or null for new trigger */
         val editingTriggerId: String? = null,
         /** ID of the action currently being edited in the bottom sheet, or null for new action */
         val editingActionId: String? = null,
+        /** ID of the field currently being edited in the bottom sheet, or null for new action */
+        val editingFieldId: String? = null,
     ) {
         /** Whether the form is valid */
         val isValid: Boolean
@@ -112,12 +115,6 @@ object RuleEditorContract {
         /** Show matching logic bottom sheet for adding a new trigger */
         data object OnAddTriggerClicked : UiEvent()
 
-        /** Hide matching logic bottom sheet */
-        data object OnDismissTriggerSheet : UiEvent()
-
-        /** Handle effect from the MatchingLogicBottomSheet */
-        data class OnMatchingLogicEffect(val effect: MatchingLogicContract.UiEffect) : UiEvent()
-
         /** Remove a trigger from the list */
         data class OnRemoveTriggerClicked(val triggerId: String) : UiEvent()
 
@@ -126,12 +123,6 @@ object RuleEditorContract {
 
         /** Show action bottom sheet */
         data object OnAddActionClicked : UiEvent()
-
-        /** Hide action bottom sheet */
-        data object OnDismissActionSheet : UiEvent()
-
-        /** Handle effect from the ActionBottomSheet */
-        data class OnActionSheetEffect(val effect: ActionBottomSheetContract.UiEffect) : UiEvent()
 
         /** Click on an action item to edit it */
         data class OnEditActionClicked(val actionId: String) : UiEvent()
@@ -150,6 +141,19 @@ object RuleEditorContract {
 
         /** Add field result returned from AddFieldScreen */
         data class OnFieldAdded(val field: ExtractionField) : UiEvent()
+        data object OnDismissSheet : UiEvent()
+
+        /** Trigger added from MatchingLogicBottomSheet */
+        data class OnTriggerAdded(val trigger: TriggerUiModel) : UiEvent()
+
+        /** Trigger updated from MatchingLogicBottomSheet */
+        data class OnTriggerUpdated(val triggerId: String, val trigger: TriggerUiModel) : UiEvent()
+
+        /** Action added from ActionBottomSheet */
+        data class OnActionAdded(val action: ActionUiModel) : UiEvent()
+
+        /** Action updated from ActionBottomSheet */
+        data class OnActionUpdated(val actionId: String, val action: ActionUiModel) : UiEvent()
 
         /** Test extraction on sample notification */
         data object OnTestExtractionClicked : UiEvent()
@@ -168,55 +172,10 @@ object RuleEditorContract {
      * One-time effects for navigation and actions.
      */
     sealed class UiEffect {
-        /** Navigate back to previous screen */
-        data object NavigateBack : UiEffect()
-
-        /** Navigate to AddField screen with sample text */
-        data class NavigateToAddField(val sampleText: String) : UiEffect()
-
         /** Show success message */
         data class ShowSuccess(val message: String) : UiEffect()
 
         /** Show error message */
         data class ShowError(val message: String) : UiEffect()
-    }
-
-    /**
-     * Action to take when rule matches.
-     */
-    enum class ActionType {
-        SAVE_DATA,
-        DELETE_NOTIFICATION,
-        CREATE_ALARM,
-    }
-
-    /**
-     * UI model for an action in the list.
-     */
-    data class ActionUiModel(val id: String, val type: ActionType, val isEnabled: Boolean = true) {
-        val displayName: String
-            get() = when (type) {
-                ActionType.SAVE_DATA -> "Save to Data tab"
-                ActionType.DELETE_NOTIFICATION -> "Delete notification"
-                ActionType.CREATE_ALARM -> "Create alarm"
-            }
-    }
-
-    /**
-     * UI model for an extraction field in the list.
-     */
-    data class ExtractionFieldUiModel(
-        val id: String,
-        val name: String,
-        val methodType: String,
-        val methodSummary: String,
-    )
-
-    /**
-     * Result of testing field extraction.
-     */
-    sealed class TestResult {
-        data class Success(val value: String) : TestResult()
-        data class Failure(val reason: String) : TestResult()
     }
 }

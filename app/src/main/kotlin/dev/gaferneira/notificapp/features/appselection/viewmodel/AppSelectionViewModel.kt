@@ -9,6 +9,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
+import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract
@@ -27,11 +29,17 @@ import javax.inject.Inject
  *
  * Loads installed apps that can send notifications and allows user to select
  * which ones to monitor. Persists selections to the repository.
+ *
+ * @param context Application context for loading apps
+ * @param selectedAppRepository Repository for selected apps
+ * @param navigationHandler Handler for navigation commands
+ * @param ioDispatcher Dispatcher for IO operations
  */
 @HiltViewModel
 class AppSelectionViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val selectedAppRepository: SelectedAppRepository,
+    private val navigationHandler: NavigationHandler,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
@@ -51,8 +59,7 @@ class AppSelectionViewModel @Inject constructor(
                 saveSelectionsAndContinue()
             }
             is UiEvent.OnBackClicked -> {
-                // Just navigate back without saving (changes are saved immediately on toggle)
-                sendEffect(UiEffect.NavigateBack)
+                navigateBack()
             }
             is UiEvent.OnDismissError -> {
                 setState { copy(error = null) }
@@ -60,6 +67,24 @@ class AppSelectionViewModel @Inject constructor(
             is UiEvent.OnRefresh -> {
                 loadInstalledApps()
             }
+        }
+    }
+
+    /**
+     * Navigate back to previous screen.
+     */
+    private fun navigateBack() {
+        viewModelScope.launch {
+            navigationHandler.goBack()
+        }
+    }
+
+    /**
+     * Navigate to main app (inbox).
+     */
+    private fun navigateToMainApp() {
+        viewModelScope.launch {
+            navigationHandler.clearAndNavigate(Routes.inbox())
         }
     }
 
@@ -290,9 +315,9 @@ class AppSelectionViewModel @Inject constructor(
 
         // Navigate based on context
         if (currentState.isInitialSetup == true) {
-            sendEffect(UiEffect.NavigateToMainApp)
+            navigateToMainApp()
         } else {
-            sendEffect(UiEffect.NavigateBack)
+            navigateBack()
         }
     }
 }

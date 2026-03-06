@@ -5,6 +5,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
+import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.domain.model.ExtractionRule
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
@@ -21,11 +23,17 @@ import javax.inject.Inject
  * ViewModel for the Notification Detail screen.
  *
  * Loads notification data and determines which rules apply to it.
+ *
+ * @param notificationRepository Repository for notifications
+ * @param ruleRepository Repository for rules
+ * @param navigationHandler Handler for navigation commands
+ * @param ioDispatcher Dispatcher for IO operations
  */
 @HiltViewModel
 class NotificationDetailViewModel @Inject constructor(
     private val notificationRepository: NotificationRepository,
     private val ruleRepository: RuleRepository,
+    private val navigationHandler: NavigationHandler,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
@@ -43,13 +51,13 @@ class NotificationDetailViewModel @Inject constructor(
     override fun onEvent(event: UiEvent) {
         when (event) {
             is UiEvent.OnBackClicked -> {
-                sendEffect(UiEffect.NavigateBack)
+                navigateBack()
             }
             is UiEvent.OnCreateRuleClicked -> {
-                notificationId?.let { sendEffect(UiEffect.NavigateToRuleEditor(it)) }
+                notificationId?.let { navigateToRuleEditor(it) }
             }
             is UiEvent.OnEditRuleClicked -> {
-                sendEffect(UiEffect.NavigateToEditRule(event.ruleId))
+                navigateToEditRule(event.ruleId)
             }
             is UiEvent.OnRuleToggleClicked -> {
                 toggleRule(event.ruleId)
@@ -57,6 +65,33 @@ class NotificationDetailViewModel @Inject constructor(
             is UiEvent.OnDismissError -> {
                 setState { copy(error = null) }
             }
+        }
+    }
+
+    /**
+     * Navigate back to previous screen.
+     */
+    private fun navigateBack() {
+        viewModelScope.launch {
+            navigationHandler.goBack()
+        }
+    }
+
+    /**
+     * Navigate to rule editor for creating a new rule from this notification.
+     */
+    private fun navigateToRuleEditor(notificationId: String) {
+        viewModelScope.launch {
+            navigationHandler.navigate(Routes.ruleEditor(notificationId = notificationId))
+        }
+    }
+
+    /**
+     * Navigate to rule editor for editing an existing rule.
+     */
+    private fun navigateToEditRule(ruleId: String) {
+        viewModelScope.launch {
+            navigationHandler.navigate(Routes.ruleEditor(ruleId = ruleId))
         }
     }
 

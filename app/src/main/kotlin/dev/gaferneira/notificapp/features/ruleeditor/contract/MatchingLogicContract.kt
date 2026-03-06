@@ -163,19 +163,19 @@ data class TriggerUiModel(
 }
 
 // Extension functions for display names
-internal fun MatchingLogicContract.MatchingCondition.displayName(): String = when (this) {
-    MatchingLogicContract.MatchingCondition.TEXT_CONTENT -> "Text"
-    MatchingLogicContract.MatchingCondition.TITLE -> "Title"
-    MatchingLogicContract.MatchingCondition.APP_NAME -> "App name"
-    MatchingLogicContract.MatchingCondition.PACKAGE_NAME -> "Package"
-    MatchingLogicContract.MatchingCondition.RAW_CONTENT -> "Raw content"
+internal fun MatchingCondition.displayName(): String = when (this) {
+    MatchingCondition.TEXT_CONTENT -> "Text"
+    MatchingCondition.TITLE -> "Title"
+    MatchingCondition.APP_NAME -> "App name"
+    MatchingCondition.PACKAGE_NAME -> "Package"
+    MatchingCondition.RAW_CONTENT -> "Raw content"
 }
 
-internal fun MatchingLogicContract.MatchingOperator.displayName(): String = when (this) {
-    MatchingLogicContract.MatchingOperator.CONTAINS -> "contains"
-    MatchingLogicContract.MatchingOperator.STARTS_WITH -> "starts with"
-    MatchingLogicContract.MatchingOperator.ENDS_WITH -> "ends with"
-    MatchingLogicContract.MatchingOperator.EQUALS -> "equals"
-    MatchingLogicContract.MatchingOperator.REGEX_MATCH -> "matches"
-    MatchingLogicContract.MatchingOperator.NOT_CONTAINS -> "doesn't contain"
+internal fun MatchingOperator.displayName(): String = when (this) {
+    MatchingOperator.CONTAINS -> "contains"
+    MatchingOperator.STARTS_WITH -> "starts with"
+    MatchingOperator.ENDS_WITH -> "ends with"
+    MatchingOperator.EQUALS -> "equals"
+    MatchingOperator.REGEX_MATCH -> "matches"
+    MatchingOperator.NOT_CONTAINS -> "doesn't contain"
 }

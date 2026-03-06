@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.extraction.FieldExtractor
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiEvent
@@ -23,7 +24,7 @@ class AddFieldViewModel @Inject constructor() : MviViewModel<UiState, UiEvent, U
 
     override fun onEvent(event: UiEvent) {
         when (event) {
-            is UiEvent.Initialize -> initialize(event.sampleText)
+            is UiEvent.Initialize -> initialize(event.field, event.notification)
             is UiEvent.OnFieldNameChange -> updateFieldName(event.name)
             is UiEvent.OnMethodTypeChange -> updateMethodType(event.type)
             is UiEvent.OnStartIndexChange -> updateStartIndex(event.index)
@@ -41,12 +42,15 @@ class AddFieldViewModel @Inject constructor() : MviViewModel<UiState, UiEvent, U
             is UiEvent.OnJsonPathChange -> updateJsonPath(event.path)
             is UiEvent.OnPreviewClicked -> previewExtraction()
             is UiEvent.OnSaveClicked -> saveField()
-            is UiEvent.OnCancelClicked -> sendEffect(UiEffect.CancelAndReturn)
+            is UiEvent.OnCancelClicked -> {
+                sendEffect(UiEffect.CancelAndReturn)
+            }
             is UiEvent.OnDismissError -> dismissError()
         }
     }
 
-    private fun initialize(sampleText: String) {
+    private fun initialize(fieldId: String?, notification: Notification?) {
+        val sampleText = notification?.content ?: ""
         setState {
             copy(
                 sampleText = sampleText,
@@ -239,6 +243,7 @@ class AddFieldViewModel @Inject constructor() : MviViewModel<UiState, UiEvent, U
             Timber.w("Field extraction test failed: ${testResult.reason}")
         }
 
+        // Send effect to return with the created field
         sendEffect(UiEffect.ReturnWithField(field))
     }
 

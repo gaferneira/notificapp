@@ -3,18 +3,21 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.domain.model.ExtractionField
 import dev.gaferneira.notificapp.domain.model.ExtractionMethod
 import dev.gaferneira.notificapp.domain.model.ExtractionRule
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
-import dev.gaferneira.notificapp.features.ruleeditor.contract.ActionBottomSheetContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.contract.TriggerUiModel
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionType
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ExtractionFieldUiModel
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.UUID
@@ -30,6 +33,7 @@ import javax.inject.Inject
 class RuleEditorViewModel @Inject constructor(
     private val ruleRepository: RuleRepository,
     private val notificationRepository: NotificationRepository,
+    private val navigationHandler: NavigationHandler,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
     override fun onEvent(event: UiEvent) {
@@ -45,23 +49,30 @@ class RuleEditorViewModel @Inject constructor(
             is UiEvent.OnGlobalRuleToggle -> toggleGlobalRule()
             is UiEvent.OnTargetAppsChange -> updateTargetApps(event.apps)
             is UiEvent.OnAddTriggerClicked -> showMatchingLogicSheet()
-            is UiEvent.OnDismissTriggerSheet -> hideMatchingLogicSheet()
-            is UiEvent.OnMatchingLogicEffect -> handleMatchingLogicEffect(event.effect)
             is UiEvent.OnRemoveTriggerClicked -> removeTrigger(event.triggerId)
             is UiEvent.OnTriggerItemClicked -> openTriggerForEditing(event.triggerId)
             is UiEvent.OnAddActionClicked -> showActionSheet()
-            is UiEvent.OnDismissActionSheet -> hideActionSheet()
-            is UiEvent.OnActionSheetEffect -> handleActionSheetEffect(event.effect)
             is UiEvent.OnEditActionClicked -> openActionForEditing(event.actionId)
             is UiEvent.OnRemoveActionClicked -> removeAction(event.actionId)
             is UiEvent.OnAutoGenerateClicked -> autoGenerateExtraction()
             is UiEvent.OnAddFieldClicked -> addField()
             is UiEvent.OnRemoveFieldClicked -> removeField(event.fieldId)
             is UiEvent.OnFieldAdded -> onFieldAdded(event.field)
+            is UiEvent.OnTriggerAdded -> onTriggerAdded(event.trigger)
+            is UiEvent.OnTriggerUpdated -> onTriggerUpdated(event.triggerId, event.trigger)
+            is UiEvent.OnActionAdded -> onActionAdded(event.action)
+            is UiEvent.OnActionUpdated -> onActionUpdated(event.actionId, event.action)
             is UiEvent.OnTestExtractionClicked -> testExtraction()
             is UiEvent.OnSaveClicked -> saveRule()
-            is UiEvent.OnBackClicked -> sendEffect(UiEffect.NavigateBack)
+            is UiEvent.OnBackClicked -> onBackClicked()
             is UiEvent.OnDismissError -> dismissError()
+            UiEvent.OnDismissSheet -> dismissBottomSheet()
+        }
+    }
+
+    private fun onBackClicked() {
+        viewModelScope.launch {
+            navigationHandler.goBack()
         }
     }
 
@@ -188,45 +199,28 @@ class RuleEditorViewModel @Inject constructor(
         }
     }
 
-    private fun hideMatchingLogicSheet() {
+    private fun removeTrigger(triggerId: String) {
+        setState {
+            copy(triggers = triggers.filter { it.id != triggerId })
+        }
+    }
+
+    private fun onTriggerAdded(trigger: TriggerUiModel) {
         setState {
             copy(
+                triggers = triggers + trigger,
                 isMatchingLogicSheetVisible = false,
-                editingTriggerId = null,
             )
         }
     }
 
-    private fun handleMatchingLogicEffect(effect: MatchingLogicContract.UiEffect) {
-        when (effect) {
-            is MatchingLogicContract.UiEffect.TriggerCreated -> {
-                val trigger = effect.trigger
-                setState {
-                    copy(triggers = triggers + trigger)
-                }
-            }
-            is MatchingLogicContract.UiEffect.TriggerUpdated -> {
-                val trigger = effect.trigger
-                setState {
-                    copy(
-                        triggers = triggers.map { if (it.id == effect.triggerId) trigger else it },
-                        isMatchingLogicSheetVisible = false,
-                        editingTriggerId = null,
-                    )
-                }
-            }
-            is MatchingLogicContract.UiEffect.Dismiss -> {
-                hideMatchingLogicSheet()
-            }
-            is MatchingLogicContract.UiEffect.ShowError -> {
-                // Error is handled by the bottom sheet internally
-            }
-        }
-    }
-
-    private fun removeTrigger(triggerId: String) {
+    private fun onTriggerUpdated(triggerId: String, trigger: TriggerUiModel) {
         setState {
-            copy(triggers = triggers.filter { it.id != triggerId })
+            copy(
+                triggers = triggers.map { if (it.id == triggerId) trigger else it },
+                isMatchingLogicSheetVisible = false,
+                editingTriggerId = null,
+            )
         }
     }
 
@@ -248,36 +242,6 @@ class RuleEditorViewModel @Inject constructor(
         setState { copy(isActionSheetVisible = false, editingActionId = null) }
     }
 
-    private fun handleActionSheetEffect(effect: ActionBottomSheetContract.UiEffect) {
-        when (effect) {
-            is ActionBottomSheetContract.UiEffect.ActionCreated -> {
-                val action = effect.action.toRuleEditorActionUiModel()
-                setState {
-                    copy(
-                        actions = actions + action,
-                        isActionSheetVisible = false,
-                    )
-                }
-            }
-            is ActionBottomSheetContract.UiEffect.ActionUpdated -> {
-                val action = effect.action.toRuleEditorActionUiModel()
-                setState {
-                    copy(
-                        actions = actions.map { if (it.id == effect.actionId) action else it },
-                        isActionSheetVisible = false,
-                        editingActionId = null,
-                    )
-                }
-            }
-            is ActionBottomSheetContract.UiEffect.Dismiss -> {
-                hideActionSheet()
-            }
-            is ActionBottomSheetContract.UiEffect.ShowError -> {
-                // Error is handled by the bottom sheet internally
-            }
-        }
-    }
-
     private fun openActionForEditing(actionId: String) {
         setState {
             copy(
@@ -290,6 +254,25 @@ class RuleEditorViewModel @Inject constructor(
     private fun removeAction(actionId: String) {
         setState {
             copy(actions = actions.filter { it.id != actionId })
+        }
+    }
+
+    private fun onActionAdded(action: ActionUiModel) {
+        setState {
+            copy(
+                actions = actions + action,
+                isActionSheetVisible = false,
+            )
+        }
+    }
+
+    private fun onActionUpdated(actionId: String, action: ActionUiModel) {
+        setState {
+            copy(
+                actions = actions.map { if (it.id == actionId) action else it },
+                isActionSheetVisible = false,
+                editingActionId = null,
+            )
         }
     }
 
@@ -313,7 +296,7 @@ class RuleEditorViewModel @Inject constructor(
         }
 
         val newFields = matches.mapIndexed { index, matchResult ->
-            RuleEditorContract.ExtractionFieldUiModel(
+            ExtractionFieldUiModel(
                 id = UUID.randomUUID().toString(),
                 name = if (matches.size == 1) "Amount" else "Amount ${index + 1}",
                 methodType = "smart_amount",
@@ -322,11 +305,11 @@ class RuleEditorViewModel @Inject constructor(
         }
 
         // Also add a Save to Data action if not already present
-        val hasSaveAction = uiState.value.actions.any { it.type == RuleEditorContract.ActionType.SAVE_DATA }
+        val hasSaveAction = uiState.value.actions.any { it.type == ActionType.SAVE_DATA }
         val newActions = if (!hasSaveAction) {
-            uiState.value.actions + RuleEditorContract.ActionUiModel(
+            uiState.value.actions + ActionUiModel(
                 id = UUID.randomUUID().toString(),
-                type = RuleEditorContract.ActionType.SAVE_DATA,
+                type = ActionType.SAVE_DATA,
                 isEnabled = true,
             )
         } else {
@@ -358,11 +341,11 @@ class RuleEditorViewModel @Inject constructor(
     }
 
     private fun addField() {
-        val sampleText = uiState.value.sampleNotification?.let { notification ->
-            notification.content ?: notification.title ?: notification.rawContent
-        } ?: ""
-
-        sendEffect(UiEffect.NavigateToAddField(sampleText))
+        setState {
+            copy(
+                isFieldSheetVisible = true,
+            )
+        }
     }
 
     private fun removeField(fieldId: String) {
@@ -404,7 +387,7 @@ class RuleEditorViewModel @Inject constructor(
 
     private fun testFieldExtraction(
         @Suppress("UNUSED_PARAMETER") text: String,
-        @Suppress("UNUSED_PARAMETER") fieldUiModel: RuleEditorContract.ExtractionFieldUiModel,
+        @Suppress("UNUSED_PARAMETER") fieldUiModel: ExtractionFieldUiModel,
     ): RuleEditorContract.TestResult = RuleEditorContract.TestResult.Failure("Test requires field configuration")
 
     private fun saveRule() {
@@ -445,7 +428,7 @@ class RuleEditorViewModel @Inject constructor(
                 .onSuccess {
                     setState { copy(isLoading = false) }
                     sendEffect(UiEffect.ShowSuccess("Rule saved successfully"))
-                    sendEffect(UiEffect.NavigateBack)
+                    navigationHandler.goBack()
                 }
                 .onFailure { e ->
                     Timber.e(e, "Failed to save rule")
@@ -464,25 +447,27 @@ class RuleEditorViewModel @Inject constructor(
         setState { copy(error = null) }
     }
 
-    // Extension functions for model conversion
-    private fun ActionBottomSheetContract.ActionUiModel.toRuleEditorActionUiModel(): RuleEditorContract.ActionUiModel = RuleEditorContract.ActionUiModel(
-        id = id,
-        type = when (type) {
-            ActionBottomSheetContract.ActionType.SAVE_DATA -> RuleEditorContract.ActionType.SAVE_DATA
-            ActionBottomSheetContract.ActionType.DELETE_NOTIFICATION -> RuleEditorContract.ActionType.DELETE_NOTIFICATION
-            ActionBottomSheetContract.ActionType.CREATE_ALARM -> RuleEditorContract.ActionType.CREATE_ALARM
-        },
-        isEnabled = isEnabled,
-    )
+    private fun dismissBottomSheet() {
+        setState {
+            copy(
+                isFieldSheetVisible = false,
+                isActionSheetVisible = false,
+                isMatchingLogicSheetVisible = false,
+                editingFieldId = null,
+                editingTriggerId = null,
+                editingActionId = null,
+            )
+        }
+    }
 
-    private fun ExtractionField.toUiModel(): RuleEditorContract.ExtractionFieldUiModel = RuleEditorContract.ExtractionFieldUiModel(
+    private fun ExtractionField.toUiModel() = ExtractionFieldUiModel(
         id = UUID.randomUUID().toString(),
         name = name,
         methodType = method.type,
         methodSummary = getMethodSummary(method),
     )
 
-    private fun RuleEditorContract.ExtractionFieldUiModel.toDomainModel(): ExtractionField = ExtractionField(
+    private fun ExtractionFieldUiModel.toDomainModel(): ExtractionField = ExtractionField(
         name = name,
         description = null,
         method = ExtractionMethod.RegexPattern("(.*)", 1),

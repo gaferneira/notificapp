@@ -2,6 +2,7 @@ package dev.gaferneira.notificapp.features.ruleeditor.contract
 
 import dev.gaferneira.notificapp.domain.model.ExtractionField
 import dev.gaferneira.notificapp.domain.model.ExtractionMethod
+import dev.gaferneira.notificapp.domain.model.Notification
 
 /**
  * MVI Contract for the Add Field screen.
@@ -174,7 +175,7 @@ object AddFieldContract {
      */
     sealed class UiEvent {
         /** Initialize with sample text */
-        data class Initialize(val sampleText: String) : UiEvent()
+        data class Initialize(val field: String?, val notification: Notification?) : UiEvent()
 
         /** Update field name */
         data class OnFieldNameChange(val name: String) : UiEvent()

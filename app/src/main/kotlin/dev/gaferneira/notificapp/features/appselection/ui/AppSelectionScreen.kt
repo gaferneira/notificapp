@@ -61,7 +61,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -79,29 +79,26 @@ import dev.gaferneira.notificapp.features.appselection.viewmodel.AppSelectionVie
  * Shows installed apps with search functionality and allows user to select
  * which apps to monitor for notification extraction.
  *
- * @param onNavigate Callback for navigation effects
+ * @param onNavigateToMainApp Callback when navigation to main app is needed
+ * @param onNavigateBack Callback when navigating back is needed
+ * @param onShowError Callback when showing an error message
  * @param modifier Modifier for the screen
  * @param viewModel ViewModel for state management
  */
 @Composable
 fun AppSelectionScreen(
     modifier: Modifier = Modifier,
-    onNavigate: (UiEffect) -> Unit = {},
     viewModel: AppSelectionViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val keyboardController = LocalSoftwareKeyboardController.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Handle effects
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
-                is UiEffect.NavigateToMainApp, is UiEffect.NavigateBack -> {
-                    keyboardController?.hide()
-                    onNavigate(effect)
+                is UiEffect.ShowError -> {
                 }
-                else -> onNavigate(effect)
             }
         }
     }

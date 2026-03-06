@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
+import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEffect
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEvent
@@ -20,9 +22,15 @@ import javax.inject.Inject
  * Manages the two-step onboarding flow:
  * 1. Value Statement - introduces the app
  * 2. Permission Explanation - requests notification access
+ *
+ * @param context Application context for checking permission status
+ * @param navigationHandler Handler for navigation commands
  */
 @HiltViewModel
-class OnboardingViewModel @Inject constructor(@ApplicationContext private val context: Context) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
+class OnboardingViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val navigationHandler: NavigationHandler,
+) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
     init {
         checkPermissionStatus()
@@ -71,6 +79,15 @@ class OnboardingViewModel @Inject constructor(@ApplicationContext private val co
     }
 
     /**
+     * Navigate to main app after permission is granted.
+     */
+    private fun navigateToMainApp() {
+        viewModelScope.launch {
+            navigationHandler.clearAndNavigate(Routes.appSelection(isInitialSetup = true))
+        }
+    }
+
+    /**
      * Check if notification listener permission is granted.
      */
     private fun checkPermissionStatus() {
@@ -91,7 +108,7 @@ class OnboardingViewModel @Inject constructor(@ApplicationContext private val co
 
             if (hasPermission) {
                 Timber.d("Notification permission granted, completing onboarding")
-                sendEffect(UiEffect.NavigateToMainApp)
+                navigateToMainApp()
             }
         }
     }

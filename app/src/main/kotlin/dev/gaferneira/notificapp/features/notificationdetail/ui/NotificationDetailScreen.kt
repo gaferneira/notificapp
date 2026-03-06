@@ -55,7 +55,6 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ExtractionRule
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract
-import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEffect
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEvent
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiState
 import dev.gaferneira.notificapp.features.notificationdetail.viewmodel.NotificationDetailViewModel
@@ -66,7 +65,6 @@ import java.util.Date
 fun NotificationDetailScreen(
     modifier: Modifier = Modifier,
     notificationId: String,
-    onNavigate: (UiEffect) -> Unit = {},
     viewModel: NotificationDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -74,13 +72,6 @@ fun NotificationDetailScreen(
     // Set the notification ID when the screen is first composed
     LaunchedEffect(notificationId) {
         viewModel.setNotificationId(notificationId)
-    }
-
-    // Handle effects
-    LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            onNavigate(effect)
-        }
     }
 
     NotificationDetailScreenContent(

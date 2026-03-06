@@ -44,6 +44,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ActionBottomSheetContract
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionType
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ActionBottomSheetViewModel
 
 /**
@@ -54,7 +56,9 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ActionBottomSheet
  * @param isVisible Whether the bottom sheet is visible
  * @param editingActionId The ID of the action being edited, or null for new action
  * @param initialAction Pre-populated action data when editing, or null for new action
- * @param onEffect Callback for effects that need to be handled by the parent
+ * @param onActionAdded Called when a new action is created
+ * @param onActionUpdated Called when an existing action is updated
+ * @param onDismiss Called when the sheet should be dismissed
  * @param modifier Modifier for the bottom sheet
  * @param viewModel The ViewModel for this bottom sheet (injected by default)
  */
@@ -63,8 +67,10 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ActionBottomSheet
 fun ActionBottomSheet(
     isVisible: Boolean,
     editingActionId: String? = null,
-    initialAction: ActionBottomSheetContract.ActionUiModel? = null,
-    onEffect: (ActionBottomSheetContract.UiEffect) -> Unit,
+    initialAction: ActionUiModel? = null,
+    onActionAdded: (ActionUiModel) -> Unit,
+    onActionUpdated: (actionId: String, action: ActionUiModel) -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ActionBottomSheetViewModel = hiltViewModel(),
 ) {
@@ -86,9 +92,22 @@ fun ActionBottomSheet(
         }
     }
 
-    // Collect effects and forward to parent
+    // Collect effects and handle them internally, calling appropriate callbacks
     CollectOneOffEffects(viewModel.effect) { effect ->
-        onEffect(effect)
+        when (effect) {
+            is ActionBottomSheetContract.UiEffect.ActionCreated -> {
+                onActionAdded(effect.action)
+            }
+            is ActionBottomSheetContract.UiEffect.ActionUpdated -> {
+                onActionUpdated(effect.actionId, effect.action)
+            }
+            is ActionBottomSheetContract.UiEffect.Dismiss -> {
+                onDismiss()
+            }
+            is ActionBottomSheetContract.UiEffect.ShowError -> {
+                // Error is already shown via validation in the bottom sheet
+            }
+        }
     }
 
     val title = when (uiState.mode) {
@@ -152,11 +171,11 @@ fun ActionBottomSheet(
                 title = "Save to Data Lab",
                 description = "Store extracted data for later viewing and analysis",
                 icon = Icons.Default.Save,
-                isSelected = uiState.actionType == ActionBottomSheetContract.ActionType.SAVE_DATA,
+                isSelected = uiState.actionType == ActionType.SAVE_DATA,
                 onClick = {
                     viewModel.onEvent(
                         ActionBottomSheetContract.UiEvent.OnActionTypeChange(
-                            ActionBottomSheetContract.ActionType.SAVE_DATA,
+                            ActionType.SAVE_DATA,
                         ),
                     )
                 },
@@ -168,11 +187,11 @@ fun ActionBottomSheet(
                 title = "Delete notification",
                 description = "Remove the notification after processing",
                 icon = Icons.Default.Delete,
-                isSelected = uiState.actionType == ActionBottomSheetContract.ActionType.DELETE_NOTIFICATION,
+                isSelected = uiState.actionType == ActionType.DELETE_NOTIFICATION,
                 onClick = {
                     viewModel.onEvent(
                         ActionBottomSheetContract.UiEvent.OnActionTypeChange(
-                            ActionBottomSheetContract.ActionType.DELETE_NOTIFICATION,
+                            ActionType.DELETE_NOTIFICATION,
                         ),
                     )
                 },
@@ -184,18 +203,18 @@ fun ActionBottomSheet(
                 title = "Create alarm",
                 description = "Set an alarm or reminder based on extracted time",
                 icon = Icons.Default.Alarm,
-                isSelected = uiState.actionType == ActionBottomSheetContract.ActionType.CREATE_ALARM,
+                isSelected = uiState.actionType == ActionType.CREATE_ALARM,
                 onClick = {
                     viewModel.onEvent(
                         ActionBottomSheetContract.UiEvent.OnActionTypeChange(
-                            ActionBottomSheetContract.ActionType.CREATE_ALARM,
+                            ActionType.CREATE_ALARM,
                         ),
                     )
                 },
             )
 
             // Show Save to Data Lab toggle when that action is selected
-            if (uiState.actionType == ActionBottomSheetContract.ActionType.SAVE_DATA) {
+            if (uiState.actionType == ActionType.SAVE_DATA) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(

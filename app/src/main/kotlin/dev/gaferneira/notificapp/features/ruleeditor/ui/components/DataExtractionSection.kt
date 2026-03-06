@@ -31,7 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ExtractionFieldUiModel
 
 /**
  * The "And then" data extraction section.
@@ -39,7 +39,7 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
  */
 @Composable
 fun DataExtractionSection(
-    fields: List<RuleEditorContract.ExtractionFieldUiModel>,
+    fields: List<ExtractionFieldUiModel>,
     onAutoGenerate: () -> Unit,
     onAddField: () -> Unit,
     onRemoveField: (String) -> Unit,
@@ -115,7 +115,7 @@ fun DataExtractionSection(
 
 @Composable
 private fun ExtractionFieldItem(
-    field: RuleEditorContract.ExtractionFieldUiModel,
+    field: ExtractionFieldUiModel,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -217,13 +217,13 @@ private fun DataExtractionSectionPreview() {
     NotificappTheme {
         DataExtractionSection(
             fields = listOf(
-                RuleEditorContract.ExtractionFieldUiModel(
+                ExtractionFieldUiModel(
                     id = "1",
                     name = "Merchant",
                     methodType = "text_between_anchors",
                     methodSummary = "Regex: (.*) at .*",
                 ),
-                RuleEditorContract.ExtractionFieldUiModel(
+                ExtractionFieldUiModel(
                     id = "2",
                     name = "Amount",
                     methodType = "smart_amount",

@@ -100,12 +100,6 @@ object AppSelectionContract {
      * One-time effects (navigation, actions).
      */
     sealed class UiEffect {
-        /** Navigate to main app (initial setup complete) */
-        data object NavigateToMainApp : UiEffect()
-
-        /** Go back to previous screen (when accessed from settings) */
-        data object NavigateBack : UiEffect()
-
         /** Show error message */
         data class ShowError(val message: String) : UiEffect()
     }

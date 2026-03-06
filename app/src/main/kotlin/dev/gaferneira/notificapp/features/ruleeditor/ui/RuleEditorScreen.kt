@@ -40,15 +40,15 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.domain.model.ExtractionField
 import dev.gaferneira.notificapp.domain.model.Notification
-import dev.gaferneira.notificapp.features.ruleeditor.contract.ActionBottomSheetContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
-import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.contract.TriggerUiModel
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionType
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ExtractionFieldUiModel
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DataExtractionSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DoSection
@@ -60,8 +60,6 @@ fun RuleEditorScreen(
     modifier: Modifier = Modifier,
     ruleId: String? = null,
     notificationId: String? = null,
-    pendingField: ExtractionField? = null,
-    onNavigate: (UiEffect) -> Unit = {},
     viewModel: RuleEditorViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
@@ -72,16 +70,14 @@ fun RuleEditorScreen(
         notificationId?.let { viewModel.onEvent(UiEvent.LoadSampleNotification(it)) }
     }
 
-    // Handle pending field from AddField screen
-    LaunchedEffect(pendingField) {
-        pendingField?.let {
-            viewModel.onEvent(UiEvent.OnFieldAdded(it))
-        }
-    }
-
     // Collect effects
     CollectOneOffEffects(viewModel.effect) { effect ->
-        onNavigate(effect)
+        when (effect) {
+            is UiEffect.ShowSuccess -> {
+            }
+            is UiEffect.ShowError -> {
+            }
+        }
     }
 
     RuleEditorScreenContent(
@@ -99,42 +95,6 @@ private fun RuleEditorScreenContent(
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
-
-    // Helper function to handle effects from the MatchingLogicBottomSheet
-    val handleMatchingLogicEffect: (MatchingLogicContract.UiEffect) -> Unit = { effect ->
-        when (effect) {
-            is MatchingLogicContract.UiEffect.TriggerCreated -> {
-                onEvent(UiEvent.OnMatchingLogicEffect(effect))
-            }
-            is MatchingLogicContract.UiEffect.TriggerUpdated -> {
-                onEvent(UiEvent.OnMatchingLogicEffect(effect))
-            }
-            is MatchingLogicContract.UiEffect.Dismiss -> {
-                onEvent(UiEvent.OnDismissTriggerSheet)
-            }
-            is MatchingLogicContract.UiEffect.ShowError -> {
-                // Error is already shown via validation in the bottom sheet
-            }
-        }
-    }
-
-    // Helper function to handle effects from the ActionBottomSheet
-    val handleActionSheetEffect: (ActionBottomSheetContract.UiEffect) -> Unit = { effect ->
-        when (effect) {
-            is ActionBottomSheetContract.UiEffect.ActionCreated -> {
-                onEvent(UiEvent.OnActionSheetEffect(effect))
-            }
-            is ActionBottomSheetContract.UiEffect.ActionUpdated -> {
-                onEvent(UiEvent.OnActionSheetEffect(effect))
-            }
-            is ActionBottomSheetContract.UiEffect.Dismiss -> {
-                onEvent(UiEvent.OnDismissActionSheet)
-            }
-            is ActionBottomSheetContract.UiEffect.ShowError -> {
-                // Error is already shown via validation in the bottom sheet
-            }
-        }
-    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -204,7 +164,9 @@ private fun RuleEditorScreenContent(
                     isVisible = true,
                     editingTriggerId = uiState.editingTriggerId,
                     initialTrigger = uiState.editingTrigger,
-                    onEffect = handleMatchingLogicEffect,
+                    onTriggerAdded = { onEvent(UiEvent.OnTriggerAdded(it)) },
+                    onTriggerUpdated = { id, trigger -> onEvent(UiEvent.OnTriggerUpdated(id, trigger)) },
+                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
                 )
             }
 
@@ -212,18 +174,22 @@ private fun RuleEditorScreenContent(
                 ActionBottomSheet(
                     isVisible = true,
                     editingActionId = uiState.editingActionId,
-                    initialAction = uiState.editingAction?.let { action ->
-                        ActionBottomSheetContract.ActionUiModel(
-                            id = action.id,
-                            type = when (action.type) {
-                                RuleEditorContract.ActionType.SAVE_DATA -> ActionBottomSheetContract.ActionType.SAVE_DATA
-                                RuleEditorContract.ActionType.DELETE_NOTIFICATION -> ActionBottomSheetContract.ActionType.DELETE_NOTIFICATION
-                                RuleEditorContract.ActionType.CREATE_ALARM -> ActionBottomSheetContract.ActionType.CREATE_ALARM
-                            },
-                            isEnabled = action.isEnabled,
-                        )
+                    initialAction = uiState.editingAction,
+                    onActionAdded = { onEvent(UiEvent.OnActionAdded(it)) },
+                    onActionUpdated = { id, action -> onEvent(UiEvent.OnActionUpdated(id, action)) },
+                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
+                )
+            }
+
+            if (uiState.isFieldSheetVisible) {
+                // Add Field Bottom Sheet
+                AddFieldBottomSheet(
+                    fieldId = uiState.editingFieldId,
+                    notification = uiState.sampleNotification,
+                    onFieldAdded = { field ->
+                        onEvent(UiEvent.OnFieldAdded(field))
                     },
-                    onEffect = handleActionSheetEffect,
+                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
                 )
             }
         }
@@ -491,13 +457,13 @@ private fun RuleEditorScreenStep1Preview() {
                     ),
                 ),
                 extractionFields = listOf(
-                    RuleEditorContract.ExtractionFieldUiModel(
+                    ExtractionFieldUiModel(
                         id = "1",
                         name = "Merchant",
                         methodType = "text_between_anchors",
                         methodSummary = "Regex: (.*) at .*",
                     ),
-                    RuleEditorContract.ExtractionFieldUiModel(
+                    ExtractionFieldUiModel(
                         id = "2",
                         name = "Amount",
                         methodType = "smart_amount",
@@ -505,9 +471,9 @@ private fun RuleEditorScreenStep1Preview() {
                     ),
                 ),
                 actions = listOf(
-                    RuleEditorContract.ActionUiModel(
+                    ActionUiModel(
                         id = "1",
-                        type = RuleEditorContract.ActionType.SAVE_DATA,
+                        type = ActionType.SAVE_DATA,
                         isEnabled = true,
                     ),
                 ),
@@ -528,13 +494,13 @@ private fun RuleEditorScreenStep2Preview() {
                 description = "Extracts purchase information from ICA Banken notifications",
                 targetApps = listOf("com.ica.banken"),
                 extractionFields = listOf(
-                    RuleEditorContract.ExtractionFieldUiModel(
+                    ExtractionFieldUiModel(
                         id = "1",
                         name = "Merchant",
                         methodType = "text_between_anchors",
                         methodSummary = "Regex: (.*) at .*",
                     ),
-                    RuleEditorContract.ExtractionFieldUiModel(
+                    ExtractionFieldUiModel(
                         id = "2",
                         name = "Amount",
                         methodType = "smart_amount",
@@ -542,9 +508,9 @@ private fun RuleEditorScreenStep2Preview() {
                     ),
                 ),
                 actions = listOf(
-                    RuleEditorContract.ActionUiModel(
+                    ActionUiModel(
                         id = "1",
-                        type = RuleEditorContract.ActionType.SAVE_DATA,
+                        type = ActionType.SAVE_DATA,
                         isEnabled = true,
                     ),
                 ),

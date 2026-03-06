@@ -60,7 +60,9 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.MatchingLogicView
  * @param isVisible Whether the bottom sheet is visible
  * @param editingTriggerId The ID of the trigger being edited, or null for new trigger
  * @param initialTrigger Pre-populated trigger data when editing, or null for new trigger
- * @param onEffect Callback for effects that need to be handled by the parent
+ * @param onTriggerAdded Called when a new trigger is created
+ * @param onTriggerUpdated Called when an existing trigger is updated
+ * @param onDismiss Called when the sheet should be dismissed
  * @param viewModel The ViewModel for this bottom sheet (injected by default)
  * @param modifier Modifier for the bottom sheet
  */
@@ -70,7 +72,9 @@ fun MatchingLogicBottomSheet(
     isVisible: Boolean,
     editingTriggerId: String? = null,
     initialTrigger: TriggerUiModel? = null,
-    onEffect: (MatchingLogicContract.UiEffect) -> Unit,
+    onTriggerAdded: (TriggerUiModel) -> Unit,
+    onTriggerUpdated: (triggerId: String, trigger: TriggerUiModel) -> Unit,
+    onDismiss: () -> Unit,
     viewModel: MatchingLogicViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
 ) {
@@ -95,9 +99,22 @@ fun MatchingLogicBottomSheet(
         }
     }
 
-    // Collect effects and forward to parent
+    // Collect effects and handle them internally, calling appropriate callbacks
     CollectOneOffEffects(viewModel.effect) { effect ->
-        onEffect(effect)
+        when (effect) {
+            is MatchingLogicContract.UiEffect.TriggerCreated -> {
+                onTriggerAdded(effect.trigger)
+            }
+            is MatchingLogicContract.UiEffect.TriggerUpdated -> {
+                onTriggerUpdated(effect.triggerId, effect.trigger)
+            }
+            is MatchingLogicContract.UiEffect.Dismiss -> {
+                onDismiss()
+            }
+            is MatchingLogicContract.UiEffect.ShowError -> {
+                // Error is already shown via validation in the bottom sheet
+            }
+        }
     }
 
     val title = when (uiState.mode) {

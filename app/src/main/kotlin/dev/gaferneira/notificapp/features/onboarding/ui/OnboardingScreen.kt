@@ -50,7 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -66,13 +66,13 @@ import dev.gaferneira.notificapp.features.onboarding.viewmodel.OnboardingViewMod
  * 1. Value Statement - Shows app value proposition
  * 2. Permission Explanation - Explains and requests notification access
  *
- * @param onNavigate Callback for navigation effects
+ * @param onOpenNotificationSettings Callback to open system notification settings
  * @param modifier Modifier for the screen
  * @param viewModel ViewModel for state management
  */
 @Composable
 fun OnboardingScreen(
-    onNavigate: (UiEffect) -> Unit = {},
+    onOpenNotificationSettings: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
@@ -82,7 +82,12 @@ fun OnboardingScreen(
     // Handle effects
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
-            onNavigate(effect)
+            when (effect) {
+                is UiEffect.OpenNotificationSettings -> onOpenNotificationSettings()
+                is UiEffect.NavigateToMainApp -> {
+                    // Navigation handled by ViewModel via NavigationHandler
+                }
+            }
         }
     }
 

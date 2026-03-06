@@ -1,6 +1,5 @@
 package dev.gaferneira.notificapp.features.settings.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
@@ -42,8 +40,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
+import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
+import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
+import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEffect
@@ -57,13 +59,13 @@ import dev.gaferneira.notificapp.features.settings.viewmodel.SettingsViewModel
  * Provides options to manage monitored apps, notification settings,
  * and app preferences.
  *
- * @param onNavigate Callback for navigation effects
+ * @param navigateTo Navigation callback that accepts a route and optional NavOptions
  * @param modifier Modifier for the screen
  * @param viewModel ViewModel for state management
  */
 @Composable
 fun SettingsScreen(
-    onNavigate: (UiEffect) -> Unit = {},
+    navigateTo: (Screen, NavOptions?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -72,13 +74,19 @@ fun SettingsScreen(
     // Handle effects
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
-            onNavigate(effect)
+            when (effect) {
+                is UiEffect.NavigateToAppSelection -> {
+                    navigateTo(Screen.AppSelection(isInitialSetup = false), null)
+                }
+                else -> {}
+            }
         }
     }
 
     SettingsScreenContent(
         uiState = uiState,
         onEvent = viewModel::onEvent,
+        navigateTo = navigateTo,
         modifier = modifier,
     )
 }
@@ -87,6 +95,7 @@ fun SettingsScreen(
 private fun SettingsScreenContent(
     uiState: UiState,
     onEvent: (UiEvent) -> Unit,
+    navigateTo: (Screen, NavOptions?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -115,6 +124,12 @@ private fun SettingsScreenContent(
                     )
                 }
             }
+        },
+        bottomBar = {
+            MainBottomNav(
+                selectedDestination = AppDestinations.SETTINGS,
+                navigateTo = navigateTo,
+            )
         },
     ) { paddingValues ->
         Box(
@@ -314,32 +329,12 @@ private fun MonitoredAppsCard(
             }
 
             // Chevron and Add button
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                TextButton(
-                    onClick = onSelectApps,
-                    modifier = Modifier.height(32.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(modifier = Modifier.size(4.dp))
-                    Text(
-                        text = "Select",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                }
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
+            )
         }
     }
 }
@@ -521,6 +516,7 @@ private fun SettingsScreenPreview() {
                 isLoading = false,
             ),
             onEvent = {},
+            navigateTo = { _, _ -> },
         )
     }
 }
@@ -538,6 +534,7 @@ private fun SettingsScreenEmptyPreview() {
                 isLoading = false,
             ),
             onEvent = {},
+            navigateTo = { _, _ -> },
         )
     }
 }

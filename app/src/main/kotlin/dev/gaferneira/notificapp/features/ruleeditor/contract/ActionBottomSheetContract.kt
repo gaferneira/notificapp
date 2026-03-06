@@ -1,5 +1,8 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionType
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
+
 /**
  * MVI Contract for the ActionBottomSheet.
  *
@@ -61,26 +64,5 @@ object ActionBottomSheetContract {
 
         /** Show error message */
         data class ShowError(val message: String) : UiEffect()
-    }
-
-    /**
-     * Action to take when rule matches.
-     */
-    enum class ActionType {
-        SAVE_DATA,
-        DELETE_NOTIFICATION,
-        CREATE_ALARM,
-    }
-
-    /**
-     * UI model for an action.
-     */
-    data class ActionUiModel(val id: String, val type: ActionType, val isEnabled: Boolean = true) {
-        val displayName: String
-            get() = when (type) {
-                ActionType.SAVE_DATA -> "Save to Data tab"
-                ActionType.DELETE_NOTIFICATION -> "Delete notification"
-                ActionType.CREATE_ALARM -> "Create alarm"
-            }
     }
 }
