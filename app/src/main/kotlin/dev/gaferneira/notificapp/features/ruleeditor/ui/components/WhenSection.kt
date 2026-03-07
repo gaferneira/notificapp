@@ -30,15 +30,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
-import dev.gaferneira.notificapp.features.ruleeditor.contract.TriggerUiModel
+import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.MatchingCondition
+import dev.gaferneira.notificapp.domain.model.MatchingOperator
+import dev.gaferneira.notificapp.domain.model.RuleTrigger
+import dev.gaferneira.notificapp.domain.model.TriggerType
+import dev.gaferneira.notificapp.features.ruleeditor.contract.displayText
 
 /**
  * The "When" section showing all configured triggers.
  */
 @Composable
 fun WhenSection(
-    triggers: List<TriggerUiModel>,
+    triggers: List<RuleTrigger>,
     onRemoveTrigger: (String) -> Unit,
     onTriggerClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -59,20 +63,20 @@ fun WhenSection(
 
 @Composable
 private fun TriggerCard(
-    trigger: TriggerUiModel,
+    trigger: RuleTrigger,
     onClick: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val (icon, iconColor, label, labelColor) = when (trigger.type) {
-        MatchingLogicContract.TriggerType.CONDITION ->
+        TriggerType.CONDITION ->
             Quadruple(
                 Icons.Default.Notifications,
                 MaterialTheme.colorScheme.secondary,
                 "CONDITION",
                 MaterialTheme.colorScheme.secondary,
             )
-        MatchingLogicContract.TriggerType.APP ->
+        TriggerType.APP ->
             Quadruple(
                 Icons.Default.Apps,
                 MaterialTheme.colorScheme.tertiary,
@@ -109,8 +113,8 @@ private fun TriggerCard(
                         .clip(RoundedCornerShape(12.dp))
                         .background(
                             when (trigger.type) {
-                                MatchingLogicContract.TriggerType.CONDITION -> MaterialTheme.colorScheme.secondaryContainer
-                                MatchingLogicContract.TriggerType.APP -> MaterialTheme.colorScheme.tertiaryContainer
+                                TriggerType.CONDITION -> MaterialTheme.colorScheme.secondaryContainer
+                                TriggerType.APP -> MaterialTheme.colorScheme.tertiaryContainer
                             },
                         ),
                     contentAlignment = Alignment.Center,
@@ -141,7 +145,7 @@ private fun TriggerCard(
                 }
             }
 
-            if (trigger.type == MatchingLogicContract.TriggerType.CONDITION) {
+            if (trigger.type == TriggerType.CONDITION) {
                 // Remove button
                 IconButton(
                     onClick = onRemove,
@@ -167,19 +171,19 @@ private fun WhenSectionPreview() {
     NotificappTheme {
         WhenSection(
             triggers = listOf(
-                TriggerUiModel(
+                RuleTrigger(
                     id = "2",
-                    type = MatchingLogicContract.TriggerType.APP,
-                    selectedApps = listOf(
-                        MatchingLogicContract.AppInfo("com.swish", "Swish"),
-                        MatchingLogicContract.AppInfo("com.bank", "Bank App"),
+                    type = TriggerType.APP,
+                    targetApps = listOf(
+                        AppInfo("com.swish", "Swish"),
+                        AppInfo("com.bank", "Bank App"),
                     ),
                 ),
-                TriggerUiModel(
+                RuleTrigger(
                     id = "1",
-                    type = MatchingLogicContract.TriggerType.CONDITION,
-                    condition = MatchingLogicContract.MatchingCondition.TEXT_CONTENT,
-                    operator = MatchingLogicContract.MatchingOperator.CONTAINS,
+                    type = TriggerType.CONDITION,
+                    condition = MatchingCondition.TEXT_CONTENT,
+                    operator = MatchingOperator.CONTAINS,
                     value = "purchase",
                 ),
             ),

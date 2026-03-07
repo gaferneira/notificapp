@@ -1,6 +1,6 @@
 package dev.gaferneira.notificapp.domain.repository
 
-import dev.gaferneira.notificapp.domain.model.ExtractionRule
+import dev.gaferneira.notificapp.domain.model.Rule
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -11,32 +11,32 @@ interface RuleRepository {
     /**
      * Observe all rules as a Flow.
      */
-    fun observeAllRules(): Flow<List<ExtractionRule>>
+    fun observeAllRules(): Flow<List<Rule>>
 
     /**
      * Get all rules.
      */
-    suspend fun getAllRules(): Result<List<ExtractionRule>>
+    suspend fun getAllRules(): Result<List<Rule>>
 
     /**
      * Get a specific rule by ID.
      */
-    suspend fun getRule(id: String): Result<ExtractionRule?>
+    suspend fun getRule(id: String): Result<Rule?>
 
     /**
      * Get rules that apply to a specific app.
      */
-    suspend fun getRulesForApp(packageName: String): Result<List<ExtractionRule>>
+    suspend fun getRulesForApp(packageName: String): Result<List<Rule>>
 
     /**
      * Save a new rule.
      */
-    suspend fun saveRule(rule: ExtractionRule): Result<Unit>
+    suspend fun saveRule(rule: Rule): Result<Unit>
 
     /**
      * Update an existing rule.
      */
-    suspend fun updateRule(rule: ExtractionRule): Result<Unit>
+    suspend fun updateRule(rule: Rule): Result<Unit>
 
     /**
      * Delete a rule.

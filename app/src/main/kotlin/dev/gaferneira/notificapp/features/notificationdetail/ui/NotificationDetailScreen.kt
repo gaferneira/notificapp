@@ -52,8 +52,8 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.domain.model.ExtractionRule
 import dev.gaferneira.notificapp.domain.model.Notification
+import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEvent
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiState
@@ -472,11 +472,10 @@ private fun NotificationDetailScreenPreview() {
                 ),
                 applicableRules = listOf(
                     NotificationDetailContract.ApplicableRule(
-                        rule = ExtractionRule(
+                        rule = Rule(
                             id = "1",
                             name = "Purchase notification",
                             description = "Extracts amount & merchant",
-                            pattern = "Purchase.*SEK",
                             isActive = true,
                             targetApps = null,
                         ),
@@ -484,11 +483,10 @@ private fun NotificationDetailScreenPreview() {
                         isActive = true,
                     ),
                     NotificationDetailContract.ApplicableRule(
-                        rule = ExtractionRule(
+                        rule = Rule(
                             id = "2",
                             name = "Salary deposit",
                             description = "Captures income events",
-                            pattern = "Salary.*deposited",
                             isActive = true,
                             targetApps = null,
                         ),
@@ -496,11 +494,10 @@ private fun NotificationDetailScreenPreview() {
                         isActive = true,
                     ),
                     NotificationDetailContract.ApplicableRule(
-                        rule = ExtractionRule(
+                        rule = Rule(
                             id = "3",
                             name = "Low balance alert",
                             description = "Monitors threshold warnings",
-                            pattern = "balance.*low",
                             isActive = false,
                             targetApps = null,
                         ),

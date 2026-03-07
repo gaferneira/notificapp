@@ -1,7 +1,7 @@
 package dev.gaferneira.notificapp.features.notificationdetail.contract
 
-import dev.gaferneira.notificapp.domain.model.ExtractionRule
 import dev.gaferneira.notificapp.domain.model.Notification
+import dev.gaferneira.notificapp.domain.model.Rule
 
 /**
  * Contract for the Notification Detail screen.
@@ -35,7 +35,7 @@ object NotificationDetailContract {
     /**
      * Represents a rule and whether it applies to this notification.
      */
-    data class ApplicableRule(val rule: ExtractionRule, val isApplicable: Boolean, val isActive: Boolean)
+    data class ApplicableRule(val rule: Rule, val isApplicable: Boolean, val isActive: Boolean)
 
     /**
      * UI Events from user interactions.

@@ -40,15 +40,19 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.MatchingCondition
+import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.Notification
-import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
+import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
+import dev.gaferneira.notificapp.domain.model.RuleTrigger
+import dev.gaferneira.notificapp.domain.model.TriggerType
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
-import dev.gaferneira.notificapp.features.ruleeditor.contract.TriggerUiModel
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionType
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ExtractionFieldUiModel
+import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DataExtractionSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DoSection
@@ -103,7 +107,7 @@ private fun RuleEditorScreenContent(
                 title = {
                     Text(
                         when (uiState.currentStep) {
-                            1 -> "New automation"
+                            1 -> if (uiState.rule.id == null) "New rule" else "Edit rule"
                             else -> "Save"
                         },
                     )
@@ -161,22 +165,20 @@ private fun RuleEditorScreenContent(
             // Bottom sheets
             if (uiState.isMatchingLogicSheetVisible) {
                 MatchingLogicBottomSheet(
-                    isVisible = true,
-                    editingTriggerId = uiState.editingTriggerId,
                     initialTrigger = uiState.editingTrigger,
-                    onTriggerAdded = { onEvent(UiEvent.OnTriggerAdded(it)) },
-                    onTriggerUpdated = { id, trigger -> onEvent(UiEvent.OnTriggerUpdated(id, trigger)) },
+                    onTriggerSaved = { trigger ->
+                        onEvent(UiEvent.OnTriggerSaved(trigger))
+                    },
                     onDismiss = { onEvent(UiEvent.OnDismissSheet) },
                 )
             }
 
             if (uiState.isActionSheetVisible) {
                 ActionBottomSheet(
-                    isVisible = true,
-                    editingActionId = uiState.editingActionId,
                     initialAction = uiState.editingAction,
-                    onActionAdded = { onEvent(UiEvent.OnActionAdded(it)) },
-                    onActionUpdated = { id, action -> onEvent(UiEvent.OnActionUpdated(id, action)) },
+                    onActionSaved = { action ->
+                        onEvent(UiEvent.OnActionSaved(action))
+                    },
                     onDismiss = { onEvent(UiEvent.OnDismissSheet) },
                 )
             }
@@ -184,10 +186,10 @@ private fun RuleEditorScreenContent(
             if (uiState.isFieldSheetVisible) {
                 // Add Field Bottom Sheet
                 AddFieldBottomSheet(
-                    fieldId = uiState.editingFieldId,
+                    fieldToEdit = uiState.editingField,
                     notification = uiState.sampleNotification,
-                    onFieldAdded = { field ->
-                        onEvent(UiEvent.OnFieldAdded(field))
+                    onFieldSaved = { field ->
+                        onEvent(UiEvent.OnFieldSaved(field))
                     },
                     onDismiss = { onEvent(UiEvent.OnDismissSheet) },
                 )
@@ -216,7 +218,7 @@ private fun LogicStep(
             description = "A trigger is a specific notification event. Any trigger added here will start the extraction process.",
         ) {
             WhenSection(
-                triggers = uiState.triggers,
+                triggers = uiState.rule.triggers,
                 onRemoveTrigger = { onEvent(UiEvent.OnRemoveTriggerClicked(it)) },
                 onTriggerClick = { onEvent(UiEvent.OnTriggerItemClicked(it)) },
                 modifier = Modifier.fillMaxWidth(),
@@ -232,16 +234,17 @@ private fun LogicStep(
 
         // Data Extraction Section
         DataExtractionSection(
-            fields = uiState.extractionFields,
+            fields = uiState.rule.extractionFields,
             onAutoGenerate = { onEvent(UiEvent.OnAutoGenerateClicked) },
             onAddField = { onEvent(UiEvent.OnAddFieldClicked) },
+            onEditField = { onEvent(UiEvent.OnEditFieldClicked(it)) },
             onRemoveField = { onEvent(UiEvent.OnRemoveFieldClicked(it)) },
             modifier = Modifier.fillMaxWidth(),
         )
 
         // Do Section
         DoSection(
-            actions = uiState.actions,
+            actions = uiState.rule.actions,
             onToggleAction = { _, _ ->
                 // For now, we toggle by removing and re-adding (simplified)
                 // In a full implementation, we'd have a specific toggle event
@@ -304,7 +307,7 @@ private fun MetadataStep(
 
         // Name field (required)
         OutlinedTextField(
-            value = uiState.name,
+            value = uiState.rule.name,
             onValueChange = { onEvent(UiEvent.OnNameChange(it)) },
             label = { Text("Name*") },
             placeholder = { Text("e.g., ICA Banken Purchase") },
@@ -314,49 +317,47 @@ private fun MetadataStep(
             singleLine = true,
         )
 
-        // Action chips row 1
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            ActionChip(
-                text = if (uiState.description.isBlank()) "Add description" else "Edit description",
-                onClick = { /* Toggle description field visibility */ },
-                modifier = Modifier.weight(1f),
-            )
-            ActionChip(
-                text = if (uiState.area.isBlank()) "Add area" else "Edit area",
-                onClick = { /* Toggle area field visibility */ },
-                modifier = Modifier.weight(1f),
+            if (!uiState.showDescription) {
+                ActionChip(
+                    text = "Add description",
+                    onClick = { onEvent(UiEvent.OnAddDescriptionClicked) },
+                )
+            }
+            if (!uiState.showCategory) {
+                ActionChip(
+                    text = "Add category",
+                    onClick = { onEvent(UiEvent.OnAddCategoryClicked) },
+                )
+            }
+        }
+
+        // Description field (shown when showDescription is true)
+        if (uiState.showDescription) {
+            OutlinedTextField(
+                value = uiState.rule.description,
+                onValueChange = { onEvent(UiEvent.OnDescriptionChange(it)) },
+                label = { Text("Description") },
+                placeholder = { Text("What does this rule do?") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2,
             )
         }
 
-        // Action chips row 2
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            ActionChip(
-                text = if (uiState.category.isBlank()) "Add category" else "Edit category",
-                onClick = { /* Toggle category field visibility */ },
-                modifier = Modifier.weight(1f),
-            )
-            ActionChip(
-                text = "Set app scope",
-                onClick = { /* Show app scope selection */ },
-                modifier = Modifier.weight(1f),
+        // Category field (shown when showCategory is true)
+        if (uiState.showCategory) {
+            OutlinedTextField(
+                value = uiState.rule.category,
+                onValueChange = { onEvent(UiEvent.OnCategoryChange(it)) },
+                label = { Text("Category") },
+                placeholder = { Text("e.g., Finance, Shopping") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
             )
         }
-
-        // Description field (always visible in this version)
-        OutlinedTextField(
-            value = uiState.description,
-            onValueChange = { onEvent(UiEvent.OnDescriptionChange(it)) },
-            label = { Text("Description") },
-            placeholder = { Text("What does this rule do?") },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 2,
-        )
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -376,7 +377,7 @@ private fun MetadataStep(
                 onClick = { onEvent(UiEvent.OnSaveClicked) },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                enabled = uiState.name.isNotBlank() && !uiState.isLoading,
+                enabled = uiState.rule.name.isNotBlank() && !uiState.isLoading,
             ) {
                 Text("Save")
             }
@@ -436,8 +437,38 @@ private fun RuleEditorScreenStep1Preview() {
         RuleEditorScreenContent(
             uiState = UiState(
                 currentStep = 1,
-                name = "ICA Banken Purchase",
-                targetApps = listOf("com.ica.banken"),
+                rule = RuleUiModel(
+                    name = "ICA Banken Purchase",
+                    targetApps = listOf("com.ica.banken"),
+                    triggers = listOf(
+                        RuleTrigger(
+                            id = "1",
+                            type = TriggerType.CONDITION,
+                            condition = MatchingCondition.TEXT_CONTENT,
+                            operator = MatchingOperator.CONTAINS,
+                            value = "purchase",
+                        ),
+                    ),
+                    extractionFields = listOf(
+                        RuleField(
+                            id = "1",
+                            name = "Merchant",
+                            method = ExtractionMethod.LineExtraction(10),
+                        ),
+                        RuleField(
+                            id = "2",
+                            name = "Amount",
+                            method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
+                        ),
+                    ),
+                    actions = listOf(
+                        RuleAction(
+                            id = "1",
+                            type = ActionType.SAVE_DATA,
+                            isEnabled = true,
+                        ),
+                    ),
+                ),
                 sampleNotification = Notification(
                     id = "test",
                     packageName = "com.ica.banken",
@@ -446,36 +477,6 @@ private fun RuleEditorScreenStep1Preview() {
                     content = "Your purchase of 153.50 kr at ICA Kvantum was successful",
                     rawContent = "Your purchase of 153.50 kr at ICA Kvantum was successful",
                     timestamp = System.currentTimeMillis(),
-                ),
-                triggers = listOf(
-                    TriggerUiModel(
-                        id = "1",
-                        type = MatchingLogicContract.TriggerType.CONDITION,
-                        condition = MatchingLogicContract.MatchingCondition.TEXT_CONTENT,
-                        operator = MatchingLogicContract.MatchingOperator.CONTAINS,
-                        value = "purchase",
-                    ),
-                ),
-                extractionFields = listOf(
-                    ExtractionFieldUiModel(
-                        id = "1",
-                        name = "Merchant",
-                        methodType = "text_between_anchors",
-                        methodSummary = "Regex: (.*) at .*",
-                    ),
-                    ExtractionFieldUiModel(
-                        id = "2",
-                        name = "Amount",
-                        methodType = "smart_amount",
-                        methodSummary = "Find: currency pattern",
-                    ),
-                ),
-                actions = listOf(
-                    ActionUiModel(
-                        id = "1",
-                        type = ActionType.SAVE_DATA,
-                        isEnabled = true,
-                    ),
                 ),
             ),
             onEvent = {},
@@ -490,28 +491,28 @@ private fun RuleEditorScreenStep2Preview() {
         RuleEditorScreenContent(
             uiState = UiState(
                 currentStep = 2,
-                name = "ICA Banken Purchase",
-                description = "Extracts purchase information from ICA Banken notifications",
-                targetApps = listOf("com.ica.banken"),
-                extractionFields = listOf(
-                    ExtractionFieldUiModel(
-                        id = "1",
-                        name = "Merchant",
-                        methodType = "text_between_anchors",
-                        methodSummary = "Regex: (.*) at .*",
+                rule = RuleUiModel(
+                    name = "ICA Banken Purchase",
+                    description = "Extracts purchase information from ICA Banken notifications",
+                    targetApps = listOf("com.ica.banken"),
+                    extractionFields = listOf(
+                        RuleField(
+                            id = "1",
+                            name = "Merchant",
+                            method = ExtractionMethod.LineExtraction(10),
+                        ),
+                        RuleField(
+                            id = "2",
+                            name = "Amount",
+                            method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
+                        ),
                     ),
-                    ExtractionFieldUiModel(
-                        id = "2",
-                        name = "Amount",
-                        methodType = "smart_amount",
-                        methodSummary = "Find: currency pattern",
-                    ),
-                ),
-                actions = listOf(
-                    ActionUiModel(
-                        id = "1",
-                        type = ActionType.SAVE_DATA,
-                        isEnabled = true,
+                    actions = listOf(
+                        RuleAction(
+                            id = "1",
+                            type = ActionType.SAVE_DATA,
+                            isEnabled = true,
+                        ),
                     ),
                 ),
             ),

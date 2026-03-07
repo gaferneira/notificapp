@@ -11,16 +11,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.CallSplit
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.DataObject
+import androidx.compose.material.icons.filled.HorizontalRule
+import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -28,18 +41,25 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.domain.model.ExtractionField
 import dev.gaferneira.notificapp.domain.model.Notification
+import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiState
@@ -52,18 +72,18 @@ import kotlinx.coroutines.launch
  * This is shown as a modal bottom sheet from the RuleEditor screen
  * instead of being a separate navigation destination.
  *
- * @param fieldId The ID of the field being edited, or null for new field
+ * @param fieldToEdit The field being edited, or null for a new field
  * @param notification The notification to extract fields from
- * @param onFieldAdded Called when a field is successfully added
+ * @param onFieldSaved Called when a field is successfully saved
  * @param onDismiss Called when the sheet should be dismissed
  * @param viewModel ViewModel for state management
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddFieldBottomSheet(
-    fieldId: String?,
+    fieldToEdit: RuleField?,
     notification: Notification?,
-    onFieldAdded: (ExtractionField) -> Unit,
+    onFieldSaved: (RuleField) -> Unit,
     onDismiss: () -> Unit,
     viewModel: AddFieldViewModel = hiltViewModel(),
 ) {
@@ -74,15 +94,15 @@ fun AddFieldBottomSheet(
     val scope = rememberCoroutineScope()
 
     // Initialize with sample text when shown
-    LaunchedEffect(fieldId, notification) {
-        viewModel.onEvent(UiEvent.Initialize(fieldId, notification))
+    LaunchedEffect(fieldToEdit, notification) {
+        viewModel.onEvent(UiEvent.Initialize(fieldToEdit, notification))
     }
 
     // Collect effects and handle them internally, calling appropriate callbacks
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
             is AddFieldContract.UiEffect.ReturnWithField -> {
-                onFieldAdded(effect.field)
+                onFieldSaved(effect.field)
             }
             is AddFieldContract.UiEffect.CancelAndReturn -> {
                 onDismiss()
@@ -129,7 +149,7 @@ private fun AddFieldBottomSheetContent(
     ) {
         // Header
         TopAppBar(
-            title = { Text("Add Field") },
+            title = { Text(if (uiState.fieldName.isBlank()) "Add Field" else "Edit Field") },
             navigationIcon = {
                 IconButton(onClick = { onEvent(UiEvent.OnCancelClicked) }) {
                     Icon(
@@ -151,7 +171,7 @@ private fun AddFieldBottomSheetContent(
         // Error message
         if (uiState.error != null) {
             Text(
-                text = uiState.error!!,
+                text = uiState.error,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -165,24 +185,6 @@ private fun AddFieldBottomSheetContent(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Sample Text Preview
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            ) {
-                Text(
-                    text = "Sample Text",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = uiState.sampleText,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-
             // Field Name Input
             OutlinedTextField(
                 value = uiState.fieldName,
@@ -196,20 +198,10 @@ private fun AddFieldBottomSheetContent(
             )
 
             // Method Type Selection
-            Text(
-                text = "Extraction Method",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Medium,
+            MethodTypeDropdown(
+                selectedMethodType = uiState.selectedMethodType,
+                onMethodTypeChange = { onEvent(UiEvent.OnMethodTypeChange(it)) },
             )
-
-            // Show all method types as radio buttons
-            AddFieldContract.MethodType.entries.forEach { methodType ->
-                MethodTypeOption(
-                    methodType = methodType,
-                    isSelected = uiState.selectedMethodType == methodType,
-                    onClick = { onEvent(UiEvent.OnMethodTypeChange(methodType)) },
-                )
-            }
 
             // Method-specific configuration based on selected type
             when (uiState.selectedMethodType) {
@@ -276,34 +268,84 @@ private fun AddFieldBottomSheetContent(
                         error = uiState.validationErrors["jsonPath"],
                     )
                 }
-                AddFieldContract.MethodType.SMART_AMOUNT,
-                AddFieldContract.MethodType.SMART_DATE,
-                -> {
-                    // No additional configuration needed for smart detection
+                AddFieldContract.MethodType.SMART_AMOUNT -> {
+                    SectionHeader(
+                        icon = Icons.Default.AttachMoney,
+                        title = "SMART DETECTION",
+                    )
                     Text(
-                        text = "This method will automatically detect the ${if (uiState.selectedMethodType == AddFieldContract.MethodType.SMART_AMOUNT) "amount" else "date"} in the text.",
+                        text = "This method will automatically detect currency amounts in the text.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                AddFieldContract.MethodType.SMART_DATE -> {
+                    SectionHeader(
+                        icon = Icons.Default.CalendarToday,
+                        title = "SMART DETECTION",
+                    )
+                    Text(
+                        text = "This method will automatically detect dates in the text.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
 
-            // Preview Section
+            // Preview Result Section (Notification Sample + Extracted Value)
             if (uiState.previewResult != AddFieldContract.PreviewResult.None) {
-                Spacer(modifier = Modifier.height(8.dp))
-                PreviewResultCard(result = uiState.previewResult)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    // Notification Sample with Highlighting
+                    val highlightStart = (uiState.previewResult as? AddFieldContract.PreviewResult.Success)?.startIndex ?: -1
+                    val highlightEnd = (uiState.previewResult as? AddFieldContract.PreviewResult.Success)?.endIndex ?: -1
+
+                    Text(
+                        text = "PREVIEW RESULT",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    // Notification Sample Card
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                        ) {
+                            Text(
+                                text = "Notification Sample:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            if (highlightStart >= 0 && highlightEnd > 0) {
+                                HighlightedText(
+                                    text = uiState.sampleText,
+                                    highlightStart = highlightStart,
+                                    highlightEnd = highlightEnd,
+                                )
+                            } else {
+                                Text(
+                                    text = uiState.sampleText,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        }
+                    }
+
+                    // Preview Result Card
+                    PreviewResultCard(result = uiState.previewResult)
+                }
             }
 
-            // Action Buttons
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedButton(
-                onClick = { onEvent(UiEvent.OnPreviewClicked) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isTesting,
-            ) {
-                Text(if (uiState.isTesting) "Testing..." else "Preview Extraction")
-            }
-
+            // Add Field Button
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = { onEvent(UiEvent.OnSaveClicked) },
@@ -312,40 +354,135 @@ private fun AddFieldBottomSheetContent(
             ) {
                 Text("Add Field")
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MethodTypeDropdown(
+    selectedMethodType: AddFieldContract.MethodType,
+    onMethodTypeChange: (AddFieldContract.MethodType) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = selectedMethodType.displayName,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Extraction Method") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            AddFieldContract.MethodType.entries.forEach { methodType ->
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text(
+                                text = methodType.displayName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Text(
+                                text = methodType.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    onClick = {
+                        onMethodTypeChange(methodType)
+                        expanded = false
+                    },
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun MethodTypeOption(
-    methodType: AddFieldContract.MethodType,
-    isSelected: Boolean,
-    onClick: () -> Unit,
+private fun SectionHeader(
+    icon: ImageVector,
+    title: String,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        RadioButton(
-            selected = isSelected,
-            onClick = onClick,
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(vertical = 4.dp),
         )
-        Column(modifier = Modifier.padding(start = 8.dp)) {
-            Text(
-                text = methodType.displayName,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-            )
-            Text(
-                text = methodType.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun HighlightedText(
+    text: String,
+    highlightStart: Int,
+    highlightEnd: Int,
+    modifier: Modifier = Modifier,
+) {
+    val annotatedText = buildAnnotatedString {
+        if (highlightStart >= 0 && highlightEnd > highlightStart && highlightStart < text.length) {
+            // Text before highlight
+            if (highlightStart > 0) {
+                append(text.substring(0, highlightStart))
+            }
+            // Highlighted portion
+            withStyle(
+                style = SpanStyle(
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Bold,
+                    background = MaterialTheme.colorScheme.primaryContainer,
+                ),
+            ) {
+                val end = highlightEnd.coerceAtMost(text.length)
+                append(text.substring(highlightStart, end))
+            }
+            // Text after highlight
+            if (highlightEnd < text.length) {
+                append(text.substring(highlightEnd.coerceAtMost(text.length)))
+            }
+        } else {
+            // No valid highlight, show plain text
+            append(text)
         }
     }
+
+    Text(
+        text = annotatedText,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -356,24 +493,33 @@ private fun FixedPositionConfig(
     onEndIndexChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        OutlinedTextField(
-            value = startIndex.toString(),
-            onValueChange = { onStartIndexChange(it.toIntOrNull() ?: 0) },
-            label = { Text("Start Index") },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
+        SectionHeader(
+            icon = Icons.Default.Straighten,
+            title = "POSITION",
         )
-        OutlinedTextField(
-            value = endIndex.toString(),
-            onValueChange = { onEndIndexChange(it.toIntOrNull() ?: 0) },
-            label = { Text("End Index") },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = startIndex.toString(),
+                onValueChange = { onStartIndexChange(it.toIntOrNull() ?: 0) },
+                label = { Text("Start Index") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = endIndex.toString(),
+                onValueChange = { onEndIndexChange(it.toIntOrNull() ?: 0) },
+                label = { Text("End Index") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+            )
+        }
     }
 }
 
@@ -390,6 +536,10 @@ private fun TextBetweenAnchorsConfig(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        SectionHeader(
+            icon = Icons.Default.HorizontalRule,
+            title = "ANCHORS",
+        )
         OutlinedTextField(
             value = startAnchor,
             onValueChange = onStartAnchorChange,
@@ -426,6 +576,10 @@ private fun RegexConfig(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        SectionHeader(
+            icon = Icons.Default.Code,
+            title = "REGEX PATTERN",
+        )
         OutlinedTextField(
             value = pattern,
             onValueChange = onPatternChange,
@@ -459,6 +613,10 @@ private fun TextAfterKeywordConfig(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        SectionHeader(
+            icon = Icons.Default.TextFields,
+            title = "KEYWORD",
+        )
         OutlinedTextField(
             value = keyword,
             onValueChange = onKeywordChange,
@@ -486,16 +644,25 @@ private fun TextBeforeKeywordConfig(
     error: String?,
     modifier: Modifier = Modifier,
 ) {
-    OutlinedTextField(
-        value = keyword,
-        onValueChange = onKeywordChange,
-        label = { Text("Keyword") },
-        placeholder = { Text("Text to search for") },
+    Column(
         modifier = modifier.fillMaxWidth(),
-        singleLine = true,
-        isError = error != null,
-        supportingText = error?.let { { Text(it) } },
-    )
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SectionHeader(
+            icon = Icons.Default.TextFields,
+            title = "KEYWORD",
+        )
+        OutlinedTextField(
+            value = keyword,
+            onValueChange = onKeywordChange,
+            label = { Text("Keyword") },
+            placeholder = { Text("Text to search for") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = error != null,
+            supportingText = error?.let { { Text(it) } },
+        )
+    }
 }
 
 @Composable
@@ -504,13 +671,22 @@ private fun LineExtractionConfig(
     onLineNumberChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    OutlinedTextField(
-        value = lineNumber.toString(),
-        onValueChange = { onLineNumberChange(it.toIntOrNull()?.coerceAtLeast(1) ?: 1) },
-        label = { Text("Line Number") },
+    Column(
         modifier = modifier.fillMaxWidth(),
-        singleLine = true,
-    )
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SectionHeader(
+            icon = Icons.AutoMirrored.Default.List,
+            title = "LINE",
+        )
+        OutlinedTextField(
+            value = lineNumber.toString(),
+            onValueChange = { onLineNumberChange(it.toIntOrNull()?.coerceAtLeast(1) ?: 1) },
+            label = { Text("Line Number") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+    }
 }
 
 @Composable
@@ -521,25 +697,34 @@ private fun SplitByDelimiterConfig(
     onTakeIndexChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        OutlinedTextField(
-            value = delimiter,
-            onValueChange = onDelimiterChange,
-            label = { Text("Delimiter") },
-            placeholder = { Text(",") },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
+        SectionHeader(
+            icon = Icons.AutoMirrored.Default.CallSplit,
+            title = "DELIMITER",
         )
-        OutlinedTextField(
-            value = takeIndex.toString(),
-            onValueChange = { onTakeIndexChange(it.toIntOrNull()?.coerceAtLeast(0) ?: 0) },
-            label = { Text("Take Index") },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = delimiter,
+                onValueChange = onDelimiterChange,
+                label = { Text("Delimiter") },
+                placeholder = { Text(",") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = takeIndex.toString(),
+                onValueChange = { onTakeIndexChange(it.toIntOrNull()?.coerceAtLeast(0) ?: 0) },
+                label = { Text("Take Index") },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+            )
+        }
     }
 }
 
@@ -550,16 +735,25 @@ private fun JsonPathConfig(
     error: String?,
     modifier: Modifier = Modifier,
 ) {
-    OutlinedTextField(
-        value = path,
-        onValueChange = onPathChange,
-        label = { Text("JSON Path") },
-        placeholder = { Text("e.g., $.amount") },
+    Column(
         modifier = modifier.fillMaxWidth(),
-        singleLine = true,
-        isError = error != null,
-        supportingText = error?.let { { Text(it) } },
-    )
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        SectionHeader(
+            icon = Icons.Default.DataObject,
+            title = "JSON PATH",
+        )
+        OutlinedTextField(
+            value = path,
+            onValueChange = onPathChange,
+            label = { Text("JSON Path") },
+            placeholder = { Text("e.g., $.amount") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            isError = error != null,
+            supportingText = error?.let { { Text(it) } },
+        )
+    }
 }
 
 @Composable
@@ -574,42 +768,64 @@ private fun PreviewResultCard(
     ) { targetResult ->
         when (targetResult) {
             is AddFieldContract.PreviewResult.Success -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.medium,
                 ) {
-                    Text(
-                        text = "Preview Result",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = targetResult.value,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column {
+                            Text(
+                                text = "EXTRACTED VALUE",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = targetResult.value,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
                 }
             }
             is AddFieldContract.PreviewResult.Failure -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = MaterialTheme.shapes.medium,
                 ) {
-                    Text(
-                        text = "Extraction Failed",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = targetResult.reason,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    ) {
+                        Text(
+                            text = "EXTRACTION FAILED",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = targetResult.reason,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
                 }
             }
             else -> {}
@@ -623,11 +839,16 @@ private fun AddFieldBottomSheetContentPreview() {
     NotificappTheme {
         AddFieldBottomSheetContent(
             uiState = UiState(
-                sampleText = "Your order total is $123.45",
+                sampleText = "Your purchase of 153,50 kr at ICA Supermarket was successful.",
                 fieldName = "Amount",
-                selectedMethodType = AddFieldContract.MethodType.REGEX,
-                regexPattern = "\\$([0-9]+\\.?[0-9]*)",
-                previewResult = AddFieldContract.PreviewResult.Success("123.45"),
+                selectedMethodType = AddFieldContract.MethodType.TEXT_BETWEEN_ANCHORS,
+                startAnchor = "purchase of ",
+                endAnchor = " kr",
+                previewResult = AddFieldContract.PreviewResult.Success(
+                    value = "153,50",
+                    startIndex = 16,
+                    endIndex = 22,
+                ),
             ),
             onEvent = {},
             onClose = {},

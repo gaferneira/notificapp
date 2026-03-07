@@ -7,7 +7,7 @@ import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
-import dev.gaferneira.notificapp.domain.model.ExtractionRule
+import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ApplicableRule
@@ -161,7 +161,7 @@ class NotificationDetailViewModel @Inject constructor(
      * Check if a rule applies to this notification.
      */
     private fun isRuleApplicable(
-        rule: ExtractionRule,
+        rule: Rule,
         packageName: String,
         notification: dev.gaferneira.notificapp.domain.model.Notification,
     ): Boolean {
@@ -182,13 +182,7 @@ class NotificationDetailViewModel @Inject constructor(
             notification.rawContent,
         ).joinToString(" ")
 
-        return try {
-            val regex = Regex(rule.pattern, RegexOption.IGNORE_CASE)
-            regex.containsMatchIn(contentToCheck)
-        } catch (e: Exception) {
-            // Invalid regex, treat as non-matching
-            false
-        }
+        return false
     }
 
     /**

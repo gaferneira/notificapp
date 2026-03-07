@@ -56,7 +56,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
+import dev.gaferneira.notificapp.domain.model.AppInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -68,9 +68,9 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AppSelectionPicker(
     isVisible: Boolean,
-    selectedApps: List<MatchingLogicContract.AppInfo>,
+    selectedApps: List<AppInfo>,
     onDismiss: () -> Unit,
-    onConfirm: (List<MatchingLogicContract.AppInfo>) -> Unit,
+    onConfirm: (List<AppInfo>) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -224,7 +224,7 @@ fun AppSelectionPicker(
                     onClick = {
                         val selectedAppInfos = availableApps
                             .filter { tempSelectedPackages.contains(it.packageName) }
-                            .map { MatchingLogicContract.AppInfo(it.packageName, it.name) }
+                            .map { AppInfo(it.packageName, it.name) }
                         onConfirm(selectedAppInfos)
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -362,8 +362,8 @@ private fun AppSelectionPickerPreview() {
         AppSelectionPicker(
             isVisible = true,
             selectedApps = listOf(
-                MatchingLogicContract.AppInfo("com.whatsapp", "WhatsApp"),
-                MatchingLogicContract.AppInfo("com.telegram", "Telegram"),
+                AppInfo("com.whatsapp", "WhatsApp"),
+                AppInfo("com.telegram", "Telegram"),
             ),
             onDismiss = {},
             onConfirm = {},

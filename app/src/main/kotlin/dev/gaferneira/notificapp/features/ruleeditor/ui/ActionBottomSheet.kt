@@ -43,9 +43,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ActionBottomSheetContract
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionType
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ActionBottomSheetViewModel
 
 /**
@@ -53,11 +53,8 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ActionBottomSheet
  * Uses its own MVI ViewModel for state management.
  * Supports both adding new actions and editing existing ones.
  *
- * @param isVisible Whether the bottom sheet is visible
- * @param editingActionId The ID of the action being edited, or null for new action
  * @param initialAction Pre-populated action data when editing, or null for new action
- * @param onActionAdded Called when a new action is created
- * @param onActionUpdated Called when an existing action is updated
+ * @param onActionSaved Called when an action is saved (new or updated)
  * @param onDismiss Called when the sheet should be dismissed
  * @param modifier Modifier for the bottom sheet
  * @param viewModel The ViewModel for this bottom sheet (injected by default)
@@ -65,29 +62,20 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ActionBottomSheet
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionBottomSheet(
-    isVisible: Boolean,
-    editingActionId: String? = null,
-    initialAction: ActionUiModel? = null,
-    onActionAdded: (ActionUiModel) -> Unit,
-    onActionUpdated: (actionId: String, action: ActionUiModel) -> Unit,
+    initialAction: RuleAction? = null,
+    onActionSaved: (RuleAction) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ActionBottomSheetViewModel = hiltViewModel(),
 ) {
-    if (!isVisible) return
-
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Initialize for edit mode when editingActionId changes
-    LaunchedEffect(editingActionId, initialAction) {
-        if (editingActionId != null && initialAction != null) {
+    // Initialize for edit mode when initialAction changes
+    LaunchedEffect(initialAction) {
+        if (initialAction != null) {
             viewModel.onEvent(
-                ActionBottomSheetContract.UiEvent.InitForEdit(
-                    actionId = editingActionId,
-                    actionType = initialAction.type,
-                    isEnabled = initialAction.isEnabled,
-                ),
+                ActionBottomSheetContract.UiEvent.InitForEdit(initialAction),
             )
         }
     }
@@ -96,10 +84,10 @@ fun ActionBottomSheet(
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
             is ActionBottomSheetContract.UiEffect.ActionCreated -> {
-                onActionAdded(effect.action)
+                onActionSaved(effect.action)
             }
             is ActionBottomSheetContract.UiEffect.ActionUpdated -> {
-                onActionUpdated(effect.actionId, effect.action)
+                onActionSaved(effect.action)
             }
             is ActionBottomSheetContract.UiEffect.Dismiss -> {
                 onDismiss()

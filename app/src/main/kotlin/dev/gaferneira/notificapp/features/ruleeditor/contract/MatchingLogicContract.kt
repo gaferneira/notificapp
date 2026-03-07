@@ -1,9 +1,10 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
-import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract.AppInfo
-import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract.MatchingCondition
-import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract.MatchingOperator
-import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract.TriggerType
+import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.MatchingCondition
+import dev.gaferneira.notificapp.domain.model.MatchingOperator
+import dev.gaferneira.notificapp.domain.model.RuleTrigger
+import dev.gaferneira.notificapp.domain.model.TriggerType
 
 /**
  * MVI Contract for the MatchingLogicBottomSheet.
@@ -44,14 +45,7 @@ object MatchingLogicContract {
      */
     sealed class UiEvent {
         /** Initialize the sheet for editing an existing trigger */
-        data class InitForEdit(
-            val triggerId: String,
-            val triggerType: TriggerType,
-            val condition: MatchingCondition?,
-            val operator: MatchingOperator?,
-            val value: String?,
-            val selectedApps: List<AppInfo>,
-        ) : UiEvent()
+        data class InitForEdit(val trigger: RuleTrigger) : UiEvent()
 
         /** Change trigger type between CONDITION and APP */
         data class OnTriggerTypeChange(val triggerType: TriggerType) : UiEvent()
@@ -92,10 +86,10 @@ object MatchingLogicContract {
      */
     sealed class UiEffect {
         /** New trigger created */
-        data class TriggerCreated(val trigger: TriggerUiModel) : UiEffect()
+        data class TriggerCreated(val trigger: RuleTrigger) : UiEffect()
 
         /** Existing trigger updated */
-        data class TriggerUpdated(val triggerId: String, val trigger: TriggerUiModel) : UiEffect()
+        data class TriggerUpdated(val triggerId: String, val trigger: RuleTrigger) : UiEffect()
 
         /** Dismiss the sheet */
         data object Dismiss : UiEffect()
@@ -103,72 +97,15 @@ object MatchingLogicContract {
         /** Show error message */
         data class ShowError(val message: String) : UiEffect()
     }
-
-    /**
-     * Type of trigger.
-     */
-    enum class TriggerType {
-        CONDITION,
-        APP,
-    }
-
-    /**
-     * What to match against in the notification.
-     */
-    enum class MatchingCondition {
-        TEXT_CONTENT,
-        TITLE,
-        APP_NAME,
-        PACKAGE_NAME,
-        RAW_CONTENT,
-    }
-
-    /**
-     * How to perform the match.
-     */
-    enum class MatchingOperator {
-        CONTAINS,
-        STARTS_WITH,
-        ENDS_WITH,
-        EQUALS,
-        REGEX_MATCH,
-        NOT_CONTAINS,
-    }
-
-    /**
-     * App information for trigger selection.
-     */
-    data class AppInfo(val packageName: String, val name: String)
-}
-
-data class TriggerUiModel(
-    val id: String,
-    val type: TriggerType,
-    val condition: MatchingCondition? = null,
-    val operator: MatchingOperator? = null,
-    val value: String? = null,
-    val selectedApps: List<AppInfo> = emptyList(),
-) {
-    val displayText: String
-        get() = when (type) {
-            TriggerType.CONDITION -> "${condition?.displayName()} ${operator?.displayName()} '$value'"
-            TriggerType.APP -> if (selectedApps.isEmpty()) {
-                "All apps selected"
-            } else if (selectedApps.size == 1) {
-                "App is ${selectedApps.first().name}"
-            } else {
-                "${selectedApps.size} apps selected"
-            }
-        }
 }
 
 // Extension functions for display names
 internal fun MatchingCondition.displayName(): String = when (this) {
     MatchingCondition.TEXT_CONTENT -> "Text"
     MatchingCondition.TITLE -> "Title"
-    MatchingCondition.APP_NAME -> "App name"
-    MatchingCondition.PACKAGE_NAME -> "Package"
-    MatchingCondition.RAW_CONTENT -> "Raw content"
+    MatchingCondition.APP_NAME -> "App Name"
+    MatchingCondition.PACKAGE_NAME -> "Package Name"
+    MatchingCondition.RAW_CONTENT -> "Raw Content"
 }
 
 internal fun MatchingOperator.displayName(): String = when (this) {
@@ -176,6 +113,6 @@ internal fun MatchingOperator.displayName(): String = when (this) {
     MatchingOperator.STARTS_WITH -> "starts with"
     MatchingOperator.ENDS_WITH -> "ends with"
     MatchingOperator.EQUALS -> "equals"
-    MatchingOperator.REGEX_MATCH -> "matches"
-    MatchingOperator.NOT_CONTAINS -> "doesn't contain"
+    MatchingOperator.REGEX_MATCH -> "matches regex"
+    MatchingOperator.NOT_CONTAINS -> "does not contain"
 }

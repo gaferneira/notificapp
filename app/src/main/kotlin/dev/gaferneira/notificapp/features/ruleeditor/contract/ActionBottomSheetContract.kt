@@ -1,7 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionType
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
+import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.RuleAction
 
 /**
  * MVI Contract for the ActionBottomSheet.
@@ -34,7 +34,7 @@ object ActionBottomSheetContract {
      */
     sealed class UiEvent {
         /** Initialize the sheet for editing an existing action */
-        data class InitForEdit(val actionId: String, val actionType: ActionType, val isEnabled: Boolean) : UiEvent()
+        data class InitForEdit(val action: RuleAction) : UiEvent()
 
         /** Update action type */
         data class OnActionTypeChange(val actionType: ActionType) : UiEvent()
@@ -54,10 +54,10 @@ object ActionBottomSheetContract {
      */
     sealed class UiEffect {
         /** New action created */
-        data class ActionCreated(val action: ActionUiModel) : UiEffect()
+        data class ActionCreated(val action: RuleAction) : UiEffect()
 
         /** Existing action updated */
-        data class ActionUpdated(val actionId: String, val action: ActionUiModel) : UiEffect()
+        data class ActionUpdated(val actionId: String, val action: RuleAction) : UiEffect()
 
         /** Dismiss the sheet */
         data object Dismiss : UiEffect()

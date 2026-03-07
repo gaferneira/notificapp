@@ -1,9 +1,12 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
-import dev.gaferneira.notificapp.domain.model.ExtractionField
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.Notification
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ExtractionFieldUiModel
+import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.RuleTrigger
+import dev.gaferneira.notificapp.domain.model.TriggerType
+import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
 
 /**
  * MVI Contract for the Rule Editor screen.
@@ -19,26 +22,8 @@ object RuleEditorContract {
     data class UiState(
         /** Current step in the wizard (1 = Logic, 2 = Metadata) */
         val currentStep: Int = 1,
-        /** Rule ID - null for new rules */
-        val ruleId: String? = null,
-        /** Rule name */
-        val name: String = "",
-        /** Rule description */
-        val description: String = "",
-        /** Rule category */
-        val category: String = "",
-        /** Rule area */
-        val area: String = "",
-        /** Whether this is a global rule (applies to all apps) */
-        val isGlobalRule: Boolean = true,
-        /** Target app package names (null = all apps) */
-        val targetApps: List<String> = emptyList(),
-        /** List of configured triggers */
-        val triggers: List<TriggerUiModel> = emptyList(),
-        /** List of configured actions */
-        val actions: List<ActionUiModel> = emptyList(),
-        /** Fields to extract (only for SAVE_DATA action) */
-        val extractionFields: List<ExtractionFieldUiModel> = emptyList(),
+        /** Rule being edited */
+        val rule: RuleUiModel = RuleUiModel(),
         /** Sample notification for testing */
         val sampleNotification: Notification? = null,
         /** Whether currently loading */
@@ -51,31 +36,40 @@ object RuleEditorContract {
         val isMatchingLogicSheetVisible: Boolean = false,
         /** Whether action bottom sheet is visible */
         val isActionSheetVisible: Boolean = false,
+        /** Whether field bottom sheet is visible */
         val isFieldSheetVisible: Boolean = false,
         /** ID of the trigger currently being edited in the bottom sheet, or null for new trigger */
         val editingTriggerId: String? = null,
         /** ID of the action currently being edited in the bottom sheet, or null for new action */
         val editingActionId: String? = null,
-        /** ID of the field currently being edited in the bottom sheet, or null for new action */
+        /** ID of the field currently being edited in the bottom sheet, or null for new field */
         val editingFieldId: String? = null,
+        /** Whether to show the description field (true if description is not empty) */
+        val showDescription: Boolean = false,
+        /** Whether to show the category field (true if category is not empty) */
+        val showCategory: Boolean = false,
     ) {
         /** Whether the form is valid */
         val isValid: Boolean
-            get() = name.isNotBlank() &&
+            get() = rule.name.isNotBlank() &&
                 validationErrors.isEmpty()
 
         /** Whether we can test extraction */
         val canTestExtraction: Boolean
             get() = sampleNotification != null &&
-                extractionFields.isNotEmpty()
+                rule.extractionFields.isNotEmpty()
 
         /** Get the trigger being edited, if any */
-        val editingTrigger: TriggerUiModel?
-            get() = editingTriggerId?.let { id -> triggers.find { it.id == id } }
+        val editingTrigger: RuleTrigger?
+            get() = editingTriggerId?.let { id -> rule.triggers.find { it.id == id } }
 
         /** Get the action being edited, if any */
-        val editingAction: ActionUiModel?
-            get() = editingActionId?.let { id -> actions.find { it.id == id } }
+        val editingAction: RuleAction?
+            get() = editingActionId?.let { id -> rule.actions.find { it.id == id } }
+
+        /** Get the field being edited, if any */
+        val editingField: RuleField?
+            get() = editingFieldId?.let { id -> rule.extractionFields.find { it.id == id } }
     }
 
     /**
@@ -100,8 +94,14 @@ object RuleEditorContract {
         /** Update rule description */
         data class OnDescriptionChange(val description: String) : UiEvent()
 
+        /** Show description field */
+        data object OnAddDescriptionClicked : UiEvent()
+
         /** Update rule category */
         data class OnCategoryChange(val category: String) : UiEvent()
+
+        /** Show category field */
+        data object OnAddCategoryClicked : UiEvent()
 
         /** Update rule area */
         data class OnAreaChange(val area: String) : UiEvent()
@@ -136,27 +136,21 @@ object RuleEditorContract {
         /** Add a new extraction field */
         data object OnAddFieldClicked : UiEvent()
 
+        /** Edit an existing extraction field */
+        data class OnEditFieldClicked(val fieldId: String) : UiEvent()
+
         /** Remove an extraction field */
         data class OnRemoveFieldClicked(val fieldId: String) : UiEvent()
 
         /** Add field result returned from AddFieldScreen */
-        data class OnFieldAdded(val field: ExtractionField) : UiEvent()
+        data class OnFieldSaved(val field: RuleField) : UiEvent()
         data object OnDismissSheet : UiEvent()
 
-        /** Trigger added from MatchingLogicBottomSheet */
-        data class OnTriggerAdded(val trigger: TriggerUiModel) : UiEvent()
+        /** Trigger saved from MatchingLogicBottomSheet (add or update) */
+        data class OnTriggerSaved(val trigger: RuleTrigger) : UiEvent()
 
-        /** Trigger updated from MatchingLogicBottomSheet */
-        data class OnTriggerUpdated(val triggerId: String, val trigger: TriggerUiModel) : UiEvent()
-
-        /** Action added from ActionBottomSheet */
-        data class OnActionAdded(val action: ActionUiModel) : UiEvent()
-
-        /** Action updated from ActionBottomSheet */
-        data class OnActionUpdated(val actionId: String, val action: ActionUiModel) : UiEvent()
-
-        /** Test extraction on sample notification */
-        data object OnTestExtractionClicked : UiEvent()
+        /** Action saved from ActionBottomSheet (add or update) */
+        data class OnActionSaved(val action: RuleAction) : UiEvent()
 
         /** Save the rule */
         data object OnSaveClicked : UiEvent()
@@ -179,3 +173,22 @@ object RuleEditorContract {
         data class ShowError(val message: String) : UiEffect()
     }
 }
+
+val RuleTrigger.displayText: String
+    get() = when (type) {
+        TriggerType.CONDITION -> "${condition?.displayName()} ${operator?.displayName()} '$value'"
+        TriggerType.APP -> if (targetApps.isEmpty()) {
+            "All apps selected"
+        } else if (targetApps.size == 1) {
+            "App is ${targetApps.first().name}"
+        } else {
+            "${targetApps.size} apps selected"
+        }
+    }
+
+val RuleAction.displayName: String
+    get() = when (type) {
+        ActionType.SAVE_DATA -> "Save to Data tab"
+        ActionType.DELETE_NOTIFICATION -> "Delete notification"
+        ActionType.CREATE_ALARM -> "Create alarm"
+    }

@@ -11,9 +11,9 @@ import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
+import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
-import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEffect
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEvent
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiState
@@ -114,7 +114,7 @@ class AppSelectionViewModel @Inject constructor(
                 // Sort apps initially: selected first (alphabetically), then unselected (alphabetically)
                 // This creates a stable order that won't change during selection
                 val sortedApps = installedApps.sortedWith(
-                    compareByDescending<AppSelectionContract.AppInfo> { selectedPackages.contains(it.packageName) }
+                    compareByDescending<AppInfo> { selectedPackages.contains(it.packageName) }
                         .thenBy { it.name.lowercase() },
                 )
 
@@ -148,8 +148,8 @@ class AppSelectionViewModel @Inject constructor(
      * Load apps that have notification capability.
      * Uses queryIntentActivities to work correctly on Android 11+ with package visibility restrictions.
      */
-    private fun loadAppsWithNotifications(packageManager: PackageManager): List<AppSelectionContract.AppInfo> {
-        val apps = mutableListOf<AppSelectionContract.AppInfo>()
+    private fun loadAppsWithNotifications(packageManager: PackageManager): List<AppInfo> {
+        val apps = mutableListOf<AppInfo>()
         val seenPackages = mutableSetOf<String>()
 
         // Query all apps that can handle MAIN/LAUNCHER intent
@@ -232,7 +232,7 @@ class AppSelectionViewModel @Inject constructor(
                 }
 
                 apps.add(
-                    AppSelectionContract.AppInfo(
+                    AppInfo(
                         packageName = packageName,
                         name = appName,
                         category = category,

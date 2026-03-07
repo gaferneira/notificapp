@@ -67,7 +67,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract
+import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEffect
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEvent
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiState
@@ -414,7 +414,7 @@ private fun SearchField(
  */
 @Composable
 private fun AppList(
-    apps: List<AppSelectionContract.AppInfo>,
+    apps: List<AppInfo>,
     selectedPackages: Set<String>,
     onAppToggled: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -445,7 +445,7 @@ private fun AppList(
  */
 @Composable
 private fun AppListItem(
-    app: AppSelectionContract.AppInfo,
+    app: AppInfo,
     isSelected: Boolean,
     onToggled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -703,12 +703,12 @@ private fun AppSelectionScreenInitialSetupPreview() {
         AppSelectionScreenContent(
             uiState = UiState(
                 availableApps = listOf(
-                    AppSelectionContract.AppInfo("com.google.android.gm", "Gmail", "Email"),
-                    AppSelectionContract.AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
-                    AppSelectionContract.AppInfo("com.revolut.revolut", "Revolut", "Financial"),
-                    AppSelectionContract.AppInfo("com.amazon.mShop.android.shopping", "Amazon", "Shopping"),
-                    AppSelectionContract.AppInfo("com.microsoft.office.outlook", "Outlook", "Email"),
-                    AppSelectionContract.AppInfo("com.uber", "Uber", null),
+                    AppInfo("com.google.android.gm", "Gmail", "Email"),
+                    AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
+                    AppInfo("com.revolut.revolut", "Revolut", "Financial"),
+                    AppInfo("com.amazon.mShop.android.shopping", "Amazon", "Shopping"),
+                    AppInfo("com.microsoft.office.outlook", "Outlook", "Email"),
+                    AppInfo("com.uber", "Uber", null),
                 ),
                 selectedPackageNames = setOf("com.google.android.gm"),
                 isLoading = false,
@@ -726,9 +726,9 @@ private fun AppSelectionScreenFromSettingsPreview() {
         AppSelectionScreenContent(
             uiState = UiState(
                 availableApps = listOf(
-                    AppSelectionContract.AppInfo("com.google.android.gm", "Gmail", "Email"),
-                    AppSelectionContract.AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
-                    AppSelectionContract.AppInfo("com.revolut.revolut", "Revolut", "Financial"),
+                    AppInfo("com.google.android.gm", "Gmail", "Email"),
+                    AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
+                    AppInfo("com.revolut.revolut", "Revolut", "Financial"),
                 ),
                 selectedPackageNames = setOf("com.google.android.gm", "com.whatsapp"),
                 isLoading = false,

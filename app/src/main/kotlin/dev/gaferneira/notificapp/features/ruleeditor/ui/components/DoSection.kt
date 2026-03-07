@@ -31,8 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionType
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
+import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.features.ruleeditor.contract.displayName
 
 /**
  * The "Do" section showing configured actions.
@@ -40,7 +41,7 @@ import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
  */
 @Composable
 fun DoSection(
-    actions: List<ActionUiModel>,
+    actions: List<RuleAction>,
     onToggleAction: (String, Boolean) -> Unit,
     onRemoveAction: (String) -> Unit,
     onEditAction: (String) -> Unit,
@@ -78,7 +79,7 @@ fun DoSection(
 
 @Composable
 private fun ActionCard(
-    action: ActionUiModel,
+    action: RuleAction,
     onToggle: () -> Unit,
     onRemove: () -> Unit,
     onClick: () -> Unit,
@@ -162,12 +163,12 @@ private fun DoSectionPreview() {
     NotificappTheme {
         DoSection(
             actions = listOf(
-                ActionUiModel(
+                RuleAction(
                     id = "1",
                     type = ActionType.SAVE_DATA,
                     isEnabled = true,
                 ),
-                ActionUiModel(
+                RuleAction(
                     id = "2",
                     type = ActionType.CREATE_ALARM,
                     isEnabled = false,

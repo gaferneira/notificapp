@@ -1,5 +1,7 @@
 package dev.gaferneira.notificapp.features.appselection.contract
 
+import dev.gaferneira.notificapp.domain.model.AppInfo
+
 /**
  * Contract for the App Selection screen.
  *
@@ -60,18 +62,6 @@ object AppSelectionContract {
         val selectedCount: Int
             get() = selectedPackageNames.size
     }
-
-    /**
-     * Information about an installed app.
-     */
-    data class AppInfo(
-        /** Package name (unique identifier) */
-        val packageName: String,
-        /** Display name of the app */
-        val name: String,
-        /** App category or type (optional) */
-        val category: String? = null,
-    )
 
     /**
      * UI Events from user interactions.

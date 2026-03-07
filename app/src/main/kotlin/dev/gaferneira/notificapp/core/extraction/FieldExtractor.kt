@@ -1,7 +1,7 @@
 package dev.gaferneira.notificapp.core.extraction
 
-import dev.gaferneira.notificapp.domain.model.ExtractionField
-import dev.gaferneira.notificapp.domain.model.ExtractionMethod
+import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 
 /**
  * Pure Kotlin extraction engine for extracting fields from notification text.
@@ -16,7 +16,7 @@ object FieldExtractor {
      * @param field The extraction field configuration
      * @return ExtractionResult containing the extracted value or failure reason
      */
-    fun extract(text: String, field: ExtractionField): ExtractionResult = try {
+    fun extract(text: String, field: RuleField): ExtractionResult = try {
         when (val method = field.method) {
             is ExtractionMethod.FixedPosition -> extractFixedPosition(text, method)
             is ExtractionMethod.TextBetweenAnchors -> extractTextBetweenAnchors(text, method)
@@ -41,7 +41,11 @@ object FieldExtractor {
             return ExtractionResult.Failure("Start index beyond text length")
         }
 
-        return ExtractionResult.Success(text.substring(safeStart, safeEnd))
+        return ExtractionResult.Success(
+            value = text.substring(safeStart, safeEnd),
+            startIndex = safeStart,
+            endIndex = safeEnd,
+        )
     }
 
     private fun extractTextBetweenAnchors(text: String, method: ExtractionMethod.TextBetweenAnchors): ExtractionResult {
@@ -56,7 +60,15 @@ object FieldExtractor {
             return ExtractionResult.Failure("End anchor not found: ${method.endAnchor}")
         }
 
-        return ExtractionResult.Success(text.substring(afterStart, endIndex).trim())
+        val extractedValue = text.substring(afterStart, endIndex).trim()
+        // Find the actual start of the trimmed value (skip leading whitespace)
+        val actualStart = afterStart + (text.substring(afterStart, endIndex).length - extractedValue.length)
+
+        return ExtractionResult.Success(
+            value = extractedValue,
+            startIndex = actualStart,
+            endIndex = actualStart + extractedValue.length,
+        )
     }
 
     private fun extractWithRegex(text: String, method: ExtractionMethod.RegexPattern): ExtractionResult {
@@ -65,9 +77,15 @@ object FieldExtractor {
 
         return if (match != null) {
             val groupIndex = method.captureGroup.coerceIn(0, match.groupValues.size - 1)
-            val value = match.groupValues.getOrNull(groupIndex)
+            val group = match.groups[groupIndex]
                 ?: return ExtractionResult.Failure("Capture group $groupIndex not found")
-            ExtractionResult.Success(value)
+            val value = group.value
+            val range = group.range
+            ExtractionResult.Success(
+                value = value,
+                startIndex = range.first,
+                endIndex = range.last + 1,
+            )
         } else {
             ExtractionResult.Failure("Pattern did not match")
         }
@@ -80,13 +98,20 @@ object FieldExtractor {
         }
 
         val afterKeyword = index + method.keyword.length
-        var result = text.substring(afterKeyword)
+        val maxLength = method.maxLength
+        val rawResult = text.substring(afterKeyword)
+        val result = if (maxLength != null) rawResult.take(maxLength) else rawResult
+        val trimmedResult = result.trim()
 
-        method.maxLength?.let { max ->
-            result = result.take(max)
-        }
+        // Calculate actual start after whitespace
+        val leadingWhitespace = result.length - result.trimStart().length
+        val actualStart = afterKeyword + leadingWhitespace
 
-        return ExtractionResult.Success(result.trim())
+        return ExtractionResult.Success(
+            value = trimmedResult,
+            startIndex = actualStart,
+            endIndex = actualStart + trimmedResult.length,
+        )
     }
 
     private fun extractTextBeforeKeyword(text: String, method: ExtractionMethod.TextBeforeKeyword): ExtractionResult {
@@ -95,7 +120,15 @@ object FieldExtractor {
             return ExtractionResult.Failure("Keyword not found: ${method.keyword}")
         }
 
-        return ExtractionResult.Success(text.substring(0, index).trim())
+        val rawResult = text.substring(0, index)
+        val trimmedResult = rawResult.trim()
+        val trailingWhitespace = rawResult.length - rawResult.trimEnd().length
+
+        return ExtractionResult.Success(
+            value = trimmedResult,
+            startIndex = index - trimmedResult.length - trailingWhitespace,
+            endIndex = index - trailingWhitespace,
+        )
     }
 
     private fun extractLine(text: String, method: ExtractionMethod.LineExtraction): ExtractionResult {
@@ -103,7 +136,17 @@ object FieldExtractor {
         val lineNumber = method.lineNumber.coerceAtLeast(1)
 
         return if (lineNumber <= lines.size) {
-            ExtractionResult.Success(lines[lineNumber - 1].trim())
+            val targetLine = lines[lineNumber - 1]
+            val startIndex = lines.take(lineNumber - 1).joinToString("\n").let { if (it.isEmpty()) 0 else it.length + 1 }
+            val trimmedLine = targetLine.trim()
+            val leadingWhitespace = targetLine.length - targetLine.trimStart().length
+            val actualStart = startIndex + leadingWhitespace
+
+            ExtractionResult.Success(
+                value = trimmedLine,
+                startIndex = actualStart,
+                endIndex = actualStart + trimmedLine.length,
+            )
         } else {
             ExtractionResult.Failure("Line $lineNumber not found (text has ${lines.size} lines)")
         }
@@ -112,8 +155,20 @@ object FieldExtractor {
     private fun extractSplitByDelimiter(text: String, method: ExtractionMethod.SplitByDelimiter): ExtractionResult {
         val parts = text.split(method.delimiter)
         val index = method.takeIndex.coerceIn(0, parts.size - 1)
+        val targetPart = parts[index]
+        val trimmedPart = targetPart.trim()
 
-        return ExtractionResult.Success(parts[index].trim())
+        // Calculate position
+        val beforeParts = parts.take(index)
+        val startIndex = beforeParts.joinToString(method.delimiter).let { if (it.isEmpty()) 0 else it.length + method.delimiter.length }
+        val leadingWhitespace = targetPart.length - targetPart.trimStart().length
+        val actualStart = startIndex + leadingWhitespace
+
+        return ExtractionResult.Success(
+            value = trimmedPart,
+            startIndex = actualStart,
+            endIndex = actualStart + trimmedPart.length,
+        )
     }
 
     private fun extractJsonPath(text: String, method: ExtractionMethod.JsonPath): ExtractionResult {
@@ -147,7 +202,11 @@ object FieldExtractor {
         val match = amountRegex.find(text)
 
         return if (match != null) {
-            ExtractionResult.Success(match.value.trim())
+            ExtractionResult.Success(
+                value = match.value.trim(),
+                startIndex = match.range.first,
+                endIndex = match.range.last + 1,
+            )
         } else {
             ExtractionResult.Failure("No amount detected")
         }
@@ -166,7 +225,11 @@ object FieldExtractor {
         for (pattern in datePatterns) {
             val match = pattern.find(text)
             if (match != null) {
-                return ExtractionResult.Success(match.value)
+                return ExtractionResult.Success(
+                    value = match.value,
+                    startIndex = match.range.first,
+                    endIndex = match.range.last + 1,
+                )
             }
         }
 
@@ -357,9 +420,21 @@ object FieldExtractor {
  */
 sealed class ExtractionResult {
     /**
-     * Successful extraction with the extracted value.
+     * Successful extraction with the extracted value and position info.
+     * @param value The extracted text
+     * @param startIndex The start index of the extracted text in the original text (inclusive)
+     * @param endIndex The end index of the extracted text in the original text (exclusive)
      */
-    data class Success(val value: String) : ExtractionResult()
+    data class Success(
+        val value: String,
+        val startIndex: Int = -1,
+        val endIndex: Int = -1,
+    ) : ExtractionResult() {
+        /**
+         * Whether position information is available for highlighting.
+         */
+        val hasPosition: Boolean get() = startIndex >= 0 && endIndex > startIndex
+    }
 
     /**
      * Failed extraction with the reason for failure.

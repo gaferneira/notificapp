@@ -9,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.gaferneira.notificapp.core.data.local.AppDatabase
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
+import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
 import javax.inject.Singleton
 
@@ -32,9 +33,6 @@ object DatabaseModule {
         AppDatabase::class.java,
         "notificapp_database",
     )
-        // For development, allow destructive migration
-        // In production, add proper migrations
-        .fallbackToDestructiveMigration()
         .build()
 
     /**
@@ -54,4 +52,13 @@ object DatabaseModule {
      */
     @Provides
     fun provideNotificationDao(database: AppDatabase): NotificationDao = database.notificationDao()
+
+    /**
+     * Provides the RuleDao.
+     *
+     * @param database AppDatabase instance
+     * @return RuleDao
+     */
+    @Provides
+    fun provideRuleDao(database: AppDatabase): RuleDao = database.ruleDao()
 }

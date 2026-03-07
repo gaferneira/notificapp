@@ -1,8 +1,9 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
-import dev.gaferneira.notificapp.domain.model.ExtractionField
-import dev.gaferneira.notificapp.domain.model.ExtractionMethod
 import dev.gaferneira.notificapp.domain.model.Notification
+import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
+import java.util.UUID
 
 /**
  * MVI Contract for the Add Field screen.
@@ -69,6 +70,30 @@ object AddFieldContract {
         val isValid: Boolean
             get() = fieldName.isNotBlank() && validationErrors.isEmpty()
 
+        /**
+         * Whether all required fields for the current method are filled,
+         * allowing preview extraction and highlighting.
+         */
+        val canPreview: Boolean
+            get() = when (selectedMethodType) {
+                MethodType.FIXED_POSITION -> true // Always has valid defaults
+                MethodType.TEXT_BETWEEN_ANCHORS ->
+                    startAnchor.isNotBlank() && endAnchor.isNotBlank()
+                MethodType.REGEX ->
+                    regexPattern.isNotBlank()
+                MethodType.TEXT_AFTER_KEYWORD ->
+                    afterKeyword.isNotBlank()
+                MethodType.TEXT_BEFORE_KEYWORD ->
+                    beforeKeyword.isNotBlank()
+                MethodType.LINE_EXTRACTION -> true // Always has valid default
+                MethodType.SPLIT_BY_DELIMITER -> true // Always has valid defaults
+                MethodType.JSON_PATH ->
+                    jsonPath.isNotBlank()
+                MethodType.SMART_AMOUNT,
+                MethodType.SMART_DATE,
+                -> true // No required input fields
+            }
+
         /** Build ExtractionMethod from current parameters */
         val extractionMethod: ExtractionMethod
             get() = when (selectedMethodType) {
@@ -105,11 +130,11 @@ object AddFieldContract {
                 MethodType.SMART_DATE -> ExtractionMethod.SmartDateDetection
             }
 
-        /** Build ExtractionField from current state */
-        val extractionField: ExtractionField
-            get() = ExtractionField(
+        /** Build RuleField from current state */
+        val extractionField: RuleField
+            get() = RuleField(
+                id = UUID.randomUUID().toString(),
                 name = fieldName.trim(),
-                description = null,
                 method = extractionMethod,
                 isRequired = false,
             )
@@ -166,7 +191,13 @@ object AddFieldContract {
      */
     sealed class PreviewResult {
         data object None : PreviewResult()
-        data class Success(val value: String) : PreviewResult()
+        data class Success(
+            val value: String,
+            val startIndex: Int = -1,
+            val endIndex: Int = -1,
+        ) : PreviewResult() {
+            val hasPosition: Boolean get() = startIndex >= 0 && endIndex > startIndex
+        }
         data class Failure(val reason: String) : PreviewResult()
     }
 
@@ -175,7 +206,7 @@ object AddFieldContract {
      */
     sealed class UiEvent {
         /** Initialize with sample text */
-        data class Initialize(val field: String?, val notification: Notification?) : UiEvent()
+        data class Initialize(val field: RuleField?, val notification: Notification?) : UiEvent()
 
         /** Update field name */
         data class OnFieldNameChange(val name: String) : UiEvent()
@@ -230,7 +261,7 @@ object AddFieldContract {
      */
     sealed class UiEffect {
         /** Return with the created field */
-        data class ReturnWithField(val field: ExtractionField) : UiEffect()
+        data class ReturnWithField(val field: RuleField) : UiEffect()
 
         /** Cancel and return without field */
         data object CancelAndReturn : UiEffect()

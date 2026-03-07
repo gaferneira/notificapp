@@ -3,8 +3,12 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.MatchingCondition
+import dev.gaferneira.notificapp.domain.model.MatchingOperator
+import dev.gaferneira.notificapp.domain.model.RuleTrigger
+import dev.gaferneira.notificapp.domain.model.TriggerType
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
-import dev.gaferneira.notificapp.features.ruleeditor.contract.TriggerUiModel
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -42,21 +46,22 @@ class MatchingLogicViewModel @Inject constructor() :
     }
 
     private fun initForEdit(event: MatchingLogicContract.UiEvent.InitForEdit) {
-        editingTriggerId = event.triggerId
+        val trigger = event.trigger
+        editingTriggerId = trigger.id
         setState {
             copy(
                 mode = MatchingLogicContract.UiState.Mode.EDIT,
-                triggerType = event.triggerType,
-                matchingCondition = event.condition ?: MatchingLogicContract.MatchingCondition.TEXT_CONTENT,
-                matchingOperator = event.operator ?: MatchingLogicContract.MatchingOperator.CONTAINS,
-                matchingValue = event.value ?: "",
-                selectedApps = event.selectedApps,
+                triggerType = trigger.type,
+                matchingCondition = trigger.condition ?: MatchingCondition.TEXT_CONTENT,
+                matchingOperator = trigger.operator ?: MatchingOperator.CONTAINS,
+                matchingValue = trigger.value ?: "",
+                selectedApps = trigger.targetApps,
                 validationError = null,
             )
         }
     }
 
-    private fun updateTriggerType(triggerType: MatchingLogicContract.TriggerType) {
+    private fun updateTriggerType(triggerType: TriggerType) {
         setState {
             copy(
                 triggerType = triggerType,
@@ -65,11 +70,11 @@ class MatchingLogicViewModel @Inject constructor() :
         }
     }
 
-    private fun updateMatchingCondition(condition: MatchingLogicContract.MatchingCondition) {
+    private fun updateMatchingCondition(condition: MatchingCondition) {
         setState { copy(matchingCondition = condition) }
     }
 
-    private fun updateMatchingOperator(operator: MatchingLogicContract.MatchingOperator) {
+    private fun updateMatchingOperator(operator: MatchingOperator) {
         setState { copy(matchingOperator = operator) }
     }
 
@@ -82,7 +87,7 @@ class MatchingLogicViewModel @Inject constructor() :
         }
     }
 
-    private fun addApps(apps: List<MatchingLogicContract.AppInfo>) {
+    private fun addApps(apps: List<AppInfo>) {
         setState {
             copy(
                 selectedApps = apps,
@@ -107,16 +112,16 @@ class MatchingLogicViewModel @Inject constructor() :
         val triggerId = editingTriggerId
 
         when (state.triggerType) {
-            MatchingLogicContract.TriggerType.CONDITION -> {
+            TriggerType.CONDITION -> {
                 if (state.matchingValue.isBlank()) {
                     setState { copy(validationError = "Please enter a value to match") }
                     sendEffect(MatchingLogicContract.UiEffect.ShowError("Please enter a value to match"))
                     return
                 }
 
-                val trigger = TriggerUiModel(
+                val trigger = RuleTrigger(
                     id = triggerId ?: UUID.randomUUID().toString(),
-                    type = MatchingLogicContract.TriggerType.CONDITION,
+                    type = TriggerType.CONDITION,
                     condition = state.matchingCondition,
                     operator = state.matchingOperator,
                     value = state.matchingValue,
@@ -129,11 +134,11 @@ class MatchingLogicViewModel @Inject constructor() :
                 }
             }
 
-            MatchingLogicContract.TriggerType.APP -> {
-                val trigger = TriggerUiModel(
+            TriggerType.APP -> {
+                val trigger = RuleTrigger(
                     id = triggerId ?: UUID.randomUUID().toString(),
-                    type = MatchingLogicContract.TriggerType.APP,
-                    selectedApps = state.selectedApps,
+                    type = TriggerType.APP,
+                    targetApps = state.selectedApps,
                 )
 
                 if (triggerId != null) {

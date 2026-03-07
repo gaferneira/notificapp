@@ -46,8 +46,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.MatchingCondition
+import dev.gaferneira.notificapp.domain.model.MatchingOperator
+import dev.gaferneira.notificapp.domain.model.RuleTrigger
+import dev.gaferneira.notificapp.domain.model.TriggerType
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
-import dev.gaferneira.notificapp.features.ruleeditor.contract.TriggerUiModel
 import dev.gaferneira.notificapp.features.ruleeditor.contract.displayName
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AppSelectionPicker
@@ -58,10 +62,8 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.MatchingLogicView
  * Uses its own MVI ViewModel for state management.
  *
  * @param isVisible Whether the bottom sheet is visible
- * @param editingTriggerId The ID of the trigger being edited, or null for new trigger
  * @param initialTrigger Pre-populated trigger data when editing, or null for new trigger
- * @param onTriggerAdded Called when a new trigger is created
- * @param onTriggerUpdated Called when an existing trigger is updated
+ * @param onTriggerSaved Called when a trigger is saved (new or updated)
  * @param onDismiss Called when the sheet should be dismissed
  * @param viewModel The ViewModel for this bottom sheet (injected by default)
  * @param modifier Modifier for the bottom sheet
@@ -69,32 +71,19 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.MatchingLogicView
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MatchingLogicBottomSheet(
-    isVisible: Boolean,
-    editingTriggerId: String? = null,
-    initialTrigger: TriggerUiModel? = null,
-    onTriggerAdded: (TriggerUiModel) -> Unit,
-    onTriggerUpdated: (triggerId: String, trigger: TriggerUiModel) -> Unit,
-    onDismiss: () -> Unit,
-    viewModel: MatchingLogicViewModel = hiltViewModel(),
     modifier: Modifier = Modifier,
+    viewModel: MatchingLogicViewModel = hiltViewModel(),
+    initialTrigger: RuleTrigger? = null,
+    onTriggerSaved: (RuleTrigger) -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    if (!isVisible) return
-
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Initialize for edit mode when editingTriggerId changes
-    LaunchedEffect(editingTriggerId, initialTrigger) {
-        if (editingTriggerId != null && initialTrigger != null) {
+    LaunchedEffect(initialTrigger) {
+        if (initialTrigger != null) {
             viewModel.onEvent(
-                MatchingLogicContract.UiEvent.InitForEdit(
-                    triggerId = editingTriggerId,
-                    triggerType = initialTrigger.type,
-                    condition = initialTrigger.condition,
-                    operator = initialTrigger.operator,
-                    value = initialTrigger.value,
-                    selectedApps = initialTrigger.selectedApps,
-                ),
+                MatchingLogicContract.UiEvent.InitForEdit(initialTrigger),
             )
         }
     }
@@ -103,10 +92,10 @@ fun MatchingLogicBottomSheet(
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
             is MatchingLogicContract.UiEffect.TriggerCreated -> {
-                onTriggerAdded(effect.trigger)
+                onTriggerSaved(effect.trigger)
             }
             is MatchingLogicContract.UiEffect.TriggerUpdated -> {
-                onTriggerUpdated(effect.triggerId, effect.trigger)
+                onTriggerSaved(effect.trigger)
             }
             is MatchingLogicContract.UiEffect.Dismiss -> {
                 onDismiss()
@@ -119,7 +108,7 @@ fun MatchingLogicBottomSheet(
 
     val title = when (uiState.mode) {
         MatchingLogicContract.UiState.Mode.EDIT -> {
-            if (uiState.triggerType == MatchingLogicContract.TriggerType.CONDITION) "Edit Condition" else "Edit Apps"
+            if (uiState.triggerType == TriggerType.CONDITION) "Edit Condition" else "Edit Apps"
         }
         MatchingLogicContract.UiState.Mode.ADD -> "Add Trigger"
     }
@@ -146,9 +135,9 @@ fun MatchingLogicBottomSheet(
 
             // Description based on trigger type
             val description = when (uiState.triggerType) {
-                MatchingLogicContract.TriggerType.CONDITION ->
+                TriggerType.CONDITION ->
                     "Define the condition under which this rule should trigger."
-                MatchingLogicContract.TriggerType.APP ->
+                TriggerType.APP ->
                     "Select the apps for which this rule should trigger."
             }
             Text(
@@ -171,7 +160,7 @@ fun MatchingLogicBottomSheet(
 
             // Mode-specific content
             when (uiState.triggerType) {
-                MatchingLogicContract.TriggerType.CONDITION -> {
+                TriggerType.CONDITION -> {
                     ConditionModeContent(
                         condition = uiState.matchingCondition,
                         operator = uiState.matchingOperator,
@@ -187,7 +176,7 @@ fun MatchingLogicBottomSheet(
                         },
                     )
                 }
-                MatchingLogicContract.TriggerType.APP -> {
+                TriggerType.APP -> {
                     AppModeContent(
                         selectedApps = uiState.selectedApps,
                         onRemoveApp = {
@@ -245,11 +234,11 @@ fun MatchingLogicBottomSheet(
 
 @Composable
 private fun ConditionModeContent(
-    condition: MatchingLogicContract.MatchingCondition,
-    operator: MatchingLogicContract.MatchingOperator,
+    condition: MatchingCondition,
+    operator: MatchingOperator,
     value: String,
-    onConditionChange: (MatchingLogicContract.MatchingCondition) -> Unit,
-    onOperatorChange: (MatchingLogicContract.MatchingOperator) -> Unit,
+    onConditionChange: (MatchingCondition) -> Unit,
+    onOperatorChange: (MatchingOperator) -> Unit,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -262,7 +251,7 @@ private fun ConditionModeContent(
             MatchingDropdown(
                 label = "Condition",
                 selected = condition,
-                options = MatchingLogicContract.MatchingCondition.entries.toList(),
+                options = MatchingCondition.entries.toList(),
                 onSelect = onConditionChange,
                 displayName = { it.displayName() },
                 modifier = Modifier.weight(1f),
@@ -271,7 +260,7 @@ private fun ConditionModeContent(
             MatchingDropdown(
                 label = "Operator",
                 selected = operator,
-                options = MatchingLogicContract.MatchingOperator.entries.toList(),
+                options = MatchingOperator.entries.toList(),
                 onSelect = onOperatorChange,
                 displayName = { it.displayName() },
                 modifier = Modifier.weight(1f),
@@ -294,7 +283,7 @@ private fun ConditionModeContent(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AppModeContent(
-    selectedApps: List<MatchingLogicContract.AppInfo>,
+    selectedApps: List<AppInfo>,
     onRemoveApp: (String) -> Unit,
     onAddApps: () -> Unit,
     modifier: Modifier = Modifier,
@@ -422,9 +411,9 @@ private fun MatchingLogicBottomSheetConditionPreview() {
         // Preview using the component's structure but with default values
         val previewState = MatchingLogicContract.UiState(
             mode = MatchingLogicContract.UiState.Mode.ADD,
-            triggerType = MatchingLogicContract.TriggerType.CONDITION,
-            matchingCondition = MatchingLogicContract.MatchingCondition.TEXT_CONTENT,
-            matchingOperator = MatchingLogicContract.MatchingOperator.CONTAINS,
+            triggerType = TriggerType.CONDITION,
+            matchingCondition = MatchingCondition.TEXT_CONTENT,
+            matchingOperator = MatchingOperator.CONTAINS,
             matchingValue = "delivery",
             selectedApps = emptyList(),
         )
@@ -464,9 +453,9 @@ private fun MatchingLogicBottomSheetConditionPreview() {
 private fun MatchingLogicBottomSheetAppPreview() {
     NotificappTheme {
         val previewApps = listOf(
-            MatchingLogicContract.AppInfo("com.ica.banken", "ICA Banken"),
-            MatchingLogicContract.AppInfo("com.postnord", "PostNord"),
-            MatchingLogicContract.AppInfo("com.klarna", "Klarna"),
+            AppInfo("com.ica.banken", "ICA Banken"),
+            AppInfo("com.postnord", "PostNord"),
+            AppInfo("com.klarna", "Klarna"),
         )
 
         Column(

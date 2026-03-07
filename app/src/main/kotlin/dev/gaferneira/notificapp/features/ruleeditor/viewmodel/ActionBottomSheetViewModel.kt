@@ -3,9 +3,9 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ActionBottomSheetContract
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionType
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionUiModel
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -37,12 +37,13 @@ class ActionBottomSheetViewModel @Inject constructor() :
     }
 
     private fun initForEdit(event: ActionBottomSheetContract.UiEvent.InitForEdit) {
-        editingActionId = event.actionId
+        val action = event.action
+        editingActionId = action.id
         setState {
             copy(
                 mode = ActionBottomSheetContract.UiState.Mode.EDIT,
-                actionType = event.actionType,
-                isSaveToDataLabEnabled = event.isEnabled,
+                actionType = action.type,
+                isSaveToDataLabEnabled = action.isEnabled,
                 validationError = null,
             )
         }
@@ -65,7 +66,7 @@ class ActionBottomSheetViewModel @Inject constructor() :
         val state = uiState.value
         val actionId = editingActionId
 
-        val action = ActionUiModel(
+        val action = RuleAction(
             id = actionId ?: UUID.randomUUID().toString(),
             type = state.actionType,
             isEnabled = if (state.actionType == ActionType.SAVE_DATA) {

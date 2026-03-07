@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ExtractionFieldUiModel
+import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 
 /**
  * The "And then" data extraction section.
@@ -39,9 +41,10 @@ import dev.gaferneira.notificapp.features.ruleeditor.domain.ExtractionFieldUiMod
  */
 @Composable
 fun DataExtractionSection(
-    fields: List<ExtractionFieldUiModel>,
+    fields: List<RuleField>,
     onAutoGenerate: () -> Unit,
     onAddField: () -> Unit,
+    onEditField: (String) -> Unit,
     onRemoveField: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -100,6 +103,7 @@ fun DataExtractionSection(
         fields.forEach { field ->
             ExtractionFieldItem(
                 field = field,
+                onClick = { onEditField(field.id) },
                 onRemove = { onRemoveField(field.id) },
             )
         }
@@ -115,7 +119,8 @@ fun DataExtractionSection(
 
 @Composable
 private fun ExtractionFieldItem(
-    field: ExtractionFieldUiModel,
+    field: RuleField,
+    onClick: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -138,7 +143,9 @@ private fun ExtractionFieldItem(
     }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -181,7 +188,7 @@ private fun ExtractionFieldItem(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = field.methodSummary,
+                        text = field.method.toString(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -217,21 +224,20 @@ private fun DataExtractionSectionPreview() {
     NotificappTheme {
         DataExtractionSection(
             fields = listOf(
-                ExtractionFieldUiModel(
+                RuleField(
                     id = "1",
                     name = "Merchant",
-                    methodType = "text_between_anchors",
-                    methodSummary = "Regex: (.*) at .*",
+                    method = ExtractionMethod.LineExtraction(10),
                 ),
-                ExtractionFieldUiModel(
+                RuleField(
                     id = "2",
                     name = "Amount",
-                    methodType = "smart_amount",
-                    methodSummary = "Find: currency pattern",
+                    method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
                 ),
             ),
             onAutoGenerate = {},
             onAddField = {},
+            onEditField = {},
             onRemoveField = {},
             modifier = Modifier.padding(16.dp),
         )
@@ -246,6 +252,7 @@ private fun DataExtractionSectionEmptyPreview() {
             fields = emptyList(),
             onAutoGenerate = {},
             onAddField = {},
+            onEditField = {},
             onRemoveField = {},
             modifier = Modifier.padding(16.dp),
         )

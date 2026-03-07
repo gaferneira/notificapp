@@ -5,6 +5,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.extraction.FieldExtractor
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Notification
+import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiEvent
@@ -49,19 +51,120 @@ class AddFieldViewModel @Inject constructor() : MviViewModel<UiState, UiEvent, U
         }
     }
 
-    private fun initialize(fieldId: String?, notification: Notification?) {
+    private fun initialize(field: RuleField?, notification: Notification?) {
         val sampleText = notification?.content ?: ""
-        setState {
-            copy(
-                sampleText = sampleText,
-                // Set a reasonable default based on sample
-                fixedEndIndex = sampleText.length.coerceAtMost(50),
-            )
+
+        if (field != null) {
+            // Populate from existing field
+            val methodType = mapMethodToType(field.method)
+            setState {
+                copy(
+                    fieldName = field.name,
+                    selectedMethodType = methodType,
+                    sampleText = sampleText,
+                    // Populate method-specific fields based on type
+                    fixedStartIndex = when (val m = field.method) {
+                        is ExtractionMethod.FixedPosition -> m.startIndex
+                        else -> 0
+                    },
+                    fixedEndIndex = when (val m = field.method) {
+                        is ExtractionMethod.FixedPosition -> m.endIndex
+                        else -> sampleText.length.coerceAtMost(50)
+                    },
+                    startAnchor = when (val m = field.method) {
+                        is ExtractionMethod.TextBetweenAnchors -> m.startAnchor
+                        else -> ""
+                    },
+                    endAnchor = when (val m = field.method) {
+                        is ExtractionMethod.TextBetweenAnchors -> m.endAnchor
+                        else -> ""
+                    },
+                    regexPattern = when (val m = field.method) {
+                        is ExtractionMethod.RegexPattern -> m.pattern
+                        else -> ""
+                    },
+                    captureGroup = when (val m = field.method) {
+                        is ExtractionMethod.RegexPattern -> m.captureGroup
+                        else -> 1
+                    },
+                    afterKeyword = when (val m = field.method) {
+                        is ExtractionMethod.TextAfterKeyword -> m.keyword
+                        else -> ""
+                    },
+                    afterKeywordMaxLength = when (val m = field.method) {
+                        is ExtractionMethod.TextAfterKeyword -> m.maxLength
+                        else -> null
+                    },
+                    beforeKeyword = when (val m = field.method) {
+                        is ExtractionMethod.TextBeforeKeyword -> m.keyword
+                        else -> ""
+                    },
+                    lineNumber = when (val m = field.method) {
+                        is ExtractionMethod.LineExtraction -> m.lineNumber
+                        else -> 1
+                    },
+                    delimiter = when (val m = field.method) {
+                        is ExtractionMethod.SplitByDelimiter -> m.delimiter
+                        else -> ","
+                    },
+                    takeIndex = when (val m = field.method) {
+                        is ExtractionMethod.SplitByDelimiter -> m.takeIndex
+                        else -> 0
+                    },
+                    jsonPath = when (val m = field.method) {
+                        is ExtractionMethod.JsonPath -> m.path
+                        else -> ""
+                    },
+                    // Clear any previous errors and preview
+                    validationErrors = emptyMap(),
+                    error = null,
+                    previewResult = AddFieldContract.PreviewResult.None,
+                )
+            }
+        } else {
+            // Reset to default state for new field
+            setState {
+                copy(
+                    fieldName = "",
+                    selectedMethodType = AddFieldContract.MethodType.TEXT_BETWEEN_ANCHORS,
+                    sampleText = sampleText,
+                    fixedStartIndex = 0,
+                    fixedEndIndex = sampleText.length.coerceAtMost(50),
+                    startAnchor = "",
+                    endAnchor = "",
+                    regexPattern = "",
+                    captureGroup = 1,
+                    afterKeyword = "",
+                    afterKeywordMaxLength = null,
+                    beforeKeyword = "",
+                    lineNumber = 1,
+                    delimiter = ",",
+                    takeIndex = 0,
+                    jsonPath = "",
+                    validationErrors = emptyMap(),
+                    error = null,
+                    previewResult = AddFieldContract.PreviewResult.None,
+                )
+            }
         }
-        // Auto-preview if we have sample text
+
+        // Auto-preview if we have sample text and can preview
         if (sampleText.isNotEmpty()) {
             previewExtraction()
         }
+    }
+
+    private fun mapMethodToType(method: ExtractionMethod): AddFieldContract.MethodType = when (method) {
+        is ExtractionMethod.FixedPosition -> AddFieldContract.MethodType.FIXED_POSITION
+        is ExtractionMethod.TextBetweenAnchors -> AddFieldContract.MethodType.TEXT_BETWEEN_ANCHORS
+        is ExtractionMethod.RegexPattern -> AddFieldContract.MethodType.REGEX
+        is ExtractionMethod.TextAfterKeyword -> AddFieldContract.MethodType.TEXT_AFTER_KEYWORD
+        is ExtractionMethod.TextBeforeKeyword -> AddFieldContract.MethodType.TEXT_BEFORE_KEYWORD
+        is ExtractionMethod.LineExtraction -> AddFieldContract.MethodType.LINE_EXTRACTION
+        is ExtractionMethod.SplitByDelimiter -> AddFieldContract.MethodType.SPLIT_BY_DELIMITER
+        is ExtractionMethod.JsonPath -> AddFieldContract.MethodType.JSON_PATH
+        is ExtractionMethod.SmartAmountDetection -> AddFieldContract.MethodType.SMART_AMOUNT
+        is ExtractionMethod.SmartDateDetection -> AddFieldContract.MethodType.SMART_DATE
     }
 
     private fun updateFieldName(name: String) {
@@ -148,7 +251,7 @@ class AddFieldViewModel @Inject constructor() : MviViewModel<UiState, UiEvent, U
 
     private fun previewExtraction() {
         val currentState = uiState.value
-        if (currentState.sampleText.isEmpty()) {
+        if (currentState.sampleText.isEmpty() || !currentState.canPreview) {
             setState { copy(previewResult = AddFieldContract.PreviewResult.None) }
             return
         }
@@ -162,7 +265,11 @@ class AddFieldViewModel @Inject constructor() : MviViewModel<UiState, UiEvent, U
 
                 val previewResult = when (result) {
                     is dev.gaferneira.notificapp.core.extraction.ExtractionResult.Success ->
-                        AddFieldContract.PreviewResult.Success(result.value)
+                        AddFieldContract.PreviewResult.Success(
+                            value = result.value,
+                            startIndex = result.startIndex,
+                            endIndex = result.endIndex,
+                        )
                     is dev.gaferneira.notificapp.core.extraction.ExtractionResult.Failure ->
                         AddFieldContract.PreviewResult.Failure(result.reason)
                 }
