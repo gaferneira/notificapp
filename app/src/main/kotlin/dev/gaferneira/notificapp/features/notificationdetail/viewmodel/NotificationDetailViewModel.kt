@@ -169,7 +169,6 @@ class NotificationDetailViewModel @Inject constructor(
         val appMatches = when {
             rule.targetApps == null -> true // Rule applies to all apps
             rule.targetApps.isEmpty() -> true
-            rule.targetApps.contains(packageName) -> true
             else -> false
         }
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
@@ -33,56 +34,58 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
-import dev.gaferneira.notificapp.domain.model.RuleTrigger
-import dev.gaferneira.notificapp.domain.model.TriggerType
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.features.ruleeditor.contract.displayText
 
 /**
- * The "When" section showing all configured triggers.
+ * The "When" section showing target apps and configured conditions.
+ *
+ * @param targetApps Selected target apps (empty = all apps)
+ * @param conditions List of matching conditions
+ * @param onAppsClick Called when the apps card is clicked
+ * @param onRemoveCondition Called when a condition should be removed
+ * @param onConditionClick Called when a condition card is clicked
  */
 @Composable
 fun WhenSection(
-    triggers: List<RuleTrigger>,
-    onRemoveTrigger: (String) -> Unit,
-    onTriggerClick: (String) -> Unit,
+    targetApps: List<AppInfo>,
+    conditions: List<RuleCondition>,
+    onAppsClick: () -> Unit,
+    onRemoveCondition: (String) -> Unit,
+    onConditionClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        triggers.forEach { trigger ->
-            TriggerCard(
-                trigger = trigger,
-                onClick = { onTriggerClick(trigger.id) },
-                onRemove = { onRemoveTrigger(trigger.id) },
+        // Apps card (always shown, even if empty - shows "All apps" when empty)
+        AppsCard(
+            selectedApps = targetApps,
+            onClick = onAppsClick,
+        )
+
+        // Condition cards
+        conditions.forEach { condition ->
+            ConditionCard(
+                condition = condition,
+                onClick = { onConditionClick(condition.id) },
+                onRemove = { onRemoveCondition(condition.id) },
             )
         }
     }
 }
 
 @Composable
-private fun TriggerCard(
-    trigger: RuleTrigger,
+private fun AppsCard(
+    selectedApps: List<AppInfo>,
     onClick: () -> Unit,
-    onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val (icon, iconColor, label, labelColor) = when (trigger.type) {
-        TriggerType.CONDITION ->
-            Quadruple(
-                Icons.Default.Notifications,
-                MaterialTheme.colorScheme.secondary,
-                "CONDITION",
-                MaterialTheme.colorScheme.secondary,
-            )
-        TriggerType.APP ->
-            Quadruple(
-                Icons.Default.Apps,
-                MaterialTheme.colorScheme.tertiary,
-                "APP TRIGGER",
-                MaterialTheme.colorScheme.tertiary,
-            )
+    val displayText = when {
+        selectedApps.isEmpty() -> "All apps"
+        selectedApps.size == 1 -> selectedApps.first().name
+        else -> "${selectedApps.size} apps selected"
     }
 
     Card(
@@ -111,18 +114,13 @@ private fun TriggerCard(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            when (trigger.type) {
-                                TriggerType.CONDITION -> MaterialTheme.colorScheme.secondaryContainer
-                                TriggerType.APP -> MaterialTheme.colorScheme.tertiaryContainer
-                            },
-                        ),
+                        .background(MaterialTheme.colorScheme.tertiaryContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = icon,
+                        imageVector = Icons.Default.Apps,
                         contentDescription = null,
-                        tint = iconColor,
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(24.dp),
                     )
                 }
@@ -131,13 +129,13 @@ private fun TriggerCard(
 
                 Column {
                     Text(
-                        text = label,
+                        text = "APPS",
                         style = MaterialTheme.typography.labelSmall,
-                        color = labelColor,
+                        color = MaterialTheme.colorScheme.tertiary,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = trigger.displayText,
+                        text = displayText,
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -145,50 +143,120 @@ private fun TriggerCard(
                 }
             }
 
-            if (trigger.type == TriggerType.CONDITION) {
-                // Remove button
-                IconButton(
-                    onClick = onRemove,
-                    modifier = Modifier.size(32.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Remove trigger",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            // Edit indicator
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Edit apps",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }
 
-// Helper data class for 4 values
-private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+@Composable
+private fun ConditionCard(
+    condition: RuleCondition,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f),
+            ) {
+                // Icon container
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = "CONDITION",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = condition.displayText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+
+            // Remove button
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Remove condition",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
 
 @Preview(showBackground = true)
 @Composable
 private fun WhenSectionPreview() {
     NotificappTheme {
         WhenSection(
-            triggers = listOf(
-                RuleTrigger(
-                    id = "2",
-                    type = TriggerType.APP,
-                    targetApps = listOf(
-                        AppInfo("com.swish", "Swish"),
-                        AppInfo("com.bank", "Bank App"),
-                    ),
-                ),
-                RuleTrigger(
+            targetApps = listOf(
+                AppInfo("com.swish", "Swish"),
+                AppInfo("com.bank", "Bank App"),
+            ),
+            conditions = listOf(
+                RuleCondition(
                     id = "1",
-                    type = TriggerType.CONDITION,
                     condition = MatchingCondition.TEXT_CONTENT,
                     operator = MatchingOperator.CONTAINS,
                     value = "purchase",
                 ),
+                RuleCondition(
+                    id = "2",
+                    condition = MatchingCondition.TITLE,
+                    operator = MatchingOperator.EQUALS,
+                    value = "Payment received",
+                ),
             ),
-            onRemoveTrigger = {},
-            onTriggerClick = {},
+            onAppsClick = {},
+            onRemoveCondition = {},
+            onConditionClick = {},
             modifier = Modifier.padding(16.dp),
         )
     }
@@ -199,9 +267,33 @@ private fun WhenSectionPreview() {
 private fun WhenSectionEmptyPreview() {
     NotificappTheme {
         WhenSection(
-            triggers = emptyList(),
-            onRemoveTrigger = {},
-            onTriggerClick = {},
+            targetApps = emptyList(),
+            conditions = emptyList(),
+            onAppsClick = {},
+            onRemoveCondition = {},
+            onConditionClick = {},
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun WhenSectionAllAppsPreview() {
+    NotificappTheme {
+        WhenSection(
+            targetApps = emptyList(),
+            conditions = listOf(
+                RuleCondition(
+                    id = "1",
+                    condition = MatchingCondition.TEXT_CONTENT,
+                    operator = MatchingOperator.CONTAINS,
+                    value = "delivery",
+                ),
+            ),
+            onAppsClick = {},
+            onRemoveCondition = {},
+            onConditionClick = {},
             modifier = Modifier.padding(16.dp),
         )
     }

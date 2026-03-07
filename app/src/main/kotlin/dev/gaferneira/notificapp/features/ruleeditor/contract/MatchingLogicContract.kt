@@ -1,15 +1,13 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
-import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
-import dev.gaferneira.notificapp.domain.model.RuleTrigger
-import dev.gaferneira.notificapp.domain.model.TriggerType
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 
 /**
  * MVI Contract for the MatchingLogicBottomSheet.
  *
- * Manages the state for creating and editing trigger conditions (WHEN logic).
+ * Manages the state for creating and editing matching conditions (WHEN logic).
  */
 object MatchingLogicContract {
 
@@ -19,18 +17,12 @@ object MatchingLogicContract {
     data class UiState(
         /** Current mode: adding new or editing existing */
         val mode: Mode = Mode.ADD,
-        /** Trigger type: condition-based or app-based */
-        val triggerType: TriggerType = TriggerType.CONDITION,
-        /** Matching condition (for CONDITION type) */
+        /** Matching condition (what to match against) */
         val matchingCondition: MatchingCondition = MatchingCondition.TEXT_CONTENT,
-        /** Matching operator (for CONDITION type) */
+        /** Matching operator (how to match) */
         val matchingOperator: MatchingOperator = MatchingOperator.CONTAINS,
-        /** Value to match (for CONDITION type) */
+        /** Value to match */
         val matchingValue: String = "",
-        /** Selected apps (for APP type) */
-        val selectedApps: List<AppInfo> = emptyList(),
-        /** Whether the app selection picker is visible */
-        val isAppPickerVisible: Boolean = false,
         /** Validation error message, if any */
         val validationError: String? = null,
     ) {
@@ -44,11 +36,8 @@ object MatchingLogicContract {
      * UI Events from user interactions.
      */
     sealed class UiEvent {
-        /** Initialize the sheet for editing an existing trigger */
-        data class InitForEdit(val trigger: RuleTrigger) : UiEvent()
-
-        /** Change trigger type between CONDITION and APP */
-        data class OnTriggerTypeChange(val triggerType: TriggerType) : UiEvent()
+        /** Initialize the sheet for editing an existing condition */
+        data class InitForEdit(val condition: RuleCondition) : UiEvent()
 
         /** Update matching condition */
         data class OnMatchingConditionChange(val condition: MatchingCondition) : UiEvent()
@@ -59,37 +48,25 @@ object MatchingLogicContract {
         /** Update matching value */
         data class OnMatchingValueChange(val value: String) : UiEvent()
 
-        /** Add apps to selection */
-        data class OnAppsSelected(val apps: List<AppInfo>) : UiEvent()
-
-        /** Remove app from selection */
-        data class OnRemoveApp(val packageName: String) : UiEvent()
-
         /** Clear validation error */
         data object OnClearError : UiEvent()
 
-        /** Confirm and create/update trigger */
+        /** Confirm and create/update condition */
         data object OnConfirm : UiEvent()
 
         /** Dismiss without saving */
         data object OnDismiss : UiEvent()
-
-        /** Show app selection picker */
-        data object OnShowAppPicker : UiEvent()
-
-        /** Dismiss app selection picker */
-        data object OnDismissAppPicker : UiEvent()
     }
 
     /**
      * One-time effects to communicate with the parent.
      */
     sealed class UiEffect {
-        /** New trigger created */
-        data class TriggerCreated(val trigger: RuleTrigger) : UiEffect()
+        /** New condition created */
+        data class ConditionCreated(val condition: RuleCondition) : UiEffect()
 
-        /** Existing trigger updated */
-        data class TriggerUpdated(val triggerId: String, val trigger: RuleTrigger) : UiEffect()
+        /** Existing condition updated */
+        data class ConditionUpdated(val conditionId: String, val condition: RuleCondition) : UiEffect()
 
         /** Dismiss the sheet */
         data object Dismiss : UiEffect()

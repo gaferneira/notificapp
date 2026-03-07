@@ -6,14 +6,13 @@ import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
-import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
-import dev.gaferneira.notificapp.domain.model.RuleTrigger
-import dev.gaferneira.notificapp.domain.model.TriggerType
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
+import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
@@ -33,8 +32,26 @@ import javax.inject.Inject
 class RuleEditorViewModel @Inject constructor(
     private val ruleRepository: RuleRepository,
     private val notificationRepository: NotificationRepository,
+    private val selectedAppRepository: SelectedAppRepository,
     private val navigationHandler: NavigationHandler,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
+
+    init {
+        observeEnabledApps()
+    }
+
+    private fun observeEnabledApps() {
+        viewModelScope.launch {
+            selectedAppRepository.observeEnabledApps()
+                .collect { apps ->
+                    setState {
+                        copy(
+                            enabledApps = apps.map { AppInfo(it.packageName, it.appName) },
+                        )
+                    }
+                }
+        }
+    }
 
     override fun onEvent(event: UiEvent) {
         when (event) {
@@ -47,12 +64,11 @@ class RuleEditorViewModel @Inject constructor(
             is UiEvent.OnAddDescriptionClicked -> showDescriptionField()
             is UiEvent.OnCategoryChange -> updateCategory(event.category)
             is UiEvent.OnAddCategoryClicked -> showCategoryField()
-            is UiEvent.OnAreaChange -> updateArea(event.area)
-            is UiEvent.OnGlobalRuleToggle -> toggleGlobalRule()
-            is UiEvent.OnTargetAppsChange -> updateTargetApps(event.apps)
-            is UiEvent.OnAddTriggerClicked -> showMatchingLogicSheet()
-            is UiEvent.OnRemoveTriggerClicked -> removeTrigger(event.triggerId)
-            is UiEvent.OnTriggerItemClicked -> openTriggerForEditing(event.triggerId)
+            is UiEvent.OnAddConditionClicked -> showMatchingLogicSheet()
+            is UiEvent.OnRemoveConditionClicked -> removeCondition(event.conditionId)
+            is UiEvent.OnConditionItemClicked -> openConditionForEditing(event.conditionId)
+            is UiEvent.OnAppsClicked -> showAppSheet()
+            is UiEvent.OnAppsSelected -> onAppsSelected(event.apps)
             is UiEvent.OnAddActionClicked -> showActionSheet()
             is UiEvent.OnEditActionClicked -> openActionForEditing(event.actionId)
             is UiEvent.OnRemoveActionClicked -> removeAction(event.actionId)
@@ -61,12 +77,15 @@ class RuleEditorViewModel @Inject constructor(
             is UiEvent.OnEditFieldClicked -> openFieldForEditing(event.fieldId)
             is UiEvent.OnRemoveFieldClicked -> removeField(event.fieldId)
             is UiEvent.OnFieldSaved -> onFieldSaved(event.field)
-            is UiEvent.OnTriggerSaved -> onTriggerSaved(event.trigger)
+            is UiEvent.OnConditionSaved -> onConditionSaved(event.condition)
             is UiEvent.OnActionSaved -> onActionSaved(event.action)
             is UiEvent.OnSaveClicked -> saveRule()
             is UiEvent.OnBackClicked -> onBackClicked()
             is UiEvent.OnDismissError -> dismissError()
             UiEvent.OnDismissSheet -> dismissBottomSheet()
+            UiEvent.OnDeleteClicked -> showDeleteConfirmation()
+            UiEvent.OnDeleteConfirmed -> deleteRule()
+            UiEvent.OnDeleteDismissed -> dismissDeleteConfirmation()
         }
     }
 
@@ -78,19 +97,6 @@ class RuleEditorViewModel @Inject constructor(
 
     private fun loadRule(ruleId: String?) {
         if (ruleId == null) {
-            setState {
-                copy(
-                    rule = RuleUiModel(
-                        triggers = listOf(
-                            RuleTrigger(
-                                id = UUID.randomUUID().toString(),
-                                type = TriggerType.APP,
-                                targetApps = emptyList(),
-                            ),
-                        ),
-                    ),
-                )
-            }
             return
         }
         viewModelScope.launch {
@@ -139,24 +145,12 @@ class RuleEditorViewModel @Inject constructor(
                             copy(
                                 sampleNotification = notification,
                                 rule = currentRule.copy(
-                                    targetApps = if (currentRule.id == null) listOf(notification.packageName) else currentRule.targetApps,
+                                    targetApps = if (currentRule.id == null) listOf(notification.app) else currentRule.targetApps,
                                     triggers = if (currentRule.id == null) {
-                                        listOf(
-                                            RuleTrigger(
-                                                id = UUID.randomUUID().toString(),
-                                                type = TriggerType.APP,
-                                                targetApps = listOf(
-                                                    AppInfo(
-                                                        packageName = notification.packageName,
-                                                        name = notification.appName,
-                                                    ),
-                                                ),
-                                            ),
-                                        )
+                                        emptyList()
                                     } else {
                                         currentRule.triggers
                                     },
-                                    isGlobalRule = false,
                                 ),
                             )
                         }
@@ -193,10 +187,6 @@ class RuleEditorViewModel @Inject constructor(
         setState { copy(rule = rule.copy(category = category)) }
     }
 
-    private fun updateArea(area: String) {
-        setState { copy(rule = rule.copy(area = area)) }
-    }
-
     private fun navigateToStep(step: Int) {
         setState { copy(currentStep = step) }
     }
@@ -205,45 +195,58 @@ class RuleEditorViewModel @Inject constructor(
         setState {
             copy(
                 isMatchingLogicSheetVisible = true,
-                editingTriggerId = null,
+                editingConditionId = null,
             )
         }
     }
 
-    private fun removeTrigger(triggerId: String) {
+    private fun removeCondition(conditionId: String) {
         setState {
-            copy(rule = rule.copy(triggers = rule.triggers.filter { it.id != triggerId }))
+            copy(rule = rule.copy(triggers = rule.triggers.filter { it.id != conditionId }))
         }
     }
 
-    private fun onTriggerSaved(trigger: RuleTrigger) {
-        val editingId = uiState.value.editingTriggerId
+    private fun onConditionSaved(condition: RuleCondition) {
+        val editingId = uiState.value.editingConditionId
         if (editingId != null) {
-            // Update existing trigger
+            // Update existing condition
             setState {
                 copy(
-                    rule = rule.copy(triggers = rule.triggers.map { if (it.id == editingId) trigger else it }),
+                    rule = rule.copy(triggers = rule.triggers.map { if (it.id == editingId) condition else it }),
                     isMatchingLogicSheetVisible = false,
-                    editingTriggerId = null,
+                    editingConditionId = null,
                 )
             }
         } else {
-            // Add new trigger
+            // Add new condition
             setState {
                 copy(
-                    rule = rule.copy(triggers = rule.triggers + trigger),
+                    rule = rule.copy(triggers = rule.triggers + condition),
                     isMatchingLogicSheetVisible = false,
                 )
             }
         }
     }
 
-    private fun openTriggerForEditing(triggerId: String) {
-        uiState.value.rule.triggers.find { it.id == triggerId } ?: return
+    private fun openConditionForEditing(conditionId: String) {
+        uiState.value.rule.triggers.find { it.id == conditionId } ?: return
         setState {
             copy(
-                editingTriggerId = triggerId,
+                editingConditionId = conditionId,
                 isMatchingLogicSheetVisible = true,
+            )
+        }
+    }
+
+    private fun showAppSheet() {
+        setState { copy(isAppSheetVisible = true) }
+    }
+
+    private fun onAppsSelected(apps: List<AppInfo>) {
+        setState {
+            copy(
+                rule = rule.copy(targetApps = apps),
+                isAppSheetVisible = false,
             )
         }
     }
@@ -331,26 +334,11 @@ class RuleEditorViewModel @Inject constructor(
         setState {
             copy(
                 rule = rule.copy(
-                    extractionFields = newFields,
+                    fields = newFields,
                     actions = newActions,
                 ),
             )
         }
-    }
-
-    private fun toggleGlobalRule() {
-        setState {
-            copy(
-                rule = rule.copy(
-                    isGlobalRule = !rule.isGlobalRule,
-                    targetApps = if (!rule.isGlobalRule) emptyList() else rule.targetApps,
-                ),
-            )
-        }
-    }
-
-    private fun updateTargetApps(apps: List<String>) {
-        setState { copy(rule = rule.copy(targetApps = apps)) }
     }
 
     private fun addField() {
@@ -374,7 +362,7 @@ class RuleEditorViewModel @Inject constructor(
     private fun removeField(fieldId: String) {
         setState {
             copy(
-                rule = rule.copy(extractionFields = rule.extractionFields.filter { it.id != fieldId }),
+                rule = rule.copy(fields = rule.fields.filter { it.id != fieldId }),
             )
         }
     }
@@ -386,15 +374,15 @@ class RuleEditorViewModel @Inject constructor(
         setState {
             val updatedFields = if (existingFieldId != null) {
                 // Update existing field
-                rule.extractionFields.map {
+                rule.fields.map {
                     if (it.id == existingFieldId) field else it
                 }
             } else {
                 // Add new field
-                rule.extractionFields + field
+                rule.fields + field
             }
             copy(
-                rule = rule.copy(extractionFields = updatedFields),
+                rule = rule.copy(fields = updatedFields),
             )
         }
         dismissBottomSheet()
@@ -419,16 +407,7 @@ class RuleEditorViewModel @Inject constructor(
         viewModelScope.launch {
             setState { copy(isLoading = true) }
 
-            val rule = Rule(
-                id = ruleUiModel.id ?: UUID.randomUUID().toString(),
-                name = ruleUiModel.name.trim(),
-                description = ruleUiModel.description.takeIf { it.isNotBlank() },
-                triggers = ruleUiModel.triggers,
-                actions = ruleUiModel.actions,
-                isActive = true,
-                targetApps = if (ruleUiModel.isGlobalRule) null else ruleUiModel.targetApps,
-                fields = ruleUiModel.extractionFields,
-            )
+            val rule = ruleUiModel.toEntity()
 
             val result = if (ruleUiModel.id != null) {
                 ruleRepository.updateRule(rule)
@@ -465,10 +444,45 @@ class RuleEditorViewModel @Inject constructor(
                 isFieldSheetVisible = false,
                 isActionSheetVisible = false,
                 isMatchingLogicSheetVisible = false,
+                isAppSheetVisible = false,
                 editingFieldId = null,
-                editingTriggerId = null,
+                editingConditionId = null,
                 editingActionId = null,
             )
+        }
+    }
+
+    private fun showDeleteConfirmation() {
+        setState { copy(showDeleteConfirmation = true) }
+    }
+
+    private fun dismissDeleteConfirmation() {
+        setState { copy(showDeleteConfirmation = false) }
+    }
+
+    private fun deleteRule() {
+        val ruleId = uiState.value.rule.id ?: return
+
+        viewModelScope.launch {
+            setState { copy(isLoading = true, showDeleteConfirmation = false) }
+
+            ruleRepository.deleteRule(ruleId)
+                .onSuccess {
+                    Timber.d("Rule deleted: $ruleId")
+                    setState { copy(isLoading = false) }
+                    sendEffect(UiEffect.ShowSuccess("Rule deleted successfully"))
+                    navigationHandler.goBack()
+                }
+                .onFailure { e ->
+                    Timber.e(e, "Failed to delete rule: $ruleId")
+                    setState {
+                        copy(
+                            isLoading = false,
+                            error = "Failed to delete rule: ${e.message}",
+                        )
+                    }
+                    sendEffect(UiEffect.ShowError("Failed to delete rule"))
+                }
         }
     }
 

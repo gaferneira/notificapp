@@ -2,9 +2,8 @@ package dev.gaferneira.notificapp.core.data.local.converter
 
 import androidx.room.TypeConverter
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
-import dev.gaferneira.notificapp.domain.model.RuleTrigger
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
@@ -31,10 +30,10 @@ class RuleTypeConverters {
 
     // ========== RuleTrigger List ==========
     @TypeConverter
-    fun fromRuleTriggerList(triggers: List<RuleTrigger>): String = json.encodeToString(triggers)
+    fun fromRuleTriggerList(triggers: List<RuleCondition>): String = json.encodeToString(triggers)
 
     @TypeConverter
-    fun toRuleTriggerList(jsonString: String): List<RuleTrigger> = json.decodeFromString(jsonString)
+    fun toRuleTriggerList(jsonString: String): List<RuleCondition> = json.decodeFromString(jsonString)
 
     // ========== RuleAction List ==========
     @TypeConverter

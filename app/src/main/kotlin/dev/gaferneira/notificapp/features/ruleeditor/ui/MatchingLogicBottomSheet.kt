@@ -1,29 +1,20 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -36,9 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -46,24 +35,19 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
-import dev.gaferneira.notificapp.domain.model.RuleTrigger
-import dev.gaferneira.notificapp.domain.model.TriggerType
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.displayName
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AppSelectionPicker
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.MatchingLogicViewModel
 
 /**
- * Bottom sheet for configuring matching logic (trigger conditions).
+ * Bottom sheet for configuring matching logic (conditions).
  * Uses its own MVI ViewModel for state management.
  *
- * @param isVisible Whether the bottom sheet is visible
- * @param initialTrigger Pre-populated trigger data when editing, or null for new trigger
- * @param onTriggerSaved Called when a trigger is saved (new or updated)
+ * @param initialCondition Pre-populated condition data when editing, or null for new condition
+ * @param onConditionSaved Called when a condition is saved (new or updated)
  * @param onDismiss Called when the sheet should be dismissed
  * @param viewModel The ViewModel for this bottom sheet (injected by default)
  * @param modifier Modifier for the bottom sheet
@@ -73,17 +57,17 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.MatchingLogicView
 fun MatchingLogicBottomSheet(
     modifier: Modifier = Modifier,
     viewModel: MatchingLogicViewModel = hiltViewModel(),
-    initialTrigger: RuleTrigger? = null,
-    onTriggerSaved: (RuleTrigger) -> Unit,
+    initialCondition: RuleCondition? = null,
+    onConditionSaved: (RuleCondition) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    LaunchedEffect(initialTrigger) {
-        if (initialTrigger != null) {
+    LaunchedEffect(initialCondition) {
+        if (initialCondition != null) {
             viewModel.onEvent(
-                MatchingLogicContract.UiEvent.InitForEdit(initialTrigger),
+                MatchingLogicContract.UiEvent.InitForEdit(initialCondition),
             )
         }
     }
@@ -91,11 +75,11 @@ fun MatchingLogicBottomSheet(
     // Collect effects and handle them internally, calling appropriate callbacks
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
-            is MatchingLogicContract.UiEffect.TriggerCreated -> {
-                onTriggerSaved(effect.trigger)
+            is MatchingLogicContract.UiEffect.ConditionCreated -> {
+                onConditionSaved(effect.condition)
             }
-            is MatchingLogicContract.UiEffect.TriggerUpdated -> {
-                onTriggerSaved(effect.trigger)
+            is MatchingLogicContract.UiEffect.ConditionUpdated -> {
+                onConditionSaved(effect.condition)
             }
             is MatchingLogicContract.UiEffect.Dismiss -> {
                 onDismiss()
@@ -107,10 +91,8 @@ fun MatchingLogicBottomSheet(
     }
 
     val title = when (uiState.mode) {
-        MatchingLogicContract.UiState.Mode.EDIT -> {
-            if (uiState.triggerType == TriggerType.CONDITION) "Edit Condition" else "Edit Apps"
-        }
-        MatchingLogicContract.UiState.Mode.ADD -> "Add Trigger"
+        MatchingLogicContract.UiState.Mode.EDIT -> "Edit Condition"
+        MatchingLogicContract.UiState.Mode.ADD -> "Add Condition"
     }
 
     ModalBottomSheet(
@@ -133,15 +115,9 @@ fun MatchingLogicBottomSheet(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Description based on trigger type
-            val description = when (uiState.triggerType) {
-                TriggerType.CONDITION ->
-                    "Define the condition under which this rule should trigger."
-                TriggerType.APP ->
-                    "Select the apps for which this rule should trigger."
-            }
+            // Description
             Text(
-                text = description,
+                text = "Define the condition under which this rule should trigger.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -158,36 +134,21 @@ fun MatchingLogicBottomSheet(
                 )
             }
 
-            // Mode-specific content
-            when (uiState.triggerType) {
-                TriggerType.CONDITION -> {
-                    ConditionModeContent(
-                        condition = uiState.matchingCondition,
-                        operator = uiState.matchingOperator,
-                        value = uiState.matchingValue,
-                        onConditionChange = {
-                            viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingConditionChange(it))
-                        },
-                        onOperatorChange = {
-                            viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingOperatorChange(it))
-                        },
-                        onValueChange = {
-                            viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingValueChange(it))
-                        },
-                    )
-                }
-                TriggerType.APP -> {
-                    AppModeContent(
-                        selectedApps = uiState.selectedApps,
-                        onRemoveApp = {
-                            viewModel.onEvent(MatchingLogicContract.UiEvent.OnRemoveApp(it))
-                        },
-                        onAddApps = {
-                            viewModel.onEvent(MatchingLogicContract.UiEvent.OnShowAppPicker)
-                        },
-                    )
-                }
-            }
+            // Condition content
+            ConditionModeContent(
+                condition = uiState.matchingCondition,
+                operator = uiState.matchingOperator,
+                value = uiState.matchingValue,
+                onConditionChange = {
+                    viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingConditionChange(it))
+                },
+                onOperatorChange = {
+                    viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingOperatorChange(it))
+                },
+                onValueChange = {
+                    viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingValueChange(it))
+                },
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -209,26 +170,12 @@ fun MatchingLogicBottomSheet(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                 ) {
-                    Text(if (uiState.mode == MatchingLogicContract.UiState.Mode.EDIT) "Update" else "Add Trigger")
+                    Text(if (uiState.mode == MatchingLogicContract.UiState.Mode.EDIT) "Update" else "Add")
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
         }
-    }
-
-    // App Selection Picker - shown on top of the matching logic sheet
-    if (uiState.isAppPickerVisible) {
-        AppSelectionPicker(
-            isVisible = true,
-            selectedApps = uiState.selectedApps,
-            onDismiss = {
-                viewModel.onEvent(MatchingLogicContract.UiEvent.OnDismissAppPicker)
-            },
-            onConfirm = { apps ->
-                viewModel.onEvent(MatchingLogicContract.UiEvent.OnAppsSelected(apps))
-            },
-        )
     }
 }
 
@@ -280,87 +227,6 @@ private fun ConditionModeContent(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun AppModeContent(
-    selectedApps: List<AppInfo>,
-    onRemoveApp: (String) -> Unit,
-    onAddApps: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = "SELECTED APPS",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (selectedApps.isEmpty()) {
-            Text(
-                text = "No apps selected. This rule will trigger for all apps.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                selectedApps.forEach { app ->
-                    AppChip(
-                        appName = app.name,
-                        onRemove = { onRemoveApp(app.packageName) },
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Add apps button
-        AddButton(
-            text = "Add apps",
-            onClick = onAddApps,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
-@Composable
-private fun AppChip(appName: String, onRemove: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.primaryContainer)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = appName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier.size(16.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Remove",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(14.dp),
-                )
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun <T> MatchingDropdown(
@@ -406,26 +272,23 @@ private fun <T> MatchingDropdown(
 
 @Preview(showBackground = true)
 @Composable
-private fun MatchingLogicBottomSheetConditionPreview() {
+private fun MatchingLogicBottomSheetPreview() {
     NotificappTheme {
         // Preview using the component's structure but with default values
         val previewState = MatchingLogicContract.UiState(
             mode = MatchingLogicContract.UiState.Mode.ADD,
-            triggerType = TriggerType.CONDITION,
             matchingCondition = MatchingCondition.TEXT_CONTENT,
             matchingOperator = MatchingOperator.CONTAINS,
             matchingValue = "delivery",
-            selectedApps = emptyList(),
         )
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp)
-                .background(MaterialTheme.colorScheme.surface),
+                .padding(24.dp),
         ) {
             Text(
-                text = "Add Trigger",
+                text = "Add Condition",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -443,43 +306,6 @@ private fun MatchingLogicBottomSheetConditionPreview() {
                 onConditionChange = {},
                 onOperatorChange = {},
                 onValueChange = {},
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun MatchingLogicBottomSheetAppPreview() {
-    NotificappTheme {
-        val previewApps = listOf(
-            AppInfo("com.ica.banken", "ICA Banken"),
-            AppInfo("com.postnord", "PostNord"),
-            AppInfo("com.klarna", "Klarna"),
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-                .background(MaterialTheme.colorScheme.surface),
-        ) {
-            Text(
-                text = "Add Trigger",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Select the apps for which this rule should trigger.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            AppModeContent(
-                selectedApps = previewApps,
-                onRemoveApp = {},
-                onAddApps = {},
             )
         }
     }

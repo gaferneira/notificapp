@@ -1,9 +1,11 @@
 package dev.gaferneira.notificapp.core.data.repository
 
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
+import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
 import dev.gaferneira.notificapp.core.data.local.mapper.RuleMapper
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -22,6 +24,7 @@ import javax.inject.Singleton
 @Singleton
 class RuleRepositoryImpl @Inject constructor(
     private val ruleDao: RuleDao,
+    private val selectedAppDao: SelectedAppDao,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : RuleRepository {
 
@@ -78,7 +81,7 @@ class RuleRepositoryImpl @Inject constructor(
     override suspend fun saveRule(rule: Rule): Result<Unit> = withContext(ioDispatcher) {
         try {
             val entity = RuleMapper.toEntity(rule)
-            val apps = rule.targetApps?.filter { it.isNotBlank() }
+            val apps = rule.targetApps?.map { it.packageName }
             ruleDao.saveRuleWithApps(entity, apps)
             Timber.d("Saved rule: ${rule.id}")
             Result.success(Unit)
@@ -91,7 +94,7 @@ class RuleRepositoryImpl @Inject constructor(
     override suspend fun updateRule(rule: Rule): Result<Unit> = withContext(ioDispatcher) {
         try {
             val entity = RuleMapper.toEntity(rule)
-            val apps = rule.targetApps?.filter { it.isNotBlank() }
+            val apps = rule.targetApps?.map { it.packageName }
             ruleDao.saveRuleWithApps(entity, apps)
             Timber.d("Updated rule: ${rule.id}")
             Result.success(Unit)
@@ -144,5 +147,14 @@ class RuleRepositoryImpl @Inject constructor(
     /**
      * Load target apps for a rule.
      */
-    private suspend fun loadTargetApps(ruleId: String): List<String>? = ruleDao.getTargetAppsForRule(ruleId).takeIf { it.isNotEmpty() }
+    private suspend fun loadTargetApps(ruleId: String): List<AppInfo>? {
+        val packageNames = ruleDao.getTargetAppsForRule(ruleId).takeIf { it.isNotEmpty() } ?: return null
+        val entities = selectedAppDao.getByPackageNames(packageNames)
+        return entities.map { entity ->
+            AppInfo(
+                packageName = entity.packageName,
+                name = entity.appName,
+            )
+        }.takeIf { it.isNotEmpty() }
+    }
 }

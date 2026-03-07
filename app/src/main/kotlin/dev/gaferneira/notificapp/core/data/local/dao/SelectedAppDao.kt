@@ -46,6 +46,12 @@ interface SelectedAppDao {
     suspend fun getByPackageName(packageName: String): SelectedAppEntity?
 
     /**
+     * Get multiple apps by their package names (batch query).
+     */
+    @Query("SELECT * FROM selected_apps WHERE package_name IN (:packageNames)")
+    suspend fun getByPackageNames(packageNames: List<String>): List<SelectedAppEntity>
+
+    /**
      * Check if an app is selected (exists in database).
      */
     @Query("SELECT EXISTS(SELECT 1 FROM selected_apps WHERE package_name = :packageName LIMIT 1)")

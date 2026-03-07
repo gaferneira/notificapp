@@ -1,11 +1,11 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
-import dev.gaferneira.notificapp.domain.model.RuleTrigger
-import dev.gaferneira.notificapp.domain.model.TriggerType
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
 
 /**
@@ -32,14 +32,18 @@ object RuleEditorContract {
         val error: String? = null,
         /** Validation errors by field */
         val validationErrors: Map<String, String> = emptyMap(),
+        /** List of enabled apps for filtering available apps in the picker */
+        val enabledApps: List<AppInfo> = emptyList(),
         /** Whether matching logic bottom sheet is visible */
         val isMatchingLogicSheetVisible: Boolean = false,
+        /** Whether app selection bottom sheet is visible */
+        val isAppSheetVisible: Boolean = false,
         /** Whether action bottom sheet is visible */
         val isActionSheetVisible: Boolean = false,
         /** Whether field bottom sheet is visible */
         val isFieldSheetVisible: Boolean = false,
-        /** ID of the trigger currently being edited in the bottom sheet, or null for new trigger */
-        val editingTriggerId: String? = null,
+        /** ID of the condition currently being edited in the bottom sheet, or null for new condition */
+        val editingConditionId: String? = null,
         /** ID of the action currently being edited in the bottom sheet, or null for new action */
         val editingActionId: String? = null,
         /** ID of the field currently being edited in the bottom sheet, or null for new field */
@@ -48,6 +52,8 @@ object RuleEditorContract {
         val showDescription: Boolean = false,
         /** Whether to show the category field (true if category is not empty) */
         val showCategory: Boolean = false,
+        /** Whether to show the delete confirmation dialog */
+        val showDeleteConfirmation: Boolean = false,
     ) {
         /** Whether the form is valid */
         val isValid: Boolean
@@ -57,11 +63,11 @@ object RuleEditorContract {
         /** Whether we can test extraction */
         val canTestExtraction: Boolean
             get() = sampleNotification != null &&
-                rule.extractionFields.isNotEmpty()
+                rule.fields.isNotEmpty()
 
-        /** Get the trigger being edited, if any */
-        val editingTrigger: RuleTrigger?
-            get() = editingTriggerId?.let { id -> rule.triggers.find { it.id == id } }
+        /** Get the condition being edited, if any */
+        val editingCondition: RuleCondition?
+            get() = editingConditionId?.let { id -> rule.triggers.find { it.id == id } }
 
         /** Get the action being edited, if any */
         val editingAction: RuleAction?
@@ -69,7 +75,7 @@ object RuleEditorContract {
 
         /** Get the field being edited, if any */
         val editingField: RuleField?
-            get() = editingFieldId?.let { id -> rule.extractionFields.find { it.id == id } }
+            get() = editingFieldId?.let { id -> rule.fields.find { it.id == id } }
     }
 
     /**
@@ -103,23 +109,20 @@ object RuleEditorContract {
         /** Show category field */
         data object OnAddCategoryClicked : UiEvent()
 
-        /** Update rule area */
-        data class OnAreaChange(val area: String) : UiEvent()
+        /** Show matching logic bottom sheet for adding a new condition */
+        data object OnAddConditionClicked : UiEvent()
 
-        /** Toggle global rule setting */
-        data object OnGlobalRuleToggle : UiEvent()
+        /** Remove a condition from the list */
+        data class OnRemoveConditionClicked(val conditionId: String) : UiEvent()
 
-        /** Update target apps */
-        data class OnTargetAppsChange(val apps: List<String>) : UiEvent()
+        /** Click on a condition item to edit it */
+        data class OnConditionItemClicked(val conditionId: String) : UiEvent()
 
-        /** Show matching logic bottom sheet for adding a new trigger */
-        data object OnAddTriggerClicked : UiEvent()
+        /** Show app selection bottom sheet */
+        data object OnAppsClicked : UiEvent()
 
-        /** Remove a trigger from the list */
-        data class OnRemoveTriggerClicked(val triggerId: String) : UiEvent()
-
-        /** Click on a trigger item to edit it */
-        data class OnTriggerItemClicked(val triggerId: String) : UiEvent()
+        /** Apps selected from AppBottomSheet */
+        data class OnAppsSelected(val apps: List<AppInfo>) : UiEvent()
 
         /** Show action bottom sheet */
         data object OnAddActionClicked : UiEvent()
@@ -146,8 +149,8 @@ object RuleEditorContract {
         data class OnFieldSaved(val field: RuleField) : UiEvent()
         data object OnDismissSheet : UiEvent()
 
-        /** Trigger saved from MatchingLogicBottomSheet (add or update) */
-        data class OnTriggerSaved(val trigger: RuleTrigger) : UiEvent()
+        /** Condition saved from MatchingLogicBottomSheet (add or update) */
+        data class OnConditionSaved(val condition: RuleCondition) : UiEvent()
 
         /** Action saved from ActionBottomSheet (add or update) */
         data class OnActionSaved(val action: RuleAction) : UiEvent()
@@ -160,6 +163,15 @@ object RuleEditorContract {
 
         /** Dismiss error */
         data object OnDismissError : UiEvent()
+
+        /** Show delete confirmation dialog */
+        data object OnDeleteClicked : UiEvent()
+
+        /** Confirm rule deletion */
+        data object OnDeleteConfirmed : UiEvent()
+
+        /** Dismiss delete confirmation dialog */
+        data object OnDeleteDismissed : UiEvent()
     }
 
     /**
@@ -174,17 +186,8 @@ object RuleEditorContract {
     }
 }
 
-val RuleTrigger.displayText: String
-    get() = when (type) {
-        TriggerType.CONDITION -> "${condition?.displayName()} ${operator?.displayName()} '$value'"
-        TriggerType.APP -> if (targetApps.isEmpty()) {
-            "All apps selected"
-        } else if (targetApps.size == 1) {
-            "App is ${targetApps.first().name}"
-        } else {
-            "${targetApps.size} apps selected"
-        }
-    }
+val RuleCondition.displayText: String
+    get() = "${condition?.displayName()} ${operator?.displayName()} '$value'"
 
 val RuleAction.displayName: String
     get() = when (type) {

@@ -5,8 +5,8 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
-import dev.gaferneira.notificapp.domain.model.RuleTrigger
 
 /**
  * Room entity representing an extraction rule.
@@ -61,7 +61,7 @@ data class RuleEntity(
     val ruleFields: List<RuleField> = emptyList(),
 
     @ColumnInfo(name = "triggers")
-    val triggers: List<RuleTrigger> = emptyList(),
+    val triggers: List<RuleCondition> = emptyList(),
 
     @ColumnInfo(name = "actions")
     val actions: List<RuleAction> = emptyList(),

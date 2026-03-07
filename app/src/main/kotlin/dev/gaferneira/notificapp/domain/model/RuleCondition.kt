@@ -9,30 +9,14 @@ import kotlinx.serialization.Serializable
  * Defines when a rule should be applied based on notification properties.
  */
 @Serializable
-data class RuleTrigger(
+data class RuleCondition(
     val id: String,
-    val type: TriggerType,
     /** For CONDITION type: what to match against */
     val condition: MatchingCondition? = null,
     /** For CONDITION type: how to match */
     val operator: MatchingOperator? = null,
-    /** For CONDITION type: the value to match */
     val value: String? = null,
-    /** For APP type: selected app package names */
-    val targetApps: List<AppInfo> = emptyList(),
 )
-
-/**
- * Type of trigger.
- */
-@Serializable
-enum class TriggerType {
-    @SerialName("condition")
-    CONDITION,
-
-    @SerialName("app")
-    APP,
-}
 
 /**
  * What notification property to match against.

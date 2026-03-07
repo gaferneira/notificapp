@@ -14,9 +14,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -61,17 +61,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * App Selection Picker bottom sheet for rule editor.
- * Allows selecting multiple apps for the app trigger type.
+ * Bottom sheet for selecting target apps for a rule.
+ *
+ * @param selectedApps Currently selected apps
+ * @param enabledApps List of enabled apps to show in the picker (filters the installed apps)
+ * @param onConfirm Called when apps are confirmed
+ * @param onDismiss Called when the sheet should be dismissed
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppSelectionPicker(
-    isVisible: Boolean,
     selectedApps: List<AppInfo>,
-    onDismiss: () -> Unit,
+    enabledApps: List<AppInfo>,
     onConfirm: (List<AppInfo>) -> Unit,
-    modifier: Modifier = Modifier,
+    onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(
@@ -81,17 +84,19 @@ fun AppSelectionPicker(
     var searchQuery by remember { mutableStateOf("") }
     var availableApps by remember { mutableStateOf<List<AppDisplayInfo>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var tempSelectedPackages by remember { mutableStateOf<Set<String>>(selectedApps.map { it.packageName }.toSet()) }
+    var tempSelectedPackages by remember { mutableStateOf(selectedApps.map { it.packageName }.toSet()) }
 
-    // Load installed apps
-    LaunchedEffect(isVisible) {
-        if (isVisible) {
-            isLoading = true
-            availableApps = loadInstalledApps(context)
-            // Initialize temp selection with currently selected apps
-            tempSelectedPackages = selectedApps.map { it.packageName }.toSet()
-            isLoading = false
+    // Load installed apps filtered by enabled apps
+    LaunchedEffect(enabledApps) {
+        isLoading = true
+        val allInstalledApps = loadInstalledApps(context)
+        // Filter to only show enabled apps
+        availableApps = allInstalledApps.filter { installedApp ->
+            enabledApps.any { it.packageName == installedApp.packageName }
         }
+        // Initialize temp selection with currently selected apps
+        tempSelectedPackages = selectedApps.map { it.packageName }.toSet()
+        isLoading = false
     }
 
     // Filter apps based on search
@@ -108,17 +113,14 @@ fun AppSelectionPicker(
 
     val selectedCount = tempSelectedPackages.size
 
-    if (!isVisible) return
-
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.statusBarsPadding().fillMaxSize(),
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding(),
+                .fillMaxWidth(),
         ) {
             // Header
             Row(
@@ -360,10 +362,14 @@ private suspend fun loadInstalledApps(context: Context): List<AppDisplayInfo> = 
 private fun AppSelectionPickerPreview() {
     NotificappTheme {
         AppSelectionPicker(
-            isVisible = true,
             selectedApps = listOf(
                 AppInfo("com.whatsapp", "WhatsApp"),
                 AppInfo("com.telegram", "Telegram"),
+            ),
+            enabledApps = listOf(
+                AppInfo("com.whatsapp", "WhatsApp"),
+                AppInfo("com.telegram", "Telegram"),
+                AppInfo("com.slack", "Slack"),
             ),
             onDismiss = {},
             onConfirm = {},

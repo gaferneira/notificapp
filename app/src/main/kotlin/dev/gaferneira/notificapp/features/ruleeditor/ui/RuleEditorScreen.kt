@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,15 +47,15 @@ import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
-import dev.gaferneira.notificapp.domain.model.RuleTrigger
-import dev.gaferneira.notificapp.domain.model.TriggerType
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AppSelectionPicker
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DataExtractionSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DoSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.WhenSection
@@ -126,6 +128,17 @@ private fun RuleEditorScreenContent(
                         )
                     }
                 },
+                actions = {
+                    // Show delete icon only when editing an existing rule
+                    if (uiState.rule.id != null) {
+                        IconButton(onClick = { onEvent(UiEvent.OnDeleteClicked) }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete rule",
+                            )
+                        }
+                    }
+                },
             )
         },
     ) { paddingValues ->
@@ -165,9 +178,20 @@ private fun RuleEditorScreenContent(
             // Bottom sheets
             if (uiState.isMatchingLogicSheetVisible) {
                 MatchingLogicBottomSheet(
-                    initialTrigger = uiState.editingTrigger,
-                    onTriggerSaved = { trigger ->
-                        onEvent(UiEvent.OnTriggerSaved(trigger))
+                    initialCondition = uiState.editingCondition,
+                    onConditionSaved = { condition ->
+                        onEvent(UiEvent.OnConditionSaved(condition))
+                    },
+                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
+                )
+            }
+
+            if (uiState.isAppSheetVisible) {
+                AppSelectionPicker(
+                    selectedApps = uiState.rule.targetApps,
+                    enabledApps = uiState.enabledApps,
+                    onConfirm = { apps ->
+                        onEvent(UiEvent.OnAppsSelected(apps))
                     },
                     onDismiss = { onEvent(UiEvent.OnDismissSheet) },
                 )
@@ -194,6 +218,29 @@ private fun RuleEditorScreenContent(
                     onDismiss = { onEvent(UiEvent.OnDismissSheet) },
                 )
             }
+
+            // Delete confirmation dialog
+            if (uiState.showDeleteConfirmation) {
+                AlertDialog(
+                    onDismissRequest = { onEvent(UiEvent.OnDeleteDismissed) },
+                    title = { Text("Delete Rule") },
+                    text = { Text("Are you sure you want to delete this rule? This action cannot be undone.") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = { onEvent(UiEvent.OnDeleteConfirmed) },
+                        ) {
+                            Text("Delete", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { onEvent(UiEvent.OnDeleteDismissed) },
+                        ) {
+                            Text("Cancel")
+                        }
+                    },
+                )
+            }
         }
     }
 }
@@ -215,26 +262,28 @@ private fun LogicStep(
         // When Section
         SectionWithHelp(
             title = "When",
-            description = "A trigger is a specific notification event. Any trigger added here will start the extraction process.",
+            description = "Define when this rule should trigger. Select apps and add conditions.",
         ) {
             WhenSection(
-                triggers = uiState.rule.triggers,
-                onRemoveTrigger = { onEvent(UiEvent.OnRemoveTriggerClicked(it)) },
-                onTriggerClick = { onEvent(UiEvent.OnTriggerItemClicked(it)) },
+                targetApps = uiState.rule.targetApps,
+                conditions = uiState.rule.triggers,
+                onAppsClick = { onEvent(UiEvent.OnAppsClicked) },
+                onRemoveCondition = { onEvent(UiEvent.OnRemoveConditionClicked(it)) },
+                onConditionClick = { onEvent(UiEvent.OnConditionItemClicked(it)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            // Add trigger button
+            // Add condition button
             AddButton(
-                text = "Add trigger",
-                onClick = { onEvent(UiEvent.OnAddTriggerClicked) },
+                text = "Add condition",
+                onClick = { onEvent(UiEvent.OnAddConditionClicked) },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
 
         // Data Extraction Section
         DataExtractionSection(
-            fields = uiState.rule.extractionFields,
+            fields = uiState.rule.fields,
             onAutoGenerate = { onEvent(UiEvent.OnAutoGenerateClicked) },
             onAddField = { onEvent(UiEvent.OnAddFieldClicked) },
             onEditField = { onEvent(UiEvent.OnEditFieldClicked(it)) },
@@ -439,17 +488,16 @@ private fun RuleEditorScreenStep1Preview() {
                 currentStep = 1,
                 rule = RuleUiModel(
                     name = "ICA Banken Purchase",
-                    targetApps = listOf("com.ica.banken"),
+                    targetApps = emptyList(),
                     triggers = listOf(
-                        RuleTrigger(
+                        RuleCondition(
                             id = "1",
-                            type = TriggerType.CONDITION,
                             condition = MatchingCondition.TEXT_CONTENT,
                             operator = MatchingOperator.CONTAINS,
                             value = "purchase",
                         ),
                     ),
-                    extractionFields = listOf(
+                    fields = listOf(
                         RuleField(
                             id = "1",
                             name = "Merchant",
@@ -494,8 +542,8 @@ private fun RuleEditorScreenStep2Preview() {
                 rule = RuleUiModel(
                     name = "ICA Banken Purchase",
                     description = "Extracts purchase information from ICA Banken notifications",
-                    targetApps = listOf("com.ica.banken"),
-                    extractionFields = listOf(
+                    targetApps = emptyList(),
+                    fields = listOf(
                         RuleField(
                             id = "1",
                             name = "Merchant",
