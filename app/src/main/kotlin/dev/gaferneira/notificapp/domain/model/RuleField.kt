@@ -10,11 +10,34 @@ import kotlinx.serialization.Serializable
 data class RuleField(
     val id: String,
     val name: String,
+    /** The type of data this field represents */
+    val fieldType: FieldType = FieldType.STRING,
     /** The extraction method to use */
     val method: ExtractionMethod,
     /** Whether this field is required */
     val isRequired: Boolean = false,
 ) {
+    /**
+     * Enum representing the type of data a field can hold.
+     */
+    @Serializable
+    enum class FieldType {
+        @SerialName("string")
+        STRING,
+
+        @SerialName("number")
+        NUMBER,
+
+        @SerialName("date")
+        DATE,
+
+        @SerialName("currency")
+        CURRENCY,
+
+        @SerialName("boolean")
+        BOOLEAN,
+    }
+
     /**
      * Sealed class representing different extraction methods.
      */

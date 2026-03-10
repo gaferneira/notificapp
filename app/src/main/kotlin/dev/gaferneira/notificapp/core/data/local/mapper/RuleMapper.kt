@@ -1,8 +1,14 @@
 package dev.gaferneira.notificapp.core.data.local.mapper
 
+import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
+import dev.gaferneira.notificapp.core.data.local.entity.RuleConditionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleEntity
+import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Rule
+import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.RuleCondition
+import dev.gaferneira.notificapp.domain.model.RuleField
 
 /**
  * Mapper functions for converting between Rule domain models and RuleEntity database models.
@@ -13,19 +19,28 @@ object RuleMapper {
      * Convert a RuleEntity to an Rule domain model.
      *
      * @param entity The database entity
+     * @param fieldEntities List of field entities for this rule
+     * @param conditionEntities List of condition entities for this rule
+     * @param actionEntities List of action entities for this rule
      * @param targetApps List of package names for target apps (null if global rule)
      * @return The domain model
      */
-    fun toDomain(entity: RuleEntity, targetApps: List<AppInfo>? = null): Rule = Rule(
+    fun toDomain(
+        entity: RuleEntity,
+        fieldEntities: List<RuleFieldEntity>,
+        conditionEntities: List<RuleConditionEntity>,
+        actionEntities: List<RuleActionEntity>,
+        targetApps: List<AppInfo>? = null,
+    ): Rule = Rule(
         id = entity.id,
         name = entity.name,
         description = entity.description,
         category = entity.category,
         isActive = entity.isActive,
         targetApps = if (entity.isGlobal) null else targetApps,
-        conditions = entity.triggers,
-        fields = entity.ruleFields,
-        actions = entity.actions,
+        conditions = RuleConditionMapper.toDomainList(conditionEntities),
+        fields = RuleFieldMapper.toDomainList(fieldEntities),
+        actions = RuleActionMapper.toDomainList(actionEntities),
         createdAt = entity.createdAt,
         updatedAt = entity.updatedAt,
     )
@@ -33,7 +48,7 @@ object RuleMapper {
     /**
      * Convert an Rule domain model to a RuleEntity.
      *
-     * Note: Target apps are stored separately in rule_target_apps table.
+     * Note: Target apps, fields, conditions, and actions are stored separately.
      *
      * @param domain The domain model
      * @return The database entity
@@ -46,10 +61,34 @@ object RuleMapper {
         area = null, // Not yet in domain model
         isActive = domain.isActive,
         isGlobal = domain.targetApps == null,
-        ruleFields = domain.fields,
-        triggers = domain.conditions,
-        actions = domain.actions,
         createdAt = domain.createdAt,
         updatedAt = domain.updatedAt,
     )
+
+    /**
+     * Convert RuleField domain models to entities for a specific rule.
+     *
+     * @param fields The domain models
+     * @param ruleId The parent rule ID
+     * @return The database entities
+     */
+    fun fieldsToEntityList(fields: List<RuleField>, ruleId: String): List<RuleFieldEntity> = RuleFieldMapper.toEntityList(fields, ruleId)
+
+    /**
+     * Convert RuleCondition domain models to entities for a specific rule.
+     *
+     * @param conditions The domain models
+     * @param ruleId The parent rule ID
+     * @return The database entities
+     */
+    fun conditionsToEntityList(conditions: List<RuleCondition>, ruleId: String): List<RuleConditionEntity> = RuleConditionMapper.toEntityList(conditions, ruleId)
+
+    /**
+     * Convert RuleAction domain models to entities for a specific rule.
+     *
+     * @param actions The domain models
+     * @param ruleId The parent rule ID
+     * @return The database entities
+     */
+    fun actionsToEntityList(actions: List<RuleAction>, ruleId: String): List<RuleActionEntity> = RuleActionMapper.toEntityList(actions, ruleId)
 }

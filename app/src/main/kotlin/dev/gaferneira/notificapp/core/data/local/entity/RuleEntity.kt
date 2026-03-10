@@ -4,14 +4,11 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import dev.gaferneira.notificapp.domain.model.RuleAction
-import dev.gaferneira.notificapp.domain.model.RuleCondition
-import dev.gaferneira.notificapp.domain.model.RuleField
 
 /**
  * Room entity representing an extraction rule.
  *
- * Stores rule metadata and JSON-serialized complex objects.
+ * Stores rule metadata. Rule fields, conditions, and actions are stored separately in their own tables.
  *
  * @property id Unique identifier
  * @property name Rule name
@@ -20,9 +17,6 @@ import dev.gaferneira.notificapp.domain.model.RuleField
  * @property area Optional area/location
  * @property isActive Whether the rule is active
  * @property isGlobal Whether this rule applies to all apps (true) or specific apps (false)
- * @property ruleFields JSON list of fields to extract
- * @property triggers JSON list of trigger conditions
- * @property actions JSON list of actions to take
  * @property createdAt Creation timestamp
  * @property updatedAt Last update timestamp
  */
@@ -56,15 +50,6 @@ data class RuleEntity(
 
     @ColumnInfo(name = "is_global")
     val isGlobal: Boolean = true,
-
-    @ColumnInfo(name = "rule_fields")
-    val ruleFields: List<RuleField> = emptyList(),
-
-    @ColumnInfo(name = "triggers")
-    val triggers: List<RuleCondition> = emptyList(),
-
-    @ColumnInfo(name = "actions")
-    val actions: List<RuleAction> = emptyList(),
 
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),

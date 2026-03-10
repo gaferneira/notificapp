@@ -8,8 +8,10 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.gaferneira.notificapp.core.data.local.AppDatabase
+import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
+import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
 import javax.inject.Singleton
 
@@ -33,6 +35,7 @@ object DatabaseModule {
         AppDatabase::class.java,
         "notificapp_database",
     )
+        .fallbackToDestructiveMigration() // App not yet published - data loss acceptable
         .build()
 
     /**
@@ -61,4 +64,22 @@ object DatabaseModule {
      */
     @Provides
     fun provideRuleDao(database: AppDatabase): RuleDao = database.ruleDao()
+
+    /**
+     * Provides the RuleExecutionDao.
+     *
+     * @param database AppDatabase instance
+     * @return RuleExecutionDao
+     */
+    @Provides
+    fun provideRuleExecutionDao(database: AppDatabase): RuleExecutionDao = database.ruleExecutionDao()
+
+    /**
+     * Provides the ExtractedFieldValueDao.
+     *
+     * @param database AppDatabase instance
+     * @return ExtractedFieldValueDao
+     */
+    @Provides
+    fun provideExtractedFieldValueDao(database: AppDatabase): ExtractedFieldValueDao = database.extractedFieldValueDao()
 }

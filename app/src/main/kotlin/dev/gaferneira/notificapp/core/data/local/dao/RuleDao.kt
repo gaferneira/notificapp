@@ -5,7 +5,10 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
+import dev.gaferneira.notificapp.core.data.local.entity.RuleConditionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleEntity
+import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleTargetAppEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -124,11 +127,134 @@ interface RuleDao {
     }
 
     /**
-     * Update only the rule metadata without touching target apps.
-     * Use saveRuleWithApps if you need to update apps as well.
+     * Update only the rule metadata without touching target apps or fields.
+     * Use saveRuleWithAppsAndFields if you need to update related data as well.
      */
     @Transaction
     suspend fun updateRule(rule: RuleEntity) {
         insert(rule)
+    }
+
+    // ========== Rule Condition Operations ==========
+
+    /**
+     * Get all conditions for a specific rule.
+     */
+    @Query("SELECT * FROM rule_conditions WHERE rule_id = :ruleId")
+    suspend fun getConditionsForRule(ruleId: String): List<RuleConditionEntity>
+
+    /**
+     * Get all conditions for a specific rule as a Flow.
+     */
+    @Query("SELECT * FROM rule_conditions WHERE rule_id = :ruleId")
+    fun observeConditionsForRule(ruleId: String): Flow<List<RuleConditionEntity>>
+
+    /**
+     * Insert or update conditions.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertConditions(conditions: List<RuleConditionEntity>)
+
+    /**
+     * Delete all conditions for a rule.
+     */
+    @Query("DELETE FROM rule_conditions WHERE rule_id = :ruleId")
+    suspend fun deleteConditionsForRule(ruleId: String)
+
+    // ========== Rule Action Operations ==========
+
+    /**
+     * Get all actions for a specific rule.
+     */
+    @Query("SELECT * FROM rule_actions WHERE rule_id = :ruleId")
+    suspend fun getActionsForRule(ruleId: String): List<RuleActionEntity>
+
+    /**
+     * Get all actions for a specific rule as a Flow.
+     */
+    @Query("SELECT * FROM rule_actions WHERE rule_id = :ruleId")
+    fun observeActionsForRule(ruleId: String): Flow<List<RuleActionEntity>>
+
+    /**
+     * Insert or update actions.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertActions(actions: List<RuleActionEntity>)
+
+    /**
+     * Delete all actions for a rule.
+     */
+    @Query("DELETE FROM rule_actions WHERE rule_id = :ruleId")
+    suspend fun deleteActionsForRule(ruleId: String)
+
+    // ========== Rule Field Operations ==========
+
+    /**
+     * Get all fields for a specific rule.
+     */
+    @Query("SELECT * FROM rule_fields WHERE rule_id = :ruleId")
+    suspend fun getFieldsForRule(ruleId: String): List<RuleFieldEntity>
+
+    /**
+     * Get all fields for a specific rule as a Flow.
+     */
+    @Query("SELECT * FROM rule_fields WHERE rule_id = :ruleId")
+    fun observeFieldsForRule(ruleId: String): Flow<List<RuleFieldEntity>>
+
+    /**
+     * Insert or update fields.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFields(fields: List<RuleFieldEntity>)
+
+    /**
+     * Delete all fields for a rule.
+     */
+    @Query("DELETE FROM rule_fields WHERE rule_id = :ruleId")
+    suspend fun deleteFieldsForRule(ruleId: String)
+
+    // ========== Combined Operations ==========
+
+    @Transaction
+    suspend fun saveRuleWithRelatedData(
+        rule: RuleEntity,
+        fields: List<RuleFieldEntity>,
+        conditions: List<RuleConditionEntity>,
+        actions: List<RuleActionEntity>,
+        apps: List<String>?,
+    ) {
+        insert(rule)
+        deleteFieldsForRule(rule.id)
+        deleteConditionsForRule(rule.id)
+        deleteActionsForRule(rule.id)
+        deleteTargetAppsForRule(rule.id)
+        if (fields.isNotEmpty()) {
+            insertFields(fields)
+        }
+        if (conditions.isNotEmpty()) {
+            insertConditions(conditions)
+        }
+        if (actions.isNotEmpty()) {
+            insertActions(actions)
+        }
+        if (!apps.isNullOrEmpty()) {
+            insertTargetApps(
+                apps.map { packageName ->
+                    RuleTargetAppEntity(rule.id, packageName)
+                },
+            )
+        }
+    }
+
+    /**
+     * Delete a rule and all its related data (cascades to fields, conditions, actions and target apps via FK constraints).
+     */
+    @Transaction
+    suspend fun deleteRuleWithRelatedData(ruleId: String) {
+        deleteFieldsForRule(ruleId)
+        deleteConditionsForRule(ruleId)
+        deleteActionsForRule(ruleId)
+        deleteTargetAppsForRule(ruleId)
+        delete(ruleId)
     }
 }

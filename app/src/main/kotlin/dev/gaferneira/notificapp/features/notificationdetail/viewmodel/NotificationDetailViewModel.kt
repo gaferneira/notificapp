@@ -2,15 +2,20 @@ package dev.gaferneira.notificapp.features.notificationdetail.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
+import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
+import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
-import dev.gaferneira.notificapp.domain.model.Rule
+import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
-import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ApplicableRule
+import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ExecutionWithDetails
+import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ExtractedFieldDisplay
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEffect
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEvent
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiState
@@ -22,17 +27,25 @@ import javax.inject.Inject
 /**
  * ViewModel for the Notification Detail screen.
  *
- * Loads notification data and determines which rules apply to it.
+ * Loads notification data and rule executions that matched this notification.
  *
  * @param notificationRepository Repository for notifications
- * @param ruleRepository Repository for rules
+ * @param ruleExecutionDao DAO for rule executions
+ * @param extractedFieldValueDao DAO for extracted field values
+ * @param ruleRepository Repository for rules (to get rule names)
+ * @param notificationDao DAO for notification counter updates
+ * @param ruleEngine Engine for re-executing rules
  * @param navigationHandler Handler for navigation commands
  * @param ioDispatcher Dispatcher for IO operations
  */
 @HiltViewModel
 class NotificationDetailViewModel @Inject constructor(
     private val notificationRepository: NotificationRepository,
+    private val ruleExecutionDao: RuleExecutionDao,
+    private val extractedFieldValueDao: ExtractedFieldValueDao,
     private val ruleRepository: RuleRepository,
+    private val notificationDao: NotificationDao,
+    private val ruleEngine: RuleEngine,
     private val navigationHandler: NavigationHandler,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
@@ -45,7 +58,7 @@ class NotificationDetailViewModel @Inject constructor(
     fun setNotificationId(id: String) {
         if (notificationId == id) return
         notificationId = id
-        loadNotificationAndRules()
+        loadNotificationAndExecutions()
     }
 
     override fun onEvent(event: UiEvent) {
@@ -56,11 +69,8 @@ class NotificationDetailViewModel @Inject constructor(
             is UiEvent.OnCreateRuleClicked -> {
                 notificationId?.let { navigateToRuleEditor(it) }
             }
-            is UiEvent.OnEditRuleClicked -> {
-                navigateToEditRule(event.ruleId)
-            }
-            is UiEvent.OnRuleToggleClicked -> {
-                toggleRule(event.ruleId)
+            is UiEvent.OnRefreshClicked -> {
+                refreshExecutions()
             }
             is UiEvent.OnDismissError -> {
                 setState { copy(error = null) }
@@ -87,18 +97,9 @@ class NotificationDetailViewModel @Inject constructor(
     }
 
     /**
-     * Navigate to rule editor for editing an existing rule.
+     * Load notification and rule executions.
      */
-    private fun navigateToEditRule(ruleId: String) {
-        viewModelScope.launch {
-            navigationHandler.navigate(Routes.ruleEditor(ruleId = ruleId))
-        }
-    }
-
-    /**
-     * Load notification and applicable rules.
-     */
-    private fun loadNotificationAndRules() {
+    private fun loadNotificationAndExecutions() {
         val id = notificationId ?: return
 
         viewModelScope.launch(ioDispatcher) {
@@ -119,8 +120,8 @@ class NotificationDetailViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Observe rules that apply to this notification
-                observeApplicableRules(notification.packageName, notification)
+                // Load executions for this notification
+                observeExecutions(notification)
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load notification detail")
                 setState { copy(isLoading = false, error = "Failed to load: ${e.message}") }
@@ -129,78 +130,140 @@ class NotificationDetailViewModel @Inject constructor(
     }
 
     /**
-     * Observe rules and determine which apply to this notification.
+     * Load and observe executions for this notification.
      */
-    private fun observeApplicableRules(
-        packageName: String,
+    private fun observeExecutions(
         notification: dev.gaferneira.notificapp.domain.model.Notification,
     ) {
         viewModelScope.launch(ioDispatcher) {
-            ruleRepository.observeAllRules()
-                .collect { rules ->
-                    val applicableRules = rules.map { rule ->
-                        ApplicableRule(
-                            rule = rule,
-                            isApplicable = isRuleApplicable(rule, packageName, notification),
-                            isActive = rule.isActive,
-                        )
-                    }.sortedByDescending { it.isApplicable }
-
-                    setState {
-                        copy(
-                            notification = notification,
-                            applicableRules = applicableRules,
-                            isLoading = false,
-                        )
-                    }
-                }
-        }
-    }
-
-    /**
-     * Check if a rule applies to this notification.
-     */
-    private fun isRuleApplicable(
-        rule: Rule,
-        packageName: String,
-        notification: dev.gaferneira.notificapp.domain.model.Notification,
-    ): Boolean {
-        // Check if rule targets this app
-        val appMatches = when {
-            rule.targetApps == null -> true // Rule applies to all apps
-            rule.targetApps.isEmpty() -> true
-            else -> false
-        }
-
-        if (!appMatches) return false
-
-        // Check if notification content matches the rule pattern
-        val contentToCheck = listOfNotNull(
-            notification.title,
-            notification.content,
-            notification.rawContent,
-        ).joinToString(" ")
-
-        return false
-    }
-
-    /**
-     * Toggle a rule's active state.
-     */
-    private fun toggleRule(ruleId: String) {
-        viewModelScope.launch(ioDispatcher) {
             try {
-                ruleRepository.toggleRuleActive(ruleId)
-                    .onSuccess {
-                        Timber.d("Toggled rule: $ruleId")
-                    }
-                    .onFailure { e ->
-                        Timber.e(e, "Failed to toggle rule: $ruleId")
-                        sendEffect(UiEffect.ShowError("Failed to toggle rule"))
-                    }
+                // Get executions from DAO
+                val executionEntities = ruleExecutionDao.getExecutionsForNotification(notification.id)
+
+                // Build execution details
+                val executionsWithDetails = executionEntities.map { executionEntity ->
+                    buildExecutionDetails(executionEntity)
+                }
+
+                setState {
+                    copy(
+                        notification = notification,
+                        executions = executionsWithDetails,
+                        isLoading = false,
+                    )
+                }
             } catch (e: Exception) {
-                Timber.e(e, "Error toggling rule: $ruleId")
-                sendEffect(UiEffect.ShowError("Failed to toggle rule: ${e.message}"))
+                Timber.e(e, "Failed to load executions")
+                setState {
+                    copy(
+                        notification = notification,
+                        executions = emptyList(),
+                        isLoading = false,
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Build execution details with field values and action names.
+     */
+    private suspend fun buildExecutionDetails(
+        executionEntity: dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity,
+    ): ExecutionWithDetails {
+        // Get rule name
+        val ruleResult = ruleRepository.getRule(executionEntity.ruleId)
+        val ruleName = ruleResult.getOrNull()?.name ?: "Unknown Rule"
+
+        // Get extracted field values
+        val fieldValueEntities = extractedFieldValueDao.getValuesForExecution(executionEntity.id)
+
+        // Build field displays (we'd need rule fields to get names, but we can use IDs for now)
+        val extractedFields = fieldValueEntities.map { fieldValue ->
+            ExtractedFieldDisplay(
+                fieldName = "Field ${fieldValue.ruleFieldId.takeLast(4)}", // Temporary naming
+                fieldType = RuleField.FieldType.STRING, // Default type
+                value = fieldValue.valueText ?: fieldValue.valueNumber?.toString() ?: "N/A",
+            )
+        }
+
+        // Parse triggered actions from JSON
+        val triggeredActionIds = try {
+            kotlinx.serialization.json.Json.decodeFromString<List<String>>(
+                executionEntity.triggeredActions,
+            )
+        } catch (e: Exception) {
+            emptyList<String>()
+        }
+
+        // Convert action IDs to display names
+        val actionNames = triggeredActionIds.map { actionId ->
+            when (actionId) {
+                "SAVE_DATA" -> "Save Data"
+                "DELETE_NOTIFICATION" -> "Delete"
+                "CREATE_ALARM" -> "Alarm"
+                else -> actionId
+            }
+        }
+
+        return ExecutionWithDetails(
+            execution = dev.gaferneira.notificapp.domain.model.RuleExecution(
+                id = executionEntity.id,
+                notificationId = executionEntity.notificationId,
+                ruleId = executionEntity.ruleId,
+                extractedData = try {
+                    kotlinx.serialization.json.Json.decodeFromString(executionEntity.extractedData)
+                } catch (e: Exception) {
+                    emptyMap()
+                },
+                triggeredActions = triggeredActionIds,
+                createdAt = executionEntity.createdAt,
+            ),
+            ruleName = ruleName,
+            extractedFields = extractedFields,
+            triggeredActionNames = actionNames,
+        )
+    }
+
+    /**
+     * Refresh/re-execute rules for this notification.
+     * Clears existing executions and re-runs current rules.
+     */
+    private fun refreshExecutions() {
+        val id = notificationId ?: return
+
+        viewModelScope.launch(ioDispatcher) {
+            setState { copy(isLoading = true, error = null) }
+
+            try {
+                // 1. Get the notification
+                val notificationResult = notificationRepository.getNotification(id)
+                if (notificationResult.isFailure) {
+                    setState { copy(isLoading = false, error = "Failed to load notification") }
+                    return@launch
+                }
+                val notification = notificationResult.getOrNull()
+                if (notification == null) {
+                    setState { copy(isLoading = false, error = "Notification not found") }
+                    return@launch
+                }
+
+                // 2. Delete existing executions for this notification
+                ruleExecutionDao.deleteExecutionsForNotification(id)
+
+                // 3. Reset applied rules count on the notification
+                notificationDao.resetAppliedRulesCount(id)
+
+                // 4. Re-run the rule engine
+                ruleEngine.process(notification)
+
+                // 5. Reload executions
+                observeExecutions(notification)
+
+                Timber.d("Refreshed rules for notification $id")
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to refresh rules for notification $id")
+                setState { copy(isLoading = false, error = "Failed to refresh: ${e.message}") }
             }
         }
     }

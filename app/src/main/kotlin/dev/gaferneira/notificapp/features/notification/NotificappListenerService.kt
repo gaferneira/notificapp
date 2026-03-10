@@ -3,6 +3,7 @@ package dev.gaferneira.notificapp.features.notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import dagger.hilt.android.AndroidEntryPoint
+import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
@@ -35,6 +36,9 @@ class NotificappListenerService : NotificationListenerService() {
 
     @Inject
     lateinit var deduplicator: NotificationDeduplicator
+
+    @Inject
+    lateinit var ruleEngine: RuleEngine
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -89,6 +93,8 @@ class NotificappListenerService : NotificationListenerService() {
                 notificationRepository.saveNotification(notification)
                     .onSuccess {
                         Timber.d("Saved notification from $packageName: ${notification.id}")
+                        // Process rules against this notification
+                        processRules(notification)
                     }
                     .onFailure { e ->
                         Timber.e(e, "Failed to save notification from $packageName")
@@ -96,6 +102,26 @@ class NotificappListenerService : NotificationListenerService() {
             } catch (e: Exception) {
                 Timber.e(e, "Error processing notification from $packageName")
             }
+        }
+    }
+
+    /**
+     * Process rules against a saved notification.
+     */
+    private suspend fun processRules(notification: dev.gaferneira.notificapp.domain.model.Notification) {
+        try {
+            val result = ruleEngine.process(notification)
+            result
+                .onSuccess { executions ->
+                    if (executions.isNotEmpty()) {
+                        Timber.d("Processed ${executions.size} rule matches for notification ${notification.id}")
+                    }
+                }
+                .onFailure { e ->
+                    Timber.e(e, "Failed to process rules for notification ${notification.id}")
+                }
+        } catch (e: Exception) {
+            Timber.e(e, "Error in rule processing for notification ${notification.id}")
         }
     }
 

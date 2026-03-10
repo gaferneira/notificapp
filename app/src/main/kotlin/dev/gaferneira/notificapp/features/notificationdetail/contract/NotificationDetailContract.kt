@@ -1,12 +1,13 @@
 package dev.gaferneira.notificapp.features.notificationdetail.contract
 
 import dev.gaferneira.notificapp.domain.model.Notification
-import dev.gaferneira.notificapp.domain.model.Rule
+import dev.gaferneira.notificapp.domain.model.RuleExecution
+import dev.gaferneira.notificapp.domain.model.RuleField
 
 /**
  * Contract for the Notification Detail screen.
  *
- * Shows notification data and applicable extraction rules.
+ * Shows notification data and rule executions that matched this notification.
  */
 object NotificationDetailContract {
 
@@ -16,26 +17,40 @@ object NotificationDetailContract {
     data class UiState(
         /** The notification being viewed */
         val notification: Notification? = null,
-        /** Rules that apply to this notification's app */
-        val applicableRules: List<ApplicableRule> = emptyList(),
+        /** Rule executions for this notification */
+        val executions: List<ExecutionWithDetails> = emptyList(),
         /** Whether data is loading */
         val isLoading: Boolean = true,
         /** Error message if loading failed */
         val error: String? = null,
     ) {
-        /** Count of applicable rules */
-        val applicableRulesCount: Int
-            get() = applicableRules.size
+        /** Count of rule executions */
+        val executionCount: Int
+            get() = executions.size
 
-        /** Count of active applicable rules */
-        val activeRulesCount: Int
-            get() = applicableRules.count { it.isActive }
+        /** Whether any rules matched this notification */
+        val hasExecutions: Boolean
+            get() = executions.isNotEmpty()
     }
 
     /**
-     * Represents a rule and whether it applies to this notification.
+     * Represents a rule execution with display details.
      */
-    data class ApplicableRule(val rule: Rule, val isApplicable: Boolean, val isActive: Boolean)
+    data class ExecutionWithDetails(
+        val execution: RuleExecution,
+        val ruleName: String,
+        val extractedFields: List<ExtractedFieldDisplay>,
+        val triggeredActionNames: List<String>,
+    )
+
+    /**
+     * Display data for an extracted field.
+     */
+    data class ExtractedFieldDisplay(
+        val fieldName: String,
+        val fieldType: RuleField.FieldType,
+        val value: String,
+    )
 
     /**
      * UI Events from user interactions.
@@ -47,11 +62,8 @@ object NotificationDetailContract {
         /** User clicked to create a new rule */
         data object OnCreateRuleClicked : UiEvent()
 
-        /** User clicked to edit a rule */
-        data class OnEditRuleClicked(val ruleId: String) : UiEvent()
-
-        /** User clicked to toggle a rule */
-        data class OnRuleToggleClicked(val ruleId: String) : UiEvent()
+        /** User clicked to refresh/re-execute rules */
+        data object OnRefreshClicked : UiEvent()
 
         /** User dismissed error */
         data object OnDismissError : UiEvent()
@@ -66,9 +78,6 @@ object NotificationDetailContract {
 
         /** Navigate to rule editor for new rule */
         data class NavigateToRuleEditor(val notificationId: String) : UiEffect()
-
-        /** Navigate to rule editor for existing rule */
-        data class NavigateToEditRule(val ruleId: String) : UiEffect()
 
         /** Show error message */
         data class ShowError(val message: String) : UiEffect()

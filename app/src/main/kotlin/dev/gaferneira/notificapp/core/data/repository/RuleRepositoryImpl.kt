@@ -30,9 +30,12 @@ class RuleRepositoryImpl @Inject constructor(
 
     override fun observeAllRules(): Flow<List<Rule>> = ruleDao.observeAll().map { entities ->
         entities.map { entity ->
-            // Load target apps for each rule
+            // Load target apps, fields, conditions, and actions for each rule
             val apps = if (entity.isGlobal) null else loadTargetApps(entity.id)
-            RuleMapper.toDomain(entity, apps)
+            val fields = ruleDao.getFieldsForRule(entity.id)
+            val conditions = ruleDao.getConditionsForRule(entity.id)
+            val actions = ruleDao.getActionsForRule(entity.id)
+            RuleMapper.toDomain(entity, fields, conditions, actions, apps)
         }
     }
 
@@ -41,7 +44,10 @@ class RuleRepositoryImpl @Inject constructor(
             val entities = ruleDao.getAll()
             val rules = entities.map { entity ->
                 val apps = loadTargetApps(entity.id)
-                RuleMapper.toDomain(entity, apps)
+                val fields = ruleDao.getFieldsForRule(entity.id)
+                val conditions = ruleDao.getConditionsForRule(entity.id)
+                val actions = ruleDao.getActionsForRule(entity.id)
+                RuleMapper.toDomain(entity, fields, conditions, actions, apps)
             }
             Result.success(rules)
         } catch (e: Exception) {
@@ -55,7 +61,10 @@ class RuleRepositoryImpl @Inject constructor(
             val entity = ruleDao.getById(id)
             val rule = entity?.let {
                 val apps = loadTargetApps(it.id)
-                RuleMapper.toDomain(it, apps)
+                val fields = ruleDao.getFieldsForRule(it.id)
+                val conditions = ruleDao.getConditionsForRule(it.id)
+                val actions = ruleDao.getActionsForRule(it.id)
+                RuleMapper.toDomain(it, fields, conditions, actions, apps)
             }
             Result.success(rule)
         } catch (e: Exception) {
@@ -69,7 +78,10 @@ class RuleRepositoryImpl @Inject constructor(
             val entities = ruleDao.getRulesForApp(packageName)
             val rules = entities.map { entity ->
                 val apps = loadTargetApps(entity.id)
-                RuleMapper.toDomain(entity, apps)
+                val fields = ruleDao.getFieldsForRule(entity.id)
+                val conditions = ruleDao.getConditionsForRule(entity.id)
+                val actions = ruleDao.getActionsForRule(entity.id)
+                RuleMapper.toDomain(entity, fields, conditions, actions, apps)
             }
             Result.success(rules)
         } catch (e: Exception) {
@@ -81,8 +93,11 @@ class RuleRepositoryImpl @Inject constructor(
     override suspend fun saveRule(rule: Rule): Result<Unit> = withContext(ioDispatcher) {
         try {
             val entity = RuleMapper.toEntity(rule)
+            val fieldEntities = RuleMapper.fieldsToEntityList(rule.fields, rule.id)
+            val conditionEntities = RuleMapper.conditionsToEntityList(rule.conditions, rule.id)
+            val actionEntities = RuleMapper.actionsToEntityList(rule.actions, rule.id)
             val apps = rule.targetApps?.map { it.packageName }
-            ruleDao.saveRuleWithApps(entity, apps)
+            ruleDao.saveRuleWithRelatedData(entity, fieldEntities, conditionEntities, actionEntities, apps)
             Timber.d("Saved rule: ${rule.id}")
             Result.success(Unit)
         } catch (e: Exception) {
@@ -94,8 +109,11 @@ class RuleRepositoryImpl @Inject constructor(
     override suspend fun updateRule(rule: Rule): Result<Unit> = withContext(ioDispatcher) {
         try {
             val entity = RuleMapper.toEntity(rule)
+            val fieldEntities = RuleMapper.fieldsToEntityList(rule.fields, rule.id)
+            val conditionEntities = RuleMapper.conditionsToEntityList(rule.conditions, rule.id)
+            val actionEntities = RuleMapper.actionsToEntityList(rule.actions, rule.id)
             val apps = rule.targetApps?.map { it.packageName }
-            ruleDao.saveRuleWithApps(entity, apps)
+            ruleDao.saveRuleWithRelatedData(entity, fieldEntities, conditionEntities, actionEntities, apps)
             Timber.d("Updated rule: ${rule.id}")
             Result.success(Unit)
         } catch (e: Exception) {
@@ -106,7 +124,7 @@ class RuleRepositoryImpl @Inject constructor(
 
     override suspend fun deleteRule(id: String): Result<Unit> = withContext(ioDispatcher) {
         try {
-            ruleDao.delete(id)
+            ruleDao.deleteRuleWithRelatedData(id)
             Timber.d("Deleted rule: $id")
             Result.success(Unit)
         } catch (e: Exception) {

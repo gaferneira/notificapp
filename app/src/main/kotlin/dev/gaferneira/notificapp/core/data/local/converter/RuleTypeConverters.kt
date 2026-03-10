@@ -1,16 +1,14 @@
 package dev.gaferneira.notificapp.core.data.local.converter
 
 import androidx.room.TypeConverter
-import dev.gaferneira.notificapp.domain.model.RuleAction
-import dev.gaferneira.notificapp.domain.model.RuleCondition
-import dev.gaferneira.notificapp.domain.model.RuleField
 import kotlinx.serialization.json.Json
 
 /**
  * Room TypeConverters for complex rule-related types.
  *
- * Handles serialization of polymorphic sealed classes (ExtractionMethod)
- * to JSON strings for database storage.
+ * Handles serialization of polymorphic sealed classes to JSON strings for database storage.
+ *
+ * Note: RuleField, RuleCondition, and RuleAction are no longer stored as JSON lists - they have their own tables.
  */
 class RuleTypeConverters {
 
@@ -21,26 +19,12 @@ class RuleTypeConverters {
         classDiscriminator = "classType"
     }
 
-    // ========== RuleField List ==========
+    // ========== String Map (for extracted data) ==========
     @TypeConverter
-    fun fromRuleFieldList(fields: List<RuleField>): String = json.encodeToString(fields)
+    fun fromStringMap(map: Map<String, String>): String = json.encodeToString(map)
 
     @TypeConverter
-    fun toRuleFieldList(jsonString: String): List<RuleField> = json.decodeFromString(jsonString)
-
-    // ========== RuleTrigger List ==========
-    @TypeConverter
-    fun fromRuleTriggerList(triggers: List<RuleCondition>): String = json.encodeToString(triggers)
-
-    @TypeConverter
-    fun toRuleTriggerList(jsonString: String): List<RuleCondition> = json.decodeFromString(jsonString)
-
-    // ========== RuleAction List ==========
-    @TypeConverter
-    fun fromRuleActionList(actions: List<RuleAction>): String = json.encodeToString(actions)
-
-    @TypeConverter
-    fun toRuleActionList(jsonString: String): List<RuleAction> = json.decodeFromString(jsonString)
+    fun toStringMap(jsonString: String): Map<String, String> = json.decodeFromString(jsonString)
 
     // ========== String List (for targetApps and other lists) ==========
     @TypeConverter
