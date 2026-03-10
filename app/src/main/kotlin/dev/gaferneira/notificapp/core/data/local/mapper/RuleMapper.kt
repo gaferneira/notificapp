@@ -35,7 +35,7 @@ object RuleMapper {
         id = entity.id,
         name = entity.name,
         description = entity.description,
-        category = entity.category,
+        category = entity.category?.takeIf { it.isNotBlank() },
         isActive = entity.isActive,
         targetApps = if (entity.isGlobal) null else targetApps,
         conditions = RuleConditionMapper.toDomainList(conditionEntities),
@@ -57,8 +57,7 @@ object RuleMapper {
         id = domain.id,
         name = domain.name,
         description = domain.description,
-        category = domain.category,
-        area = null, // Not yet in domain model
+        category = domain.category?.takeIf { it.isNotBlank() },
         isActive = domain.isActive,
         isGlobal = domain.targetApps == null,
         createdAt = domain.createdAt,

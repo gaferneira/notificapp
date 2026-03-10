@@ -1,5 +1,7 @@
 package dev.gaferneira.notificapp.domain.repository
 
+import androidx.paging.PagingData
+import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Notification
 import kotlinx.coroutines.flow.Flow
 
@@ -20,6 +22,30 @@ interface NotificationRepository {
      * Observe notifications for specific apps.
      */
     fun observeNotificationsByApps(packageNames: List<String>): Flow<List<Notification>>
+
+    /**
+     * Get paginated notifications with optional app and status filters.
+     *
+     * @param packageNames Filter by app package names (empty = all apps)
+     * @param isProcessed Filter by processed status (null = all statuses)
+     */
+    fun observeNotificationsPaged(
+        packageNames: List<String> = emptyList(),
+        isProcessed: Boolean? = null,
+    ): Flow<PagingData<Notification>>
+
+    /**
+     * Search paginated notifications with optional app and status filters.
+     *
+     * @param query Search query for title/content
+     * @param packageNames Filter by app package names (empty = all apps)
+     * @param isProcessed Filter by processed status (null = all statuses)
+     */
+    fun searchNotificationsPaged(
+        query: String,
+        packageNames: List<String> = emptyList(),
+        isProcessed: Boolean? = null,
+    ): Flow<PagingData<Notification>>
 
     /**
      * Get all notifications.
@@ -81,4 +107,9 @@ interface NotificationRepository {
      * Get the count of unprocessed notifications.
      */
     suspend fun getUnprocessedCount(): Result<Int>
+
+    /**
+     * Get all unique apps that have notifications, sorted by name.
+     */
+    fun observeAppsWithNotifications(): Flow<List<AppInfo>>
 }

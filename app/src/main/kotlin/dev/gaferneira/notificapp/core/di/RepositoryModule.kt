@@ -7,9 +7,11 @@ import dagger.hilt.components.SingletonComponent
 import dev.gaferneira.notificapp.core.data.repository.NotificationRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.RuleRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.SelectedAppRepositoryImpl
+import dev.gaferneira.notificapp.core.data.repository.UserPreferencesRepositoryImpl
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
+import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 
 /**
  * Dagger module for binding repository interfaces to their implementations.
@@ -35,4 +37,10 @@ internal abstract class RepositoryModule {
      */
     @Binds
     abstract fun bindRuleRepository(impl: RuleRepositoryImpl): RuleRepository
+
+    /**
+     * Binds UserPreferencesRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindUserPreferencesRepository(impl: UserPreferencesRepositoryImpl): UserPreferencesRepository
 }

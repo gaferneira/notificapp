@@ -36,6 +36,7 @@ timber = "5.0.1"
 
 # Image Loading
 coil = "2.7.0"
+paging = "3.3.0"
 
 # Testing
 junit5 = "6.0.3"
@@ -96,7 +97,10 @@ androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", vers
 # Room
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+room-paging = { group = "androidx.room", name = "room-paging", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
+androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
 sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
 
 # DataStore
@@ -171,6 +175,9 @@ compose-debug = [
 room = [
     "room-runtime",
     "room-ktx",
+    "room-paging",
+    "androidx-paging-runtime",
+    "androidx-paging-compose",
 ]
 
 # Hilt bundle

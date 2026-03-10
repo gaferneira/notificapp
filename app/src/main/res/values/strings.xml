@@ -106,9 +106,24 @@
     <string name="error_fix_validation">Please fix validation errors</string>
 
     <!-- Filter Bottom Sheet -->
-    <string name="filter_rules_title">Filter Rules</string>
+    <string name="filter_rules_title">Filter &amp; Sort</string>
+    <string name="filter_inbox_title">Filter Notifications</string>
+    <string name="sort_by">Sort By</string>
+    <string name="filter_by_status">By Status</string>
     <string name="filter_by_category">By Category</string>
     <string name="filter_by_app">By Target App</string>
+    <string name="status_all">All</string>
+    <string name="status_enabled">Enabled</string>
+    <string name="status_disabled">Disabled</string>
+    <string name="status_processed">Processed</string>
+    <string name="status_unprocessed">Unprocessed</string>
+    <string name="sort_category">Category</string>
+    <string name="sort_name_asc">Name A-Z</string>
+    <string name="sort_name_desc">Name Z-A</string>
+    <string name="sort_created_newest">Newest First</string>
+    <string name="sort_created_oldest">Oldest First</string>
+    <string name="sort_updated_recent">Recently Updated</string>
+    <string name="sort_status">By Status</string>
     <string name="clear_all">Clear All</string>
     <string name="apply">Apply</string>
     <string name="no_filters_available">No filter options available. Create more rules with different categories or target apps.</string>

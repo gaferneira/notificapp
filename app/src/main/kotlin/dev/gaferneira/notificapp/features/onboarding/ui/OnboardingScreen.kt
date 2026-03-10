@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -118,7 +119,7 @@ private fun OnboardingScreenContent(
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().systemBarsPadding(),
         containerColor = MaterialTheme.colorScheme.background,
     ) { paddingValues ->
         Box(
@@ -185,11 +186,9 @@ private fun ValueStatementContent(
     ) {
         // Top section with logo and privacy badge
         Column {
-            Spacer(modifier = Modifier.height(48.dp))
-
             // Header with logo and privacy badge
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(48.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -435,8 +434,6 @@ private fun PermissionExplanationContent(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp),
     ) {
-        Spacer(modifier = Modifier.height(48.dp))
-
         // Header with back button and title
         Row(
             modifier = Modifier.fillMaxWidth(),

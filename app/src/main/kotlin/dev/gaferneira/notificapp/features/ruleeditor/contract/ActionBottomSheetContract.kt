@@ -17,9 +17,7 @@ object ActionBottomSheetContract {
         /** Current mode: adding new or editing existing */
         val mode: Mode = Mode.ADD,
         /** Selected action type */
-        val actionType: ActionType = ActionType.SAVE_DATA,
-        /** Whether Save to Data Lab is enabled (only for SAVE_DATA) */
-        val isSaveToDataLabEnabled: Boolean = true,
+        val actionType: ActionType? = null,
         /** Validation error message, if any */
         val validationError: String? = null,
     ) {
@@ -38,9 +36,6 @@ object ActionBottomSheetContract {
 
         /** Update action type */
         data class OnActionTypeChange(val actionType: ActionType) : UiEvent()
-
-        /** Toggle Save to Data Lab setting */
-        data object OnToggleSaveToDataLab : UiEvent()
 
         /** Confirm and create/update action */
         data object OnConfirm : UiEvent()

@@ -26,7 +26,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingBag
@@ -199,11 +198,6 @@ private fun AppSelectionScreenContent(
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Recommendation banner
-                RecommendationBanner()
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Selected apps count
@@ -329,41 +323,6 @@ private fun PageIndicator() {
                     .size(width = width, height = 4.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(color),
-            )
-        }
-    }
-}
-
-/**
- * Recommendation banner.
- */
-@Composable
-private fun RecommendationBanner() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-        ),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = "Recommended: start with one app only.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium,
             )
         }
     }

@@ -42,9 +42,6 @@ data class RuleEntity(
     @ColumnInfo(name = "category")
     val category: String?,
 
-    @ColumnInfo(name = "area")
-    val area: String?,
-
     @ColumnInfo(name = "is_active")
     val isActive: Boolean = true,
 

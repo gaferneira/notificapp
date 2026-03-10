@@ -26,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -98,6 +97,20 @@ fun ActionBottomSheet(
         }
     }
 
+    ModalBottomSheet(
+        onDismissRequest = { viewModel.onEvent(ActionBottomSheetContract.UiEvent.OnDismiss) },
+        sheetState = sheetState,
+        modifier = modifier,
+    ) {
+        ActionsContent(uiState, viewModel::onEvent)
+    }
+}
+
+@Composable
+private fun ActionsContent(
+    uiState: ActionBottomSheetContract.UiState,
+    onEvent: (ActionBottomSheetContract.UiEvent) -> Unit,
+) {
     val title = when (uiState.mode) {
         ActionBottomSheetContract.UiState.Mode.EDIT -> "Edit Action"
         ActionBottomSheetContract.UiState.Mode.ADD -> "Add Action"
@@ -108,156 +121,144 @@ fun ActionBottomSheet(
         ActionBottomSheetContract.UiState.Mode.ADD -> "Add Action"
     }
 
-    ModalBottomSheet(
-        onDismissRequest = { viewModel.onEvent(ActionBottomSheetContract.UiEvent.OnDismiss) },
-        sheetState = sheetState,
-        modifier = modifier,
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+            .navigationBarsPadding(),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-                .navigationBarsPadding(),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
 
-            Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
+        Text(
+            text = "Choose what happens when the rule matches a notification.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Validation error
+        uiState.validationError?.let { error ->
             Text(
-                text = "Choose what happens when the rule matches a notification.",
+                text = error,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(bottom = 16.dp),
             )
+        }
 
-            Spacer(modifier = Modifier.height(24.dp))
+        // Action type options
+        Text(
+            text = "Action type",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
 
-            // Validation error
-            uiState.validationError?.let { error ->
-                Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(bottom = 16.dp),
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ActionTypeCard(
+            title = "Save to Data Lab",
+            description = "Store extracted data for later viewing and analysis",
+            icon = Icons.Default.Save,
+            isSelected = uiState.actionType == ActionType.SAVE_DATA,
+            onClick = {
+                onEvent(
+                    ActionBottomSheetContract.UiEvent.OnActionTypeChange(
+                        ActionType.SAVE_DATA,
+                    ),
                 )
-            }
+            },
+        )
 
-            // Action type options
-            Text(
-                text = "Action type",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+        Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
+        ActionTypeCard(
+            title = "Create alarm",
+            description = "Set an alarm or reminder based on extracted time",
+            icon = Icons.Default.Alarm,
+            isSelected = uiState.actionType == ActionType.CREATE_ALARM,
+            onClick = {
+                onEvent(
+                    ActionBottomSheetContract.UiEvent.OnActionTypeChange(
+                        ActionType.CREATE_ALARM,
+                    ),
+                )
+            },
+        )
 
-            ActionTypeCard(
-                title = "Save to Data Lab",
-                description = "Store extracted data for later viewing and analysis",
-                icon = Icons.Default.Save,
-                isSelected = uiState.actionType == ActionType.SAVE_DATA,
-                onClick = {
-                    viewModel.onEvent(
-                        ActionBottomSheetContract.UiEvent.OnActionTypeChange(
-                            ActionType.SAVE_DATA,
-                        ),
-                    )
-                },
-            )
+        Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(8.dp))
+        ActionTypeCard(
+            title = "Delete notification",
+            description = "Remove the notification after processing",
+            icon = Icons.Default.Delete,
+            isSelected = uiState.actionType == ActionType.DELETE_NOTIFICATION,
+            onClick = {
+                onEvent(
+                    ActionBottomSheetContract.UiEvent.OnActionTypeChange(
+                        ActionType.DELETE_NOTIFICATION,
+                    ),
+                )
+            },
+        )
 
-            ActionTypeCard(
-                title = "Delete notification",
-                description = "Remove the notification after processing",
-                icon = Icons.Default.Delete,
-                isSelected = uiState.actionType == ActionType.DELETE_NOTIFICATION,
-                onClick = {
-                    viewModel.onEvent(
-                        ActionBottomSheetContract.UiEvent.OnActionTypeChange(
-                            ActionType.DELETE_NOTIFICATION,
-                        ),
-                    )
-                },
-            )
+        // Show Save to Data Lab toggle when that action is selected
+        if (uiState.actionType == ActionType.SAVE_DATA) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            ActionTypeCard(
-                title = "Create alarm",
-                description = "Set an alarm or reminder based on extracted time",
-                icon = Icons.Default.Alarm,
-                isSelected = uiState.actionType == ActionType.CREATE_ALARM,
-                onClick = {
-                    viewModel.onEvent(
-                        ActionBottomSheetContract.UiEvent.OnActionTypeChange(
-                            ActionType.CREATE_ALARM,
-                        ),
-                    )
-                },
-            )
-
-            // Show Save to Data Lab toggle when that action is selected
-            if (uiState.actionType == ActionType.SAVE_DATA) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Enable Save to Data Lab",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            text = "Turn this on to save extracted data",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
-                    Switch(
-                        checked = uiState.isSaveToDataLabEnabled,
-                        onCheckedChange = {
-                            viewModel.onEvent(ActionBottomSheetContract.UiEvent.OnToggleSaveToDataLab)
-                        },
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                OutlinedButton(
-                    onClick = { viewModel.onEvent(ActionBottomSheetContract.UiEvent.OnDismiss) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("Cancel")
-                }
-
-                Button(
-                    onClick = { viewModel.onEvent(ActionBottomSheetContract.UiEvent.OnConfirm) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text(buttonText)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Enable Save to Data Lab",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = "Turn this on to save extracted data",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Action buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            OutlinedButton(
+                onClick = { onEvent(ActionBottomSheetContract.UiEvent.OnDismiss) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text("Cancel")
+            }
+
+            Button(
+                onClick = { onEvent(ActionBottomSheetContract.UiEvent.OnConfirm) },
+                modifier = Modifier.weight(1f),
+                enabled = uiState.actionType != null,
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text(buttonText)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -349,47 +350,29 @@ private fun ActionTypeCard(
 private fun ActionBottomSheetPreview() {
     NotificappTheme {
         // Preview using the component's structure but with default values
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
-                .background(MaterialTheme.colorScheme.surface),
-        ) {
-            Text(
-                text = "Add Action",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Choose what happens when the rule matches a notification.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            ActionTypeCard(
-                title = "Save to Data Lab",
-                description = "Store extracted data for later viewing and analysis",
-                icon = Icons.Default.Save,
-                isSelected = true,
-                onClick = {},
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            ActionTypeCard(
-                title = "Delete notification",
-                description = "Remove the notification after processing",
-                icon = Icons.Default.Delete,
-                isSelected = false,
-                onClick = {},
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            ActionTypeCard(
-                title = "Create alarm",
-                description = "Set an alarm or reminder based on extracted time",
-                icon = Icons.Default.Alarm,
-                isSelected = false,
-                onClick = {},
-            )
-        }
+        ActionsContent(
+            uiState = ActionBottomSheetContract.UiState(
+                actionType = ActionType.SAVE_DATA,
+                mode = ActionBottomSheetContract.UiState.Mode.EDIT,
+                validationError = null,
+            ),
+            onEvent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ActionBottomSheetAlarmPreview() {
+    NotificappTheme {
+        // Preview using the component's structure but with default values
+        ActionsContent(
+            uiState = ActionBottomSheetContract.UiState(
+                actionType = ActionType.CREATE_ALARM,
+                mode = ActionBottomSheetContract.UiState.Mode.EDIT,
+                validationError = null,
+            ),
+            onEvent = {},
+        )
     }
 }

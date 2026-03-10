@@ -49,6 +49,7 @@ data class RuleUiModel(
             id = rule.id,
             name = rule.name,
             description = rule.description ?: "",
+            category = rule.category.orEmpty(),
             targetApps = rule.targetApps ?: emptyList(),
             triggers = rule.conditions,
             actions = rule.actions,

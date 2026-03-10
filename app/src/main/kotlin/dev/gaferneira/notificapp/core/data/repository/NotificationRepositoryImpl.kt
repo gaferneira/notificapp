@@ -1,9 +1,14 @@
 package dev.gaferneira.notificapp.core.data.repository
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.entity.NotificationEntity
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import kotlinx.coroutines.CoroutineDispatcher
@@ -34,6 +39,62 @@ class NotificationRepositoryImpl @Inject constructor(
     override fun observeNotificationsByApps(packageNames: List<String>): Flow<List<Notification>> = dao.getByPackageNames(packageNames)
         .map { entities -> entities.map { it.toModel() } }
         .flowOn(ioDispatcher)
+
+    override fun observeNotificationsPaged(
+        packageNames: List<String>,
+        isProcessed: Boolean?,
+    ): Flow<PagingData<Notification>> {
+        val hasPackageFilter = packageNames.isNotEmpty()
+        val hasStatusFilter = isProcessed != null
+
+        return Pager(
+            config = PagingConfig(
+                pageSize = PAGE_SIZE,
+                prefetchDistance = PREFETCH_DISTANCE,
+                enablePlaceholders = false,
+                initialLoadSize = INITIAL_LOAD_SIZE,
+            ),
+            pagingSourceFactory = {
+                dao.getFilteredPaged(
+                    packageNames = if (hasPackageFilter) packageNames else emptyList(),
+                    hasPackageFilter = hasPackageFilter,
+                    isProcessed = isProcessed ?: false,
+                    hasStatusFilter = hasStatusFilter,
+                )
+            },
+        ).flow
+            .map { pagingData -> pagingData.map { it.toModel() } }
+            .flowOn(ioDispatcher)
+    }
+
+    override fun searchNotificationsPaged(
+        query: String,
+        packageNames: List<String>,
+        isProcessed: Boolean?,
+    ): Flow<PagingData<Notification>> {
+        val hasPackageFilter = packageNames.isNotEmpty()
+        val hasStatusFilter = isProcessed != null
+
+        return Pager(
+            config = PagingConfig(
+                pageSize = PAGE_SIZE,
+                prefetchDistance = PREFETCH_DISTANCE,
+                enablePlaceholders = false,
+                initialLoadSize = INITIAL_LOAD_SIZE,
+            ),
+            pagingSourceFactory = {
+                dao.searchFilteredPaged(
+                    query = query,
+                    packageNames = if (hasPackageFilter) packageNames else emptyList(),
+                    hasPackageFilter = hasPackageFilter,
+                    isProcessed = isProcessed ?: false,
+                    hasStatusFilter = hasStatusFilter,
+                )
+            },
+        ).flow
+            .map { pagingData -> pagingData.map { it.toModel() } }
+            .flowOn(ioDispatcher)
+    }
 
     override suspend fun getAllNotifications(): Result<List<Notification>> = withContext(ioDispatcher) {
         try {
@@ -155,6 +216,19 @@ class NotificationRepositoryImpl @Inject constructor(
             Result.failure(e)
         }
     }
+
+    override fun observeAppsWithNotifications(): Flow<List<AppInfo>> = dao.getUniquePackageNames()
+        .map { packageNames ->
+            packageNames.map { packageName ->
+                // Get the most recent app name for this package
+                val appName = dao.getAppNameForPackage(packageName) ?: packageName
+                AppInfo(
+                    packageName = packageName,
+                    name = appName,
+                )
+            }.sortedBy { it.name }
+        }
+        .flowOn(ioDispatcher)
 }
 
 /**
@@ -168,7 +242,7 @@ private fun NotificationEntity.toModel(): Notification = Notification(
     content = this.content,
     rawContent = this.rawContent,
     timestamp = this.timestamp,
-    isProcessed = this.isProcessed,
+    isProcessed = this.isProcessed || this.appliedRulesCount > 0,
     appliedRulesCount = this.appliedRulesCount,
 )
 
@@ -183,6 +257,13 @@ private fun Notification.toEntity(): NotificationEntity = NotificationEntity(
     content = this.content,
     rawContent = this.rawContent,
     timestamp = this.timestamp,
-    isProcessed = this.isProcessed,
+    isProcessed = this.isProcessed || this.appliedRulesCount > 0,
     appliedRulesCount = this.appliedRulesCount,
 )
+
+/**
+ * Paging configuration constants.
+ */
+private const val PAGE_SIZE = 50
+private const val PREFETCH_DISTANCE = 100
+private const val INITIAL_LOAD_SIZE = 100

@@ -164,7 +164,7 @@ class NotificappListenerService : NotificationListenerService() {
         packageName.startsWith("com.google.android.gms")
 
     companion object {
-        // Don't process notifications older than 5 seconds
-        private const val MAX_AGE_MS = 5000L
+        // Don't process notifications older than 50 minutes
+        private const val MAX_AGE_MS = 1000L * 60 * 50
     }
 }

@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.data.local.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -37,6 +38,48 @@ interface NotificationDao {
      */
     @Query("SELECT * FROM notifications WHERE package_name IN (:packageNames) ORDER BY timestamp DESC")
     fun getByPackageNames(packageNames: List<String>): Flow<List<NotificationEntity>>
+
+    /**
+     * Get paginated notifications with optional app and status filters.
+     * NULL or empty packageNames means no app filter.
+     * NULL isProcessed means no status filter.
+     */
+    @Query(
+        """
+        SELECT * FROM notifications 
+        WHERE (package_name IN (:packageNames) OR :hasPackageFilter = 0)
+        AND (is_processed = :isProcessed OR :hasStatusFilter = 0)
+        ORDER BY timestamp DESC
+    """,
+    )
+    fun getFilteredPaged(
+        packageNames: List<String>,
+        hasPackageFilter: Boolean,
+        isProcessed: Boolean,
+        hasStatusFilter: Boolean,
+    ): PagingSource<Int, NotificationEntity>
+
+    /**
+     * Search paginated notifications with optional app and status filters.
+     */
+    @Query(
+        """
+        SELECT * FROM notifications 
+        WHERE (package_name IN (:packageNames) OR :hasPackageFilter = 0)
+        AND (is_processed = :isProcessed OR :hasStatusFilter = 0)
+        AND (title LIKE '%' || :query || '%' 
+             OR content LIKE '%' || :query || '%'
+             OR raw_content LIKE '%' || :query || '%')
+        ORDER BY timestamp DESC
+    """,
+    )
+    fun searchFilteredPaged(
+        query: String,
+        packageNames: List<String>,
+        hasPackageFilter: Boolean,
+        isProcessed: Boolean,
+        hasStatusFilter: Boolean,
+    ): PagingSource<Int, NotificationEntity>
 
     /**
      * Get a specific notification by ID.
@@ -150,6 +193,18 @@ interface NotificationDao {
      */
     @Query("SELECT COUNT(*) FROM notifications WHERE is_processed = 0")
     suspend fun getUnprocessedCount(): Int
+
+    /**
+     * Get all unique package names that have notifications.
+     */
+    @Query("SELECT DISTINCT package_name FROM notifications ORDER BY package_name")
+    fun getUniquePackageNames(): Flow<List<String>>
+
+    /**
+     * Get the most recent app name for a package (for display purposes).
+     */
+    @Query("SELECT app_name FROM notifications WHERE package_name = :packageName ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getAppNameForPackage(packageName: String): String?
 
     /**
      * Increment the applied rules count for a notification.

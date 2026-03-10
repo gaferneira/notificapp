@@ -1,27 +1,17 @@
 package dev.gaferneira.notificapp.features.inbox.contract
 
-/**
- * MVI Contract for InboxScreen.
- *
- * Spec: openspec/specs/inbox/001-inbox-screen.md
- */
-sealed interface InboxUiState {
-    data object Loading : InboxUiState
-    data class Success(
-        val groupedNotifications: List<NotificationGroup>,
-        val selectedApps: List<String>,
-        val searchQuery: String = "",
-    ) : InboxUiState
-    data class Error(val message: String) : InboxUiState
-}
+import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract.Status
 
 /**
- * A group of notifications from the same app.
+ * Data class representing the state of the Inbox screen.
+ *
+ * Note: The notification data itself is exposed as a separate Flow<PagingData<NotificationItem>>
+ * from the ViewModel, not stored in this state class. This state only holds filter configuration.
  */
-data class NotificationGroup(
-    val appPackageName: String,
-    val appName: String,
-    val notifications: List<NotificationItem>,
+data class InboxUiState(
+    val selectedApps: List<String> = emptyList(),
+    val statusFilter: Status = Status.ALL,
+    val searchQuery: String = "",
 )
 
 /**
@@ -41,15 +31,36 @@ data class NotificationItem(
 )
 
 /**
+ * Sealed class representing items in the paginated inbox list.
+ * Used with PagingData.insertSeparators() to add time headers.
+ */
+sealed class InboxListItem {
+    /**
+     * Time header showing a 2-hour window (e.g., "10 March 18:00").
+     */
+    data class TimeHeader(
+        val timestamp: Long,
+        val label: String,
+    ) : InboxListItem()
+
+    /**
+     * A notification row in the list.
+     */
+    data class NotificationRow(
+        val notification: NotificationItem,
+    ) : InboxListItem()
+}
+
+/**
  * UI Events for InboxScreen.
  */
 sealed interface InboxEvent {
-    data object LoadNotifications : InboxEvent
-    data object Refresh : InboxEvent
     data class OnSearchQueryChange(val query: String) : InboxEvent
-    data class OnAppFilterChange(val packageNames: List<String>) : InboxEvent
+    data class OnAppFilterChange(
+        val packageNames: List<String>,
+        val statusFilter: Status = Status.ALL,
+    ) : InboxEvent
     data class OnNotificationClick(val notificationId: String) : InboxEvent
-    data class OnNotificationDelete(val notificationId: String) : InboxEvent
 }
 
 /**

@@ -30,7 +30,6 @@ class ActionBottomSheetViewModel @Inject constructor() :
         when (event) {
             is ActionBottomSheetContract.UiEvent.InitForEdit -> initForEdit(event)
             is ActionBottomSheetContract.UiEvent.OnActionTypeChange -> updateActionType(event.actionType)
-            is ActionBottomSheetContract.UiEvent.OnToggleSaveToDataLab -> toggleSaveToDataLab()
             is ActionBottomSheetContract.UiEvent.OnConfirm -> confirm()
             is ActionBottomSheetContract.UiEvent.OnDismiss -> dismiss()
         }
@@ -43,7 +42,6 @@ class ActionBottomSheetViewModel @Inject constructor() :
             copy(
                 mode = ActionBottomSheetContract.UiState.Mode.EDIT,
                 actionType = action.type,
-                isSaveToDataLabEnabled = action.isEnabled,
                 validationError = null,
             )
         }
@@ -58,22 +56,14 @@ class ActionBottomSheetViewModel @Inject constructor() :
         }
     }
 
-    private fun toggleSaveToDataLab() {
-        setState { copy(isSaveToDataLabEnabled = !isSaveToDataLabEnabled) }
-    }
-
     private fun confirm() {
         val state = uiState.value
+        val actionType = state.actionType ?: return
         val actionId = editingActionId
 
         val action = RuleAction(
             id = actionId ?: UUID.randomUUID().toString(),
-            type = state.actionType,
-            isEnabled = if (state.actionType == ActionType.SAVE_DATA) {
-                state.isSaveToDataLabEnabled
-            } else {
-                true
-            },
+            type = actionType,
         )
 
         if (actionId != null) {
