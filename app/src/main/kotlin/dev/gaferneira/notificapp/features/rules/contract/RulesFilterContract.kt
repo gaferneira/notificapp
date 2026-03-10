@@ -7,7 +7,7 @@ import dev.gaferneira.notificapp.domain.model.AppInfo
  *
  * Manages the state for filtering rules by category and target app.
  */
-object FilterBottomSheetContract {
+object RulesFilterContract {
 
     /**
      * UI State for the filter bottom sheet.
@@ -23,6 +23,8 @@ object FilterBottomSheetContract {
         val selectedApps: Set<String> = emptySet(),
         /** Current status filter (inherited from parent) */
         val statusFilter: RuleFilter.Status = RuleFilter.Status.ALL,
+        /** Current sort option */
+        val sortBy: RuleFilter.SortBy = RuleFilter.SortBy.CATEGORY_ASC,
         /** Whether any filters are active */
         val hasActiveFilters: Boolean = false,
     )
@@ -39,6 +41,12 @@ object FilterBottomSheetContract {
 
         /** Toggle an app selection */
         data class OnAppToggle(val appPackageName: String) : UiEvent()
+
+        /** Change status filter (All/Enabled/Disabled) */
+        data class OnStatusChange(val status: RuleFilter.Status) : UiEvent()
+
+        /** Change sort option */
+        data class OnSortChange(val sortBy: RuleFilter.SortBy) : UiEvent()
 
         /** Clear all filters */
         data object OnClearAll : UiEvent()

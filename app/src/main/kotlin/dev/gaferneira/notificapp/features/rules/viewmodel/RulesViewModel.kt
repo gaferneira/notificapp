@@ -105,40 +105,76 @@ class RulesViewModel @Inject constructor(
         }
     }
 
-    private fun applyFilters(rules: List<Rule>, query: String, currentFilter: RuleFilter): List<Rule> = rules.filter { rule ->
-        // Apply search filter
-        val matchesSearch = if (query.isBlank()) {
-            true
-        } else {
-            rule.name.contains(query, ignoreCase = true) ||
-                rule.description?.contains(query, ignoreCase = true) == true ||
-                rule.category?.contains(query, ignoreCase = true) == true
+    private fun applyFilters(rules: List<Rule>, query: String, currentFilter: RuleFilter): List<Rule> {
+        // First apply all filters
+        val filteredRules = rules.filter { rule ->
+            // Apply search filter
+            val matchesSearch = if (query.isBlank()) {
+                true
+            } else {
+                rule.name.contains(query, ignoreCase = true) ||
+                    rule.description?.contains(query, ignoreCase = true) == true ||
+                    rule.category?.contains(query, ignoreCase = true) == true
+            }
+
+            // Apply status filter
+            val matchesStatusFilter = when (currentFilter.status) {
+                RuleFilter.Status.ALL -> true
+                RuleFilter.Status.ENABLED -> rule.isActive
+                RuleFilter.Status.DISABLED -> !rule.isActive
+            }
+
+            // Apply category filter
+            val matchesCategoryFilter = if (currentFilter.selectedCategories.isEmpty()) {
+                true
+            } else {
+                rule.category in currentFilter.selectedCategories
+            }
+
+            // Apply app filter
+            val matchesAppFilter = if (currentFilter.selectedApps.isEmpty()) {
+                true
+            } else {
+                val ruleApps = rule.targetApps?.map { it.packageName } ?: emptyList()
+                // Match if any selected app is in the rule's target apps
+                currentFilter.selectedApps.any { it in ruleApps }
+            }
+
+            matchesSearch && matchesStatusFilter && matchesCategoryFilter && matchesAppFilter
         }
 
-        // Apply status filter
-        val matchesStatusFilter = when (currentFilter.status) {
-            RuleFilter.Status.ALL -> true
-            RuleFilter.Status.ENABLED -> rule.isActive
-            RuleFilter.Status.DISABLED -> !rule.isActive
+        // Then apply sorting
+        return when (currentFilter.sortBy) {
+            RuleFilter.SortBy.CATEGORY_ASC -> {
+                // Sort by category first, then by name within each category
+                filteredRules.sortedWith(
+                    compareBy<Rule> { it.category ?: "Uncategorized" }
+                        .thenBy { it.name.lowercase() },
+                )
+            }
+            RuleFilter.SortBy.NAME_ASC -> {
+                filteredRules.sortedBy { it.name.lowercase() }
+            }
+            RuleFilter.SortBy.NAME_DESC -> {
+                filteredRules.sortedByDescending { it.name.lowercase() }
+            }
+            RuleFilter.SortBy.CREATED_NEWEST -> {
+                filteredRules.sortedByDescending { it.createdAt }
+            }
+            RuleFilter.SortBy.CREATED_OLDEST -> {
+                filteredRules.sortedBy { it.createdAt }
+            }
+            RuleFilter.SortBy.UPDATED_RECENT -> {
+                filteredRules.sortedByDescending { it.updatedAt }
+            }
+            RuleFilter.SortBy.STATUS -> {
+                // Sort by status (active first), then by name
+                filteredRules.sortedWith(
+                    compareByDescending<Rule> { it.isActive }
+                        .thenBy { it.name.lowercase() },
+                )
+            }
         }
-
-        // Apply category filter
-        val matchesCategoryFilter = if (currentFilter.selectedCategories.isEmpty()) {
-            true
-        } else {
-            rule.category in currentFilter.selectedCategories
-        }
-
-        // Apply app filter
-        val matchesAppFilter = if (currentFilter.selectedApps.isEmpty()) {
-            true
-        } else {
-            val ruleApps = rule.targetApps?.map { it.packageName } ?: emptyList()
-            // Match if any selected app is in the rule's target apps
-            currentFilter.selectedApps.any { it in ruleApps }
-        }
-
-        matchesSearch && matchesStatusFilter && matchesCategoryFilter && matchesAppFilter
     }
 
     private fun onSearchQueryChange(query: String) {

@@ -6,8 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +19,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DoNotDisturb
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.AccountBalance
@@ -34,8 +34,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -110,7 +108,7 @@ fun RulesScreen(
 
     // Show filter bottom sheet
     if (showFilterSheet && uiState.allRules.isNotEmpty()) {
-        FilterBottomSheet(
+        RulesFilterBottomSheet(
             allRules = uiState.allRules,
             currentFilter = uiState.filter,
             onFilterApplied = { filter ->
@@ -223,7 +221,6 @@ internal fun RulesScreenContent(
                         searchQuery = uiState.searchQuery,
                         filter = uiState.filter,
                         onSearchChange = { onEvent(RulesEvent.OnSearchQueryChange(it)) },
-                        onFilterChange = { onEvent(RulesEvent.OnFilterChange(it)) },
                         onRuleClick = { onEvent(RulesEvent.OnRuleClick(it)) },
                         onRuleToggleActive = { onEvent(RulesEvent.OnRuleToggleActive(it)) },
                     )
@@ -282,14 +279,13 @@ private fun ErrorState(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SuccessState(
     rules: List<Rule>,
     searchQuery: String,
     filter: RuleFilter,
     onSearchChange: (String) -> Unit,
-    onFilterChange: (RuleFilter) -> Unit,
     onRuleClick: (String) -> Unit,
     onRuleToggleActive: (String) -> Unit,
 ) {
@@ -319,43 +315,9 @@ private fun SuccessState(
             ),
         )
 
-        // Filter chips
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterChip(
-                selected = filter.status == RuleFilter.Status.ALL,
-                onClick = { onFilterChange(filter.copy(status = RuleFilter.Status.ALL)) },
-                label = { Text("All") },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            )
-            FilterChip(
-                selected = filter.status == RuleFilter.Status.ENABLED,
-                onClick = { onFilterChange(filter.copy(status = RuleFilter.Status.ENABLED)) },
-                label = { Text("Enabled") },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            )
-            FilterChip(
-                selected = filter.status == RuleFilter.Status.DISABLED,
-                onClick = { onFilterChange(filter.copy(status = RuleFilter.Status.DISABLED)) },
-                label = { Text("Disabled") },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            )
-        }
-
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Rules list grouped by category
+        // Rules list
         if (rules.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -368,23 +330,48 @@ private fun SuccessState(
                 )
             }
         } else {
-            val groupedRules = rules.groupBy { it.category ?: "Uncategorized" }
-                .toSortedMap()
+            // Determine grouping based on sort option
+            val groupedRules = when (filter.sortBy) {
+                RuleFilter.SortBy.CATEGORY_ASC -> {
+                    rules.groupBy { it.category ?: "Uncategorized" }
+                }
+                RuleFilter.SortBy.STATUS -> {
+                    rules.groupBy { if (it.isActive) "Enabled" else "Disabled" }
+                }
+                else -> {
+                    // Flat list - no grouping
+                    mapOf("" to rules)
+                }
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                groupedRules.forEach { (category, categoryRules) ->
-                    item(key = "header_$category") {
-                        CategoryHeader(
-                            category = category,
-                            ruleCount = categoryRules.size,
-                        )
+                groupedRules.forEach { (groupKey, groupRules) ->
+                    // Only show header if grouped
+                    if (groupKey.isNotEmpty()) {
+                        item(key = "header_$groupKey") {
+                            when (filter.sortBy) {
+                                RuleFilter.SortBy.CATEGORY_ASC -> {
+                                    CategoryHeader(
+                                        category = groupKey,
+                                        ruleCount = groupRules.size,
+                                    )
+                                }
+                                RuleFilter.SortBy.STATUS -> {
+                                    StatusHeader(
+                                        status = groupKey,
+                                        ruleCount = groupRules.size,
+                                    )
+                                }
+                                else -> { /* No header for flat list */ }
+                            }
+                        }
                     }
 
                     items(
-                        items = categoryRules,
+                        items = groupRules,
                         key = { it.id },
                     ) { rule ->
                         RuleCard(
@@ -424,6 +411,62 @@ private fun CategoryHeader(
         // Category name
         Text(
             text = category,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        // Rule count badge
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.padding(start = 4.dp),
+        ) {
+            Text(
+                text = ruleCount.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusHeader(
+    status: String,
+    ruleCount: Int,
+) {
+    val statusIcon = if (status == "Enabled") {
+        Icons.Default.CheckCircle
+    } else {
+        Icons.Default.DoNotDisturb
+    }
+
+    val iconTint = if (status == "Enabled") {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.error
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        // Status icon
+        Icon(
+            imageVector = statusIcon,
+            contentDescription = null,
+            tint = iconTint,
+            modifier = Modifier.size(24.dp),
+        )
+
+        // Status name
+        Text(
+            text = status,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -617,7 +660,6 @@ private fun RulesScreenPreview() {
                 ),
                 allRules = emptyList(),
                 searchQuery = "",
-                filter = RuleFilter(),
             ),
             onEvent = {},
             navigateTo = { _, _ -> },
@@ -668,7 +710,6 @@ private fun RulesScreenPreviewDark() {
                 ),
                 allRules = emptyList(),
                 searchQuery = "",
-                filter = RuleFilter(),
             ),
             onEvent = {},
             navigateTo = { _, _ -> },

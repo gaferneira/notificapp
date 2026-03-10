@@ -4,8 +4,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Rule
-import dev.gaferneira.notificapp.features.rules.contract.FilterBottomSheetContract
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
+import dev.gaferneira.notificapp.features.rules.contract.RulesFilterContract
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -19,8 +19,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class FilterBottomSheetViewModel @Inject constructor() :
-    MviViewModel<FilterBottomSheetContract.UiState, FilterBottomSheetContract.UiEvent, FilterBottomSheetContract.UiEffect>(
-        FilterBottomSheetContract.UiState(),
+    MviViewModel<RulesFilterContract.UiState, RulesFilterContract.UiEvent, RulesFilterContract.UiEffect>(
+        RulesFilterContract.UiState(),
     ) {
 
     private val allRules = MutableStateFlow<List<Rule>>(emptyList())
@@ -45,14 +45,16 @@ class FilterBottomSheetViewModel @Inject constructor() :
         }
     }
 
-    override fun onEvent(event: FilterBottomSheetContract.UiEvent) {
+    override fun onEvent(event: RulesFilterContract.UiEvent) {
         when (event) {
-            is FilterBottomSheetContract.UiEvent.Init -> initWithFilter(event.currentFilter)
-            is FilterBottomSheetContract.UiEvent.OnCategoryToggle -> toggleCategory(event.category)
-            is FilterBottomSheetContract.UiEvent.OnAppToggle -> toggleApp(event.appPackageName)
-            is FilterBottomSheetContract.UiEvent.OnClearAll -> clearAllFilters()
-            is FilterBottomSheetContract.UiEvent.OnApply -> applyFilters()
-            is FilterBottomSheetContract.UiEvent.OnDismiss -> dismiss()
+            is RulesFilterContract.UiEvent.Init -> initWithFilter(event.currentFilter)
+            is RulesFilterContract.UiEvent.OnCategoryToggle -> toggleCategory(event.category)
+            is RulesFilterContract.UiEvent.OnAppToggle -> toggleApp(event.appPackageName)
+            is RulesFilterContract.UiEvent.OnStatusChange -> changeStatus(event.status)
+            is RulesFilterContract.UiEvent.OnSortChange -> changeSort(event.sortBy)
+            is RulesFilterContract.UiEvent.OnClearAll -> clearAllFilters()
+            is RulesFilterContract.UiEvent.OnApply -> applyFilters()
+            is RulesFilterContract.UiEvent.OnDismiss -> dismiss()
         }
     }
 
@@ -61,7 +63,7 @@ class FilterBottomSheetViewModel @Inject constructor() :
      */
     fun initialize(allRules: List<Rule>, currentFilter: RuleFilter) {
         this.allRules.value = allRules
-        onEvent(FilterBottomSheetContract.UiEvent.Init(currentFilter))
+        onEvent(RulesFilterContract.UiEvent.Init(currentFilter))
     }
 
     private fun initWithFilter(filter: RuleFilter) {
@@ -70,6 +72,7 @@ class FilterBottomSheetViewModel @Inject constructor() :
                 selectedCategories = filter.selectedCategories,
                 selectedApps = filter.selectedApps,
                 statusFilter = filter.status,
+                sortBy = filter.sortBy,
                 hasActiveFilters = filter.isActive(),
             )
         }
@@ -84,7 +87,10 @@ class FilterBottomSheetViewModel @Inject constructor() :
             }
             copy(
                 selectedCategories = newSelection,
-                hasActiveFilters = newSelection.isNotEmpty() || selectedApps.isNotEmpty() || statusFilter != RuleFilter.Status.ALL,
+                hasActiveFilters = newSelection.isNotEmpty() ||
+                    selectedApps.isNotEmpty() ||
+                    statusFilter != RuleFilter.Status.ALL ||
+                    sortBy != RuleFilter.SortBy.CATEGORY_ASC,
             )
         }
     }
@@ -98,7 +104,34 @@ class FilterBottomSheetViewModel @Inject constructor() :
             }
             copy(
                 selectedApps = newSelection,
-                hasActiveFilters = selectedCategories.isNotEmpty() || newSelection.isNotEmpty() || statusFilter != RuleFilter.Status.ALL,
+                hasActiveFilters = selectedCategories.isNotEmpty() ||
+                    newSelection.isNotEmpty() ||
+                    statusFilter != RuleFilter.Status.ALL ||
+                    sortBy != RuleFilter.SortBy.CATEGORY_ASC,
+            )
+        }
+    }
+
+    private fun changeStatus(status: RuleFilter.Status) {
+        setState {
+            copy(
+                statusFilter = status,
+                hasActiveFilters = status != RuleFilter.Status.ALL ||
+                    selectedCategories.isNotEmpty() ||
+                    selectedApps.isNotEmpty() ||
+                    sortBy != RuleFilter.SortBy.CATEGORY_ASC,
+            )
+        }
+    }
+
+    private fun changeSort(sortBy: RuleFilter.SortBy) {
+        setState {
+            copy(
+                sortBy = sortBy,
+                hasActiveFilters = statusFilter != RuleFilter.Status.ALL ||
+                    selectedCategories.isNotEmpty() ||
+                    selectedApps.isNotEmpty() ||
+                    sortBy != RuleFilter.SortBy.CATEGORY_ASC,
             )
         }
     }
@@ -108,7 +141,9 @@ class FilterBottomSheetViewModel @Inject constructor() :
             copy(
                 selectedCategories = emptySet(),
                 selectedApps = emptySet(),
-                hasActiveFilters = statusFilter != RuleFilter.Status.ALL,
+                statusFilter = RuleFilter.Status.ALL,
+                sortBy = RuleFilter.SortBy.CATEGORY_ASC,
+                hasActiveFilters = false,
             )
         }
     }
@@ -119,11 +154,12 @@ class FilterBottomSheetViewModel @Inject constructor() :
             status = currentState.statusFilter,
             selectedCategories = currentState.selectedCategories,
             selectedApps = currentState.selectedApps,
+            sortBy = currentState.sortBy,
         )
-        sendEffect(FilterBottomSheetContract.UiEffect.ApplyFilter(filter))
+        sendEffect(RulesFilterContract.UiEffect.ApplyFilter(filter))
     }
 
     private fun dismiss() {
-        sendEffect(FilterBottomSheetContract.UiEffect.Dismiss)
+        sendEffect(RulesFilterContract.UiEffect.Dismiss)
     }
 }
