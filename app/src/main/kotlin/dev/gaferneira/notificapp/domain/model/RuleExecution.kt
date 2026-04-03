@@ -18,5 +18,6 @@ data class RuleExecution(
     val ruleId: String,
     val extractedData: Map<String, String>,
     val triggeredActions: List<String>,
+    val triggeredRuleActions: List<RuleAction> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
 )

@@ -30,6 +30,7 @@ class ActionBottomSheetViewModel @Inject constructor() :
         when (event) {
             is ActionBottomSheetContract.UiEvent.InitForEdit -> initForEdit(event)
             is ActionBottomSheetContract.UiEvent.OnActionTypeChange -> updateActionType(event.actionType)
+            is ActionBottomSheetContract.UiEvent.OnSnoozeDurationChange -> updateSnoozeDuration(event.minutes)
             is ActionBottomSheetContract.UiEvent.OnConfirm -> confirm()
             is ActionBottomSheetContract.UiEvent.OnDismiss -> dismiss()
         }
@@ -42,6 +43,7 @@ class ActionBottomSheetViewModel @Inject constructor() :
             copy(
                 mode = ActionBottomSheetContract.UiState.Mode.EDIT,
                 actionType = action.type,
+                snoozeDurationMinutes = action.getSnoozeDurationMinutes(),
                 validationError = null,
             )
         }
@@ -56,15 +58,31 @@ class ActionBottomSheetViewModel @Inject constructor() :
         }
     }
 
+    private fun updateSnoozeDuration(minutes: Int) {
+        setState {
+            copy(snoozeDurationMinutes = minutes)
+        }
+    }
+
     private fun confirm() {
         val state = uiState.value
         val actionType = state.actionType ?: return
         val actionId = editingActionId
 
-        val action = RuleAction(
-            id = actionId ?: UUID.randomUUID().toString(),
-            type = actionType,
-        )
+        val action = when (actionType) {
+            ActionType.SNOOZE_NOTIFICATION -> {
+                RuleAction.createSnooze(
+                    id = actionId ?: UUID.randomUUID().toString(),
+                    durationMinutes = state.snoozeDurationMinutes,
+                )
+            }
+            else -> {
+                RuleAction(
+                    id = actionId ?: UUID.randomUUID().toString(),
+                    type = actionType,
+                )
+            }
+        }
 
         if (actionId != null) {
             sendEffect(ActionBottomSheetContract.UiEffect.ActionUpdated(actionId, action))

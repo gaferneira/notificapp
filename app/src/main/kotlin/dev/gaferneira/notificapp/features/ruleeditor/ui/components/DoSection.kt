@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NotificationsPaused
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -34,6 +35,7 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.features.ruleeditor.contract.displayName
+import dev.gaferneira.notificapp.features.ruleeditor.ui.formatDurationMinutes
 
 /**
  * The "Do" section showing configured actions.
@@ -87,8 +89,18 @@ private fun ActionCard(
 ) {
     val icon = when (action.type) {
         ActionType.SAVE_DATA -> Icons.AutoMirrored.Filled.List
-        ActionType.DELETE_NOTIFICATION -> Icons.Default.Delete
+        ActionType.DISMISS_NOTIFICATION -> Icons.Default.Delete
         ActionType.CREATE_ALARM -> Icons.Default.Alarm
+        ActionType.SNOOZE_NOTIFICATION -> Icons.Default.NotificationsPaused
+    }
+
+    // Get subtitle text for actions with configuration
+    val subtitle = when (action.type) {
+        ActionType.SNOOZE_NOTIFICATION -> {
+            val minutes = action.getSnoozeDurationMinutes()
+            formatDurationMinutes(minutes)
+        }
+        else -> null
     }
 
     Card(
@@ -130,11 +142,20 @@ private fun ActionCard(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                Text(
-                    text = action.displayName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = action.displayName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    subtitle?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -188,6 +209,31 @@ private fun DoSectionEmptyPreview() {
     NotificappTheme {
         DoSection(
             actions = emptyList(),
+            onToggleAction = { _, _ -> },
+            onRemoveAction = {},
+            onEditAction = {},
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun DoSectionWithSnoozePreview() {
+    NotificappTheme {
+        DoSection(
+            actions = listOf(
+                RuleAction(
+                    id = "1",
+                    type = ActionType.SAVE_DATA,
+                    isEnabled = true,
+                ),
+                RuleAction.createSnooze(
+                    id = "2",
+                    durationMinutes = 30,
+                    isEnabled = true,
+                ),
+            ),
             onToggleAction = { _, _ -> },
             onRemoveAction = {},
             onEditAction = {},

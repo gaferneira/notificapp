@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_DURATION_MINUTES
 import dev.gaferneira.notificapp.domain.model.RuleAction
 
 /**
@@ -18,6 +19,8 @@ object ActionBottomSheetContract {
         val mode: Mode = Mode.ADD,
         /** Selected action type */
         val actionType: ActionType? = null,
+        /** Snooze duration in minutes (for SNOOZE_NOTIFICATION type) */
+        val snoozeDurationMinutes: Int = DEFAULT_SNOOZE_DURATION_MINUTES,
         /** Validation error message, if any */
         val validationError: String? = null,
     ) {
@@ -36,6 +39,9 @@ object ActionBottomSheetContract {
 
         /** Update action type */
         data class OnActionTypeChange(val actionType: ActionType) : UiEvent()
+
+        /** Update snooze duration in minutes */
+        data class OnSnoozeDurationChange(val minutes: Int) : UiEvent()
 
         /** Confirm and create/update action */
         data object OnConfirm : UiEvent()

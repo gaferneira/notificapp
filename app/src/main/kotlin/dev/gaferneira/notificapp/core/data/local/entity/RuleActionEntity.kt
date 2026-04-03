@@ -43,4 +43,7 @@ data class RuleActionEntity(
 
     @ColumnInfo(name = "is_enabled")
     val isEnabled: Boolean = true,
+
+    @ColumnInfo(name = "config", defaultValue = "{}")
+    val config: String = "{}",
 )

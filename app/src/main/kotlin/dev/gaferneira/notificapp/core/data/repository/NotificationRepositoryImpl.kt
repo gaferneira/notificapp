@@ -244,6 +244,7 @@ private fun NotificationEntity.toModel(): Notification = Notification(
     timestamp = this.timestamp,
     isProcessed = this.isProcessed || this.appliedRulesCount > 0,
     appliedRulesCount = this.appliedRulesCount,
+    sbnKey = this.sbnKey,
 )
 
 /**
@@ -259,6 +260,7 @@ private fun Notification.toEntity(): NotificationEntity = NotificationEntity(
     timestamp = this.timestamp,
     isProcessed = this.isProcessed || this.appliedRulesCount > 0,
     appliedRulesCount = this.appliedRulesCount,
+    sbnKey = this.sbnKey,
 )
 
 /**
