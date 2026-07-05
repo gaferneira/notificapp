@@ -375,6 +375,9 @@ class RuleMatcherTest {
 # Code formatting (REQUIRED before commits)
 ./gradlew spotlessApply
 
+# Static analysis (complexity/size budgets, runs as part of `check`)
+./gradlew detekt
+
 # Run all tests
 ./gradlew test
 
@@ -418,10 +421,14 @@ class RuleMatcherTest {
 1. Spotless format check
 2. Unit tests for changed files
 
+### Static Analysis (Detekt)
+`./gradlew detekt` runs complexity/size checks (`LongMethod`, `LongParameterList`, `CyclomaticComplexMethod`) on top of the default ruleset, gated the same as Spotless. Pre-existing debt is grandfathered via `config/detekt/baseline.xml` — new code must pass clean. Regenerate the baseline only when intentionally accepting new debt: `./gradlew detektBaseline`.
+
 ### Manual Verification
 Always run before submitting PRs:
 ```bash
 ./gradlew spotlessApply
+./gradlew detekt
 ./gradlew test
 ```
 

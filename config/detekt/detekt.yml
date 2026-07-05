@@ -1,0 +1,21 @@
+complexity:
+  LongMethod:
+    threshold: 60
+  LongParameterList:
+    functionThreshold: 6
+    constructorThreshold: 7
+  CyclomaticComplexMethod:
+    threshold: 15
+  TooManyFunctions:
+    active: false
+  LargeClass:
+    active: false
+
+style:
+  MagicNumber:
+    active: false
+  MaxLineLength:
+    active: false
+
+naming:
+  active: false

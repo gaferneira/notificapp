@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
     alias(libs.plugins.spotless)
+    alias(libs.plugins.detekt)
 }
 
 android {
@@ -157,5 +158,22 @@ spotless {
         target("src/**/*.xml")
         trimTrailingWhitespace()
         endWithNewline()
+    }
+}
+
+// Detekt configuration
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    baseline = file("$rootDir/config/detekt/baseline.xml")
+    source.setFrom("src/main/kotlin", "src/test/kotlin", "src/androidTest/kotlin")
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    reports {
+        html.required.set(true)
+        txt.required.set(false)
+        xml.required.set(false)
+        sarif.required.set(false)
     }
 }
