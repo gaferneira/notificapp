@@ -2,19 +2,19 @@
 
 This document details every technical debt item identified in the July 2026 architecture review, with the concrete solution for each. It is the implementation companion to **Phase 0: Foundation Hardening** in [`docs/roadmap.md`](roadmap.md) — the roadmap says *what* and *why*; this document says *how*. The corresponding architectural decisions are recorded in [ADR 009](adr/009-notification-processing-pipeline.md) (pipeline, TD-1/2/3), [ADR 010](adr/010-action-executor-multibindings.md) (actions, TD-4/5), and [ADR 011](adr/011-rule-definition-storage.md) (rule storage, TD-8).
 
-**Recommended execution order:** TD-1 → TD-2 → TD-3 → TD-4 → TD-5 → TD-6. Items TD-7 and TD-8 are decisions/conventions, not refactors. TD-9 is already resolved.
+**Execution order (as landed):** TD-1 → TD-2 & TD-3 (same commit) → TD-4 & TD-5 (same commit) → TD-6 → TD-7. Items TD-8 and TD-9 are decisions/conventions, not refactors, and were left untouched by design.
 
 ## Summary
 
 | ID | Item | Priority | Effort | Status |
 |----|------|----------|--------|--------|
-| TD-1 | `RuleExecutionRepository` — remove DAO access outside the data layer | High | ~0.5 day | Open |
-| TD-2 | Purify `RuleEngine` — evaluation without persistence | High | ~0.5 day | Open |
-| TD-3 | `ProcessNotificationUseCase` — pipeline out of the listener service | High | ~0.5 day | Open |
-| TD-4 | `ActionExecutor` — pluggable action handlers via Hilt multibindings | High | ~1 day | Open |
-| TD-5 | Per-action execution outcomes | Medium | ~0.5 day | Open |
-| TD-6 | Bootstrap the test suite (extraction engine first) | High | ~1 day | Open |
-| TD-7 | `MviViewModel` hardcodes `Dispatchers.Main.immediate` | Low | ~1 hour | Open |
+| TD-1 | `RuleExecutionRepository` — remove DAO access outside the data layer | High | ~0.5 day | Resolved 2026-07-05 |
+| TD-2 | Purify `RuleEngine` — evaluation without persistence | High | ~0.5 day | Resolved 2026-07-05 (with TD-3) |
+| TD-3 | `ProcessNotificationUseCase` — pipeline out of the listener service | High | ~0.5 day | Resolved 2026-07-05 (with TD-2) |
+| TD-4 | `ActionExecutor` — pluggable action handlers via Hilt multibindings | High | ~1 day | Resolved 2026-07-05 (with TD-5) |
+| TD-5 | Per-action execution outcomes | Medium | ~0.5 day | Resolved 2026-07-05 (with TD-4) |
+| TD-6 | Bootstrap the test suite (extraction engine first) | High | ~1 day | Resolved 2026-07-05 |
+| TD-7 | `MviViewModel` hardcodes `Dispatchers.Main.immediate` | Low | ~1 hour | Resolved 2026-07-05 |
 | TD-8 | Rule storage schema: normalized tables vs JSON column | Decision | — | Reevaluate before Roadmap Phase 2 |
 | TD-9 | Accepted trade-offs (documented, no action) | — | — | Accepted |
 | TD-10 | Documentation drift (`CLAUDE.md`, `ARCHITECTURE.md`) | High | — | **Resolved 2026-07-05** |

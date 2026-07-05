@@ -10,7 +10,7 @@
 - **Dependency Injection**: Hilt
 - **Navigation**: Navigation3 with custom Navigator (ADR 007)
 - **Build System**: Gradle with Kotlin DSL
-- **Testing**: JUnit 5, Kotest, MockK, Turbine (chosen frameworks — **no tests written yet**, see Roadmap Phase 0)
+- **Testing**: JUnit 5, Kotest, MockK, Turbine — 88 passing unit tests in `app/src/test` (extraction engine, use case, action executors); ViewModel/UI tests still pending
 - **Structure**: Monolithic (single app module) with clean package separation, designed for future modularization
 
 ## Quick Reference
@@ -66,7 +66,7 @@ Notificapp/
 │   │   │   ├── rules/
 │   │   │   └── settings/
 │   │   └── util/
-│   └── src/test/                  # Unit tests (EMPTY — planned in Roadmap Phase 0)
+│   └── src/test/                  # Unit tests (88 tests: extraction, use case, action executors)
 ├── docs/                          # ARCHITECTURE.md, roadmap.md, adr/, SDD-METHODOLOGY.md
 ├── openspec/                      # specs/ (feature specs) + changes/ (active proposals)
 ├── gradle/                        # Gradle configuration
@@ -89,10 +89,7 @@ features/notification → core/extraction (runs the rule engine)
 - `core/extraction` should be pure Kotlin depending only on domain models
 - No circular dependencies between packages
 
-**Known violations (do not copy these patterns; fixing them is Roadmap Phase 0):**
-- `core/extraction/RuleEngine` currently injects Room DAOs and persists directly — target: pure orchestration with persistence behind a planned `RuleExecutionRepository`
-- `NotificationDetailViewModel` currently injects DAOs directly — target: route through repositories only
-- Action execution is inline in `NotificappListenerService` — target: `ActionExecutor` per `ActionType` via Hilt multibindings
+Phase 0 hardening (rule-execution persistence, pure `RuleEngine`, pluggable actions) has landed — see `docs/adr/009-notification-processing-pipeline.md`, `docs/adr/010-action-executor-multibindings.md`, and `docs/roadmap_tech_debt.md` for details.
 
 ### Future Modularization Path
 
@@ -186,7 +183,7 @@ Before making any code changes:
 **Responsibilities:** Data persistence, repository implementations
 
 **Key Components:**
-- Repositories: `NotificationRepository`, `RuleRepository`, `SelectedAppRepository`, `UserPreferencesRepository` (a `RuleExecutionRepository` is planned — Roadmap Phase 0)
+- Repositories: `NotificationRepository`, `RuleRepository`, `SelectedAppRepository`, `UserPreferencesRepository`, `RuleExecutionRepository` (wraps `RuleExecutionDao`/`ExtractedFieldValueDao`/`NotificationDao` writes transactionally)
 - Room database (`AppDatabase`) with 9 entities: Notification, Rule, RuleCondition, RuleField, RuleAction, RuleTargetApp, RuleExecution, ExtractedFieldValue, SelectedApp
 - DAOs per entity, mappers from entities to domain models
 - DataStore for preferences (selected apps, settings)
@@ -205,14 +202,13 @@ Before making any code changes:
 **Key Components:**
 - `RuleMatcher` - Checks if a notification matches rule conditions (6 operators; pure Kotlin)
 - `FieldExtractor` - Extracts fields using 10 extraction methods (regex, anchors, keywords, JSON path, smart amount/date, ...; pure Kotlin)
-- `RuleEngine` - Orchestrates matching and extraction (currently also persists via DAOs — known debt, see Package Dependencies)
+- `RuleEngine` - Pure `evaluate(notification, rules): List<RuleMatch>`; zero I/O, zero coroutines, zero `core.data`/`domain.repository` imports. Rule loading and persistence live in `features/notification/ProcessNotificationUseCase`, which saves via `RuleExecutionRepository`
 
 **Notification normalization** (`NotificationNormalizer`, `NotificationDeduplicator`) lives in `features/notification/`, not here — it handles Android APIs.
 
 **Key Rules:**
 - `RuleMatcher` and `FieldExtractor` must stay pure Kotlin (no Android imports) — this is critical for testability
 - Extensible design for new extraction methods
-- New pipeline code should follow the target design (pure engine, persistence via repositories), not the current `RuleEngine` DAO pattern
 
 ## MVI Pattern Implementation
 
@@ -324,7 +320,7 @@ The skill may create delta specs in `openspec/changes/[name]/specs/`:
 
 ## Testing Standards
 
-> **Current status: `app/src/test` is EMPTY.** The initial test suite (RuleMatcher, FieldExtractor, RuleEngine) is Roadmap Phase 0. Do not assume existing test coverage; when adding tests, follow the standards below.
+> **Current status:** `app/src/test` has 88 passing tests covering `RuleMatcher` (all 6 operators), `FieldExtractor` (all 10 extraction methods), `RuleEngine`, `ProcessNotificationUseCase`, `ActionDispatcher`, and the per-action executors, with shared fixtures in `testutil/TestFixtures.kt`. ViewModels, repositories, and normalization still have no tests — follow the standards below when adding them.
 
 ### Unit Tests
 - **Framework**: JUnit 5 with Kotest assertions
@@ -486,7 +482,7 @@ Always run before submitting PRs:
 ### Adding a New Action Type
 
 1. Add the type to `ActionType` (domain model); keep config in `RuleAction.config` (`Map<String, String>`) with typed accessor methods
-2. Implement execution — target design: an `ActionExecutor` per type (see Roadmap Phase 0); until then, execution lives in `NotificappListenerService.executeAction`
+2. Implement execution as an `ActionExecutor` (`domain/action/ActionExecutor.kt`) and register it in `core/di/ActionModule.kt` via `@Binds @IntoMap @ActionTypeKey(ActionType.X)` — the `ActionDispatcher` picks it up automatically; no service edits needed
 3. Add configuration UI in the Rule Editor's `ActionBottomSheet`
 4. Record execution outcome on the `RuleExecution`
 

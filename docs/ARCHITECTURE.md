@@ -85,8 +85,8 @@ app/src/main/kotlin/dev/gaferneira/notificapp/
 │   │                          # RuleRepositoryImpl, SelectedAppRepositoryImpl, 
 │   │                          # UserPreferencesRepositoryImpl)
 │   ├── di/                    # Dependency injection modules (Hilt)
-│   ├── extraction/            # Core extraction engine (target: pure Kotlin, no Android deps)
-│   │   ├── RuleEngine         # Orchestrates matching and extraction (currently also persists — see Known Gaps)
+│   ├── extraction/            # Core extraction engine (pure Kotlin, no Android deps)
+│   │   ├── RuleEngine         # Pure evaluate(notification, rules) -> List<RuleMatch>; no I/O
 │   │   ├── RuleMatcher        # Pattern matching logic (pure Kotlin)
 │   │   └── FieldExtractor     # Field extraction with patterns (pure Kotlin)
 │   └── ui/                    # Shared UI layer
@@ -126,11 +126,8 @@ features/notification → core/extraction (notification processing)
 **Rules:**
 - Features only depend on domain models, repository interfaces, and core/ui
 - core/data implements domain repository interfaces
-- core/extraction is pure Kotlin with no Android dependencies (except RuleEngine has known debt - see Extraction Layer section)
+- core/extraction is pure Kotlin with no Android dependencies
 - No circular dependencies between packages
-
-**Known Violation (Roadmap Phase 0):**
-- RuleEngine currently injects Room DAOs and persists directly (should move behind RuleExecutionRepository interface)
 
 ### Future Modularization Path
 
@@ -152,7 +149,7 @@ When the project grows, packages can be extracted into modules:
 └── :feature:settings        # Settings screen
 ```
 
-This approach allows the extraction engine to be reused in other contexts (e.g., server-side processing, desktop apps) since it has no Android dependencies (target design, not current state).
+This approach allows the extraction engine to be reused in other contexts (e.g., server-side processing, desktop apps) since it has no Android dependencies.
 
 ## Core Data Flow: Notification to Structured Event
 
@@ -169,12 +166,12 @@ flowchart LR
     subgraph Processing["Processing & Storage"]
         Listener[NotificappListenerService]
         Normalizer[NotificationNormalizer]
+        UseCase[ProcessNotificationUseCase]
         Dedup[NotificationDeduplicator]
         RuleEngine[RuleEngine]
+        Dispatcher[ActionDispatcher]
         NotifRepo[(NotificationRepository)]
-        ExecStore[("Rule executions +
-        extracted field values
-        (DAOs today; RuleExecutionRepository planned)")]
+        ExecRepo[(RuleExecutionRepository)]
     end
     
     subgraph UI["UI Screens"]
@@ -185,14 +182,16 @@ flowchart LR
     
     Notif -->|posts| Listener
     Listener -->|enabled app?| Normalizer
-    Normalizer -->|normalize| Dedup
-    Dedup -->|is new?| NotifRepo
-    NotifRepo -->|persist| RuleEngine
-    RuleEngine -->|match & extract| ExecStore
-    RuleEngine -->|triggered actions| Listener
+    Normalizer -->|normalize| UseCase
+    UseCase -->|is new?| Dedup
+    UseCase -->|persist| NotifRepo
+    UseCase -->|evaluate| RuleEngine
+    UseCase -->|execute actions| Dispatcher
+    UseCase -->|save execution + outcomes| ExecRepo
+    Dispatcher -->|dismiss/snooze| Listener
     
     Inbox -.->|query| NotifRepo
-    Detail -.->|query| ExecStore
+    Detail -.->|query| ExecRepo
     RuleEditor -.->|load sample notification| NotifRepo
 ```
 
@@ -200,29 +199,27 @@ flowchart LR
 
 1. **Capture**: `NotificationListenerService` receives notification from Android system; filters (enabled app, has content, not system ongoing, not too old)
 2. **Normalize**: `NotificationNormalizer` transforms Android's `StatusBarNotification` into domain `Notification` model
-3. **Deduplicate**: `NotificationDeduplicator` checks for duplicates (same content within time window)
-4. **Persist**: `NotificationRepository` saves new notification to database
-5. **Match & Extract**: `RuleEngine` loads active rules via `RuleRepository`, uses `RuleMatcher` to check if notification matches, uses `FieldExtractor` to extract fields from matching rules, saves `RuleExecution` and `ExtractedFieldValue` rows
-6. **Execute Actions**: Service executes enabled actions (currently dismiss/snooze inline in listener; target design moves behind `ActionExecutor` abstraction)
-7. **Display**: UI screens query repositories to show notifications, rules, and execution results
+3. **Process**: the service delegates the normalized notification to `ProcessNotificationUseCase`, which owns the rest of the pipeline
+4. **Deduplicate**: `NotificationDeduplicator` checks for duplicates (same content within time window)
+5. **Persist**: `NotificationRepository` saves new notification to database
+6. **Match & Extract**: `RuleEngine.evaluate(notification, rules)` (rules loaded via `RuleRepository`) returns pure `RuleMatch` results — `RuleMatcher` checks conditions, `FieldExtractor` extracts fields; no I/O in this step
+7. **Execute Actions**: `ActionDispatcher` runs each matched rule's actions through the `ActionExecutor` registered for its `ActionType` (Hilt multibindings), recording a per-action `ActionOutcome` (`SUCCESS`/`FAILED`/`SKIPPED`). Dismiss/snooze reach the live listener via the narrow `SystemNotificationController` interface
+8. **Save**: `ProcessNotificationUseCase` saves `RuleExecution` (with `actionOutcomes`) and `ExtractedFieldValue` rows via `RuleExecutionRepository`, transactionally
+9. **Display**: UI screens query repositories to show notifications, rules, and execution results (including per-action outcome glyphs in Notification Detail)
 
 ### Design Rationale
 
 **Separation of Concerns:**
-- `features/notification` package handles all Android-specific APIs (NotificationListenerService, action execution)
+- `features/notification` package handles all Android-specific APIs (NotificationListenerService, action execution) plus the pipeline orchestration (`ProcessNotificationUseCase`, `ActionDispatcher`, per-action `ActionExecutor`s)
 - `NotificationNormalizer` and `NotificationDeduplicator` live in features/notification (app-specific logic)
-- `core/extraction` contains `RuleEngine`, `RuleMatcher`, `FieldExtractor` (domain logic, target: pure Kotlin for reusability)
+- `core/extraction` contains `RuleEngine`, `RuleMatcher`, `FieldExtractor` — pure Kotlin, no Android or persistence dependencies
 - `domain` models are the contract between layers
 
-**Testability (Target Design):**
-- `RuleMatcher` and `FieldExtractor` are pure Kotlin with no Android dependencies — can be unit tested with mock data
-- Rules can be tested against historical notification data without emulator
-- Action execution behind interface allows testing without system dependencies
-
-**Current Gaps (Roadmap Phase 0):**
-- `RuleEngine` currently injects Room DAOs and persists directly; target: pure orchestration, persistence behind `RuleExecutionRepository`
-- Action execution currently inline in listener; target: behind `ActionExecutor` with Hilt multibindings per action type, with system-dependent actions (dismiss/snooze) behind a narrow `SystemNotificationController` interface implemented by the listener service
-- Pipeline orchestration currently lives in the listener service; target: a `ProcessNotificationUseCase` orchestrates normalize → dedupe → persist → match → extract → act, and the service becomes a thin adapter
+**Testability:**
+- `RuleMatcher`, `FieldExtractor`, and `RuleEngine` are pure Kotlin with no Android dependencies — unit tested with mock data, no emulator
+- `ProcessNotificationUseCase` and `ActionDispatcher` are unit tested with fake repositories/executors
+- Rules can be tested against historical notification data without emulator (enables future backtesting)
+- Action execution behind the `ActionExecutor` interface allows testing without system dependencies
 
 ## Tech Stack
 
@@ -264,7 +261,7 @@ flowchart LR
 - **MockK**: Mocking framework
 - **Turbine**: Flow testing
 
-*Note: these are the chosen frameworks; the test suite itself is not written yet (Roadmap Phase 0).*
+*Note: 88 tests currently run against these frameworks, covering the extraction engine, `ProcessNotificationUseCase`, and action executors; ViewModel and repository tests are still pending.*
 
 ### Other
 
@@ -346,6 +343,7 @@ data class RuleExecution(
     val extractedData: Map<String, String>,
     val triggeredActions: List<String>,
     val triggeredRuleActions: List<RuleAction> = emptyList(),
+    val actionOutcomes: Map<String, ActionOutcome> = emptyMap(), // actionId -> SUCCESS/FAILED/SKIPPED
     val createdAt: Long = System.currentTimeMillis(),
 )
 
@@ -377,7 +375,7 @@ data class ExtractedFieldValue(
 
 **Components:**
 
-- Repositories (NotificationRepository, RuleRepository, SelectedAppRepository, UserPreferencesRepository; RuleExecutionRepository planned)
+- Repositories (NotificationRepository, RuleRepository, SelectedAppRepository, UserPreferencesRepository, RuleExecutionRepository — the last one wraps `RuleExecutionDao`/`ExtractedFieldValueDao`/`NotificationDao` writes in a single transaction)
 - Room database with 9 entities (NotificationEntity, RuleEntity, RuleConditionEntity, RuleFieldEntity, RuleActionEntity, RuleTargetAppEntity, RuleExecutionEntity, ExtractedFieldValueEntity, SelectedAppEntity)
 - DAOs for each entity
 - Mappers from entities to domain models
@@ -402,19 +400,18 @@ data class ExtractedFieldValue(
 
 - `RuleMatcher`: Checks if a notification matches rule conditions (pure Kotlin)
 - `FieldExtractor`: Extracts specific fields using patterns (regex, templates) (pure Kotlin)
-- `RuleEngine`: Orchestrates matching and extraction; loads rules, executes matching, persists results
+- `RuleEngine`: Pure `evaluate(notification, rules): List<RuleMatch>` — matches conditions and extracts fields with no persistence or I/O
 
-**Rules (Target Design):**
+**Rules:**
 
-- `RuleMatcher` and `FieldExtractor` are pure Kotlin with no Android dependencies
+- `RuleMatcher`, `FieldExtractor`, and `RuleEngine` are pure Kotlin with no Android dependencies and zero `core.data`/`domain.repository` imports
 - Fully unit testable without emulator
 - Extensible design for new extraction methods
 
-**Known Gaps (Current State, Roadmap Phase 0):**
+**Design Notes:**
 
-- `RuleEngine` currently injects Room DAOs (`RuleExecutionDao`, `ExtractedFieldValueDao`, `NotificationDao`) and persists directly to database
-- Target design: `RuleEngine` becomes pure orchestration (takes rules + notification, returns extraction results); persistence moves behind planned `RuleExecutionRepository` interface
-- Affects dependency rules: currently `core/extraction → core/data` (should be `core/extraction → domain`)
+- Rule loading (via `RuleRepository`) and persistence (via `RuleExecutionRepository`) live in `features/notification/ProcessNotificationUseCase`, not in `core/extraction` — this keeps `core/extraction → domain` as the only dependency direction
+- `RuleMatch` (`domain/model/RuleMatch.kt`) is the pure evaluation result returned by `RuleEngine`, before it is converted into a persisted `RuleExecution`
 - **Notification normalization** (`NotificationNormalizer`, `NotificationDeduplicator`) lives in `features/notification/`, not extraction (app-specific logic, handles Android APIs)
 
 ## Coding Standards
@@ -476,9 +473,9 @@ data class ExtractedFieldValue(
 
 **Current Status:**
 
-- Test suite scaffolding planned for Roadmap Phase 0
-- Initial focus: RuleMatcher, FieldExtractor (pure logic, no Android deps)
-- ViewModel and repository tests follow in Phase 1
+- 88 passing tests in `app/src/test`: `RuleMatcherTest` (all 6 operators), `FieldExtractorTest` (all 10 extraction methods), `RuleEngineTest`, `ProcessNotificationUseCaseTest`, `ActionDispatcherTest`, and per-executor tests, with shared fixtures in `testutil/TestFixtures.kt`
+- `useJUnitPlatform()` wired in `app/build.gradle.kts`; `./gradlew test` is a real, meaningful gate
+- ViewModel and repository tests are still pending
 
 ### Dependency Injection
 
