@@ -1,84 +1,39 @@
 package dev.gaferneira.notificapp.core.extraction
 
-import dev.gaferneira.notificapp.core.di.Dispatcher
-import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.Rule
-import dev.gaferneira.notificapp.domain.model.RuleExecution
-import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
-import dev.gaferneira.notificapp.domain.repository.RuleRepository
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.withContext
+import dev.gaferneira.notificapp.domain.model.RuleMatch
 import timber.log.Timber
-import java.util.UUID
 import javax.inject.Inject
 
 /**
- * Rule execution engine that orchestrates rule matching, field extraction,
- * and recording of execution results.
- *
- * @property ruleRepository Repository for loading rules
- * @property ruleExecutionRepository Repository for recording rule executions
- * @property ioDispatcher Coroutine dispatcher for IO operations
+ * Pure rule evaluation engine: matches a notification against a set of rules
+ * and extracts fields from the matches. No I/O, no persistence, no coroutines —
+ * loading rules and recording results is the caller's responsibility
+ * (see `ProcessNotificationUseCase`).
  */
-class RuleEngine @Inject constructor(
-    private val ruleRepository: RuleRepository,
-    private val ruleExecutionRepository: RuleExecutionRepository,
-    @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
-) {
+class RuleEngine @Inject constructor() {
 
     /**
-     * Process a notification against all active rules for its app.
-     *
-     * @param notification The notification to process
-     * @return Result containing list of rule executions (one per matched rule)
-     */
-    suspend fun process(notification: Notification): Result<List<RuleExecution>> = withContext(ioDispatcher) {
-        try {
-            // Load active rules for this app's package
-            val rulesResult = ruleRepository.getRulesForApp(notification.packageName)
-
-            if (rulesResult.isFailure) {
-                return@withContext Result.failure(rulesResult.exceptionOrNull()!!)
-            }
-
-            val rules = rulesResult.getOrNull() ?: emptyList()
-
-            if (rules.isEmpty()) {
-                Timber.d("No active rules for ${notification.packageName}")
-                return@withContext Result.success(emptyList())
-            }
-
-            // Process each rule and collect executions
-            val executions = mutableListOf<RuleExecution>()
-
-            for (rule in rules) {
-                val execution = executeRule(notification, rule)
-                if (execution != null) {
-                    executions.add(execution)
-                }
-            }
-
-            Timber.d("Processed ${executions.size} rule matches for notification ${notification.id}")
-            Result.success(executions)
-        } catch (e: Exception) {
-            Timber.e(e, "Error processing rules for notification ${notification.id}")
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Execute a single rule against a notification.
+     * Evaluate a notification against a list of rules.
      *
      * @param notification The notification to check
-     * @param rule The rule to execute
-     * @return RuleExecution if rule matched, null otherwise
+     * @param rules The rules to evaluate against
+     * @return One [RuleMatch] per rule whose conditions matched
      */
-    private suspend fun executeRule(
+    fun evaluate(notification: Notification, rules: List<Rule>): List<RuleMatch> = rules.mapNotNull { rule -> evaluateRule(notification, rule) }
+
+    /**
+     * Evaluate a single rule against a notification.
+     *
+     * @param notification The notification to check
+     * @param rule The rule to evaluate
+     * @return RuleMatch if the rule's conditions matched, null otherwise
+     */
+    private fun evaluateRule(
         notification: Notification,
         rule: Rule,
-    ): RuleExecution? {
-        // Check if rule conditions match
+    ): RuleMatch? {
         if (!RuleMatcher.matches(notification, rule.conditions)) {
             Timber.d("Rule ${rule.id} did not match notification ${notification.id}")
             return null
@@ -86,29 +41,13 @@ class RuleEngine @Inject constructor(
 
         Timber.d("Rule ${rule.id} matched notification ${notification.id}")
 
-        // Extract all fields
         val extractedData = extractFields(notification, rule)
 
         if (extractedData.isEmpty() && rule.fields.isNotEmpty()) {
             Timber.w("Rule ${rule.id} matched but no fields could be extracted")
         }
 
-        // Determine which actions were triggered
-        val enabledActions = rule.actions.filter { it.isEnabled }
-        val triggeredActions = enabledActions.map { it.id }
-
-        // Create RuleExecution
-        val execution = RuleExecution(
-            id = UUID.randomUUID().toString(),
-            notificationId = notification.id,
-            ruleId = rule.id,
-            extractedData = extractedData,
-            triggeredActions = triggeredActions,
-            triggeredRuleActions = enabledActions,
-        )
-
-        // Save to database
-        return saveExecution(execution, rule)
+        return RuleMatch(rule = rule, extractedData = extractedData)
     }
 
     /**
@@ -134,22 +73,5 @@ class RuleEngine @Inject constructor(
         }
 
         return extractedData
-    }
-
-    /**
-     * Save the rule execution and its extracted field values via the repository.
-     */
-    private suspend fun saveExecution(
-        execution: RuleExecution,
-        rule: Rule,
-    ): RuleExecution? {
-        val result = ruleExecutionRepository.saveExecution(execution, rule.fields)
-
-        return if (result.isSuccess) {
-            execution
-        } else {
-            Timber.e(result.exceptionOrNull(), "Failed to save rule execution ${execution.id}")
-            null
-        }
     }
 }

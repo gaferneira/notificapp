@@ -4,7 +4,6 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
-import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
@@ -14,6 +13,7 @@ import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
+import dev.gaferneira.notificapp.features.notification.ProcessNotificationUseCase
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ExecutionWithDetails
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ExtractedFieldDisplay
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEffect
@@ -33,7 +33,7 @@ import javax.inject.Inject
  * @param notificationRepository Repository for notifications
  * @param ruleExecutionRepository Repository for rule executions
  * @param ruleRepository Repository for rules (to get rule names)
- * @param ruleEngine Engine for re-executing rules
+ * @param processNotificationUseCase Use case for re-evaluating rules against a notification
  * @param navigationHandler Handler for navigation commands
  * @param ioDispatcher Dispatcher for IO operations
  */
@@ -42,7 +42,7 @@ class NotificationDetailViewModel @Inject constructor(
     private val notificationRepository: NotificationRepository,
     private val ruleExecutionRepository: RuleExecutionRepository,
     private val ruleRepository: RuleRepository,
-    private val ruleEngine: RuleEngine,
+    private val processNotificationUseCase: ProcessNotificationUseCase,
     private val navigationHandler: NavigationHandler,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
@@ -221,8 +221,8 @@ class NotificationDetailViewModel @Inject constructor(
                 // 2. Delete existing executions for this notification and reset its counter
                 ruleExecutionRepository.deleteExecutionsForNotification(id)
 
-                // 3. Re-run the rule engine
-                ruleEngine.process(notification)
+                // 3. Re-run rule evaluation and persist the new executions
+                processNotificationUseCase.evaluateAndPersist(notification)
 
                 // 4. Reload executions
                 observeExecutions(notification)
