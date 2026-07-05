@@ -247,9 +247,14 @@ class NotificationDetailViewModel @Inject constructor(
                     return@launch
                 }
 
-                // 4. No manual reload needed: the live Flow collected by observeExecutions
-                // (started from loadNotificationAndExecutions) re-emits automatically once Room
-                // detects the writes above, and updates isLoading/executions from that emission.
+                // 4. The live Flow collected by observeExecutions (started from
+                // loadNotificationAndExecutions) re-emits and clears isLoading once Room detects
+                // the writes above - but Room's invalidation trigger only fires when a write
+                // actually affects a row. If there were zero executions before and the re-run
+                // also matches zero rules, both the delete and the (skipped) insert affect zero
+                // rows, no trigger fires, and the Flow never re-emits. Clear isLoading explicitly
+                // so the spinner can't get stuck; a later Flow emission still updates the state.
+                setState { copy(isLoading = false) }
 
                 Timber.d("Refreshed rules for notification $id")
             } catch (e: Exception) {
