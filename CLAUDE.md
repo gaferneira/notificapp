@@ -10,7 +10,7 @@
 - **Dependency Injection**: Hilt
 - **Navigation**: Navigation3 with custom Navigator (ADR 007)
 - **Build System**: Gradle with Kotlin DSL
-- **Testing**: JUnit 5, Kotest, MockK, Turbine — 88 passing unit tests in `app/src/test` (extraction engine, use case, action executors); ViewModel/UI tests still pending
+- **Testing**: JUnit 5, Kotest, MockK, Turbine — 177 passing unit tests in `app/src/test` (extraction engine, use case, action executors, `RuleEditorViewModel`/`AddFieldViewModel`/`NotificationDetailViewModel`); most other ViewModels and UI tests still pending
 - **Structure**: Monolithic (single app module) with clean package separation, designed for future modularization
 
 ## Quick Reference
@@ -321,7 +321,7 @@ The skill may create delta specs in `openspec/changes/[name]/specs/`:
 
 ## Testing Standards
 
-> **Current status:** `app/src/test` has 88 passing tests covering `RuleMatcher` (all 6 operators), `FieldExtractor` (all 10 extraction methods), `RuleEngine`, `ProcessNotificationUseCase`, `ActionDispatcher`, and the per-action executors, with shared fixtures in `testutil/TestFixtures.kt`. ViewModels, repositories, and normalization still have no tests — follow the standards below when adding them.
+> **Current status:** `app/src/test` has 177 passing tests covering `RuleMatcher` (all 6 operators), `FieldExtractor` (all 10 extraction methods), `RuleEngine`, `ProcessNotificationUseCase`, `ActionDispatcher`, the per-action executors, `NotificationDeduplicator`, and three ViewModels (`RuleEditorViewModel`, `AddFieldViewModel`, `NotificationDetailViewModel`), with shared fixtures in `testutil/TestFixtures.kt`. Most other ViewModels, repositories, and normalization still have no tests — follow the standards below when adding them.
 
 ### Unit Tests
 - **Framework**: JUnit 5 with Kotest assertions
