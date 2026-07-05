@@ -1,0 +1,44 @@
+name: Bug report
+description: Something isn't working correctly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! **Do not report security vulnerabilities here** — see [SECURITY.md](../../blob/main/SECURITY.md).
+        **Redact personal data** (message contents, OTPs, account numbers) from any notification text you paste.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Clear description of the bug and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a rule with ...
+        2. Receive a notification from ...
+        3. See ...
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: e.g. Pixel 7, Android 15
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: Notificapp version / commit
+      placeholder: e.g. 0.1.0 or main @ a7cf438
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional)
+      description: Relevant logcat output if you have it. Redact personal data.
+      render: text

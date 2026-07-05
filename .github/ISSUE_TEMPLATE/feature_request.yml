@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an improvement or new capability
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [roadmap](../../blob/main/docs/roadmap.md) first — your idea may already be planned, or on the explicit out-of-scope list (cloud sync, accounts, cloud AI).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the use case, not just the solution — it helps us find the best fit.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered (optional)

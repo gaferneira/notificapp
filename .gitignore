@@ -1,17 +1,27 @@
+# Build & tool caches
 *.iml
 .gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/firebender/
-/.idea/assetWizardSettings.xml
-.DS_Store
+.kotlin/
 /build
 /captures
 .externalNativeBuild
 .cxx
+
+# IDE & OS
+/.idea/
+.DS_Store
+
+# Local environment — contains machine paths and secrets
 local.properties
 
+# Signing — never commit keystores or release credentials
+*.jks
+*.keystore
+
+# Built artifacts outside build/ (e.g., copied for release)
+*.apk
+*.aab
+
+# Personal agent config — never commit (machine-specific permissions/overrides)
+.claude/settings.local.json
+.agents/**/*_local.md

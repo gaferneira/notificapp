@@ -1,0 +1,42 @@
+name: Rule request
+description: Request or propose an extraction rule for a specific app
+labels: ["rule-gallery"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Extraction rules are how Notificapp turns an app's notifications into structured data.
+        **Important: redact all personal data** (names, amounts you'd rather keep private, account numbers, OTPs) from sample text — replace with realistic placeholders.
+  - type: input
+    id: app
+    attributes:
+      label: App name and package
+      placeholder: e.g. Revolut (com.revolut.revolut)
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample notification text (redacted)
+      description: Title and body of a typical notification, with personal data replaced by placeholders.
+      placeholder: |
+        Title: Payment received
+        Body: You received €12.34 from J*** D*** · Main account
+    validations:
+      required: true
+  - type: textarea
+    id: fields
+    attributes:
+      label: What data should be extracted?
+      placeholder: |
+        - amount (number): 12.34
+        - currency (text): EUR
+        - sender (text): J*** D***
+    validations:
+      required: true
+  - type: textarea
+    id: rule-json
+    attributes:
+      label: Working rule JSON (optional)
+      description: If you already built and tested a rule in the app, paste its export here.
+      render: json
