@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "7221f07e504c6fe1b07d210194e2cb9c",
+    "identityHash": "16624826e8675b827be272495fc0abe0",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -53,7 +53,7 @@
       },
       {
         "tableName": "notifications",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `package_name` TEXT NOT NULL, `app_name` TEXT NOT NULL, `title` TEXT, `content` TEXT, `raw_content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `is_processed` INTEGER NOT NULL, `applied_rules_count` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `package_name` TEXT NOT NULL, `app_name` TEXT NOT NULL, `title` TEXT, `content` TEXT, `raw_content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `is_processed` INTEGER NOT NULL, `applied_rules_count` INTEGER NOT NULL DEFAULT 0, `sbn_key` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -107,6 +107,11 @@
             "affinity": "INTEGER",
             "notNull": true,
             "defaultValue": "0"
+          },
+          {
+            "fieldPath": "sbnKey",
+            "columnName": "sbn_key",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -425,7 +430,7 @@
       },
       {
         "tableName": "rule_actions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `rule_id` TEXT NOT NULL, `type` TEXT NOT NULL, `is_enabled` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`rule_id`) REFERENCES `rules`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `rule_id` TEXT NOT NULL, `type` TEXT NOT NULL, `is_enabled` INTEGER NOT NULL, `config` TEXT NOT NULL DEFAULT '{}', PRIMARY KEY(`id`), FOREIGN KEY(`rule_id`) REFERENCES `rules`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -450,6 +455,13 @@
             "columnName": "is_enabled",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "config",
+            "columnName": "config",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'{}'"
           }
         ],
         "primaryKey": {
@@ -694,7 +706,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7221f07e504c6fe1b07d210194e2cb9c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '16624826e8675b827be272495fc0abe0')"
     ]
   }
 }

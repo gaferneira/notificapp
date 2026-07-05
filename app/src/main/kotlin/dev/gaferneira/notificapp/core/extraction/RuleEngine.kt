@@ -102,9 +102,8 @@ class RuleEngine @Inject constructor(
         }
 
         // Determine which actions were triggered
-        val triggeredActions = rule.actions
-            .filter { it.isEnabled }
-            .map { it.id }
+        val enabledActions = rule.actions.filter { it.isEnabled }
+        val triggeredActions = enabledActions.map { it.id }
 
         // Create RuleExecution
         val execution = RuleExecution(
@@ -113,6 +112,7 @@ class RuleEngine @Inject constructor(
             ruleId = rule.id,
             extractedData = extractedData,
             triggeredActions = triggeredActions,
+            triggeredRuleActions = enabledActions,
         )
 
         // Save to database

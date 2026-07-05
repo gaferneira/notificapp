@@ -3,13 +3,17 @@ package dev.gaferneira.notificapp.features.notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import dagger.hilt.android.AndroidEntryPoint
+import dev.gaferneira.notificapp.core.di.Dispatcher
+import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
+import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.Notification
+import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
-import dev.gaferneira.notificapp.features.notification.NotificationNormalizer
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -40,12 +44,17 @@ class NotificappListenerService : NotificationListenerService() {
     @Inject
     lateinit var ruleEngine: RuleEngine
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Inject
+    @field:Dispatcher(DispatcherType.IO)
+    lateinit var ioDispatcher: CoroutineDispatcher
+
+    private lateinit var serviceScope: CoroutineScope
 
     private var enabledApps: List<SelectedApp> = emptyList()
 
     override fun onCreate() {
         super.onCreate()
+        serviceScope = CoroutineScope(SupervisorJob() + ioDispatcher)
         Timber.d("NotificationListenerService created")
 
         // Observe enabled apps
@@ -108,13 +117,26 @@ class NotificappListenerService : NotificationListenerService() {
     /**
      * Process rules against a saved notification.
      */
-    private suspend fun processRules(notification: dev.gaferneira.notificapp.domain.model.Notification) {
+    private suspend fun processRules(notification: Notification) {
         try {
             val result = ruleEngine.process(notification)
             result
                 .onSuccess { executions ->
                     if (executions.isNotEmpty()) {
                         Timber.d("Processed ${executions.size} rule matches for notification ${notification.id}")
+                        // Execute triggered actions for each rule match
+                        for (execution in executions) {
+                            if (execution.triggeredRuleActions.isNotEmpty()) {
+                                for (action in execution.triggeredRuleActions) {
+                                    if (!action.isEnabled) continue
+                                    try {
+                                        executeAction(notification, action)
+                                    } catch (e: Exception) {
+                                        Timber.e(e, "Failed to execute action ${action.type} for notification ${notification.id}")
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 .onFailure { e ->
@@ -146,6 +168,9 @@ class NotificappListenerService : NotificationListenerService() {
         // Skip system notifications with no content
         if (sbn.notification?.extras == null) return true
 
+        // Skip notifications without title or text content
+        if (!hasTitleOrContent(sbn)) return true
+
         // Skip ongoing notifications that are just system indicators
         if (sbn.isOngoing && isSystemPackage(sbn.packageName)) return true
 
@@ -154,6 +179,59 @@ class NotificappListenerService : NotificationListenerService() {
         if (age > MAX_AGE_MS) return true
 
         return false
+    }
+
+    /**
+     * Check if the notification has a title or any text content.
+     * Notifications without both are not useful for extraction.
+     */
+    private fun hasTitleOrContent(sbn: StatusBarNotification): Boolean {
+        val extras = sbn.notification.extras
+
+        // Check for title
+        val hasTitle = extras.getCharSequence(android.app.Notification.EXTRA_TITLE_BIG)?.isNotBlank() == true ||
+            extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.isNotBlank() == true
+
+        // Check for content in various forms
+        val hasContent = extras.getCharSequence(android.app.Notification.EXTRA_BIG_TEXT)?.isNotBlank() == true ||
+            extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.isNotBlank() == true ||
+            extras.getCharSequenceArray(android.app.Notification.EXTRA_TEXT_LINES)?.isNotEmpty() == true ||
+            extras.getCharSequence(android.app.Notification.EXTRA_SUB_TEXT)?.isNotBlank() == true ||
+            sbn.notification.tickerText?.isNotBlank() == true
+
+        return hasTitle || hasContent
+    }
+
+    private suspend fun executeAction(notification: Notification, action: RuleAction) {
+        when (action.type) {
+            ActionType.DISMISS_NOTIFICATION -> {
+                val sbnKey = notification.sbnKey
+                if (sbnKey != null) {
+                    cancelNotification(sbnKey)
+                } else {
+                    Timber.w("Cannot dismiss notification ${notification.id}: no SBN key")
+                }
+            }
+            ActionType.SNOOZE_NOTIFICATION -> executeSnooze(notification, action)
+            else -> {
+                // No-op for other actions for now
+            }
+        }
+    }
+
+    private fun executeSnooze(notification: Notification, action: RuleAction) {
+        val sbnKey = notification.sbnKey
+        if (sbnKey == null) {
+            Timber.w("Cannot snooze notification ${notification.id}: no SBN key")
+            return
+        }
+
+        val durationMinutes = action.getSnoozeDurationMinutes()
+        val durationMs = durationMinutes * 60_000L
+
+        snoozeNotification(sbnKey, durationMs)
+
+        Timber.d("Snoozed notification ${notification.id} for $durationMinutes minutes")
     }
 
     /**

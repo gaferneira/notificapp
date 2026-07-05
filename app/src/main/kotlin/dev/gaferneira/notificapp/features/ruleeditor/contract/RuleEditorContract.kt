@@ -192,6 +192,7 @@ val RuleCondition.displayText: String
 val RuleAction.displayName: String
     get() = when (type) {
         ActionType.SAVE_DATA -> "Save to Data tab"
-        ActionType.DELETE_NOTIFICATION -> "Delete notification"
+        ActionType.DISMISS_NOTIFICATION -> "Delete notification"
         ActionType.CREATE_ALARM -> "Create alarm"
+        ActionType.SNOOZE_NOTIFICATION -> "Snooze notification"
     }

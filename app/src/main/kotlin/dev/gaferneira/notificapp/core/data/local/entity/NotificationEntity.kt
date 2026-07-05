@@ -54,4 +54,7 @@ data class NotificationEntity(
 
     @ColumnInfo(name = "applied_rules_count", defaultValue = "0")
     val appliedRulesCount: Int = 0,
+
+    @ColumnInfo(name = "sbn_key")
+    val sbnKey: String? = null,
 )

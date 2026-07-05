@@ -5,27 +5,37 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NotificationsPaused
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -61,10 +71,10 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ActionBottomSheet
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionBottomSheet(
+    modifier: Modifier = Modifier,
     initialAction: RuleAction? = null,
     onActionSaved: (RuleAction) -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
     viewModel: ActionBottomSheetViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -98,16 +108,22 @@ fun ActionBottomSheet(
     }
 
     ModalBottomSheet(
+        modifier = modifier
+            .statusBarsPadding()
+            .fillMaxHeight(),
         onDismissRequest = { viewModel.onEvent(ActionBottomSheetContract.UiEvent.OnDismiss) },
         sheetState = sheetState,
-        modifier = modifier,
     ) {
-        ActionsContent(uiState, viewModel::onEvent)
+        ActionsContent(
+            uiState = uiState,
+            onEvent = viewModel::onEvent,
+        )
     }
 }
 
 @Composable
 private fun ActionsContent(
+    modifier: Modifier = Modifier,
     uiState: ActionBottomSheetContract.UiState,
     onEvent: (ActionBottomSheetContract.UiEvent) -> Unit,
 ) {
@@ -121,11 +137,13 @@ private fun ActionsContent(
         ActionBottomSheetContract.UiState.Mode.ADD -> "Add Action"
     }
 
+    val scrollState = rememberScrollState()
+
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(24.dp)
-            .navigationBarsPadding(),
+            .verticalScroll(scrollState),
     ) {
         Text(
             text = title,
@@ -196,41 +214,45 @@ private fun ActionsContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         ActionTypeCard(
-            title = "Delete notification",
-            description = "Remove the notification after processing",
+            title = "Dismiss notification",
+            description = "Dismiss notification after processing",
             icon = Icons.Default.Delete,
-            isSelected = uiState.actionType == ActionType.DELETE_NOTIFICATION,
+            isSelected = uiState.actionType == ActionType.DISMISS_NOTIFICATION,
             onClick = {
                 onEvent(
                     ActionBottomSheetContract.UiEvent.OnActionTypeChange(
-                        ActionType.DELETE_NOTIFICATION,
+                        ActionType.DISMISS_NOTIFICATION,
                     ),
                 )
             },
         )
 
-        // Show Save to Data Lab toggle when that action is selected
-        if (uiState.actionType == ActionType.SAVE_DATA) {
+        Spacer(modifier = Modifier.height(8.dp))
+
+        ActionTypeCard(
+            title = "Snooze notification",
+            description = "Temporarily dismiss and remind later",
+            icon = Icons.Default.NotificationsPaused,
+            isSelected = uiState.actionType == ActionType.SNOOZE_NOTIFICATION,
+            onClick = {
+                onEvent(
+                    ActionBottomSheetContract.UiEvent.OnActionTypeChange(
+                        ActionType.SNOOZE_NOTIFICATION,
+                    ),
+                )
+            },
+        )
+
+        // Show snooze duration selector when snooze is selected
+        if (uiState.actionType == ActionType.SNOOZE_NOTIFICATION) {
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Enable Save to Data Lab",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        text = "Turn this on to save extracted data",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            SnoozeDurationSelector(
+                selectedMinutes = uiState.snoozeDurationMinutes,
+                onDurationChange = { minutes ->
+                    onEvent(ActionBottomSheetContract.UiEvent.OnSnoozeDurationChange(minutes))
+                },
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -345,6 +367,135 @@ private fun ActionTypeCard(
     }
 }
 
+/**
+ * Duration presets for quick snooze selection.
+ */
+private val SNOOZE_PRESETS = listOf(5, 10, 15, 30, 60)
+
+/**
+ * Minimum and maximum snooze duration in minutes.
+ */
+private const val MIN_SNOOZE_MINUTES = 1
+private const val MAX_SNOOZE_MINUTES = 120
+
+/**
+ * Composable for selecting snooze duration with preset chips and a slider.
+ * Provides the best UX for minute selection on mobile.
+ *
+ * @param selectedMinutes Currently selected duration in minutes
+ * @param onDurationChange Callback when duration changes
+ * @param modifier Modifier for the component
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SnoozeDurationSelector(
+    selectedMinutes: Int,
+    onDurationChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(16.dp),
+            )
+            .padding(16.dp),
+    ) {
+        // Header with current selection
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Snooze duration",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            // Duration display badge
+            Box(
+                modifier = Modifier
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        shape = RoundedCornerShape(8.dp),
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    text = formatDurationMinutes(selectedMinutes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Preset chips for quick selection
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            SNOOZE_PRESETS.forEach { preset ->
+                val isSelected = selectedMinutes == preset
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onDurationChange(preset) },
+                    label = { Text("${preset}m") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Slider for fine-grained control
+        Text(
+            text = "Or drag to set custom time",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "${MIN_SNOOZE_MINUTES}m",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Slider(
+                value = selectedMinutes.toFloat(),
+                onValueChange = { onDurationChange(it.toInt()) },
+                valueRange = MIN_SNOOZE_MINUTES.toFloat()..MAX_SNOOZE_MINUTES.toFloat(),
+                modifier = Modifier.weight(1f),
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                ),
+            )
+
+            Text(
+                text = "${MAX_SNOOZE_MINUTES}m",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun ActionBottomSheetPreview() {
@@ -370,6 +521,23 @@ private fun ActionBottomSheetAlarmPreview() {
             uiState = ActionBottomSheetContract.UiState(
                 actionType = ActionType.CREATE_ALARM,
                 mode = ActionBottomSheetContract.UiState.Mode.EDIT,
+                validationError = null,
+            ),
+            onEvent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ActionBottomSheetSnoozePreview() {
+    NotificappTheme {
+        // Preview showing snooze configuration
+        ActionsContent(
+            uiState = ActionBottomSheetContract.UiState(
+                actionType = ActionType.SNOOZE_NOTIFICATION,
+                snoozeDurationMinutes = 30,
+                mode = ActionBottomSheetContract.UiState.Mode.ADD,
                 validationError = null,
             ),
             onEvent = {},

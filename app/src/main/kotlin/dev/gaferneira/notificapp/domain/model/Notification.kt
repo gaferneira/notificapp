@@ -23,6 +23,7 @@ data class Notification(
     val timestamp: Long,
     val isProcessed: Boolean = false,
     val appliedRulesCount: Int = 0,
+    val sbnKey: String? = null,
 ) {
     val app = AppInfo(packageName, appName)
 }

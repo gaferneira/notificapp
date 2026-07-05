@@ -209,12 +209,12 @@ interface NotificationDao {
     /**
      * Increment the applied rules count for a notification.
      */
-    @Query("UPDATE notifications SET applied_rules_count = applied_rules_count + 1 WHERE id = :id")
+    @Query("UPDATE notifications SET applied_rules_count = applied_rules_count + 1, is_processed = 1 WHERE id = :id")
     suspend fun incrementAppliedRulesCount(id: String)
 
     /**
      * Reset the applied rules count to 0 for a notification (e.g., when refreshing rules).
      */
-    @Query("UPDATE notifications SET applied_rules_count = 0 WHERE id = :id")
+    @Query("UPDATE notifications SET applied_rules_count = 0, is_processed = 0 WHERE id = :id")
     suspend fun resetAppliedRulesCount(id: String)
 }

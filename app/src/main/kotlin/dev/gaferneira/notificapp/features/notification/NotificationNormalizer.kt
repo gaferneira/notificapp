@@ -37,6 +37,7 @@ class NotificationNormalizer {
             rawContent = rawContent,
             timestamp = sbn.postTime,
             isProcessed = false,
+            sbnKey = sbn.key,
         )
     }
 
