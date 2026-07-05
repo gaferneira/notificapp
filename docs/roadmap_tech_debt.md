@@ -7,12 +7,12 @@ This document details every technical debt item identified in the July 2026 arch
 | ID    | Item | Priority | Effort | Status |
 |-------|------|----------|--------|--------|
 | TD-1  | Rule storage schema: normalized tables vs JSON column | Decision | — | Open (ADR 011 `Proposed`) — decide right after Phase 1, before Phase 2 starts |
-| TD-2  | Room destructive migration silently wipes data on schema bump | P0 | Small | Open — real migrations required from next schema change; remove fallback before first release |
-| TD-3  | `NotificationDeduplicator.recentHashes` unsynchronized map | P1 | Small | Open |
-| TD-4  | `FieldExtractor` JSON parser has no recursion depth guard | P1 | Small | Open — fix before Phase 2 (community rules) |
-| TD-5  | Zero ViewModel test coverage | P2 | Medium | Open — backfill before Phase 3 adds more ViewModels |
+| TD-2  | Room destructive migration silently wipes data on schema bump | P0 | Small | **Done** — `MIGRATION_1_2` registered, fallback kept only as a safety net until first public release |
+| TD-3  | `NotificationDeduplicator.recentHashes` unsynchronized map | P1 | Small | **Done** — check-then-act wrapped in a `Mutex` |
+| TD-4  | `FieldExtractor` JSON parser has no recursion depth guard | P1 | Small | **Done** — depth-guarded, throws a caught exception past 32 levels |
+| TD-5  | Zero ViewModel test coverage | P2 | Medium | **Done** — `RuleEditorViewModel` + `AddFieldViewModel` backfilled (80 tests) |
 | TD-6  | Screen composables growing past 700 lines | P3 | Small (policy) | Open — soft budget for new screens only |
-| TD-7  | No static analysis beyond formatting (Detekt absent) | P3 | Small | Open |
+| TD-7  | No static analysis beyond formatting (Detekt absent) | P3 | Small | **Done** — Detekt wired with baseline, gated via `check` |
 | TD-8  | OpenSpec coverage: only 2 of 9 shipped features have specs | Decision | — | Open — decide before Phase 2 opens the repo to contributors |
 
 ---
@@ -93,6 +93,12 @@ Thread a `maxDepth` parameter (e.g., 32) through the three parse functions; thro
 ### Solution
 
 Backfill tests for the two highest-risk ViewModels first — `RuleEditorViewModel` (most complex, multi-step form state) and `AddFieldViewModel` — reusing the JUnit 5 / Kotest / MockK / Turbine stack already proven on the extraction engine. From Phase 3 onward, make "new ViewModel ships with tests" a hard rule, not a best-effort one.
+
+**Status: Done.** Writing the tests surfaced three pre-existing behavior bugs in `RuleEditorViewModel`, left unfixed as out of scope for a test-backfill task:
+
+1. `autoGenerateExtraction` (~line 317) hardcodes every auto-generated field to `ExtractionMethod.LineExtraction(10)` regardless of where the matched number actually sits in the source text — looks like leftover placeholder logic; should likely use the match's character range (`FixedPosition`) instead.
+2. `loadSampleNotification` (~line 148) unconditionally resets `triggers` to `emptyList()` for a new rule even if the user had already configured conditions before picking a sample notification, silently discarding that input.
+3. `deleteRule` (~line 463) returns early when `rule.id` is null without dismissing `showDeleteConfirmation`, so the confirmation dialog has no way to close on that path (only reachable for an unsaved rule).
 
 ---
 
