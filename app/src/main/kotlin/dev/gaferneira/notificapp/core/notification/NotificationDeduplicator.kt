@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.core.notification
 
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 import java.security.MessageDigest
 import javax.inject.Inject
@@ -17,13 +19,18 @@ import javax.inject.Singleton
 class NotificationDeduplicator @Inject constructor(private val notificationRepository: NotificationRepository) {
     private val recentHashes = mutableMapOf<String, Long>()
 
+    // recentHashes is check-then-act (read + conditional insert); a ConcurrentHashMap alone
+    // would keep each individual access thread-safe but not the compound operation, so bursts
+    // of notifications arriving concurrently could still race past the duplicate check.
+    private val mutex = Mutex()
+
     /**
      * Check if a notification is a duplicate of a recently stored one.
      *
      * @param notification The notification to check
      * @return true if this is a duplicate, false otherwise
      */
-    suspend fun isDuplicate(notification: Notification): Boolean {
+    suspend fun isDuplicate(notification: Notification): Boolean = mutex.withLock {
         val contentHash = generateContentHash(notification)
         val currentTime = System.currentTimeMillis()
 
@@ -34,7 +41,7 @@ class NotificationDeduplicator @Inject constructor(private val notificationRepos
         val lastSeen = recentHashes[contentHash]
         if (lastSeen != null && (currentTime - lastSeen) < DUPLICATE_WINDOW_MS) {
             Timber.d("Duplicate detected for ${notification.packageName}: $contentHash")
-            return true
+            return@withLock true
         }
 
         // Also check database for recent duplicates with same content hash
@@ -48,12 +55,12 @@ class NotificationDeduplicator @Inject constructor(private val notificationRepos
 
         if (isDuplicateInDb) {
             Timber.d("Duplicate found in database for ${notification.packageName}: $contentHash")
-            return true
+            return@withLock true
         }
 
         // Record this hash
         recentHashes[contentHash] = currentTime
-        return false
+        false
     }
 
     /**
