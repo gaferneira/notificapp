@@ -2,25 +2,26 @@
 
 ## Vision
 
-Notificapp turns notification text into structured, reusable data — locally on your device. Users monitor apps, extract fields from notifications using manual rules or on-device AI, browse their extracted data, and trigger actions like dismiss, snooze, or webhook delivery.
+Notificapp lets anyone take control of their Android notifications. Users create rules that match notifications and trigger actions — dismiss, snooze, flash alerts, alarms, webhook delivery — including the one no competitor offers: **extracting the data inside notifications** into a structured, reusable dataset, entirely on-device.
 
 ## Positioning
 
-The niche Notificapp owns is the combination nobody else has: **structured data extraction + local-first + open source**.
+**Category: open-source, local-first notification automation** — "if this notification, then that" — **with data extraction as the flagship capability.**
 
-- **BuzzKill** owns notification rules/automation (dismiss, snooze) — polished, paid, closed-source.
-- **Tasker/MacroDroid** can technically do everything, but with power-user-hostile UX.
-- **Notification history apps** capture but don't structure anything.
+- **BuzzKill** is the polished incumbent for notification rules — but paid and closed-source. Notificapp is the open alternative (the NewPipe/Aegis playbook: F-Droid thrives on open replacements for closed paid apps), and BuzzKill cannot extract data.
+- **Tasker/MacroDroid** can technically do everything, but with power-user-hostile UX. Notificapp is focused and simple: one domain (notifications), one mental model (rules).
+- **Notification history apps** capture but don't act on or structure anything.
 
-Dismiss/snooze are supporting features; **extraction is the product**. The moat is not features — it is **community-contributed rules**. Every roadmap decision that makes rules easier to create, test, and share compounds; everything else is table stakes.
+Extraction is one action among many in the rules engine — but it is the **differentiator**: the action nobody else has, and the foundation of the moat. The moat itself is **community-contributed rules**. Every roadmap decision that makes rules easier to create, test, and share compounds; everything else is table stakes.
 
 **Hero use cases** (optimize onboarding, README, and rule templates around these):
 
-1. **Expense tracking** — bank/payment notifications become a spending dataset
-2. **Package tracking** — carrier notifications become delivery status + tracking numbers
-3. **Home automation bridging** — extracted data delivered to Home Assistant & co. via webhooks
+1. **Notification noise control** — auto-dismiss/snooze the junk, get alerted for what matters
+2. **Expense tracking** — bank/payment notifications become a spending dataset
+3. **Package tracking** — carrier notifications become delivery status + tracking numbers
+4. **Home automation bridging** — extracted data delivered to Home Assistant & co. via webhooks
 
-**Target audience**: the OSS crowd — self-hosters, Home Assistant users, data-ownership people. Distribution and trust decisions (F-Droid, privacy transparency) follow from this.
+**Target audience**: any Android user who wants their notifications under control — automation is the broad on-ramp. The OSS crowd (self-hosters, Home Assistant users, data-ownership people) is the community core that contributes rules and drives F-Droid distribution. Privacy (local-first, no telemetry) is a supporting trust trait, not the headline.
 
 ## Guiding Principles
 
@@ -205,7 +206,9 @@ Dismiss/snooze are supporting features; **extraction is the product**. The moat 
 - [ ] **Delivery visibility**: per-webhook last-delivery status indicator (✓/✗ + timestamp) on the webhook list — silent failure is the most trust-destroying behavior an automation tool can have; the user's Home Assistant stops updating and they must be able to see why
 - [ ] Unit tests for delivery, retry, and queue logic
 
-*Note: this phase adds the `INTERNET` permission. Disclose it prominently (see privacy statement in the Community & Distribution track) — until here the app can honestly claim zero network access.*
+*Note: webhooks introduce the app's first network access.*
+
+- [ ] Disclose the change prominently (release notes) and update `PRIVACY.md` in the same PR — webhook delivery to user-configured URLs must remain the app's only network egress
 
 ### Phase 5: On-Device AI Extraction (Optional Flavor)
 
@@ -300,7 +303,7 @@ Explicitly **not** part of the MVP; may be revisited post-launch:
 - **User accounts / login** — no authentication system
 - **Cloud-based AI** — no Gemini Pro API or cloud fallback for unsupported devices
 - **Play Store release** — F-Droid first; Play Store distribution deferred
-- **In-app rule gallery with network fetch** — gallery lives in the repo; in-app import is manual (keeps zero-network promise pre-webhooks)
+- **In-app rule gallery with network fetch** — gallery lives in the repo; in-app import is manual (keeps the app fully local pre-webhooks)
 - **Notification reply/interaction** — no sending replies or interacting with notification actions
 - **Advanced analytics** — no ML-based insights, trend predictions, or anomaly detection beyond basic statistics
 

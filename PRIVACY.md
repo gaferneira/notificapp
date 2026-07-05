@@ -1,16 +1,14 @@
 # Privacy Policy
 
-Notificapp turns notification text into structured, reusable data — **locally on your device**. This document explains exactly what the app can see, what it stores, and what leaves your phone (spoiler: nothing).
+Notificapp acts on your notifications — automating them and extracting data from them — **entirely on your device**. This document explains exactly what the app can see, what it stores, and what leaves your phone (spoiler: nothing).
 
-Because Notificapp is open source, you don't have to take any of this on faith — every claim below can be verified in the code and in the app manifest.
+Because Notificapp is open source, you don't have to take any of this on faith — every claim below can be verified in the code.
 
 ## The permission we ask for, and why
 
 Notificapp requests **Notification Access** (`BIND_NOTIFICATION_LISTENER_SERVICE`). This is a powerful, sensitive permission: it lets an app read the content of every notification on your device, which can include private messages, one-time passcodes (OTPs), and financial information.
 
 Notificapp needs it for one purpose: reading the text of notifications **from the apps you explicitly select** so it can extract structured data using your rules.
-
-That is the app's entire permission footprint. Notificapp does **not** request the `INTERNET` permission — you can verify this in [`app/src/main/AndroidManifest.xml`](app/src/main/AndroidManifest.xml). An app without that permission is technically incapable of sending your data anywhere.
 
 ## What we collect and where it lives
 
@@ -20,7 +18,7 @@ That is the app's entire permission footprint. Notificapp does **not** request t
 
 ## What we never do
 
-- No data transmission off your device (no `INTERNET` permission)
+- No data transmission off your device
 - No analytics, telemetry, crash reporting, or tracking of any kind
 - No advertising, no third-party SDKs that phone home
 - No accounts, no login, no cloud AI
@@ -38,10 +36,10 @@ Be deliberate about which apps you monitor. If you enable an app that delivers O
 
 ## Future changes
 
-The [roadmap](docs/roadmap.md) includes an optional **webhooks** feature, which will require adding the `INTERNET` permission. When that ships:
+The [roadmap](docs/roadmap.md) includes an optional **webhooks** feature. When that ships:
 
 - Network access will be used **exclusively** to deliver data to webhook URLs that *you* configure — there is still no server of ours involved
-- The permission change will be disclosed prominently in the release notes and this policy will be updated
+- The change will be disclosed prominently in the release notes and this policy will be updated
 - Everything else above remains true
 
 This policy changes only via a public commit to this repository, so its history is fully auditable.

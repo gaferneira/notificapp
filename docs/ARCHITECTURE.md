@@ -2,11 +2,9 @@
 
 ## Overview
 
-Notificapp is an open-source Android application that turns notification text into structured, reusable data — locally on your device.
+Notificapp is an open-source notification automation app for Android: users create rules that match notifications and trigger actions — dismiss, snooze, alerts, webhook delivery — entirely on-device.
 
-Built around one core idea: **Notifications are often the only data interface an app exposes.**
-
-Notificapp lets users extract structured fields from notifications and build their own personal dataset, and trigger actions (dismiss, snooze, webhooks) when rules match. See `docs/roadmap.md` for product positioning and phases.
+Its flagship action is built around one core idea: **Notifications are often the only data interface an app exposes.** Extraction rules pull structured fields out of notification text and build a personal, local dataset — the capability that differentiates Notificapp from every other notification tool. See `docs/roadmap.md` for product positioning and phases.
 
 ### Key Principles
 

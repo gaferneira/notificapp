@@ -1,45 +1,49 @@
 # Notificapp
 
-**Turn notification text into structured, reusable data — locally on your device.**
+**Take control of your Android notifications.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android-3DDC84.svg)](https://developer.android.com)
 [![Status](https://img.shields.io/badge/Status-pre--release-orange.svg)](docs/roadmap.md)
 
-Notifications are often the only data interface an app exposes. Your bank doesn't give you an API — but it sends you a notification for every transaction. Notificapp captures notifications from apps *you* choose, extracts the fields *you* define, and builds a structured dataset that never leaves your phone.
+Create rules that act on your notifications automatically: dismiss the noise, snooze things until later, get alerted for what matters — or extract the data inside them (amounts, tracking numbers, dates) into a structured dataset you own. **If this notification, then that.** All on your device.
 
-<!-- TODO: 30-second demo GIF here — bank notification arriving → rule matching → extracted amount/merchant appearing as structured data -->
+<!-- TODO: 30-second demo GIF here — a rule matching a notification → action firing → extracted data appearing -->
 
 ## What can you do with it?
 
-- **Track spending** from bank and payment app notifications — every transaction becomes a structured row (amount, merchant, account) without giving anyone access to your bank account
-- **Follow deliveries** — extract tracking numbers and delivery status from carrier notifications
-- **Tame notification noise** — auto-dismiss or snooze notifications that match your rules
-- **Own your data** — everything is stored locally, browsable, and exportable; *(planned)* deliver extracted data to your own services (Home Assistant, webhooks)
+- **Build a spending tracker out of your bank's notifications** — every *"You paid €12.50 at…"* push becomes a structured row (amount, merchant, date) in a dataset on your phone. No bank API needed, no third-party finance app reading your account.
+- **Never lose a tracking number again** — extract the carrier, tracking code, and status from every delivery notification; all your packages in one searchable place.
+- **Silence the noise** — auto-dismiss the *"20% off this weekend!"* spam, snooze the group chat until after work, keep the notifications you actually read.
+- **Bridge notifications into your smart home** — "package delivered" makes Home Assistant announce it on your speakers; a bank payment updates your budget dashboard the second it happens.
+- **Make critical alerts impossible to miss** — a server-down or security notification can flash your camera light or fire an alarm, even on silent.
+- **Own everything** — browse, filter, and export your extracted data anytime; it never leaves your device unless *you* send it somewhere.
 
 ## How it works
 
 1. **Select apps to monitor** — only notifications from apps you enable are ever captured
-2. **Create rules** — pick a real notification as a sample, define match conditions (6 operators) and extraction fields (10 methods: regex, text anchors, keywords, smart amount/date detection, ...)
-3. **Data extracts automatically** — matching notifications become structured, typed records (text, number, date, currency)
-4. **Actions fire** — dismiss, snooze, and more per rule
+2. **Create rules from real notifications** — pick a notification as a sample and define match conditions (6 operators)
+3. **Choose what happens** — dismiss, snooze, extract data fields, and more actions per rule
+4. **Rules run automatically** — actions fire as notifications arrive; extracted data becomes structured, typed records (text, number, date, currency)
 
-No accounts. No cloud. No AI you didn't ask for.
+## The data superpower
 
-## Privacy: verifiable, not promised
+Most notification tools stop at managing alerts. Notificapp can also **read** them. Notifications are often the only data interface an app exposes — your bank doesn't give you an API, but it notifies you about every transaction. Extraction rules (10 methods: regex, text anchors, keywords, smart amount/date detection, ...) turn that text into a queryable personal dataset that never leaves your phone. No other notification automation app does this.
 
-Notification access is one of Android's most sensitive permissions — it can see private messages and OTPs. Notificapp's answer is architectural, not a pinky-promise:
+## Privacy
 
-- **The app does not request the `INTERNET` permission.** It is technically incapable of sending your data anywhere — check [`AndroidManifest.xml`](app/src/main/AndroidManifest.xml) yourself
-- Only apps you explicitly select are captured; everything is stored in a local database you can wipe anytime
+Notification access is one of Android's most sensitive permissions — it can see private messages and OTPs. Notificapp's answer:
+
+- **All your data stays on your device** — captured notifications and extracted data live in a local database you can wipe anytime; there is no cloud, no account, no sync
+- Only apps you explicitly select are captured
 - No analytics, no telemetry, no third-party SDKs
 - Fully open source under GPL-3.0, so all of the above is auditable
 
-Details in [PRIVACY.md](PRIVACY.md). Planned webhook delivery (to *your* servers) will be opt-in and prominently disclosed — see [ADR 012](docs/adr/012-local-first-network-policy.md).
+Details in [PRIVACY.md](PRIVACY.md). Planned webhook delivery (to *your* servers) will be opt-in — see [ADR 012](docs/adr/012-local-first-network-policy.md).
 
 ## Status
 
-Pre-release and under active development. Working today: notification capture, inbox with search/filters, the rule engine (conditions + extraction), rule editor, and dismiss/snooze actions. On the way: rule sharing and backtesting, a data browser with export, webhooks, and optional on-device AI extraction. See the full [roadmap](docs/roadmap.md).
+Pre-release and under active development. Working today: notification capture, inbox with search/filters, the rule engine (conditions + extraction), rule editor, and dismiss/snooze actions. On the way: flash alerts and alarms, rule sharing and backtesting, a data browser with export, webhooks, and optional on-device AI extraction. See the full [roadmap](docs/roadmap.md).
 
 **Installation:** build from source for now (below). F-Droid is the planned primary distribution channel.
 
@@ -60,7 +64,7 @@ Install the APK from `app/build/outputs/apk/debug/`, launch, and grant Notificat
 Contributions are welcome — **including from non-programmers**:
 
 - 📖 Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started
-- 🧩 **Know an app worth extracting data from?** Open a [rule request](../../issues/new?template=rule_request.yml) — community-contributed extraction rules are the heart of this project
+- 🧩 **Know an app worth automating or extracting data from?** Open a [rule request](../../issues/new?template=rule_request.yml) — community-contributed rules are the heart of this project
 - 🐛 [Report bugs](../../issues/new?template=bug_report.yml) · 💡 [Suggest features](../../issues/new?template=feature_request.yml)
 - 🔒 Security issues: see [SECURITY.md](SECURITY.md) (never public issues)
 
@@ -69,7 +73,7 @@ Contributions are welcome — **including from non-programmers**:
 | Doc | Contents |
 |-----|----------|
 | [Roadmap](docs/roadmap.md) | Product positioning, phases, what's in/out of scope |
-| [Architecture](docs/ARCHITECTURE.md) | MVI + feature-first structure, extraction pipeline, coding standards |
+| [Architecture](docs/ARCHITECTURE.md) | MVI + feature-first structure, rule pipeline, coding standards |
 | [ADRs](docs/adr/) | 12 architecture decision records |
 | [Tech debt](docs/roadmap_tech_debt.md) | Known debt with detailed solutions |
 | [Privacy](PRIVACY.md) | What the app can see, stores, and (never) sends |

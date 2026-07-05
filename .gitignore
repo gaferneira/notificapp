@@ -25,3 +25,4 @@ local.properties
 # Personal agent config — never commit (machine-specific permissions/overrides)
 .claude/settings.local.json
 .agents/**/*_local.md
+.atl/

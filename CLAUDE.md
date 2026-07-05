@@ -3,7 +3,7 @@
 ## Project Identity
 
 - **Name**: Notificapp
-- **Purpose**: Open-source Android app that turns notification text into structured, reusable data — locally on your device
+- **Purpose**: Open-source notification automation for Android — rules that act on notifications (dismiss, snooze, alerts) and extract structured data from them, entirely on-device
 - **Architecture**: MVI (Model-View-Intent), feature-first packaging with shared `core/` infrastructure
 - **Language**: Kotlin
 - **UI Framework**: Jetpack Compose with Material 3
