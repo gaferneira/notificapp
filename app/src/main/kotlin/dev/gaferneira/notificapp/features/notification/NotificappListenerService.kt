@@ -47,6 +47,9 @@ class NotificappListenerService :
 
     private lateinit var serviceScope: CoroutineScope
 
+    // Written from a coroutine on serviceScope, read from onNotificationPosted() on the system's
+    // binder thread - @Volatile ensures the binder thread sees the latest published list.
+    @Volatile
     private var enabledApps: List<SelectedApp> = emptyList()
 
     override fun onCreate() {

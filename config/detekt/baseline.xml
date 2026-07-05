@@ -14,6 +14,146 @@
     <ID>CyclomaticComplexMethod:RulesViewModel.kt$RulesViewModel$private fun applyFilters(rules: List&lt;Rule&gt;, query: String, currentFilter: RuleFilter): List&lt;Rule&gt;</ID>
     <ID>ForbiddenComment:InboxScreen.kt$// TODO: Show permission dialog</ID>
     <ID>ForbiddenComment:InboxScreen.kt$// TODO: Show snackbar or toast</ID>
+    <ID>FunctionNaming:ActionBottomSheet.kt$@Composable private fun ActionTypeCard( title: String, description: String, icon: ImageVector, isSelected: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:ActionBottomSheet.kt$@Composable private fun ActionsContent( modifier: Modifier = Modifier, uiState: ActionBottomSheetContract.UiState, onEvent: (ActionBottomSheetContract.UiEvent) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:ActionBottomSheet.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun SnoozeDurationSelector( selectedMinutes: Int, onDurationChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:ActionBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun ActionBottomSheet( modifier: Modifier = Modifier, initialAction: RuleAction? = null, onActionSaved: (RuleAction) -&gt; Unit, onDismiss: () -&gt; Unit, viewModel: ActionBottomSheetViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:ActionBottomSheet.kt$@Preview(showBackground = true) @Composable private fun ActionBottomSheetAlarmPreview()</ID>
+    <ID>FunctionNaming:ActionBottomSheet.kt$@Preview(showBackground = true) @Composable private fun ActionBottomSheetPreview()</ID>
+    <ID>FunctionNaming:ActionBottomSheet.kt$@Preview(showBackground = true) @Composable private fun ActionBottomSheetSnoozePreview()</ID>
+    <ID>FunctionNaming:AddButton.kt$@Composable fun AddButton(text: String, onClick: () -&gt; Unit, modifier: Modifier = Modifier, enabled: Boolean = true)</ID>
+    <ID>FunctionNaming:AddButton.kt$@Preview(showBackground = true) @Composable private fun AddButtonPreview()</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun FixedPositionConfig( startIndex: Int, endIndex: Int, onStartIndexChange: (Int) -&gt; Unit, onEndIndexChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun HighlightedText( text: String, highlightStart: Int, highlightEnd: Int, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun JsonPathConfig( path: String, onPathChange: (String) -&gt; Unit, error: String?, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun LineExtractionConfig( lineNumber: Int, onLineNumberChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun PreviewResultCard( result: AddFieldContract.PreviewResult, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun RegexConfig( pattern: String, captureGroup: Int, onPatternChange: (String) -&gt; Unit, onCaptureGroupChange: (Int) -&gt; Unit, error: String?, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun SectionHeader( icon: ImageVector, title: String, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun SplitByDelimiterConfig( delimiter: String, takeIndex: Int, onDelimiterChange: (String) -&gt; Unit, onTakeIndexChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun TextAfterKeywordConfig( keyword: String, maxLength: Int?, onKeywordChange: (String) -&gt; Unit, onMaxLengthChange: (Int?) -&gt; Unit, error: String?, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun TextBeforeKeywordConfig( keyword: String, onKeywordChange: (String) -&gt; Unit, error: String?, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Composable private fun TextBetweenAnchorsConfig( startAnchor: String, endAnchor: String, onStartAnchorChange: (String) -&gt; Unit, onEndAnchorChange: (String) -&gt; Unit, errors: Map&lt;String, String&gt;, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AddFieldBottomSheet( fieldToEdit: RuleField?, notification: Notification?, onFieldSaved: (RuleField) -&gt; Unit, onDismiss: () -&gt; Unit, viewModel: AddFieldViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun AddFieldBottomSheetContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, onClose: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun MethodTypeDropdown( selectedMethodType: AddFieldContract.MethodType, onMethodTypeChange: (AddFieldContract.MethodType) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AddFieldBottomSheet.kt$@Preview(showBackground = true) @Composable private fun AddFieldBottomSheetContentPreview()</ID>
+    <ID>FunctionNaming:AppSelectionPicker.kt$@Composable private fun AppListItem( app: AppDisplayInfo, isSelected: Boolean, onToggle: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AppSelectionPicker.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AppSelectionPicker( selectedApps: List&lt;AppInfo&gt;, enabledApps: List&lt;AppInfo&gt;, onConfirm: (List&lt;AppInfo&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:AppSelectionPicker.kt$@Preview(showBackground = true) @Composable private fun AppSelectionPickerPreview()</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Composable fun AppSelectionScreen( modifier: Modifier = Modifier, viewModel: AppSelectionViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Composable private fun AppList( apps: List&lt;AppInfo&gt;, selectedPackages: Set&lt;String&gt;, onAppToggled: (String, Boolean) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Composable private fun AppListItem( app: AppInfo, isSelected: Boolean, onToggled: (Boolean) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Composable private fun AppSelectionScreenContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Composable private fun ContinueButton( enabled: Boolean, selectedCount: Int, isInitialSetup: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Composable private fun EmptyState( searchQuery: String, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Composable private fun ErrorState( message: String, onRetry: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Composable private fun PageIndicator()</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Composable private fun SearchField( query: String, onQueryChange: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Composable private fun SecurityFooter()</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun AppSelectionScreenFromSettingsPreview()</ID>
+    <ID>FunctionNaming:AppSelectionScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun AppSelectionScreenInitialSetupPreview()</ID>
+    <ID>FunctionNaming:CollectOneOffEffects.kt$@Stable @Composable fun &lt;UiEffect&gt; CollectOneOffEffects( effectFlow: Flow&lt;UiEffect&gt;, lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current, minActiveState: Lifecycle.State = Lifecycle.State.STARTED, onEffect: suspend (UiEffect) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:DataExtractionSection.kt$@Composable fun DataExtractionSection( fields: List&lt;RuleField&gt;, onAutoGenerate: () -&gt; Unit, onAddField: () -&gt; Unit, onEditField: (String) -&gt; Unit, onRemoveField: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:DataExtractionSection.kt$@Composable private fun ExtractionFieldItem( field: RuleField, onClick: () -&gt; Unit, onRemove: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:DataExtractionSection.kt$@Preview(showBackground = true) @Composable private fun DataExtractionSectionEmptyPreview()</ID>
+    <ID>FunctionNaming:DataExtractionSection.kt$@Preview(showBackground = true) @Composable private fun DataExtractionSectionPreview()</ID>
+    <ID>FunctionNaming:DoSection.kt$@Composable fun DoSection( actions: List&lt;RuleAction&gt;, onToggleAction: (String, Boolean) -&gt; Unit, onRemoveAction: (String) -&gt; Unit, onEditAction: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:DoSection.kt$@Composable private fun ActionCard( action: RuleAction, onToggle: () -&gt; Unit, onRemove: () -&gt; Unit, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:DoSection.kt$@Preview(showBackground = true) @Composable private fun DoSectionEmptyPreview()</ID>
+    <ID>FunctionNaming:DoSection.kt$@Preview(showBackground = true) @Composable private fun DoSectionPreview()</ID>
+    <ID>FunctionNaming:DoSection.kt$@Preview(showBackground = true) @Composable private fun DoSectionWithSnoozePreview()</ID>
+    <ID>FunctionNaming:InboxFilterBottomSheet.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun FilterBottomSheetContent( uiState: InboxFilterContract.UiState, onEvent: (InboxFilterContract.UiEvent) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:InboxFilterBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun InboxFilterBottomSheet( currentSelectedApps: List&lt;String&gt;, onFilterApplied: (List&lt;String&gt;, InboxFilterContract.Status) -&gt; Unit, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, currentStatusFilter: InboxFilterContract.Status = InboxFilterContract.Status.ALL, viewModel: InboxFilterBottomSheetViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:InboxFilterBottomSheet.kt$@Preview @Composable private fun InboxFilterBottomSheetEmptyPreview()</ID>
+    <ID>FunctionNaming:InboxFilterBottomSheet.kt$@Preview @Composable private fun InboxFilterBottomSheetPreview()</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@Composable fun InboxScreen( modifier: Modifier = Modifier, navigateTo: (Screen, NavOptions?) -&gt; Unit, viewModel: InboxViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@Composable private fun EmptyState()</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@Composable private fun ErrorState( message: String, onRetry: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@Composable private fun LoadingState()</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@Composable private fun NotificationCard( notification: NotificationItem, onClick: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@Composable private fun NotificationColumn( notifications: LazyPagingItems&lt;InboxListItem&gt;, onNotificationClick: (String) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@Composable private fun NotificationList( notifications: LazyPagingItems&lt;InboxListItem&gt;, onNotificationClick: (String) -&gt; Unit, onRetry: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@Composable private fun TimeHeader( label: String, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun InboxScreenContent( uiState: InboxUiState, notifications: LazyPagingItems&lt;InboxListItem&gt;, onEvent: (InboxEvent) -&gt; Unit, navigateTo: (Screen, NavOptions?) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@Preview(showBackground = true) @Composable fun PreviewInboxScreen()</ID>
+    <ID>FunctionNaming:InboxScreen.kt$@Preview(showBackground = true, name = "Inbox Preview - Direct Items") @Composable fun PreviewInboxScreenDirect()</ID>
+    <ID>FunctionNaming:MainActivity.kt$@Composable fun Notificapp( repository: SelectedAppRepository = hiltViewModel&lt;MainViewModel&gt;().repository, navigationHandler: NavigationHandler, )</ID>
+    <ID>FunctionNaming:MainActivity.kt$@Composable private fun DebugNavOverlay(navigator: Navigator)</ID>
+    <ID>FunctionNaming:MainActivity.kt$@Preview(showBackground = true) @Composable fun NotificappPreview()</ID>
+    <ID>FunctionNaming:MainBottomNav.kt$@Composable fun MainBottomNav( selectedDestination: AppDestinations, navigateTo: (Screen, NavOptions?) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:MatchingLogicBottomSheet.kt$@Composable private fun ConditionModeContent( condition: MatchingCondition, operator: MatchingOperator, value: String, onConditionChange: (MatchingCondition) -&gt; Unit, onOperatorChange: (MatchingOperator) -&gt; Unit, onValueChange: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:MatchingLogicBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MatchingLogicBottomSheet( modifier: Modifier = Modifier, viewModel: MatchingLogicViewModel = hiltViewModel(), initialCondition: RuleCondition? = null, onConditionSaved: (RuleCondition) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:MatchingLogicBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun &lt;T&gt; MatchingDropdown( label: String, selected: T, options: List&lt;T&gt;, onSelect: (T) -&gt; Unit, displayName: (T) -&gt; String, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:MatchingLogicBottomSheet.kt$@Preview(showBackground = true) @Composable private fun MatchingLogicBottomSheetPreview()</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@Composable fun NotificationDetailScreen( modifier: Modifier = Modifier, notificationId: String, viewModel: NotificationDetailViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@Composable private fun ActionChip(action: TriggeredActionDisplay)</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@Composable private fun EmptyExecutionsState()</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@Composable private fun ErrorState(message: String, onRetry: () -&gt; Unit, modifier: Modifier = Modifier)</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@Composable private fun ExtractedFieldRow(field: ExtractedFieldDisplay)</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@Composable private fun FieldTypeChip(fieldType: RuleField.FieldType)</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@Composable private fun NotificationDataCard(notification: Notification)</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@Composable private fun NotificationDetailContent( notification: Notification, executions: List&lt;ExecutionWithDetails&gt;, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun ExecutionCard(execution: ExecutionWithDetails)</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun NotificationDetailScreenContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun NotificationDetailScreenEmptyPreview()</ID>
+    <ID>FunctionNaming:NotificationDetailScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun NotificationDetailScreenPreview()</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable fun OnboardingScreen( onOpenNotificationSettings: () -&gt; Unit, modifier: Modifier = Modifier, viewModel: OnboardingViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun NotificationCardRow( icon: androidx.compose.ui.graphics.vector.ImageVector, iconBackground: Color, title: String, subtitle: String, statusColor: Color, )</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun NotificationPreviewCards()</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun OnboardingScreenContent( uiState: OnboardingContract.UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun PermissionDetailItem( icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, description: String, )</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun PermissionExplanationContent( onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun PermissionToggleCard()</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Composable private fun ValueStatementContent( onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun OnboardingScreenPermissionExplanationPreview()</ID>
+    <ID>FunctionNaming:OnboardingScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun OnboardingScreenValueStatementPreview()</ID>
+    <ID>FunctionNaming:RuleEditorScreen.kt$@Composable fun RuleEditorScreen( modifier: Modifier = Modifier, ruleId: String? = null, notificationId: String? = null, viewModel: RuleEditorViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:RuleEditorScreen.kt$@Composable private fun ActionChip( text: String, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:RuleEditorScreen.kt$@Composable private fun LogicStep( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, scrollState: androidx.compose.foundation.ScrollState, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:RuleEditorScreen.kt$@Composable private fun MetadataStep( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, scrollState: androidx.compose.foundation.ScrollState, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:RuleEditorScreen.kt$@Composable private fun SectionWithHelp( title: String, description: String, modifier: Modifier = Modifier, content: @Composable () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:RuleEditorScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun RuleEditorScreenContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:RuleEditorScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun RuleEditorScreenStep1Preview()</ID>
+    <ID>FunctionNaming:RuleEditorScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun RuleEditorScreenStep2Preview()</ID>
+    <ID>FunctionNaming:RulesFilterBottomSheet.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun FilterBottomSheetContent( uiState: RulesFilterContract.UiState, onEvent: (RulesFilterContract.UiEvent) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:RulesFilterBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun RulesFilterBottomSheet( allRules: List&lt;Rule&gt;, currentFilter: RuleFilter, onFilterApplied: (RuleFilter) -&gt; Unit, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, viewModel: FilterBottomSheetViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:RulesFilterBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun SortDropdown( selectedSort: RuleFilter.SortBy, onSortSelected: (RuleFilter.SortBy) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:RulesFilterBottomSheet.kt$@Preview @Composable private fun FilterBottomSheetEmptyPreview()</ID>
+    <ID>FunctionNaming:RulesFilterBottomSheet.kt$@Preview @Composable private fun FilterBottomSheetPreview()</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@Composable fun RulesScreen( navigateTo: (Screen, NavOptions?) -&gt; Unit, modifier: Modifier = Modifier, viewModel: RulesViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@Composable private fun CategoryHeader( category: String, ruleCount: Int, )</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@Composable private fun ErrorState( failure: Failure, onRetry: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@Composable private fun LoadingState()</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@Composable private fun RuleCard( rule: Rule, onClick: () -&gt; Unit, onToggleActive: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@Composable private fun StatusHeader( status: String, ruleCount: Int, )</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun RulesScreenContent( uiState: RulesUiState, onEvent: (RulesEvent) -&gt; Unit, navigateTo: (Screen, NavOptions?) -&gt; Unit, onShowFilterSheet: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun SuccessState( rules: List&lt;Rule&gt;, searchQuery: String, filter: RuleFilter, onSearchChange: (String) -&gt; Unit, onRuleClick: (String) -&gt; Unit, onRuleToggleActive: (String) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@Preview(showBackground = true) @Composable private fun RulesScreenPreview()</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@Preview(showBackground = true, name = "Error") @Composable private fun RulesScreenErrorPreview()</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@Preview(showBackground = true, name = "Loading") @Composable private fun RulesScreenLoadingPreview()</ID>
+    <ID>FunctionNaming:RulesScreen.kt$@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES) @Composable private fun RulesScreenPreviewDark()</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable fun SettingsScreen( navigateTo: (Screen, NavOptions?) -&gt; Unit, modifier: Modifier = Modifier, viewModel: SettingsViewModel = hiltViewModel(), )</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable private fun AboutCard()</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable private fun ErrorState( message: String, onRetry: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable private fun MonitoredAppsCard( appsCount: Int, onSelectApps: () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable private fun SectionHeader(title: String)</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable private fun SettingsCard( modifier: Modifier = Modifier, content: @Composable () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable private fun SettingsList( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable private fun SettingsScreenContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, navigateTo: (Screen, NavOptions?) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Composable private fun ToggleSettingItem( icon: ImageVector, iconTint: Color, title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -&gt; Unit, )</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun SettingsScreenEmptyPreview()</ID>
+    <ID>FunctionNaming:SettingsScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun SettingsScreenPreview()</ID>
+    <ID>FunctionNaming:StepIndicator.kt$@Composable fun StepIndicator(currentStep: Int, modifier: Modifier = Modifier, totalSteps: Int = 2)</ID>
+    <ID>FunctionNaming:StepIndicator.kt$@Preview(showBackground = true) @Composable private fun StepIndicatorStep1Preview()</ID>
+    <ID>FunctionNaming:StepIndicator.kt$@Preview(showBackground = true) @Composable private fun StepIndicatorStep2Preview()</ID>
+    <ID>FunctionNaming:Theme.kt$@Composable fun NotificappTheme( darkTheme: Boolean = isSystemInDarkTheme(), // Dynamic color is available on Android 12+ dynamicColor: Boolean = true, content: @Composable () -&gt; Unit, )</ID>
+    <ID>FunctionNaming:WhenSection.kt$@Composable fun WhenSection( targetApps: List&lt;AppInfo&gt;, conditions: List&lt;RuleCondition&gt;, onAppsClick: () -&gt; Unit, onRemoveCondition: (String) -&gt; Unit, onConditionClick: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:WhenSection.kt$@Composable private fun AppsCard( selectedApps: List&lt;AppInfo&gt;, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:WhenSection.kt$@Composable private fun ConditionCard( condition: RuleCondition, onClick: () -&gt; Unit, onRemove: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>FunctionNaming:WhenSection.kt$@Preview(showBackground = true) @Composable private fun WhenSectionAllAppsPreview()</ID>
+    <ID>FunctionNaming:WhenSection.kt$@Preview(showBackground = true) @Composable private fun WhenSectionEmptyPreview()</ID>
+    <ID>FunctionNaming:WhenSection.kt$@Preview(showBackground = true) @Composable private fun WhenSectionPreview()</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d", day, month)</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d/%d", day, month, year)</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d:%02d", hour, minute)</ID>
@@ -78,6 +218,7 @@
     <ID>LongParameterList:TestFixtures.kt$( id: String = "test-rule-id", name: String = "Test Rule", description: String? = null, category: String? = null, isActive: Boolean = true, targetApps: List&lt;AppInfo&gt;? = null, conditions: List&lt;RuleCondition&gt; = emptyList(), fields: List&lt;RuleField&gt; = emptyList(), actions: List&lt;RuleAction&gt; = emptyList(), createdAt: Long = 0L, updatedAt: Long = 0L, )</ID>
     <ID>LongParameterList:WhenSection.kt$( targetApps: List&lt;AppInfo&gt;, conditions: List&lt;RuleCondition&gt;, onAppsClick: () -&gt; Unit, onRemoveCondition: (String) -&gt; Unit, onConditionClick: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LoopWithTooManyJumpStatements:AppSelectionViewModel.kt$AppSelectionViewModel$for</ID>
+    <ID>MatchingDeclarationName:MainBottomNav.kt$AppDestinations</ID>
     <ID>NestedBlockDepth:FieldExtractor.kt$FieldExtractor$private fun extractJsonPath(text: String, method: ExtractionMethod.JsonPath): ExtractionResult</ID>
     <ID>NestedBlockDepth:FieldExtractor.kt$FieldExtractor$private fun parseJsonArray(json: String, depth: Int = 0): List&lt;Any?&gt;</ID>
     <ID>NestedBlockDepth:FieldExtractor.kt$FieldExtractor$private fun parseJsonObject(json: String, depth: Int = 0): Map&lt;String, Any?&gt;</ID>

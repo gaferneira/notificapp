@@ -16,6 +16,3 @@ style:
     active: false
   MaxLineLength:
     active: false
-
-naming:
-  active: false
