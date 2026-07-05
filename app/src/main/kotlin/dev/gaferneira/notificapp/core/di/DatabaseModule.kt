@@ -13,6 +13,7 @@ import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
+import dev.gaferneira.notificapp.core.data.local.migration.APP_DATABASE_MIGRATIONS
 import javax.inject.Singleton
 
 /**
@@ -35,7 +36,11 @@ object DatabaseModule {
         AppDatabase::class.java,
         "notificapp_database",
     )
-        .fallbackToDestructiveMigration() // App not yet published - data loss acceptable
+        .addMigrations(*APP_DATABASE_MIGRATIONS)
+        // Safety net only, not a substitute for migrations above. Remove entirely before the
+        // first public release (see docs/roadmap_tech_debt.md TD-2) - until then it only
+        // protects schema bumps that haven't shipped an explicit Migration yet.
+        .fallbackToDestructiveMigration()
         .build()
 
     /**
