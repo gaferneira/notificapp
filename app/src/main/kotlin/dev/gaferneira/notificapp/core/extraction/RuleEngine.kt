@@ -1,15 +1,11 @@
 package dev.gaferneira.notificapp.core.extraction
 
-import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
-import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
-import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
-import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
-import dev.gaferneira.notificapp.core.data.local.mapper.ExtractedFieldValueMapper
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleExecution
+import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -22,16 +18,12 @@ import javax.inject.Inject
  * and recording of execution results.
  *
  * @property ruleRepository Repository for loading rules
- * @property ruleExecutionDao DAO for recording rule executions
- * @property extractedFieldValueDao DAO for recording extracted field values
- * @property notificationDao DAO for updating notification stats
+ * @property ruleExecutionRepository Repository for recording rule executions
  * @property ioDispatcher Coroutine dispatcher for IO operations
  */
 class RuleEngine @Inject constructor(
     private val ruleRepository: RuleRepository,
-    private val ruleExecutionDao: RuleExecutionDao,
-    private val extractedFieldValueDao: ExtractedFieldValueDao,
-    private val notificationDao: NotificationDao,
+    private val ruleExecutionRepository: RuleExecutionRepository,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
@@ -145,45 +137,19 @@ class RuleEngine @Inject constructor(
     }
 
     /**
-     * Save the rule execution and its extracted field values to the database.
+     * Save the rule execution and its extracted field values via the repository.
      */
     private suspend fun saveExecution(
         execution: RuleExecution,
         rule: Rule,
-    ): RuleExecution? = try {
-        // Save the execution
-        val executionEntity = RuleExecutionEntity(
-            id = execution.id,
-            notificationId = execution.notificationId,
-            ruleId = execution.ruleId,
-            extractedData = kotlinx.serialization.json.Json.encodeToString(
-                execution.extractedData,
-            ),
-            triggeredActions = kotlinx.serialization.json.Json.encodeToString(
-                execution.triggeredActions,
-            ),
-            createdAt = execution.createdAt,
-        )
-        ruleExecutionDao.insert(executionEntity)
+    ): RuleExecution? {
+        val result = ruleExecutionRepository.saveExecution(execution, rule.fields)
 
-        // Create and save extracted field values for filtering
-        val fieldValues = ExtractedFieldValueMapper.fromExtractedData(
-            executionId = execution.id,
-            extractedData = execution.extractedData,
-            fields = rule.fields,
-        )
-
-        if (fieldValues.isNotEmpty()) {
-            extractedFieldValueDao.insertAll(fieldValues)
+        return if (result.isSuccess) {
+            execution
+        } else {
+            Timber.e(result.exceptionOrNull(), "Failed to save rule execution ${execution.id}")
+            null
         }
-
-        // Increment the applied rules count on the notification
-        notificationDao.incrementAppliedRulesCount(execution.notificationId)
-
-        Timber.d("Saved rule execution ${execution.id} with ${fieldValues.size} field values")
-        execution
-    } catch (e: Exception) {
-        Timber.e(e, "Failed to save rule execution ${execution.id}")
-        null
     }
 }

@@ -5,10 +5,12 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.gaferneira.notificapp.core.data.repository.NotificationRepositoryImpl
+import dev.gaferneira.notificapp.core.data.repository.RuleExecutionRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.RuleRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.SelectedAppRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.UserPreferencesRepositoryImpl
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
+import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
@@ -43,4 +45,10 @@ internal abstract class RepositoryModule {
      */
     @Binds
     abstract fun bindUserPreferencesRepository(impl: UserPreferencesRepositoryImpl): UserPreferencesRepository
+
+    /**
+     * Binds RuleExecutionRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindRuleExecutionRepository(impl: RuleExecutionRepositoryImpl): RuleExecutionRepository
 }
