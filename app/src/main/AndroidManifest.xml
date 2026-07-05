@@ -7,6 +7,9 @@
         android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
         android:protectionLevel="signature|privileged" />
 
+    <!-- Vibration for the alarm action -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <!-- Query all packages - needed for Android 11+ to see installed apps -->
     <queries>
         <intent>

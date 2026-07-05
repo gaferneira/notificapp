@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_VIBRATION_ENABLED
 import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_DURATION_MINUTES
 import dev.gaferneira.notificapp.domain.model.RuleAction
 
@@ -21,6 +22,10 @@ object ActionBottomSheetContract {
         val actionType: ActionType? = null,
         /** Snooze duration in minutes (for SNOOZE_NOTIFICATION type) */
         val snoozeDurationMinutes: Int = DEFAULT_SNOOZE_DURATION_MINUTES,
+        /** Selected alarm sound URI (for CREATE_ALARM type), or null for the device default */
+        val alarmSoundUri: String? = null,
+        /** Whether the alarm should also vibrate (for CREATE_ALARM type) */
+        val alarmVibrationEnabled: Boolean = DEFAULT_ALARM_VIBRATION_ENABLED,
         /** Validation error message, if any */
         val validationError: String? = null,
     ) {
@@ -42,6 +47,12 @@ object ActionBottomSheetContract {
 
         /** Update snooze duration in minutes */
         data class OnSnoozeDurationChange(val minutes: Int) : UiEvent()
+
+        /** Update the selected alarm sound URI (null for the device default) */
+        data class OnAlarmSoundChange(val uri: String?) : UiEvent()
+
+        /** Toggle whether the alarm should also vibrate */
+        data class OnAlarmVibrationToggle(val enabled: Boolean) : UiEvent()
 
         /** Confirm and create/update action */
         data object OnConfirm : UiEvent()

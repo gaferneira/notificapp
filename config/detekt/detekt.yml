@@ -16,3 +16,7 @@ style:
     active: false
   MaxLineLength:
     active: false
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']

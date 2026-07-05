@@ -47,10 +47,12 @@ Extraction is one action among many in the rules engine — but it is the **diff
 - **Rule Editor** — Multi-step form: name, conditions, data extraction fields, actions, app targets; supports pre-filling from a sample notification
 - **Settings** — Monitored apps, data collection toggle, app icons, notification listener status
 - **Snooze/Dismiss Actions** — `SNOOZE_NOTIFICATION` (configurable duration picker) and `DISMISS_NOTIFICATION`, each as a pluggable `ActionExecutor`, with per-action outcome shown in Notification Detail
+- **Notification Content Filtering** — `NotificappListenerService.shouldSkipNotification` skips notifications without title/content, ongoing system notifications, and stale (>`MAX_AGE_MS`) notifications
+- **Alarm Action** — `CREATE_ALARM` plays an alarm sound (system ringtone picker, defaults to the device's default alarm sound) and optionally vibrates, as a pluggable `ActionExecutor`
 
 ### In Progress
 
-- **Notification Content Filtering** — Skip notifications without meaningful title or content
+_None currently — see Phase 1 below for what's next._
 
 ---
 
@@ -58,7 +60,7 @@ Extraction is one action among many in the rules engine — but it is the **diff
 
 ### Phase 1: Complete Action System
 
-**Goal:** Round out the action system on top of the refactored pipeline. Snooze/Dismiss and per-action outcome feedback are done; Alarms and Flash Alerts remain.
+**Goal:** Round out the action system on top of the refactored pipeline. Snooze/Dismiss, Alarms, and per-action outcome feedback are done; Flash Alerts remains.
 
 #### Snooze and Dismiss — **Done**
 
@@ -67,10 +69,10 @@ Extraction is one action among many in the rules engine — but it is the **diff
 - [x] Add action configuration UI to dismiss notification
 - [x] Implement `DISMISS_NOTIFICATION` handler as an `ActionExecutor`
 
-#### Alarms
+#### Alarms — **Done**
 
-- [ ] Create form to add an alarm with options (alarm sound, vibration)
-- [ ] Implement `CREATE_ALARM` handler as an `ActionExecutor`
+- [x] Create form to add an alarm with options (alarm sound via system ringtone picker, vibration toggle)
+- [x] Implement `CREATE_ALARM` handler as an `ActionExecutor` (plays sound + vibrates through an `AlarmPlayer` abstraction, kept testable per ADR 010's pattern)
 
 #### Flash Alerts
 

@@ -46,7 +46,8 @@ class ActionDispatcherTest {
 
     @Test
     fun `missing handler for a registered action type yields SKIPPED`() = runTest {
-        // Given: a dispatcher with no executor registered for CREATE_ALARM
+        // Given: a dispatcher with an empty executor map (any action type is "missing" here,
+        // regardless of what's actually bound in production DI)
         val dispatcher = ActionDispatcher(emptyMap())
         val notification = createTestNotification()
         val action = createTestAction(id = "action-1", type = ActionType.CREATE_ALARM, isEnabled = true)

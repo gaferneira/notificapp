@@ -14,8 +14,8 @@ import javax.inject.Provider
  * Looks up the [ActionExecutor] registered for each enabled [RuleAction]'s [ActionType] via Hilt
  * multibindings (`core/di/ActionModule.kt`) and runs it.
  *
- * Per ADR 010, a missing executor (e.g. `CREATE_ALARM`, deliberately unimplemented) yields an
- * explicit [ActionOutcome.SKIPPED] rather than a silent no-op, and an executor that throws yields
+ * Per ADR 010, a missing executor for a given [ActionType] yields an explicit
+ * [ActionOutcome.SKIPPED] rather than a silent no-op, and an executor that throws yields
  * [ActionOutcome.FAILED] instead of crashing the pipeline.
  */
 class ActionDispatcher @Inject constructor(

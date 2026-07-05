@@ -31,6 +31,8 @@ class ActionBottomSheetViewModel @Inject constructor() :
             is ActionBottomSheetContract.UiEvent.InitForEdit -> initForEdit(event)
             is ActionBottomSheetContract.UiEvent.OnActionTypeChange -> updateActionType(event.actionType)
             is ActionBottomSheetContract.UiEvent.OnSnoozeDurationChange -> updateSnoozeDuration(event.minutes)
+            is ActionBottomSheetContract.UiEvent.OnAlarmSoundChange -> updateAlarmSound(event.uri)
+            is ActionBottomSheetContract.UiEvent.OnAlarmVibrationToggle -> updateAlarmVibration(event.enabled)
             is ActionBottomSheetContract.UiEvent.OnConfirm -> confirm()
             is ActionBottomSheetContract.UiEvent.OnDismiss -> dismiss()
         }
@@ -44,6 +46,8 @@ class ActionBottomSheetViewModel @Inject constructor() :
                 mode = ActionBottomSheetContract.UiState.Mode.EDIT,
                 actionType = action.type,
                 snoozeDurationMinutes = action.getSnoozeDurationMinutes(),
+                alarmSoundUri = action.getAlarmSoundUri(),
+                alarmVibrationEnabled = action.isAlarmVibrationEnabled(),
                 validationError = null,
             )
         }
@@ -64,6 +68,18 @@ class ActionBottomSheetViewModel @Inject constructor() :
         }
     }
 
+    private fun updateAlarmSound(uri: String?) {
+        setState {
+            copy(alarmSoundUri = uri)
+        }
+    }
+
+    private fun updateAlarmVibration(enabled: Boolean) {
+        setState {
+            copy(alarmVibrationEnabled = enabled)
+        }
+    }
+
     private fun confirm() {
         val state = uiState.value
         val actionType = state.actionType ?: return
@@ -74,6 +90,13 @@ class ActionBottomSheetViewModel @Inject constructor() :
                 RuleAction.createSnooze(
                     id = actionId ?: UUID.randomUUID().toString(),
                     durationMinutes = state.snoozeDurationMinutes,
+                )
+            }
+            ActionType.CREATE_ALARM -> {
+                RuleAction.createAlarm(
+                    id = actionId ?: UUID.randomUUID().toString(),
+                    soundUri = state.alarmSoundUri,
+                    vibrationEnabled = state.alarmVibrationEnabled,
                 )
             }
             else -> {

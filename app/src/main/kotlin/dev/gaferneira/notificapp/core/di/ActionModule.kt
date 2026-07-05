@@ -6,6 +6,9 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
+import dev.gaferneira.notificapp.core.notification.action.AlarmActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.AlarmPlayer
+import dev.gaferneira.notificapp.core.notification.action.AndroidAlarmPlayer
 import dev.gaferneira.notificapp.core.notification.action.DismissActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SaveDataActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SnoozeActionExecutor
@@ -20,11 +23,9 @@ annotation class ActionTypeKey(val value: ActionType)
 
 /**
  * Dagger module for binding [ActionExecutor] implementations into a multibinding map, keyed by
- * [ActionType]. `ActionDispatcher` looks up the executor for each action's type.
- *
- * `ActionType.CREATE_ALARM` is deliberately unregistered — per ADR 010, a missing binding makes
- * the dispatcher return `SKIPPED`, which is the correct truthful state for an unimplemented
- * action type.
+ * [ActionType]. `ActionDispatcher` looks up the executor for each action's type. Per ADR 010, a
+ * future action type without a registered binding yields `SKIPPED` rather than a silent no-op or
+ * a crash.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -53,4 +54,18 @@ internal abstract class ActionModule {
     @IntoMap
     @ActionTypeKey(ActionType.SAVE_DATA)
     abstract fun bindSaveData(impl: SaveDataActionExecutor): ActionExecutor
+
+    /**
+     * Binds the executor for [ActionType.CREATE_ALARM].
+     */
+    @Binds
+    @IntoMap
+    @ActionTypeKey(ActionType.CREATE_ALARM)
+    abstract fun bindAlarm(impl: AlarmActionExecutor): ActionExecutor
+
+    /**
+     * Binds the real Android-backed [AlarmPlayer] used by [AlarmActionExecutor].
+     */
+    @Binds
+    abstract fun bindAlarmPlayer(impl: AndroidAlarmPlayer): AlarmPlayer
 }
