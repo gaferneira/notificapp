@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.notificationdetail.contract
 
+import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
@@ -40,7 +41,7 @@ object NotificationDetailContract {
         val execution: RuleExecution,
         val ruleName: String,
         val extractedFields: List<ExtractedFieldDisplay>,
-        val triggeredActionNames: List<String>,
+        val triggeredActions: List<TriggeredActionDisplay>,
     )
 
     /**
@@ -50,6 +51,18 @@ object NotificationDetailContract {
         val fieldName: String,
         val fieldType: RuleField.FieldType,
         val value: String,
+    )
+
+    /**
+     * Display data for a triggered action and how it turned out.
+     *
+     * [outcome] is `null` for legacy execution rows recorded before outcomes were tracked
+     * (TD-5) — this is rendered as "no data", distinct from [ActionOutcome.SKIPPED], which means
+     * the dispatcher actively decided not to run the action.
+     */
+    data class TriggeredActionDisplay(
+        val name: String,
+        val outcome: ActionOutcome?,
     )
 
     /**

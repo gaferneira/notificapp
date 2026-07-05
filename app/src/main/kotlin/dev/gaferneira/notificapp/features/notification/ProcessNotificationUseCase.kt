@@ -3,12 +3,14 @@ package dev.gaferneira.notificapp.features.notification
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
+import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleMatch
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
+import dev.gaferneira.notificapp.features.notification.action.ActionDispatcher
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -28,6 +30,7 @@ import javax.inject.Inject
  * @property ruleRepository Repository for loading rules
  * @property ruleEngine Pure rule evaluation engine
  * @property ruleExecutionRepository Repository for recording rule executions
+ * @property actionDispatcher Dispatches enabled rule actions to their registered executors
  * @property ioDispatcher Coroutine dispatcher for IO operations
  */
 class ProcessNotificationUseCase @Inject constructor(
@@ -36,6 +39,7 @@ class ProcessNotificationUseCase @Inject constructor(
     private val ruleRepository: RuleRepository,
     private val ruleEngine: RuleEngine,
     private val ruleExecutionRepository: RuleExecutionRepository,
+    private val actionDispatcher: ActionDispatcher,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
@@ -91,11 +95,14 @@ class ProcessNotificationUseCase @Inject constructor(
             }
 
             val matches = ruleEngine.evaluate(notification, rules)
-            val executions = matches.map { match -> match.toExecution(notification.id) }
-
-            matches.zip(executions).forEach { (match, execution) ->
+            val executions = matches.map { match ->
+                // Actions execute before the execution record is built/saved (per ADR 010) so the
+                // record reflects what actually happened, not just what was "triggered".
+                val outcomes = actionDispatcher.executeAll(notification, match.rule.actions)
+                val execution = match.toExecution(notification.id, outcomes)
                 ruleExecutionRepository.saveExecution(execution, match.rule.fields)
                     .onFailure { e -> Timber.e(e, "Failed to save rule execution ${execution.id}") }
+                execution
             }
 
             Timber.d("Processed ${executions.size} rule matches for notification ${notification.id}")
@@ -107,9 +114,10 @@ class ProcessNotificationUseCase @Inject constructor(
     }
 
     /**
-     * Build a [RuleExecution] from a matched rule, mirroring the rule's enabled actions.
+     * Build a [RuleExecution] from a matched rule, mirroring the rule's enabled actions and the
+     * outcomes already recorded for them by [ActionDispatcher.executeAll].
      */
-    private fun RuleMatch.toExecution(notificationId: String): RuleExecution {
+    private fun RuleMatch.toExecution(notificationId: String, actionOutcomes: Map<String, ActionOutcome>): RuleExecution {
         val enabledActions = rule.actions.filter { it.isEnabled }
         return RuleExecution(
             id = UUID.randomUUID().toString(),
@@ -118,6 +126,7 @@ class ProcessNotificationUseCase @Inject constructor(
             extractedData = extractedData,
             triggeredActions = enabledActions.map { it.id },
             triggeredRuleActions = enabledActions,
+            actionOutcomes = actionOutcomes,
         )
     }
 }

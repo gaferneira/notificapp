@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.data.local.mapper
 
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
+import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import kotlinx.serialization.json.Json
 
@@ -26,6 +27,7 @@ object RuleExecutionMapper {
         ruleId = domain.ruleId,
         extractedData = json.encodeToString(domain.extractedData),
         triggeredActions = json.encodeToString(domain.triggeredActions),
+        actionOutcomes = domain.actionOutcomes.takeIf { it.isNotEmpty() }?.let { json.encodeToString(it) },
         createdAt = domain.createdAt,
     )
 
@@ -41,6 +43,7 @@ object RuleExecutionMapper {
         ruleId = entity.ruleId,
         extractedData = json.decodeFromString(entity.extractedData),
         triggeredActions = json.decodeFromString(entity.triggeredActions),
+        actionOutcomes = entity.actionOutcomes?.let { json.decodeFromString<Map<String, ActionOutcome>>(it) } ?: emptyMap(),
         createdAt = entity.createdAt,
     )
 

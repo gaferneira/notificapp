@@ -16,6 +16,7 @@ import androidx.room.PrimaryKey
  * @property ruleId Foreign key to the rule that matched
  * @property extractedData JSON map of extracted field data (field name → extracted value)
  * @property triggeredActions JSON list of action IDs that were triggered
+ * @property actionOutcomes JSON map of action ID to outcome, or null if none recorded
  */
 @Entity(
     tableName = "rule_executions",
@@ -55,6 +56,9 @@ data class RuleExecutionEntity(
 
     @ColumnInfo(name = "triggered_actions")
     val triggeredActions: String, // JSON List<String>
+
+    @ColumnInfo(name = "action_outcomes")
+    val actionOutcomes: String? = null, // JSON Map<String, ActionOutcome>
 
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),

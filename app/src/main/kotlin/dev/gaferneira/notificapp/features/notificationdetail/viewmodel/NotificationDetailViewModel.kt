@@ -16,6 +16,7 @@ import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.features.notification.ProcessNotificationUseCase
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ExecutionWithDetails
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ExtractedFieldDisplay
+import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.TriggeredActionDisplay
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEffect
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEvent
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiState
@@ -177,21 +178,25 @@ class NotificationDetailViewModel @Inject constructor(
             )
         }
 
-        // Convert action IDs to display names
-        val actionNames = execution.triggeredActions.map { actionId ->
-            when (actionId) {
+        // Convert action IDs to display names + outcomes.
+        // Note: this `when` never actually matches on a real action ID (it's a UUID, not one of
+        // these type-name strings), so it always falls through to `else -> actionId` today. This
+        // is a pre-existing bug tracked separately from TD-4/TD-5 and intentionally left as-is.
+        val actionDisplays = execution.triggeredActions.map { actionId ->
+            val name = when (actionId) {
                 "SAVE_DATA" -> "Save Data"
                 "DELETE_NOTIFICATION" -> "Delete"
                 "CREATE_ALARM" -> "Alarm"
                 else -> actionId
             }
+            TriggeredActionDisplay(name = name, outcome = execution.actionOutcomes[actionId])
         }
 
         return ExecutionWithDetails(
             execution = execution,
             ruleName = ruleName,
             extractedFields = extractedFields,
-            triggeredActionNames = actionNames,
+            triggeredActions = actionDisplays,
         )
     }
 

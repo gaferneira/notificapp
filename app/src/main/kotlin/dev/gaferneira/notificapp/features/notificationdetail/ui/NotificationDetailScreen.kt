@@ -52,11 +52,13 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ExecutionWithDetails
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ExtractedFieldDisplay
+import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.TriggeredActionDisplay
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEvent
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiState
 import dev.gaferneira.notificapp.features.notificationdetail.viewmodel.NotificationDetailViewModel
@@ -364,7 +366,7 @@ private fun ExecutionCard(execution: ExecutionWithDetails) {
             }
 
             // Triggered Actions Section
-            if (execution.triggeredActionNames.isNotEmpty()) {
+            if (execution.triggeredActions.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "Actions",
@@ -377,8 +379,8 @@ private fun ExecutionCard(execution: ExecutionWithDetails) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    execution.triggeredActionNames.forEach { actionName ->
-                        ActionChip(actionName = actionName)
+                    execution.triggeredActions.forEach { action ->
+                        ActionChip(action = action)
                     }
                 }
             }
@@ -458,17 +460,39 @@ private fun FieldTypeChip(fieldType: RuleField.FieldType) {
 }
 
 @Composable
-private fun ActionChip(actionName: String) {
+private fun ActionChip(action: TriggeredActionDisplay) {
+    val outcomeColor = when (action.outcome) {
+        ActionOutcome.SUCCESS -> MaterialTheme.colorScheme.tertiary
+        ActionOutcome.FAILED -> MaterialTheme.colorScheme.error
+        ActionOutcome.SKIPPED, null -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val outcomeGlyph = when (action.outcome) {
+        ActionOutcome.SUCCESS -> "✓"
+        ActionOutcome.FAILED -> "✗"
+        ActionOutcome.SKIPPED, null -> "—"
+    }
+
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
     ) {
-        Text(
-            text = actionName,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-        )
+        ) {
+            Text(
+                text = action.name,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Text(
+                text = outcomeGlyph,
+                style = MaterialTheme.typography.labelMedium,
+                color = outcomeColor,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 
@@ -559,7 +583,10 @@ private fun NotificationDetailScreenPreview() {
                                 value = "Hemköp Stockholm",
                             ),
                         ),
-                        triggeredActionNames = listOf("Save to Database", "Show Toast"),
+                        triggeredActions = listOf(
+                            TriggeredActionDisplay(name = "Save to Database", outcome = ActionOutcome.SUCCESS),
+                            TriggeredActionDisplay(name = "Show Toast", outcome = ActionOutcome.FAILED),
+                        ),
                     ),
                     ExecutionWithDetails(
                         execution = RuleExecution(
@@ -588,7 +615,9 @@ private fun NotificationDetailScreenPreview() {
                                 value = "true",
                             ),
                         ),
-                        triggeredActionNames = listOf("Log Transaction"),
+                        triggeredActions = listOf(
+                            TriggeredActionDisplay(name = "Log Transaction", outcome = null),
+                        ),
                     ),
                 ),
                 isLoading = false,

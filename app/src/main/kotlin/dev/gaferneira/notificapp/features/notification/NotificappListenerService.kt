@@ -5,11 +5,10 @@ import android.service.notification.StatusBarNotification
 import dagger.hilt.android.AndroidEntryPoint
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
-import dev.gaferneira.notificapp.domain.model.ActionType
-import dev.gaferneira.notificapp.domain.model.Notification
-import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
+import dev.gaferneira.notificapp.features.notification.action.SystemNotificationController
+import dev.gaferneira.notificapp.features.notification.action.SystemNotificationControllerHolder
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -25,7 +24,9 @@ import javax.inject.Inject
  * normalizes them, and stores them in the database for processing.
  */
 @AndroidEntryPoint
-class NotificappListenerService : NotificationListenerService() {
+class NotificappListenerService :
+    NotificationListenerService(),
+    SystemNotificationController {
 
     @Inject
     lateinit var selectedAppRepository: SelectedAppRepository
@@ -35,6 +36,9 @@ class NotificappListenerService : NotificationListenerService() {
 
     @Inject
     lateinit var processNotificationUseCase: ProcessNotificationUseCase
+
+    @Inject
+    lateinit var systemNotificationControllerHolder: SystemNotificationControllerHolder
 
     @Inject
     @field:Dispatcher(DispatcherType.IO)
@@ -58,11 +62,28 @@ class NotificappListenerService : NotificationListenerService() {
         }
     }
 
+    override fun onListenerConnected() {
+        super.onListenerConnected()
+        systemNotificationControllerHolder.set(this)
+        Timber.d("NotificationListenerService connected")
+    }
+
+    override fun onListenerDisconnected() {
+        super.onListenerDisconnected()
+        systemNotificationControllerHolder.set(null)
+        Timber.d("NotificationListenerService disconnected")
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        systemNotificationControllerHolder.set(null)
         serviceScope.cancel()
         Timber.d("NotificationListenerService destroyed")
     }
+
+    override fun cancel(sbnKey: String) = cancelNotification(sbnKey)
+
+    override fun snooze(sbnKey: String, durationMs: Long) = snoozeNotification(sbnKey, durationMs)
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
@@ -84,18 +105,10 @@ class NotificappListenerService : NotificationListenerService() {
                 // Normalize the notification
                 val notification = normalizer.normalize(sbn, packageManager)
 
-                // Run the full pipeline: dedup, save, evaluate rules, persist executions
+                // Run the full pipeline: dedup, save, evaluate rules, execute actions, persist executions
                 processNotificationUseCase(notification)
                     .onSuccess { executions ->
-                        for (execution in executions) {
-                            for (action in execution.triggeredRuleActions) {
-                                try {
-                                    executeAction(notification, action)
-                                } catch (e: Exception) {
-                                    Timber.e(e, "Failed to execute action ${action.type} for notification ${notification.id}")
-                                }
-                            }
-                        }
+                        Timber.d("Processed ${executions.size} rule matches for notification ${notification.id}")
                     }
                     .onFailure { e ->
                         Timber.e(e, "Failed to process notification from $packageName")
@@ -159,38 +172,6 @@ class NotificappListenerService : NotificationListenerService() {
             sbn.notification.tickerText?.isNotBlank() == true
 
         return hasTitle || hasContent
-    }
-
-    private suspend fun executeAction(notification: Notification, action: RuleAction) {
-        when (action.type) {
-            ActionType.DISMISS_NOTIFICATION -> {
-                val sbnKey = notification.sbnKey
-                if (sbnKey != null) {
-                    cancelNotification(sbnKey)
-                } else {
-                    Timber.w("Cannot dismiss notification ${notification.id}: no SBN key")
-                }
-            }
-            ActionType.SNOOZE_NOTIFICATION -> executeSnooze(notification, action)
-            else -> {
-                // No-op for other actions for now
-            }
-        }
-    }
-
-    private fun executeSnooze(notification: Notification, action: RuleAction) {
-        val sbnKey = notification.sbnKey
-        if (sbnKey == null) {
-            Timber.w("Cannot snooze notification ${notification.id}: no SBN key")
-            return
-        }
-
-        val durationMinutes = action.getSnoozeDurationMinutes()
-        val durationMs = durationMinutes * 60_000L
-
-        snoozeNotification(sbnKey, durationMs)
-
-        Timber.d("Snoozed notification ${notification.id} for $durationMinutes minutes")
     }
 
     /**
