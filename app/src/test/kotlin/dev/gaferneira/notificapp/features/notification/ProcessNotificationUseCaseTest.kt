@@ -16,7 +16,7 @@ import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -29,6 +29,7 @@ class ProcessNotificationUseCaseTest {
     private lateinit var ruleExecutionRepository: RuleExecutionRepository
     private lateinit var actionDispatcher: ActionDispatcher
     private lateinit var useCase: ProcessNotificationUseCase
+    private val testDispatcher = StandardTestDispatcher()
 
     @BeforeEach
     fun setUp() {
@@ -44,12 +45,12 @@ class ProcessNotificationUseCaseTest {
             ruleEngine = RuleEngine(),
             ruleExecutionRepository = ruleExecutionRepository,
             actionDispatcher = actionDispatcher,
-            ioDispatcher = Dispatchers.Unconfined,
+            ioDispatcher = testDispatcher,
         )
     }
 
     @Test
-    fun `duplicate notification is skipped without saving or loading rules`() = runTest {
+    fun `duplicate notification is skipped without saving or loading rules`() = runTest(testDispatcher) {
         // Given: a notification detected as a duplicate
         val notification = createTestNotification()
         coEvery { deduplicator.isDuplicate(notification) } returns true
@@ -64,7 +65,7 @@ class ProcessNotificationUseCaseTest {
     }
 
     @Test
-    fun `saveNotification failure short-circuits before loading rules`() = runTest {
+    fun `saveNotification failure short-circuits before loading rules`() = runTest(testDispatcher) {
         // Given: a non-duplicate notification whose save fails
         val notification = createTestNotification()
         val exception = RuntimeException("db error")
@@ -81,7 +82,7 @@ class ProcessNotificationUseCaseTest {
     }
 
     @Test
-    fun `no matching rules yields empty success without saving executions`() = runTest {
+    fun `no matching rules yields empty success without saving executions`() = runTest(testDispatcher) {
         // Given: a saved notification with no rules configured for its app
         val notification = createTestNotification()
         coEvery { deduplicator.isDuplicate(notification) } returns false
@@ -97,7 +98,7 @@ class ProcessNotificationUseCaseTest {
     }
 
     @Test
-    fun `matching rule executes actions and persists a rule execution with the reported outcomes`() = runTest {
+    fun `matching rule executes actions and persists a rule execution with the reported outcomes`() = runTest(testDispatcher) {
         // Given: a saved notification, one matching rule with one enabled action, and a dispatcher
         // that reports SUCCESS for that action
         val notification = createTestNotification(title = "ICA Kvantum")
@@ -132,7 +133,7 @@ class ProcessNotificationUseCaseTest {
     }
 
     @Test
-    fun `evaluateAndPersist does not deduplicate or re-save the notification`() = runTest {
+    fun `evaluateAndPersist does not deduplicate or re-save the notification`() = runTest(testDispatcher) {
         // Given: an already-stored notification with no matching rules
         val notification = createTestNotification()
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(emptyList())
@@ -147,7 +148,7 @@ class ProcessNotificationUseCaseTest {
     }
 
     @Test
-    fun `getRulesForApp failure propagates as a failed result`() = runTest {
+    fun `getRulesForApp failure propagates as a failed result`() = runTest(testDispatcher) {
         // Given: a saved notification whose rule lookup fails
         val notification = createTestNotification()
         val exception = RuntimeException("rule lookup error")

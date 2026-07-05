@@ -12,6 +12,7 @@ import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
@@ -63,6 +64,7 @@ class RuleExecutionRepositoryImpl @Inject constructor(
             Timber.d("Saved rule execution ${execution.id}")
             Result.success(Unit)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Timber.e(e, "Failed to save rule execution ${execution.id}")
             Result.failure(e)
         }
@@ -80,6 +82,7 @@ class RuleExecutionRepositoryImpl @Inject constructor(
             }
             Result.success(Unit)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Timber.e(e, "Failed to delete executions for notification: $notificationId")
             Result.failure(e)
         }

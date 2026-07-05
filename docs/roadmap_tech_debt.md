@@ -297,13 +297,9 @@ data class RuleExecution(
 
 ```kotlin
 // RuleExecutionEntity: @ColumnInfo(name = "action_outcomes") val actionOutcomes: String? = null
-
-val MIGRATION_X_Y = object : Migration(X, Y) {
-    override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("ALTER TABLE rule_executions ADD COLUMN action_outcomes TEXT")
-    }
-}
 ```
+
+As landed, this didn't need a formal `Migration` object: `DatabaseModule` already builds `AppDatabase` with `.fallbackToDestructiveMigration()` since the app is unpublished, so the fix was a version bump (`version = 1` → `version = 2` in `AppDatabase`) plus the new nullable column — Room destructively recreates the schema on version mismatch instead of running a migration path. A real `Migration` (`ALTER TABLE ... ADD COLUMN`) will be needed for the first schema change after this app ships to real users.
 
 Old rows read as `null` → `emptyMap()`; no backfill needed.
 

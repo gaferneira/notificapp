@@ -1,7 +1,7 @@
 # ADR 009 – Notification Processing Pipeline as a Use Case
 
 ## Status
-Accepted (implementation pending — Roadmap Phase 0; designs in `docs/roadmap_tech_debt.md` TD-1/TD-2/TD-3)
+Accepted (implemented 2026-07-05 — see `docs/roadmap_tech_debt.md` TD-1/TD-2/TD-3)
 
 ## Context
 The capture → extract → act flow is the heart of the product, and every roadmap feature (actions, webhooks, AI extraction, backtesting) plugs into it. Today it is orchestrated inline in `NotificappListenerService` — an OS-bound class that is the hardest thing in the app to test — and `RuleEngine` mixes evaluation (pure domain logic) with persistence (Room DAOs). The extracted-data concept has no repository abstraction: DAOs are consumed directly by `RuleEngine` and `NotificationDetailViewModel`.

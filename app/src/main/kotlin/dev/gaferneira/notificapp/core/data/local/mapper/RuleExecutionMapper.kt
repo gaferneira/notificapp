@@ -4,6 +4,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 
 /**
  * Mapper functions for converting between RuleExecution domain models and RuleExecutionEntity database models.
@@ -58,8 +59,15 @@ object RuleExecutionMapper {
     /**
      * Convert a list of RuleExecutionEntity to domain models.
      *
+     * Rows that fail to decode (e.g. malformed JSON) are logged and skipped rather than
+     * failing the entire list/Flow emission.
+     *
      * @param entities The database entities
      * @return The domain models
      */
-    fun toDomainList(entities: List<RuleExecutionEntity>): List<RuleExecution> = entities.map { toDomain(it) }
+    fun toDomainList(entities: List<RuleExecutionEntity>): List<RuleExecution> = entities.mapNotNull { entity ->
+        runCatching { toDomain(entity) }
+            .onFailure { e -> Timber.e(e, "Failed to decode rule execution ${entity.id}") }
+            .getOrNull()
+    }
 }

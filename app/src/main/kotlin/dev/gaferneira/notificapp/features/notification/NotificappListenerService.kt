@@ -70,13 +70,13 @@ class NotificappListenerService :
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
-        systemNotificationControllerHolder.set(null)
+        systemNotificationControllerHolder.clear(this)
         Timber.d("NotificationListenerService disconnected")
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        systemNotificationControllerHolder.set(null)
+        systemNotificationControllerHolder.clear(this)
         serviceScope.cancel()
         Timber.d("NotificationListenerService destroyed")
     }

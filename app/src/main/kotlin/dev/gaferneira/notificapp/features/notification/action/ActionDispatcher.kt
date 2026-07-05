@@ -5,6 +5,7 @@ import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import kotlinx.coroutines.CancellationException
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Provider
@@ -28,6 +29,7 @@ class ActionDispatcher @Inject constructor(
         val outcome = executors[action.type]?.get()?.let { executor ->
             runCatching { executor.execute(notification, action) }
                 .getOrElse { e ->
+                    if (e is CancellationException) throw e
                     Timber.e(e, "Action ${action.type} failed")
                     ActionOutcome.FAILED
                 }

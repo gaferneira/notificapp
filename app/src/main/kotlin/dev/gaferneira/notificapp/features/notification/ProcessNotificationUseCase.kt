@@ -11,6 +11,7 @@ import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.features.notification.action.ActionDispatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -67,6 +68,7 @@ class ProcessNotificationUseCase @Inject constructor(
 
             evaluateAndPersist(notification)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Timber.e(e, "Error processing notification ${notification.id}")
             Result.failure(e)
         }
@@ -95,19 +97,25 @@ class ProcessNotificationUseCase @Inject constructor(
             }
 
             val matches = ruleEngine.evaluate(notification, rules)
-            val executions = matches.map { match ->
+            val executions = matches.mapNotNull { match ->
                 // Actions execute before the execution record is built/saved (per ADR 010) so the
                 // record reflects what actually happened, not just what was "triggered".
                 val outcomes = actionDispatcher.executeAll(notification, match.rule.actions)
                 val execution = match.toExecution(notification.id, outcomes)
                 ruleExecutionRepository.saveExecution(execution, match.rule.fields)
-                    .onFailure { e -> Timber.e(e, "Failed to save rule execution ${execution.id}") }
-                execution
+                    .fold(
+                        onSuccess = { execution },
+                        onFailure = { e ->
+                            Timber.e(e, "Failed to save rule execution ${execution.id}")
+                            null
+                        },
+                    )
             }
 
             Timber.d("Processed ${executions.size} rule matches for notification ${notification.id}")
             Result.success(executions)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Timber.e(e, "Error processing rules for notification ${notification.id}")
             Result.failure(e)
         }

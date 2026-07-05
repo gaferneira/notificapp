@@ -14,8 +14,8 @@ This folder contains the Architecture Decision Records (ADRs) for Notificapp. An
 | [006](006-sealed-class-error-handling.md) | Sealed Class Error Handling with Failure Hierarchy | Accepted |
 | [007](007-navigation3-navigator.md) | Navigation3 with Custom Navigator | Accepted |
 | [008](008-injected-dispatchers.md) | Injected Coroutine Dispatchers | Accepted |
-| [009](009-notification-processing-pipeline.md) | Notification Processing Pipeline as a Use Case | Accepted (implementation pending — Roadmap Phase 0) |
-| [010](010-action-executor-multibindings.md) | Action Execution via ActionExecutor Multibindings | Accepted (implementation pending — Roadmap Phase 0/1) |
+| [009](009-notification-processing-pipeline.md) | Notification Processing Pipeline as a Use Case | Accepted |
+| [010](010-action-executor-multibindings.md) | Action Execution via ActionExecutor Multibindings | Accepted |
 | [011](011-rule-definition-storage.md) | Rule Definition Storage: Normalized Tables vs JSON Column | Proposed (decide before Roadmap Phase 2) |
 | [012](012-local-first-network-policy.md) | Local-First Network Policy and Distribution | Accepted |
 

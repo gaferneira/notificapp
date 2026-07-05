@@ -20,8 +20,9 @@ import dev.gaferneira.notificapp.features.notificationdetail.contract.Notificati
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEffect
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiEvent
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.UiState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -49,6 +50,7 @@ class NotificationDetailViewModel @Inject constructor(
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
     private var notificationId: String? = null
+    private var observeJob: Job? = null
 
     /**
      * Set the notification ID to load.
@@ -128,27 +130,35 @@ class NotificationDetailViewModel @Inject constructor(
     }
 
     /**
-     * Load and observe executions for this notification.
+     * Observe executions for this notification, updating state on every emission.
+     *
+     * `RuleExecutionDao.observeExecutionsForNotification` is a `@Query`-backed `Flow`, so Room
+     * auto-invalidates and re-emits it whenever the observed table changes (e.g. after
+     * [refreshExecutions] deletes/re-persists executions) — no manual reload needed.
+     *
+     * Cancels any previously running collector first, since this can be called more than once
+     * for the same ViewModel instance (e.g. a new notification id via [setNotificationId]).
      */
     private fun observeExecutions(notification: Notification) {
-        viewModelScope.launch(ioDispatcher) {
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch(ioDispatcher) {
             try {
-                // Get executions from the repository
-                val executions = ruleExecutionRepository.observeExecutionsForNotification(notification.id).first()
+                ruleExecutionRepository.observeExecutionsForNotification(notification.id)
+                    .collect { executions ->
+                        val executionsWithDetails = executions.map { execution ->
+                            buildExecutionDetails(execution)
+                        }
 
-                // Build execution details
-                val executionsWithDetails = executions.map { execution ->
-                    buildExecutionDetails(execution)
-                }
-
-                setState {
-                    copy(
-                        notification = notification,
-                        executions = executionsWithDetails,
-                        isLoading = false,
-                    )
-                }
+                        setState {
+                            copy(
+                                notification = notification,
+                                executions = executionsWithDetails,
+                                isLoading = false,
+                            )
+                        }
+                    }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Timber.e(e, "Failed to load executions")
                 setState {
                     copy(
@@ -224,16 +234,26 @@ class NotificationDetailViewModel @Inject constructor(
                 }
 
                 // 2. Delete existing executions for this notification and reset its counter
-                ruleExecutionRepository.deleteExecutionsForNotification(id)
+                val deleteResult = ruleExecutionRepository.deleteExecutionsForNotification(id)
+                if (deleteResult.isFailure) {
+                    setState { copy(isLoading = false, error = "Failed to refresh: ${deleteResult.exceptionOrNull()?.message}") }
+                    return@launch
+                }
 
                 // 3. Re-run rule evaluation and persist the new executions
-                processNotificationUseCase.evaluateAndPersist(notification)
+                val evaluateResult = processNotificationUseCase.evaluateAndPersist(notification)
+                if (evaluateResult.isFailure) {
+                    setState { copy(isLoading = false, error = "Failed to refresh: ${evaluateResult.exceptionOrNull()?.message}") }
+                    return@launch
+                }
 
-                // 4. Reload executions
-                observeExecutions(notification)
+                // 4. No manual reload needed: the live Flow collected by observeExecutions
+                // (started from loadNotificationAndExecutions) re-emits automatically once Room
+                // detects the writes above, and updates isLoading/executions from that emission.
 
                 Timber.d("Refreshed rules for notification $id")
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Timber.e(e, "Failed to refresh rules for notification $id")
                 setState { copy(isLoading = false, error = "Failed to refresh: ${e.message}") }
             }
