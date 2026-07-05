@@ -46,63 +46,26 @@ Extraction is one action among many in the rules engine — but it is the **diff
 - **Rules List** — View, filter, search, and toggle rules active/inactive
 - **Rule Editor** — Multi-step form: name, conditions, data extraction fields, actions, app targets; supports pre-filling from a sample notification
 - **Settings** — Monitored apps, data collection toggle, app icons, notification listener status
+- **Snooze/Dismiss Actions** — `SNOOZE_NOTIFICATION` (configurable duration picker) and `DISMISS_NOTIFICATION`, each as a pluggable `ActionExecutor`, with per-action outcome shown in Notification Detail
 
 ### In Progress
 
-- **Snooze/Dismiss Actions** — `SNOOZE_NOTIFICATION` with configurable duration, `DISMISS_NOTIFICATION` rename, action configuration UI in Rule Editor bottom sheet
 - **Notification Content Filtering** — Skip notifications without meaningful title or content
-
-### Known Debt (addressed in Phase 0)
-
-- **No unit tests exist yet** — `app/src/test` is empty despite earlier docs claiming otherwise
-- **`RuleEngine` is coupled to the data layer** — injects DAOs and writes entities directly, so the core engine can't be tested without Room
-- **No repository for rule executions** — `RuleExecutionDao` / `ExtractedFieldValueDao` are consumed directly by `RuleEngine` and `NotificationDetailViewModel`
-- **Action execution is welded to `NotificappListenerService`** — every new action type means editing the OS-bound service class
-- **Executions record actions as "triggered" before they run** — history can claim an action happened when it failed
-- **Docs drift** — `CLAUDE.md` describes a package layout (`com.notificapp`, layer-first) and tests that don't match reality (`dev.gaferneira.notificapp`, `core/` + `features/`)
 
 ---
 
 ## Roadmap Phases
 
-### Phase 0: Foundation Hardening
-
-**Goal:** Pay down the pipeline debt before building on top of it. Everything in Phases 1–5 plugs into this pipeline; refactoring now is ~2 days, untangling after webhooks and the data browser land is much more.
-
-> **Detailed technical designs for every item in this phase:** [`docs/roadmap_tech_debt.md`](roadmap_tech_debt.md) (interfaces, code sketches, migration steps, done-criteria).
-
-#### Pipeline Refactor
-
-- [ ] Extract a `ProcessNotificationUseCase` (notification pipeline): normalize → dedupe → persist → match → extract → act as a plain injectable class; `NotificappListenerService` becomes a thin adapter (`StatusBarNotification` → domain `Notification` → pipeline)
-- [ ] Introduce `ActionExecutor` abstraction: one handler per `ActionType`, registered via Hilt multibindings (`@IntoMap` keyed by `ActionType`)
-- [ ] Narrow interface for system-dependent actions (e.g., `SystemNotificationController` with `cancel(key)` / `snooze(key, ms)`), implemented and registered by the listener service when connected
-- [ ] Introduce `RuleExecutionRepository`; route `RuleEngine` and `NotificationDetailViewModel` through it — no DAO imports outside the data layer
-- [ ] Make `RuleEngine` pure orchestration: takes rules + notification, returns results; persistence happens in the pipeline via the repository
-- [ ] Record per-action execution outcome (`SUCCESS` / `FAILED` / `SKIPPED`) on `RuleExecution` — cheap now, painful to retrofit once webhooks need retries
-- [ ] Inject dispatchers in `MviViewModel` instead of hardcoded `Dispatchers.Main.immediate` (per ADR 008)
-
-#### Tests (the cheapest pivot insurance)
-
-- [ ] Unit tests for `RuleMatcher` — all 6 operators, edge cases (JUnit5 + Kotest + MockK)
-- [ ] Unit tests for `FieldExtractor` — all 10 extraction methods, malformed input
-- [ ] Unit tests for `RuleEngine` orchestration (pure after refactor — no Room needed)
-- [ ] Unit tests for `ProcessNotificationUseCase` end-to-end with fakes
-
-#### Docs
-
-- [ ] Rewrite `CLAUDE.md` to match the real structure (`dev.gaferneira.notificapp`, `core/` + `features/` packaging, actual test status) — stale agent docs actively mislead every AI-assisted session
-- [ ] ADR for the pipeline + `ActionExecutor` design
-
 ### Phase 1: Complete Action System
 
-**Goal:** Finish the in-progress snooze/dismiss work on top of the refactored pipeline.
+**Goal:** Round out the action system on top of the refactored pipeline. Snooze/Dismiss and per-action outcome feedback are done; Alarms and Flash Alerts remain.
 
-#### Snooze and Dismiss
+#### Snooze and Dismiss — **Done**
 
-- [ ] Add action configuration UI (snooze duration picker in `ActionBottomSheet`)
-- [ ] Implement `SNOOZE_NOTIFICATION` handler as an `ActionExecutor`
-- [ ] Add action configuration UI to dismiss notification
-- [ ] Implement `DISMISS_NOTIFICATION` handler as an `ActionExecutor`
+- [x] Add action configuration UI (snooze duration picker in `ActionBottomSheet`)
+- [x] Implement `SNOOZE_NOTIFICATION` handler as an `ActionExecutor`
+- [x] Add action configuration UI to dismiss notification
+- [x] Implement `DISMISS_NOTIFICATION` handler as an `ActionExecutor`
 
 #### Alarms
 
@@ -118,8 +81,8 @@ Extraction is one action among many in the rules engine — but it is the **diff
 
 #### Feedback and Safety
 
-- [ ] Show per-action execution outcomes in Notification Detail screen (which actions ran, succeeded, failed)
-- [ ] Unit tests for each action handler
+- [x] Show per-action execution outcomes in Notification Detail screen (which actions ran, succeeded, failed) — landed early as part of Phase 0's TD-5
+- [x] Unit tests for each action handler (Dismiss, Snooze, SaveData, plus the dispatcher) — landed early as part of Phase 0's TD-6
 
 ### Phase 2: Rule Trust & Community Sharing
 
