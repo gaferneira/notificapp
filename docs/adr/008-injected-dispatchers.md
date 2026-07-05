@@ -37,4 +37,4 @@ class MyViewModel @Inject constructor(
 - Additional boilerplate in constructors
 - Developers must remember to inject rather than use `Dispatchers` directly
 - Slight overhead of qualification lookups (negligible in practice)
-- Main dispatcher remains hardcoded in `MviViewModel.sendEffect()` for UI thread guarantees. Resolution planned (`docs/roadmap_tech_debt.md` TD-7): a constructor parameter with `Dispatchers.Main.immediate` as production default, overridable in tests; until then, tests rely on `Dispatchers.setMain()` intercepting `Main.immediate`
+- Main dispatcher in `MviViewModel.sendEffect()` is now an `effectDispatcher` constructor parameter defaulting to `Dispatchers.Main.immediate` (resolved 2026-07-05, TD-7). Subclasses inherit the production default automatically; tests can either pass a test dispatcher explicitly or continue relying on `Dispatchers.setMain()`, which also intercepts `Main.immediate`
