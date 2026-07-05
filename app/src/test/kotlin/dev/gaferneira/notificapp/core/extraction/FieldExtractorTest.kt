@@ -3,6 +3,7 @@ package dev.gaferneira.notificapp.core.extraction
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.testutil.createTestField
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -481,6 +482,20 @@ class FieldExtractorTest {
 
             // Then: extraction fails because the path cannot resolve against a plain string
             result shouldBe ExtractionResult.Failure("Path not found: data.amount")
+        }
+
+        @Test
+        fun `fails gracefully instead of crashing on a maliciously deep payload`() {
+            // Given: JSON nested far past any reasonable extraction target, e.g. a hostile
+            // rule-shared payload designed to trigger a StackOverflowError
+            val text = "{\"a\":".repeat(100000) + "1" + "}".repeat(100000)
+            val field = createTestField(method = ExtractionMethod.JsonPath(path = "a.a.a"))
+
+            // When: extracting the field
+            val result = FieldExtractor.extract(text, field)
+
+            // Then: extraction fails as a normal ExtractionResult, it doesn't crash the process
+            result.shouldBeInstanceOf<ExtractionResult.Failure>()
         }
     }
 

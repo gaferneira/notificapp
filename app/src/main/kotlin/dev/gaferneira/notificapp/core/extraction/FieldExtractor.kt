@@ -240,12 +240,12 @@ object FieldExtractor {
      * Simple JSON parser for basic extraction needs.
      * For MVP, handles simple JSON objects and arrays.
      */
-    private fun parseJson(json: String): Any? {
+    private fun parseJson(json: String, depth: Int = 0): Any? {
         val trimmed = json.trim()
 
         return when {
-            trimmed.startsWith("{") -> parseJsonObject(trimmed)
-            trimmed.startsWith("[") -> parseJsonArray(trimmed)
+            trimmed.startsWith("{") -> parseJsonObject(trimmed, depth)
+            trimmed.startsWith("[") -> parseJsonArray(trimmed, depth)
             trimmed.startsWith("\"") -> trimmed.removeSurrounding("\"")
             trimmed == "true" -> true
             trimmed == "false" -> false
@@ -255,7 +255,8 @@ object FieldExtractor {
         }
     }
 
-    private fun parseJsonObject(json: String): Map<String, Any?> {
+    private fun parseJsonObject(json: String, depth: Int = 0): Map<String, Any?> {
+        checkJsonDepth(depth)
         val result = mutableMapOf<String, Any?>()
         val content = json.removeSurrounding("{", "}").trim()
 
@@ -312,7 +313,7 @@ object FieldExtractor {
                         }
                         ',' -> {
                             if (braceCount == 0 && bracketCount == 0) {
-                                result[currentKey] = parseJsonValue(currentValue.toString().trim())
+                                result[currentKey] = parseJsonValue(currentValue.toString().trim(), depth + 1)
                                 currentValue = StringBuilder()
                                 isKey = true
                             } else {
@@ -327,13 +328,14 @@ object FieldExtractor {
         }
 
         if (!isKey && currentKey.isNotEmpty()) {
-            result[currentKey] = parseJsonValue(currentValue.toString().trim())
+            result[currentKey] = parseJsonValue(currentValue.toString().trim(), depth + 1)
         }
 
         return result
     }
 
-    private fun parseJsonArray(json: String): List<Any?> {
+    private fun parseJsonArray(json: String, depth: Int = 0): List<Any?> {
+        checkJsonDepth(depth)
         val result = mutableListOf<Any?>()
         val content = json.removeSurrounding("[", "]").trim()
 
@@ -379,7 +381,7 @@ object FieldExtractor {
                         }
                         ',' -> {
                             if (braceCount == 0 && bracketCount == 0) {
-                                result.add(parseJsonValue(currentValue.toString().trim()))
+                                result.add(parseJsonValue(currentValue.toString().trim(), depth + 1))
                                 currentValue = StringBuilder()
                             } else {
                                 currentValue.append(char)
@@ -393,17 +395,17 @@ object FieldExtractor {
         }
 
         if (currentValue.isNotEmpty()) {
-            result.add(parseJsonValue(currentValue.toString().trim()))
+            result.add(parseJsonValue(currentValue.toString().trim(), depth + 1))
         }
 
         return result
     }
 
-    private fun parseJsonValue(value: String): Any? {
+    private fun parseJsonValue(value: String, depth: Int = 0): Any? {
         val trimmed = value.trim()
         return when {
-            trimmed.startsWith("{") -> parseJsonObject(trimmed)
-            trimmed.startsWith("[") -> parseJsonArray(trimmed)
+            trimmed.startsWith("{") -> parseJsonObject(trimmed, depth)
+            trimmed.startsWith("[") -> parseJsonArray(trimmed, depth)
             trimmed.startsWith("\"") -> trimmed.removeSurrounding("\"")
             trimmed == "true" -> true
             trimmed == "false" -> false
@@ -413,7 +415,22 @@ object FieldExtractor {
             else -> trimmed
         }
     }
+
+    /**
+     * Guards the hand-rolled JSON parser against unbounded recursion: a deeply nested or
+     * malformed payload would otherwise trigger a StackOverflowError, which (unlike a regular
+     * exception) escapes the `catch (Exception)` wrapping in [extract] and [extractJsonPath].
+     */
+    private fun checkJsonDepth(depth: Int) {
+        if (depth > MAX_JSON_DEPTH) {
+            throw JsonDepthExceededException(depth)
+        }
+    }
+
+    private const val MAX_JSON_DEPTH = 32
 }
+
+private class JsonDepthExceededException(depth: Int) : Exception("JSON nesting depth $depth exceeds maximum")
 
 /**
  * Result of a field extraction attempt.
