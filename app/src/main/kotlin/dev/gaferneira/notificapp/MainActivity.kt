@@ -127,9 +127,14 @@ fun Notificapp(
         isCheckingState = false
     }
 
-    // Re-check when resumed (permission might have changed)
+    // Re-check when resumed (permission might have changed) - but only before reaching the main
+    // app. Once in MAIN_APP, re-deriving the flow state on every resume would tear down and
+    // recreate the NavDisplay below (rememberNavigationState resets its back stack whenever it's
+    // freshly composed), wiping the user's navigation stack and any in-progress screen state
+    // every time the activity resumes - including after returning from an external activity
+    // launched via an ActivityResultContract (e.g. a system picker).
     LaunchedEffect(lifecycleOwner.lifecycle.currentStateAsState().value) {
-        if (lifecycleOwner.lifecycle.currentState == Lifecycle.State.RESUMED) {
+        if (lifecycleOwner.lifecycle.currentState == Lifecycle.State.RESUMED && appFlowState != AppFlowState.MAIN_APP) {
             isCheckingState = true
             appFlowState = determineAppFlowState(context, repository)
             isCheckingState = false
