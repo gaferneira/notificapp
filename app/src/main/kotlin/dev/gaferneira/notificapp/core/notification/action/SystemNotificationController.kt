@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.notification.action
+package dev.gaferneira.notificapp.core.notification.action
 
 /**
  * Narrow interface over the Android system notification operations that action executors need.

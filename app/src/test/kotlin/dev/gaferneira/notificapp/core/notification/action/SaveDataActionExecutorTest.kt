@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.notification.action
+package dev.gaferneira.notificapp.core.notification.action
 
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.ActionType

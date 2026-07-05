@@ -120,7 +120,7 @@ features → domain (models + repository interfaces)
 features → core/ui (MVI base, navigation)
 core/data → domain (repository implementations)
 core/extraction → domain (RuleEngine, RuleMatcher, FieldExtractor)
-features/notification → core/extraction (notification processing)
+core/notification → core/extraction (notification processing)
 ```
 
 **Rules:**
@@ -210,8 +210,8 @@ flowchart LR
 ### Design Rationale
 
 **Separation of Concerns:**
-- `features/notification` package handles all Android-specific APIs (NotificationListenerService, action execution) plus the pipeline orchestration (`ProcessNotificationUseCase`, `ActionDispatcher`, per-action `ActionExecutor`s)
-- `NotificationNormalizer` and `NotificationDeduplicator` live in features/notification (app-specific logic)
+- `features/notification` package handles Android-specific APIs only (`NotificappListenerService`, `NotificationNormalizer`); `core/notification` holds the pipeline orchestration (`ProcessNotificationUseCase`, `ActionDispatcher`, per-action `ActionExecutor`s), which is reused by `features/notificationdetail` and is pure Kotlin aside from the `SystemNotificationController` boundary
+- `NotificationNormalizer` lives in `features/notification` (app-specific logic); `NotificationDeduplicator` is pure Kotlin and lives in `core/notification`
 - `core/extraction` contains `RuleEngine`, `RuleMatcher`, `FieldExtractor` — pure Kotlin, no Android or persistence dependencies
 - `domain` models are the contract between layers
 
@@ -410,9 +410,9 @@ data class ExtractedFieldValue(
 
 **Design Notes:**
 
-- Rule loading (via `RuleRepository`) and persistence (via `RuleExecutionRepository`) live in `features/notification/ProcessNotificationUseCase`, not in `core/extraction` — this keeps `core/extraction → domain` as the only dependency direction
+- Rule loading (via `RuleRepository`) and persistence (via `RuleExecutionRepository`) live in `core/notification/ProcessNotificationUseCase`, not in `core/extraction` — this keeps `core/extraction → domain` as the only dependency direction
 - `RuleMatch` (`domain/model/RuleMatch.kt`) is the pure evaluation result returned by `RuleEngine`, before it is converted into a persisted `RuleExecution`
-- **Notification normalization** (`NotificationNormalizer`, `NotificationDeduplicator`) lives in `features/notification/`, not extraction (app-specific logic, handles Android APIs)
+- **Notification normalization** (`NotificationNormalizer`) lives in `features/notification/`, not extraction (app-specific logic, handles Android APIs). `NotificationDeduplicator` is pure Kotlin and lives in `core/notification/` with `ProcessNotificationUseCase`
 
 ## Coding Standards
 

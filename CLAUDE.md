@@ -46,6 +46,8 @@ Notificapp/
 │   │   │   │   └── repository/    # Repository implementations
 │   │   │   ├── di/                # Hilt modules (Database, Repository, Dispatchers, Coil)
 │   │   │   ├── extraction/        # Rule engine (RuleEngine, RuleMatcher, FieldExtractor)
+│   │   │   ├── notification/      # ProcessNotificationUseCase, NotificationDeduplicator,
+│   │   │   │                      # action/ (ActionDispatcher, per-type ActionExecutors)
 │   │   │   └── ui/
 │   │   │       ├── mvi/           # MviViewModel, CollectOneOffEffects
 │   │   │       ├── navigation/    # Screen, Routes, Navigator, NavigationHandler, MainBottomNav
@@ -58,8 +60,7 @@ Notificapp/
 │   │   ├── features/              # One package per feature: contract/ + ui/ + viewmodel/
 │   │   │   ├── appselection/
 │   │   │   ├── inbox/
-│   │   │   ├── notification/      # NotificappListenerService, NotificationNormalizer,
-│   │   │   │                      # NotificationDeduplicator
+│   │   │   ├── notification/      # NotificappListenerService, NotificationNormalizer
 │   │   │   ├── notificationdetail/
 │   │   │   ├── onboarding/
 │   │   │   ├── ruleeditor/        # also has domain/ (RuleUiModel) and ui/components/
@@ -80,7 +81,7 @@ features → domain (models + repository interfaces)
 features → core/ui (MVI base, navigation)
 core/data → domain (implements repository interfaces)
 core/extraction → domain
-features/notification → core/extraction (runs the rule engine)
+core/notification → core/extraction (runs the rule engine)
 ```
 
 **Dependency Rules:**
@@ -202,9 +203,9 @@ Before making any code changes:
 **Key Components:**
 - `RuleMatcher` - Checks if a notification matches rule conditions (6 operators; pure Kotlin)
 - `FieldExtractor` - Extracts fields using 10 extraction methods (regex, anchors, keywords, JSON path, smart amount/date, ...; pure Kotlin)
-- `RuleEngine` - Pure `evaluate(notification, rules): List<RuleMatch>`; zero I/O, zero coroutines, zero `core.data`/`domain.repository` imports. Rule loading and persistence live in `features/notification/ProcessNotificationUseCase`, which saves via `RuleExecutionRepository`
+- `RuleEngine` - Pure `evaluate(notification, rules): List<RuleMatch>`; zero I/O, zero coroutines, zero `core.data`/`domain.repository` imports. Rule loading and persistence live in `core/notification/ProcessNotificationUseCase`, which saves via `RuleExecutionRepository`
 
-**Notification normalization** (`NotificationNormalizer`, `NotificationDeduplicator`) lives in `features/notification/`, not here — it handles Android APIs.
+**Notification normalization** (`NotificationNormalizer`) lives in `features/notification/`, not here — it handles Android APIs. `NotificationDeduplicator` is pure Kotlin and lives in `core/notification/` alongside `ProcessNotificationUseCase`.
 
 **Key Rules:**
 - `RuleMatcher` and `FieldExtractor` must stay pure Kotlin (no Android imports) — this is critical for testability
@@ -654,6 +655,7 @@ LaunchedEffect(Unit) {
 | Repository Implementations | `app/src/main/kotlin/.../core/data/repository/` |
 | Room Entities / DAOs / Mappers | `app/src/main/kotlin/.../core/data/local/` |
 | Extraction Engine | `app/src/main/kotlin/.../core/extraction/` |
+| Notification Processing Pipeline | `app/src/main/kotlin/.../core/notification/` |
 | Notification Service | `app/src/main/kotlin/.../features/notification/` |
 | MVI Base Classes | `app/src/main/kotlin/.../core/ui/mvi/` |
 | Navigation | `app/src/main/kotlin/.../core/ui/navigation/` |

@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.notification
+package dev.gaferneira.notificapp.core.notification
 
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository

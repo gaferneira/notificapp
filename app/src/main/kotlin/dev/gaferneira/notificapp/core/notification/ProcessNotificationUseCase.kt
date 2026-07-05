@@ -1,8 +1,9 @@
-package dev.gaferneira.notificapp.features.notification
+package dev.gaferneira.notificapp.core.notification
 
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
+import dev.gaferneira.notificapp.core.notification.action.ActionDispatcher
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleExecution
@@ -10,7 +11,6 @@ import dev.gaferneira.notificapp.domain.model.RuleMatch
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
-import dev.gaferneira.notificapp.features.notification.action.ActionDispatcher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext

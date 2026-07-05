@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.notification.action
+package dev.gaferneira.notificapp.core.notification.action
 
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject

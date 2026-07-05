@@ -6,11 +6,11 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
+import dev.gaferneira.notificapp.core.notification.action.DismissActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.SaveDataActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.SnoozeActionExecutor
 import dev.gaferneira.notificapp.domain.action.ActionExecutor
 import dev.gaferneira.notificapp.domain.model.ActionType
-import dev.gaferneira.notificapp.features.notification.action.DismissActionExecutor
-import dev.gaferneira.notificapp.features.notification.action.SaveDataActionExecutor
-import dev.gaferneira.notificapp.features.notification.action.SnoozeActionExecutor
 
 /**
  * Map key annotation for binding [ActionExecutor] implementations by [ActionType].

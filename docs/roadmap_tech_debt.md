@@ -179,6 +179,8 @@ override fun onNotificationPosted(sbn: StatusBarNotification?) {
 
 **Placement note:** the use case has no Android imports, so it can live anywhere; `features/notification/` keeps it next to its callers, `core/` signals reuse. Either is fine — pick one and stay consistent with the future `:core:notification` module split.
 
+**Update (2026-07-05):** landed in `core/notification/` — once `features/notificationdetail` became a second caller, keeping it under `features/notification/` would have created a features-depending-on-features violation. `NotificationDeduplicator` and the `action/` subpackage moved alongside it.
+
 **Design decision embedded here:** actions execute *before* the execution record is saved, so the record can store real outcomes (TD-5). If an action executor hangs (webhooks later), WorkManager-based executors return `SKIPPED`/enqueued immediately rather than blocking the pipeline.
 
 **Done when:** `NotificappListenerService` contains only lifecycle wiring, pre-filters, normalization, and the `SystemNotificationController` registration (TD-4); an end-to-end pipeline test runs on plain JVM with fakes.

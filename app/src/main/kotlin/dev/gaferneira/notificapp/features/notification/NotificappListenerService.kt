@@ -5,10 +5,11 @@ import android.service.notification.StatusBarNotification
 import dagger.hilt.android.AndroidEntryPoint
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.core.notification.ProcessNotificationUseCase
+import dev.gaferneira.notificapp.core.notification.action.SystemNotificationController
+import dev.gaferneira.notificapp.core.notification.action.SystemNotificationControllerHolder
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
-import dev.gaferneira.notificapp.features.notification.action.SystemNotificationController
-import dev.gaferneira.notificapp.features.notification.action.SystemNotificationControllerHolder
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob

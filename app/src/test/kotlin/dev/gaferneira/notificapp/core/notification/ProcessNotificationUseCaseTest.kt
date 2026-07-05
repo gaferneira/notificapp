@@ -1,13 +1,13 @@
-package dev.gaferneira.notificapp.features.notification
+package dev.gaferneira.notificapp.core.notification
 
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
+import dev.gaferneira.notificapp.core.notification.action.ActionDispatcher
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
-import dev.gaferneira.notificapp.features.notification.action.ActionDispatcher
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestCondition
 import dev.gaferneira.notificapp.testutil.createTestNotification

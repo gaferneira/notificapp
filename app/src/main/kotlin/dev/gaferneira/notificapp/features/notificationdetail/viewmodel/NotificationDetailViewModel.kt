@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.core.notification.ProcessNotificationUseCase
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
@@ -13,7 +14,6 @@ import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
-import dev.gaferneira.notificapp.features.notification.ProcessNotificationUseCase
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ExecutionWithDetails
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.ExtractedFieldDisplay
 import dev.gaferneira.notificapp.features.notificationdetail.contract.NotificationDetailContract.TriggeredActionDisplay
