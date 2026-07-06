@@ -163,6 +163,32 @@ class ProcessNotificationUseCaseTest {
     }
 
     @Test
+    fun `evaluateAndPersist with executeActions false never invokes the action dispatcher, even for a matching non-dry-run rule`() = runTest(testDispatcher) {
+        // Given: a saved notification and a matching, non-dry-run rule with an enabled action
+        val notification = createTestNotification(title = "ICA Kvantum")
+        val condition = createTestCondition(
+            condition = MatchingCondition.TITLE,
+            operator = MatchingOperator.CONTAINS,
+            value = "ICA",
+        )
+        val action = createTestAction(id = "action-1")
+        val rule = createTestRule(id = "rule-1", isDryRun = false, conditions = listOf(condition), actions = listOf(action))
+
+        coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
+        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+
+        // When: re-evaluating with executeActions = false (the refresh path)
+        val result = useCase.evaluateAndPersist(notification, executeActions = false)
+
+        // Then: the match is still recorded, but with no action outcomes, and the dispatcher is
+        // never invoked - refresh must never replay a real action a second time
+        result.isSuccess shouldBe true
+        val execution = result.getOrThrow().single()
+        execution.actionOutcomes shouldBe emptyMap()
+        coVerify(exactly = 0) { actionDispatcher.executeAll(any(), any()) }
+    }
+
+    @Test
     fun `evaluateAndPersist does not deduplicate or re-save the notification`() = runTest(testDispatcher) {
         // Given: an already-stored notification with no matching rules
         val notification = createTestNotification()

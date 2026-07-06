@@ -81,9 +81,13 @@ class ProcessNotificationUseCase @Inject constructor(
      * (e.g. `NotificationDetailViewModel`'s refresh action).
      *
      * @param notification The notification to evaluate
+     * @param executeActions Whether matched, non-dry-run rules should actually dispatch their
+     * actions. `NotificationDetailViewModel`'s refresh passes `false`: it recomputes what a rule
+     * *would* do without replaying alarms/snoozes/dismisses for a notification that's already
+     * been acted on once by the listener service.
      * @return Result containing the list of rule executions
      */
-    suspend fun evaluateAndPersist(notification: Notification): Result<List<RuleExecution>> = withContext(ioDispatcher) {
+    suspend fun evaluateAndPersist(notification: Notification, executeActions: Boolean = true): Result<List<RuleExecution>> = withContext(ioDispatcher) {
         try {
             val rulesResult = ruleRepository.getRulesForApp(notification.packageName)
             if (rulesResult.isFailure) {
@@ -102,7 +106,7 @@ class ProcessNotificationUseCase @Inject constructor(
                 // point of dry-run mode (trial a rule with zero risk of it acting on anything).
                 // Actions execute before the execution record is built/saved (per ADR 010) so the
                 // record reflects what actually happened, not just what was "triggered".
-                val outcomes = if (match.rule.isDryRun) {
+                val outcomes = if (match.rule.isDryRun || !executeActions) {
                     emptyMap()
                 } else {
                     actionDispatcher.executeAll(notification, match.rule.actions)

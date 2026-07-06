@@ -10,6 +10,7 @@ import dev.gaferneira.notificapp.features.notificationdetail.contract.Notificati
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -104,12 +105,27 @@ class NotificationDetailViewModelTest {
             // trigger never fires and the observed Flow never re-emits (regression test for the
             // bug where isLoading was only ever cleared by that re-emission)
             coEvery { ruleExecutionRepository.deleteExecutionsForNotification("notif-1") } returns Result.success(Unit)
-            coEvery { processNotificationUseCase.evaluateAndPersist(notification) } returns Result.success(emptyList())
+            coEvery { processNotificationUseCase.evaluateAndPersist(notification, executeActions = false) } returns Result.success(emptyList())
 
             viewModel.onEvent(UiEvent.OnRefreshClicked)
             testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.uiState.value.isLoading shouldBe false
+        }
+
+        @Test
+        fun `refresh never dispatches actions, even for a matching non-dry-run rule`() = runTest(testDispatcher) {
+            // Given: refresh re-evaluates a rule that would normally execute a real action
+            coEvery { ruleExecutionRepository.deleteExecutionsForNotification("notif-1") } returns Result.success(Unit)
+            coEvery { processNotificationUseCase.evaluateAndPersist(notification, executeActions = false) } returns Result.success(emptyList())
+
+            // When: refreshing
+            viewModel.onEvent(UiEvent.OnRefreshClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: evaluateAndPersist was called with actions disabled - refresh must never
+            // replay alarms/snoozes/dismisses for a notification already acted on once
+            coVerify(exactly = 1) { processNotificationUseCase.evaluateAndPersist(notification, executeActions = false) }
         }
 
         @Test
@@ -130,7 +146,7 @@ class NotificationDetailViewModelTest {
         fun `refresh failure while re-evaluating rules surfaces an error`() = runTest(testDispatcher) {
             coEvery { ruleExecutionRepository.deleteExecutionsForNotification("notif-1") } returns Result.success(Unit)
             coEvery {
-                processNotificationUseCase.evaluateAndPersist(notification)
+                processNotificationUseCase.evaluateAndPersist(notification, executeActions = false)
             } returns Result.failure(IllegalStateException("eval error"))
 
             viewModel.onEvent(UiEvent.OnRefreshClicked)

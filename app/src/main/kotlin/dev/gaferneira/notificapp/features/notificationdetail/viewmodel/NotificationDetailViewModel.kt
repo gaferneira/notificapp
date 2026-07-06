@@ -211,8 +211,9 @@ class NotificationDetailViewModel @Inject constructor(
     }
 
     /**
-     * Refresh/re-execute rules for this notification.
-     * Clears existing executions and re-runs current rules.
+     * Refresh/re-evaluate rules for this notification.
+     * Clears existing executions and re-runs current rules to recompute what they would match
+     * and extract - without replaying actions (alarms, snoozes, dismisses) a second time.
      */
     private fun refreshExecutions() {
         val id = notificationId ?: return
@@ -240,8 +241,9 @@ class NotificationDetailViewModel @Inject constructor(
                     return@launch
                 }
 
-                // 3. Re-run rule evaluation and persist the new executions
-                val evaluateResult = processNotificationUseCase.evaluateAndPersist(notification)
+                // 3. Re-run rule evaluation and persist the new executions, without re-dispatching
+                // actions - refresh recomputes matches/extractions, it doesn't replay side effects
+                val evaluateResult = processNotificationUseCase.evaluateAndPersist(notification, executeActions = false)
                 if (evaluateResult.isFailure) {
                     setState { copy(isLoading = false, error = "Failed to refresh: ${evaluateResult.exceptionOrNull()?.message}") }
                     return@launch
