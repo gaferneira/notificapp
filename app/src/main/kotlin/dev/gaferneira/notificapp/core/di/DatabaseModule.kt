@@ -38,7 +38,7 @@ object DatabaseModule {
     )
         .addMigrations(*APP_DATABASE_MIGRATIONS)
         // Safety net only, not a substitute for migrations above. Remove entirely before the
-        // first public release (see docs/roadmap_tech_debt.md TD-2) - until then it only
+        // first public release - until then it only
         // protects schema bumps that haven't shipped an explicit Migration yet.
         .fallbackToDestructiveMigration()
         .build()

@@ -21,11 +21,10 @@ Extraction is one action among many in the rules engine — but it is the **diff
 3. **Package tracking** — carrier notifications become delivery status + tracking numbers
 4. **Home automation bridging** — extracted data delivered to Home Assistant & co. via webhooks
 
-**Target audience**: any Android user who wants their notifications under control — automation is the broad on-ramp. The OSS crowd (self-hosters, Home Assistant users, data-ownership people) is the community core that contributes rules and drives F-Droid distribution. Privacy (local-first, no telemetry) is a supporting trust trait, not the headline.
+**Target audience**: any Android user who wants their notifications under control — automation is the broad on-ramp. The OSS crowd (self-hosters, Home Assistant users, data-ownership people) is the community core that contributes rules and drives F-Droid distribution.
 
 ## Guiding Principles
 
-- **Local-first, always** — nothing leaves the device except user-configured webhooks
 - **Rule-creation friction is the make-or-break UX** — a normal person must go from "annoying notification" to "working rule" in under a minute (templates → create-from-notification → raw editor, in that order of prominence)
 - **Never fail silently** — automation that eats notifications or drops webhooks without telling the user destroys trust
 - **Community-first** — shared rules are the growth engine; the repo is part of the product
@@ -56,7 +55,7 @@ Extraction is one action among many in the rules engine — but it is the **diff
 
 ### In Progress
 
-_None currently — see Phase 1 below for what's next._
+- **Tech-debt hardening before Phase 3** — see `docs/roadmap_tech_debt.md` (TD-9..TD-16): freeze the rule-sharing wire format behind DTOs (must land before any rule file exists outside the repo), gate destructive Room migrations to debug builds, bound the backtesting query, and stand up CI before community contributions open.
 
 ---
 
@@ -107,15 +106,24 @@ _None currently — see Phase 1 below for what's next._
 - [x] Import a rule from file/clipboard with validation + preview before saving — `RulesScreen`'s import menu (`ActivityResultContracts.OpenDocument` / clipboard read) feeds decoded text through `RuleJsonCodec.decode`, showing a preview dialog (name, condition/field/action counts, target apps) before the user confirms
 - [x] Import safety: imported rules start in dry-run mode by default — `RuleJsonCodec.withFreshIdentityForImport()` also regenerates the rule's and every nested condition/field/action's ID, so importing the same file twice never collides with itself
 
-#### Community Rules Gallery
+### Phase 3: Starter Rules, Data Browser & Data Lifecycle
 
-- [ ] `rules/` directory in the GitHub repo with community-contributed, tested rules for popular apps (e.g., "Revolut transaction", "DHL tracking", "Amazon delivery"), organized by app/category
-- [ ] Contribution guide + PR template for submitting rules
-- [ ] In-app: "Browse community rules" entry point that explains how to import gallery rules (no network access in-app — user downloads/pastes JSON, keeping the local-first promise)
+**Goal:** Ship the first rung of the rule-creation ladder (templates), make live rules safe against noisy apps, and build the dedicated screen for browsing, filtering, and exporting extracted data — plus the retention and backup features people need before investing hours in rules.
 
-### Phase 3: Data Browser, Export & Data Lifecycle
+#### Starter Rule Templates *(promoted from backlog)*
 
-**Goal:** Dedicated screen for browsing, filtering, and exporting extracted data — plus the retention and backup features people need before investing hours in rules.
+Guiding principle #1 puts **templates first** in the rule-creation ladder (templates → create-from-notification → raw editor), but nothing on the roadmap built them before the Phase 6 gallery. They're mostly content on top of Phase 2's import machinery, and they seed the gallery.
+
+- [ ] Curate 5–10 starter rules for the hero use cases (bank transaction → spending row, carrier tracking, OTP auto-dismiss, noisy-app dismiss), stored as raw JSON assets in the APK using the `RuleJsonCodec` wire format — **requires the frozen DTO format from TD-9 first**
+- [ ] "Start from a template" entry point in the Rules empty state and as the first option when creating a rule; template import follows the same fresh-ID + dry-run path as Phase 2 imports
+- [ ] Each template doubles as a seed rule for the Phase 6 community gallery (same file format, same validation)
+
+#### Rule Safety: Per-Rule Cooldown *(promoted from backlog)*
+
+With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 seconds is an uninstall-level bug — this can't wait for someone to hit it.
+
+- [ ] `Rule.cooldownSeconds` (0 = disabled) + Room migration; editor UI in the metadata step next to the dry-run toggle
+- [ ] `ProcessNotificationUseCase.evaluateAndPersist` skips action dispatch when the rule's latest `RuleExecution` is more recent than the cooldown — the match is still recorded, flagged as cooldown-suppressed (never fail silently, even when suppressing on purpose)
 
 #### Data Screen (New Bottom Nav Tab)
 
@@ -143,7 +151,8 @@ _None currently — see Phase 1 below for what's next._
 
 #### Data Lifecycle
 
-- [ ] Retention settings: auto-delete captured notifications after 30/90 days/never (the notification table currently grows unboundedly)
+- [ ] **Interim retention sweep — do this first**: delete captured notifications older than 90 days on app start. The table currently grows unboundedly and stores OTPs/private messages forever, which contradicts the privacy story and is the root cause of the backtest memory issue (TD-11); the full settings UI below can follow later
+- [ ] Retention settings: auto-delete captured notifications after 30/90 days/never
 - [ ] Storage usage view in Settings (DB size, counts per table)
 - [ ] Local backup/restore: export/import rules — and optionally extracted data — to a local file (people won't invest in rules that vanish with a lost phone; stays local-first)
 
@@ -206,9 +215,14 @@ _None currently — see Phase 1 below for what's next._
 
 ---
 
-## Community & Distribution Track (parallel to feature phases)
+### Phase 6: Extra features
 
-For a community project, **the repo is the product**. Start alongside Phase 0–1; must be complete before announcing the project.
+#### Community Rules Gallery
+
+- [ ] `rules/` directory in the GitHub repo with community-contributed, tested rules for popular apps (e.g., "Revolut transaction", "DHL tracking", "Amazon delivery"), organized by app/category
+- [ ] Contribution guide + PR template for submitting rules
+- [ ] In-app: "Browse community rules" entry point that explains how to import gallery rules (no network access in-app — user downloads/pastes JSON, keeping the local-first promise)
+- [ ] CI validation of `rules/*.json`: a JVM test decodes every gallery file through `RuleJsonCodec` so a malformed contribution can't merge (depends on TD-9's frozen wire format and TD-12's pipeline)
 
 ### Repo Infrastructure
 
@@ -218,7 +232,7 @@ For a community project, **the repo is the product**. Start alongside Phase 0–
 - [x] Issue templates (bug, feature, rule request) and PR template in `.github/`
 - [x] `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1)
 - [x] `SECURITY.md` (private vulnerability reporting policy)
-- [ ] CI: build + unit tests + Spotless on every PR
+- [ ] CI: Spotless + Detekt + unit tests + debug build on every PR — **now urgent** (TD-12 in `docs/roadmap_tech_debt.md`): must land before community rule/code contributions open
 - [x] License decision — **GPL-3.0** (`LICENSE`): keeps forks open-source, fits the F-Droid audience and trust story
 
 ### Trust & Privacy
@@ -246,6 +260,7 @@ Recorded so they aren't lost; none are committed. Promote to a phase only when t
 - **Add to calendar**: extracted date/time → calendar event via `Intent` (no permission needed with the insert intent)
 - **Broadcast intent for automation apps**: fire a local broadcast/intent with extracted data as extras so Tasker/MacroDroid/Automate users can chain workflows — cheap to build, huge for the power-user audience, zero network
 - **Vibration pattern** per rule (subtle alternative to flash/sound)
+- **Notification reply/interaction** — Send replies or interacting with notification actions
 
 ### Data & insights
 - **Daily/weekly digest notification**: "This week: 23 transactions, €412 total" — computed locally from extracted values
@@ -253,8 +268,7 @@ Recorded so they aren't lost; none are committed. Promote to a phase only when t
 - **Auto-export to a folder (SAF)**: append extracted data to a CSV/JSON file in a user-chosen directory — pairs perfectly with Syncthing/Obsidian users without the app ever touching the network
 
 ### Rules
-- **Bundled starter rules**: ship a handful of curated gallery rules in-app for instant first-run value (subset of the community gallery)
-- **Per-rule cooldown**: execute at most once per N minutes (needed the moment noisy apps meet dismiss/flash actions)
+- **Per-rule health stats**: "matched 0 times in 30 days" indicator in the Rules list — a dead rule silently not firing violates "never fail silently", and the `RuleExecution` data to compute it already exists
 - **Time-window conditions**: rule active only during set hours/days
 - **OR condition groups**: currently conditions are AND-only (feeds the ADR 011 schema decision)
 
@@ -272,8 +286,6 @@ Explicitly **not** part of the MVP; may be revisited post-launch:
 - **User accounts / login** — no authentication system
 - **Cloud-based AI** — no Gemini Pro API or cloud fallback for unsupported devices
 - **Play Store release** — F-Droid first; Play Store distribution deferred
-- **In-app rule gallery with network fetch** — gallery lives in the repo; in-app import is manual (keeps the app fully local pre-webhooks)
-- **Notification reply/interaction** — no sending replies or interacting with notification actions
 - **Advanced analytics** — no ML-based insights, trend predictions, or anomaly detection beyond basic statistics
 
 ---
@@ -285,7 +297,7 @@ Explicitly **not** part of the MVP; may be revisited post-launch:
 | Notification pipeline | `ProcessNotificationUseCase` orchestrates normalize → dedupe → persist → match → extract → act; listener service is a thin adapter |
 | Action execution | `ActionExecutor` per `ActionType` via Hilt multibindings; system actions behind `SystemNotificationController` implemented by the listener service |
 | Execution records | Per-action outcome (`SUCCESS`/`FAILED`/`SKIPPED`) stored on `RuleExecution` |
-| Rule sharing | Versioned JSON format (models already `@Serializable`); spec in `docs/rule-format.md`; imported rules default to dry-run |
+| Rule sharing | Versioned JSON wire format defined by dedicated DTOs in `core/rulesharing` (TD-9), decoupled from domain models and pinned by a golden-file test; spec in `docs/rule-format.md`; imported rules default to dry-run |
 | Rule storage | If rule shape keeps churning (OR-groups, nesting), consider JSON-column rule definition + thin queryable metadata instead of 5 normalized tables — reevaluate before Phase 2 |
 | Webhook delivery | WorkManager retries; Room table for failed event queue; per-webhook last-status indicator |
 | On-device AI | `AiExtractor` abstraction; Gemini Nano impl in separate build flavor (F-Droid-safe main flavor) |

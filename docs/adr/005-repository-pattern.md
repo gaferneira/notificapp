@@ -15,7 +15,7 @@ Implement the Repository pattern with strict separation of concerns:
 4. **Hilt Binding**: Interfaces bound to implementations in `core/di/RepositoryModule` using `@Binds` annotation
 5. **Result Wrapping**: Repository methods return `Result<T>` for explicit error handling
 
-This pattern is applied across all data domains: notifications (`NotificationRepository`), rules (`RuleRepository`), monitored apps (`SelectedAppRepository`), and user preferences (`UserPreferencesRepository`). A `RuleExecutionRepository` for rule executions and extracted field values is planned (see ADR 009 and `docs/roadmap_tech_debt.md` TD-1); until it lands, `RuleEngine` and `NotificationDetailViewModel` access DAOs directly — a known violation of this ADR, not a pattern to copy.
+This pattern is applied across all data domains: notifications (`NotificationRepository`), rules (`RuleRepository`), monitored apps (`SelectedAppRepository`), and user preferences (`UserPreferencesRepository`).
 
 ## Consequences
 

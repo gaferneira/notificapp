@@ -1,139 +1,331 @@
 # Technical Debt Roadmap
 
-This document details every technical debt item identified in the July 2026 architecture review, with the concrete solution for each.
+This document details every technical debt item identified in the July 6, 2026 architecture review (post-Phase-2), with the concrete solution for each.
+
+> The previous review's items (TD-1..TD-8, July 5, 2026) are all resolved or converted to policy/ADRs — see git history of this file, `docs/adr/011-rule-definition-storage.md`, and the Detekt/test infrastructure now in place. Numbering continues from there so ADR and commit references stay unambiguous.
 
 ## Summary
 
 | ID    | Item | Priority | Effort | Status |
 |-------|------|----------|--------|--------|
-| TD-1  | Rule storage schema: normalized tables vs JSON column | Decision | — | **Decided** — keep normalized schema; JSON is Phase 2 wire format only (ADR 011 `Accepted`) |
-| TD-2  | Room destructive migration silently wipes data on schema bump | P0 | Small | **Done** — `MIGRATION_1_2` registered, fallback kept only as a safety net until first public release |
-| TD-3  | `NotificationDeduplicator.recentHashes` unsynchronized map | P1 | Small | **Done** — check-then-act wrapped in a `Mutex` |
-| TD-4  | `FieldExtractor` JSON parser has no recursion depth guard | P1 | Small | **Done** — depth-guarded, throws a caught exception past 32 levels |
-| TD-5  | Zero ViewModel test coverage | P2 | Medium | **Done** — `RuleEditorViewModel` + `AddFieldViewModel` backfilled (80 tests) |
-| TD-6  | Screen composables growing past 700 lines | P3 | Small (policy) | Open — soft budget for new screens only |
-| TD-7  | No static analysis beyond formatting (Detekt absent) | P3 | Small | **Done** — Detekt wired with baseline, gated via `check` |
-| TD-8  | OpenSpec coverage: only 2 of 9 shipped features have specs | Decision | — | Open — decide before Phase 2 opens the repo to contributors |
+| TD-9  | Rule-sharing wire format is coupled to domain models (and to DB columns) | P0 | Medium | Open |
+| TD-10 | `fallbackToDestructiveMigration()` active in release builds | P0 | Small | Open |
+| TD-11 | Backtesting loads the entire notification table into memory | P1 | Small | Open |
+| TD-12 | No CI pipeline (blocking for community contributions) | P1 | Small | Open |
+| TD-13 | `ActionBottomSheet` / `AddFieldBottomSheet` are per-type config monoliths | P2 | Medium | Open |
+| TD-14 | `NotificationNormalizer` has zero test coverage | P2 | Medium | Open |
+| TD-15 | Release hygiene: static `versionCode`, no Fastlane changelogs | P3 | Small | Open |
+| TD-16 | Detekt baseline holds 299 grandfathered findings | P3 | Policy | Open |
+
+Recommended order: **TD-9 and TD-10 first** — both are cheap now and catastrophic to retrofit once real users and shared rule files exist. Then TD-12 (before the repo invites contributions), TD-11, TD-13, TD-14, and the P3 items opportunistically.
 
 ---
 
-## TD-1: Rule storage schema — normalized tables vs JSON column (decision, not a refactor)
+## TD-9: Rule-sharing wire format is coupled to domain models (P0)
 
 ### Context
 
-The rule definition is normalized across 5 tables (`RuleEntity`, `RuleConditionEntity`, `RuleFieldEntity`, `RuleActionEntity`, `RuleTargetAppEntity`). While the *concept* of a rule is still maturing (OR-groups? nested conditions? AI-suggested rules?), every shape change costs a multi-table Room migration plus mapper churn. Meanwhile the app only ever *queries* rule metadata (`is_active`, `is_global`, target packages) — never condition internals. And `Rule` is already `@Serializable`.
+`RuleJsonCodec.encode()` (`core/rulesharing/RuleJsonCodec.kt:23`) serializes the domain `Rule` directly: `json.encodeToString(RuleExport(rule = rule))`. The `@Serializable` annotations live on the domain models themselves (`Rule`, `RuleCondition`, `RuleField`, `RuleAction`, `AppInfo`). The enums and the `ExtractionMethod` sealed hierarchy are already pinned with `@SerialName` (good), but the **data-class property names are not** — `isDryRun`, `targetApps`, `captureGroup`, etc. are the wire format by accident of being Kotlin property names.
 
-### Options
+This creates three concrete problems:
 
-| | Normalized (current) | JSON definition column |
-|---|---|---|
-| Query condition/field internals | Possible | Not without JSON1 functions |
-| Rule shape change | Multi-table migration | Usually zero migration |
-| Import/export (Phase 2) | Needs assembly/disassembly | Trivially the same format |
-| Mapper surface | 5 entity mappers | 1 serializer |
+1. **Domain refactors break shared rules.** Rename any property on `Rule` or its children and every exported rule file, every community gallery rule, and every user's clipboard paste stops importing. The `schemaVersion` envelope doesn't protect against this — the payload shape is implicit.
+2. **The coupling is double.** The same serializers also feed Room columns: `RuleFieldMapper` stores `ExtractionMethod` as serialized JSON in `rule_fields.methodConfig`, and `RuleActionMapper` serializes `config`. So today one Kotlin class shape simultaneously defines (a) the domain model, (b) the public wire format, and (c) persisted DB column content. Changing any one silently breaks the others.
+3. **No forward compatibility within schemaVersion 1.** kotlinx decodes enums strictly by `@SerialName`. When Phase 4 adds `SEND_WEBHOOK` to `ActionType`, a rule exported from the new version **fails to import entirely** on older versions — a hard `SerializationException`, not a graceful "this rule uses an action your version doesn't support."
 
-### Recommendation
-
-**Decided 2026-07-06 (Phase 1 complete): keep the normalized schema.** JSON is Phase 2's import/export *wire format* only, serialized from/to the existing `@Serializable` domain models — not a storage migration. No evidence emerged during Phases 0–1 that rule shape is actually churning, and no query pattern needs JSON-internal filtering, so migrating storage now would be speculative. Revisit only if rule shape genuinely starts churning later (OR-groups, AI-generated rules) or dual maintenance of wire format + mappers becomes a real burden.
-
-Tracked formally in `docs/adr/011-rule-definition-storage.md` (status: `Accepted`).
-
----
-
-## TD-2: Room relies on destructive migration — every schema bump silently wipes user data (P0)
-
-### Context
-
-`AppDatabase.kt` declares `version = 2` with `exportSchema = true`, and both `app/schemas/.../1.json` and `2.json` exist — so the schema history is captured. But `DatabaseModule.kt` builds the database with `.fallbackToDestructiveMigration()` (commented "App not yet published - data loss acceptable") and registers no `Migration` objects. That is a deliberate and reasonable pre-release choice, but its failure mode is the worst kind for this product: any schema version bump **silently deletes every captured notification, rule, and extraction** on upgrade. No crash, no warning — the user just opens the app to an empty database. For an app whose pitch is "your notifications become a dataset you own," a silent wipe on update is a trust-destroying event.
-
-The risk compounds because every future roadmap phase adds entities (Phase 3 data lifecycle settings, Phase 4 `Webhook` + failed-delivery-queue tables), so the schema version will keep climbing — and F-Droid users update in place.
+Once the community gallery (Phase 6) and starter templates exist, this format is frozen forever. The window to fix it cheaply is *now*, before any rule file exists outside the repo.
 
 ### Solution
 
-1. Keep `fallbackToDestructiveMigration()` only while genuinely pre-release; it must be removed in the same PR that ships the first public (F-Droid) build. Make that a release-checklist item now so it can't be forgotten.
-2. From the next schema bump onward, write explicit migrations: diff the exported schema JSONs (e.g., `2.json` vs `3.json`), write `object MIGRATION_2_3 : Migration(2, 3) { override fun migrate(db: SupportSQLiteDatabase) { ... } }`, and register via `.addMigrations(...)` in `DatabaseModule`.
-3. Add migration tests using `androidx.room:room-testing`'s `MigrationTestHelper`, asserting each migration runs cleanly against the exported previous-version schema.
-4. Going forward, treat "ships a Migration + a migration test" as a merge gate for any PR that changes a `@Entity`, same weight as Spotless/unit tests today.
-5. The v1 → v2 gap needs no retroactive migration if no external users ever ran v1 — destructive fallback already handled dev installs — but confirm that assumption explicitly before closing this item.
+**1. Introduce a DTO layer in `core/rulesharing/dto/` that pins today's JSON shape exactly** (so `schemaVersion` stays 1 and existing exports keep working):
+
+```kotlin
+@Serializable
+data class RuleExportDto(
+    @SerialName("schemaVersion") val schemaVersion: Int = RULE_EXPORT_SCHEMA_VERSION,
+    @SerialName("rule") val rule: RuleDto,
+)
+
+@Serializable
+data class RuleDto(
+    @SerialName("id") val id: String,
+    @SerialName("name") val name: String,
+    @SerialName("description") val description: String? = null,
+    @SerialName("category") val category: String? = null,
+    @SerialName("isActive") val isActive: Boolean = true,
+    @SerialName("isDryRun") val isDryRun: Boolean = false,
+    @SerialName("targetApps") val targetApps: List<AppInfoDto>? = null,
+    @SerialName("conditions") val conditions: List<ConditionDto> = emptyList(),
+    @SerialName("fields") val fields: List<FieldDto> = emptyList(),
+    @SerialName("actions") val actions: List<ActionDto> = emptyList(),
+    @SerialName("createdAt") val createdAt: Long = 0L,
+    @SerialName("updatedAt") val updatedAt: Long = 0L,
+)
+
+@Serializable
+data class ActionDto(
+    @SerialName("id") val id: String,
+    // Deliberately a String, not ActionType: unknown values must not fail the whole import.
+    @SerialName("type") val type: String,
+    @SerialName("isEnabled") val isEnabled: Boolean = true,
+    @SerialName("config") val config: Map<String, String> = emptyMap(),
+)
+```
+
+Every field carries an explicit `@SerialName`, even when it matches the property name — that is the point: renaming the Kotlin property no longer changes the JSON. Enums cross the wire as `String` (conditions/operators/field types too); the `ExtractionMethod` DTO mirrors the sealed hierarchy with the same `@SerialName` discriminators it has today.
+
+**2. Add a `RuleWireMapper` (pure Kotlin, same package)** with `Rule.toDto(): RuleExportDto` and `RuleExportDto.toDomain(): RuleImportResult`. The domain-ward direction maps enum strings explicitly and handles unknowns *leniently*:
+
+```kotlin
+data class RuleImportResult(
+    val rule: Rule,
+    /** Wire values this app version doesn't understand, dropped from the imported rule. */
+    val skippedActions: List<String>,
+    val skippedFields: List<String>,
+)
+```
+
+An unknown `ActionDto.type` (e.g. `"send_webhook"` on a pre-Phase-4 install) drops that action and reports it; the rest of the rule imports. `RulesViewModel`'s import preview dialog surfaces the skips ("1 action requires a newer version of Notificapp"). An unknown *condition operator* should still fail the import — a rule that can't evaluate its conditions is meaningless — but with a clear message.
+
+**3. Lock the format with a golden-file test.** This is the single most valuable deliverable of the item: check in `app/src/test/resources/rule-export-v1.json` containing a maximally-populated rule (every action type, every extraction method, every operator), and assert:
+
+- `RuleJsonCodec.encode(fixtureRule)` matches the golden file byte-for-byte (modulo the pretty-print settings), and
+- decoding the golden file yields `fixtureRule` back.
+
+From then on, *any* accidental wire-format change — a rename, a default change, a new required field — is a failing unit test instead of a broken community.
+
+**4. Afterwards, remove `@Serializable` from the rule domain models where possible.** `Rule`, `RuleCondition`, `AppInfo` become plain data classes. Note the caveat from problem 2: `RuleField.ExtractionMethod` and `RuleAction.config` serialization is still used by the Room mappers for column content — either keep those annotations documented as *internal storage format* (device-local, migratable via Room migrations, acceptable), or give the mappers their own column DTOs in a follow-up. Do not block this item on the follow-up.
+
+**5. Update `docs/rule-format.md`** to state that `core/rulesharing/dto/` is the canonical definition of the format and that changes there require a `schemaVersion` decision.
+
+### Acceptance
+
+- Golden-file round-trip test passes and is the only place the wire shape is asserted.
+- Renaming a domain property compiles without touching any JSON output (proven by the golden test).
+- Importing a rule containing an unknown action type succeeds with a visible "skipped" notice.
 
 ---
 
-## TD-3: `NotificationDeduplicator.recentHashes` unsynchronized concurrent map (P1)
+## TD-10: `fallbackToDestructiveMigration()` active in release builds (P0)
 
 ### Context
 
-`recentHashes` is a plain `mutableMapOf<String, Long>()` read and mutated inside the suspend function `isDuplicate`, which runs on the IO dispatcher and can be invoked concurrently if notifications arrive in a burst. A plain `HashMap` mutated concurrently can throw `ConcurrentModificationException` or, in worse cases, corrupt its internal bucket structure. This is exactly the kind of bug that stays invisible in manual testing (single notification at a time) and shows up under real load — precisely the hero use case #2 scenario (a bank/payment app firing several transaction notifications close together).
+`DatabaseModule.kt:43` still calls `.fallbackToDestructiveMigration()` alongside the real migration chain (`MIGRATION_1_2`, `MIGRATION_2_3`, exported schemas 1–3, and `AppDatabaseMigrationTest` covering both — all good). The old TD-2 kept the fallback as a pre-release safety net, but its failure mode inverted the moment real migrations started shipping: if a future schema bump forgets its `Migration`, Room won't crash — it will **silently wipe every rule, notification, and extraction** on user devices. For an app whose pitch is "invest hours building rules on a dataset you own," a silent wipe on update is the single worst bug possible, and it's undetectable in testing because dev installs are always fresh.
 
 ### Solution
 
-Wrap the check-and-insert with a `kotlinx.coroutines.sync.Mutex` (a `ConcurrentHashMap` alone isn't enough — the operation is check-then-act, which needs atomicity across both steps, not just per-call thread safety). Add a test that drives `isDuplicate` from multiple concurrent coroutines to lock in the fix.
+1. Gate the fallback to debug builds in `DatabaseModule`:
+
+```kotlin
+Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
+    .addMigrations(*APP_DATABASE_MIGRATIONS)
+    .apply {
+        // Dev installs may skip migrations; release builds must crash loudly on a
+        // missing migration rather than silently wiping user data.
+        if (BuildConfig.DEBUG) fallbackToDestructiveMigration()
+    }
+    .build()
+```
+
+2. Keep the existing per-bump discipline (already established): every `@Entity` change ships its `Migration` + a `MigrationTestHelper` test in the same PR. `AppDatabaseMigrationTest` already models this — extend it for each new version.
+3. Add a release-checklist line (F-Droid prep, TD-15): verify `addMigrations` covers a contiguous chain from every previously-shipped schema version.
+
+### Acceptance
+
+- A release build with a missing migration crashes with Room's `IllegalStateException` instead of wiping data (verifiable by temporarily bumping the version in a release build without a migration).
 
 ---
 
-## TD-4: `FieldExtractor`'s hand-rolled JSON parser has no recursion depth guard (P1)
+## TD-11: Backtesting loads the entire notification table into memory (P1)
 
 ### Context
 
-`parseJsonObject`/`parseJsonArray`/`parseJsonValue` recurse into nested structures with no depth limit. A deeply nested or malformed JSON-like notification body triggers unbounded recursion and a `StackOverflowError` — which is an `Error`, not an `Exception`, so it escapes the `catch (Exception)` wrapping extraction and can crash notification processing outright.
-
-This becomes a real (not theoretical) attack surface once Phase 2 ships rule import/export and the community rules gallery: untrusted rule definitions matched against arbitrary notification bodies from apps you don't control is exactly the input class that trips this.
+`RuleEditorViewModel.testAgainstHistory()` (`RuleEditorViewModel.kt:412`) calls `NotificationRepository.getAllNotifications()` — backed by `NotificationDao.getAllSync()`, an unbounded `SELECT * FROM notifications` — then filters by target package **in memory**. There is no retention sweep yet (Phase 3), so this list grows without bound. After a few months of captured notifications on a mid-range device, tapping "Test against history" is a multi-second freeze at best, an OOM at worst. The package filter belonging in SQL is the textbook part; the missing `LIMIT` is the dangerous part.
 
 ### Solution
 
-Thread a `maxDepth` parameter (e.g., 32) through the three parse functions; throw a caught, expected exception when exceeded so the field simply fails to extract instead of crashing the process. Add a unit test with a deliberately deep/malicious payload. Fix before Phase 2 ships, not after.
+1. Add bounded, filtered queries to `NotificationDao` (the table and column names already exist):
+
+```kotlin
+@Query("SELECT * FROM notifications ORDER BY timestamp DESC LIMIT :limit")
+suspend fun getRecent(limit: Int): List<NotificationEntity>
+
+@Query(
+    "SELECT * FROM notifications WHERE package_name IN (:packageNames) " +
+    "ORDER BY timestamp DESC LIMIT :limit",
+)
+suspend fun getRecentByPackageNames(packageNames: List<String>, limit: Int): List<NotificationEntity>
+```
+
+2. Add `NotificationRepository.getNotificationsForBacktest(targetPackages: List<String>?, limit: Int): Result<List<Notification>>` that picks the right query (`null`/empty → `getRecent`). Keep the existing `Result` + mapper conventions.
+3. In `testAgainstHistory()`, replace the `getAllNotifications()` + in-memory `filter` with the new call. A constant like `BACKTEST_NOTIFICATION_LIMIT = 500` is plenty for a preview; the newest-first ordering means the preview reflects what the user currently receives.
+4. UI honesty (never fail silently, even in previews): `backtestTestedCount` already exists in the contract — change the results-sheet copy to "Tested against the most recent N notifications" so a capped run doesn't masquerade as an exhaustive one.
+5. Delete `getAllNotifications()` / `getAllSync()` if this was the last caller — an unbounded full-table read shouldn't survive as an attractive nuisance. (Check callers first; `rg getAllNotifications` currently shows only the backtest path.)
+
+### Acceptance
+
+- Backtest issues a single `LIMIT`-bounded query; no full-table list is ever materialized.
+- Results sheet states the tested window size.
 
 ---
 
-## TD-5: Zero ViewModel test coverage (P2)
+## TD-12: No CI pipeline (P1 — blocking for community contributions)
 
 ### Context
 
-`app/src/test` covers the extraction engine, `ProcessNotificationUseCase`, and the action executors (9 test files) — but no ViewModel, repository, or mapper has any test. Meanwhile several ViewModels already carry non-trivial state-machine logic: `RuleEditorViewModel` (501 lines), `AddFieldViewModel` (360 lines), `AppSelectionViewModel` (323 lines). Every remaining roadmap phase adds more ViewModels (Data Browser in Phase 3, Webhook management in Phase 4, AI extraction toggle in Phase 5) on top of an already-untested presentation layer.
+Phase 2 shipped rule import/export; the roadmap's growth engine is community contributions (rules and code). The repo has quality gates locally (Spotless, Detekt, 211 unit tests, git hooks) but nothing enforces them on PRs — meaning the maintainer is the CI, and the first community PR that breaks the build merges silently. The roadmap lists CI as an unchecked Repo Infrastructure item; it stopped being optional the moment sharing landed.
 
 ### Solution
 
-Backfill tests for the two highest-risk ViewModels first — `RuleEditorViewModel` (most complex, multi-step form state) and `AddFieldViewModel` — reusing the JUnit 5 / Kotest / MockK / Turbine stack already proven on the extraction engine. From Phase 3 onward, make "new ViewModel ships with tests" a hard rule, not a best-effort one.
+Add `.github/workflows/ci.yml`:
 
-**Status: Done.** Writing the tests surfaced three pre-existing behavior bugs in `RuleEditorViewModel`, left unfixed as out of scope for a test-backfill task:
+```yaml
+name: CI
 
-1. `autoGenerateExtraction` (~line 317) hardcodes every auto-generated field to `ExtractionMethod.LineExtraction(10)` regardless of where the matched number actually sits in the source text — looks like leftover placeholder logic; should likely use the match's character range (`FixedPosition`) instead.
-2. `loadSampleNotification` (~line 148) unconditionally resets `triggers` to `emptyList()` for a new rule even if the user had already configured conditions before picking a sample notification, silently discarding that input.
-3. `deleteRule` (~line 463) returns early when `rule.id` is null without dismissing `showDeleteConfirmation`, so the confirmation dialog has no way to close on that path (only reachable for an unsaved rule).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17   # matches app/build.gradle.kts sourceCompatibility
+      - uses: gradle/actions/setup-gradle@v4   # Gradle + dependency caching
+      - run: ./gradlew spotlessCheck detekt test assembleDebug
+```
+
+Notes:
+
+- One job, one Gradle invocation — task order puts the fast failures (formatting, static analysis) before tests and assembly.
+- `gradle/actions/setup-gradle` handles wrapper validation and build caching; no manual cache keys.
+- Instrumented tests (`AppDatabaseMigrationTest`) need an emulator — defer to a separate, manually-triggered or nightly workflow (`reactivecircus/android-emulator-runner`) rather than slowing every PR.
+- When the Phase 6 gallery lands, extend with a job that decodes every `rules/*.json` through `RuleJsonCodec` (a plain JVM test iterating the directory) so a malformed community rule cannot merge. This depends on TD-9's golden format.
+
+### Acceptance
+
+- A PR that fails formatting, Detekt, or any unit test shows a red check and cannot be merged blind.
 
 ---
 
-## TD-6: Screen composables growing past 700 lines (P3, policy not refactor)
+## TD-13: `ActionBottomSheet` / `AddFieldBottomSheet` are per-type config monoliths (P2)
 
 ### Context
 
-9 of the 15 largest files in the codebase are Screen or BottomSheet composables: `AddFieldBottomSheet` (857 lines), `RulesScreen` (753), `InboxScreen` (729), `OnboardingScreen` (722), `AppSelectionScreen` (699), `NotificationDetailScreen` (652), `RuleEditorScreen` (570), `ActionBottomSheet` (546), `SettingsScreen` (540). None of these are broken, but Phase 3 (Data Browser) and Phase 4 (Webhook management form) both add another large screen on the same pattern, and large composables are harder to preview in isolation and recompose less predictably.
+`ActionBottomSheet.kt` is 806 lines: the sheet scaffolding plus `SnoozeDurationSelector`, `AlarmOptionsSelector`, `AlarmSoundPickerButton`, `FlashOptionsSelector`, `FlashCountSlider`, `FlashDurationSlider` — every action's configuration UI inlined. `AddFieldBottomSheet.kt` is 857 lines with the same pattern across 10 extraction methods. Phase 4's webhook action brings the largest config UI yet (saved-webhook picker + inline creation + payload field checkboxes); dropped into this file it lands well past 1,200 lines. This also degrades the documented "Adding a New Action Type" recipe: step 3 currently means "grow the monolith."
+
+The old TD-6 set a 700-line soft budget for *new* screens; these two files are where the budget meets reality.
 
 ### Solution
 
-No refactor of existing screens is warranted purely for size — don't destabilize working code for cosmetics. Instead, adopt a soft ~400-line budget for **new** screens starting with Phase 3's Data Browser: extract stateless sub-composables per logical section (header, list item, filter row) as the screen is built, not after. Revisit existing large files opportunistically when next touched for a feature change.
+1. Create `features/ruleeditor/ui/components/actionconfig/` with one file per action's configuration composable, moved verbatim (no behavior change — this is a mechanical extraction):
+   - `SnoozeConfig.kt` (duration selector)
+   - `AlarmConfig.kt` (options selector + sound picker button)
+   - `FlashAlertConfig.kt` (options selector + both sliders)
+   Each keeps its own `@Preview`s, which move with it.
+2. `ActionBottomSheet.kt` keeps: sheet scaffolding, the `ActionTypeCard` grid, and a single `when (selectedType)` that delegates to the config composables. Target: under 350 lines.
+3. Establish the signature convention so future actions (webhooks!) slot in without touching anything else:
+
+```kotlin
+@Composable
+fun SnoozeConfig(
+    config: Map<String, String>,
+    onConfigChange: (Map<String, String>) -> Unit,
+    modifier: Modifier = Modifier,
+)
+```
+
+4. Apply the same extraction to `AddFieldBottomSheet` → `ui/components/fieldconfig/`, one file per `ExtractionMethod` group. This can be a separate PR; the action sheet is the urgent one because Phase 4 grows it next.
+5. Update the "Adding a New Action Type" section in `CLAUDE.md`: step 3 becomes "add a config composable in `actionconfig/` and one `when` branch."
+
+### Acceptance
+
+- Adding a new action type touches: domain enum, executor + DI binding, one new `actionconfig/` file, one `when` branch. No file grows past the 700-line budget.
 
 ---
 
-## TD-7: No static analysis beyond formatting (P3)
+## TD-14: `NotificationNormalizer` has zero test coverage (P2)
 
 ### Context
 
-Spotless (ktlint) enforces formatting but nothing enforces complexity or size budgets (long methods, high cyclomatic complexity, unused code) — exactly the class of debt surfacing in TD-5 and TD-6. No Detekt config exists anywhere in the repo.
+`NotificationNormalizer` (`features/notification/NotificationNormalizer.kt`) is the funnel every captured notification passes through, and it faces the wildest input in the app — every third-party app's title/text/bigText/textLines/subText conventions. It has zero tests, while the pure engine *behind* it (matcher, extractor, engine — 211 tests) is thoroughly covered: the best-tested pipeline in the app sits downstream of its least-tested component. It's untested because it consumes `StatusBarNotification` + `PackageManager` directly, which don't exist on the JVM. There are also behaviors worth locking in (or reconsidering) under test, e.g. the `extras.toString()` last-resort in `extractContent()` — which leaks a `Bundle` debug string into user-visible content and extraction input.
 
 ### Solution
 
-Add Detekt with a generated baseline (`detektBaseline`) to grandfather existing debt without a blocking backlog, plus a modest custom ruleset (`LongMethod`, `LongParameterList`, `ComplexMethod` thresholds) wired into the same pre-commit/CI gate as Spotless. Cheap to add now; pays for itself by catching growth before it needs its own memory note.
+Split the Android boundary from the logic (same move ADR 009 made for the pipeline):
+
+1. Introduce a plain data holder capturing everything the normalizer reads:
+
+```kotlin
+data class RawNotificationData(
+    val packageName: String,
+    val notificationId: Int,
+    val postTime: Long,
+    val key: String?,
+    val title: String?,          // EXTRA_TITLE / EXTRA_TITLE_BIG, resolved
+    val text: String?,           // EXTRA_TEXT
+    val bigText: String?,        // EXTRA_BIG_TEXT
+    val textLines: List<String>, // EXTRA_TEXT_LINES
+    val subText: String?,        // EXTRA_SUB_TEXT
+    val tickerText: String?,
+)
+```
+
+2. A thin Android-side reader (`StatusBarNotification.toRawData()` extension next to the service, or a small `RawNotificationReader` class) does *only* the `extras.get*` calls and app-name resolution via `PackageManager`. No logic, no branching beyond null-safety — nothing worth unit-testing lives here.
+3. `NotificationNormalizer.normalize(raw: RawNotificationData, appName: String): Notification` becomes pure Kotlin: the source-priority cascade (bigText → text → textLines → subText), raw-content assembly, ID generation. Move it out of `features/notification` into `core/notification/` if desired — it no longer imports Android.
+4. Add JVM tests (JUnit5/Kotest, consistent with the suite) covering: title fallback order, each content source in priority order, multi-line joining, ticker dedup in `buildRawContent`, ID format stability (`packageName_id_postTime` — dedup and DB identity depend on it), and the empty-extras edge. While writing them, decide deliberately whether the `extras.toString()` fallback should survive; recommendation: drop it and return null — `shouldSkipNotification` already filters contentless notifications, and a `Bundle[...]` dump as extraction input is noise, not signal.
+
+### Acceptance
+
+- Normalization logic runs and is tested on the JVM with zero Android imports; the Android-facing reader is ≤ ~40 lines of glue.
 
 ---
 
-## TD-8: OpenSpec coverage — only 2 of 9 shipped features have specs (decision)
+## TD-15: Release hygiene — static `versionCode`, no Fastlane changelogs (P3)
 
 ### Context
 
-`openspec/specs/` currently has `action-execution/spec.md` and `snooze-scheduling/spec.md` — nothing for Inbox, Rules, Rule Editor, Settings, App Selection, Onboarding, or Notification Detail. `openspec/changes/` has no stale in-progress changes (clean), so this isn't drift from abandoned work — it's simply that SDD was adopted mid-project and specs were never backfilled for what came before.
+`app/build.gradle.kts` has `versionCode = 1`, `versionName = "1.0"`, unchanged since project start. The roadmap's Distribution section already plans Fastlane metadata for F-Droid, but version history can't be retrofitted — F-Droid builds are keyed to tagged versions and changelog files are keyed to `versionCode`.
 
-Phase 2's Community Rules Gallery explicitly invites external contributors, and `CONTRIBUTING.md` presumably points at `openspec/specs/` as the contract contributors build against. A contributor touching the rule editor or extraction pipeline today has no spec to conform to for the two most complex, most contribution-likely areas of the app.
+### Solution
 
-### Recommendation
+1. Adopt the scheme now: bump `versionCode` monotonically (+1) and `versionName` (semver-ish `0.x` until first stable) on every tagged release; tag format `v<versionName>`.
+2. Create the Fastlane structure F-Droid reads:
 
-Decide explicitly, before Phase 2 opens the repo to contributions: either (a) backfill specs for the rule editor and extraction pipeline specifically (the areas most likely to receive external PRs), or (b) accept specs as forward-only from here and rely on `ARCHITECTURE.md` + code as the contract for pre-existing features. Don't let this stay an implicit gap — pick one and note the decision here.
+```
+fastlane/metadata/android/en-US/
+├── short_description.txt
+├── full_description.txt
+├── changelogs/
+│   └── 2.txt        # one file per versionCode, plain text
+└── images/          # screenshots for the listing (roadmap item)
+```
+
+3. Add the release checklist (`docs/RELEASING.md` or a section in `CONTRIBUTING.md`): bump versions, write `changelogs/<versionCode>.txt`, verify migration chain (TD-10), tag. Five lines that prevent every "forgot the changelog" release.
+
+---
+
+## TD-16: Detekt baseline holds 299 grandfathered findings (P3 — policy)
+
+### Context
+
+Detekt is wired and gates new code (old TD-7), but `config/detekt/baseline.xml` grandfathers 299 findings. A baseline that only ever grows stale becomes permanent debt with a paper trail.
+
+### Solution
+
+Boy-scout policy, not a big-bang cleanup:
+
+1. When a PR meaningfully touches a file, fix that file's baseline entries in the same PR and regenerate the baseline (`./gradlew detektBaseline`) — the diff must show the baseline *shrinking*.
+2. Never regenerate to *add* entries except by the existing explicit rule (intentionally accepted debt, called out in the PR description).
+3. TD-13's extractions are the natural first big bite — splitting the two bottom sheets should retire their `LongMethod`/`LargeClass` entries for free.
+
+No acceptance gate; track the count direction (299 → down) in review.

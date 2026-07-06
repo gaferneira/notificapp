@@ -34,6 +34,6 @@ Triggers to revisit: build times become painful, a second contributor team forms
 - Single module keeps the OpenSpec/agent workflow simple (one source set, one test task)
 
 **Negative:**
-- Package-level boundaries are convention, not compiler-enforced — violations are possible and have occurred (see `docs/roadmap_tech_debt.md` TD-1/TD-2: `core/extraction` reaching into `core/data`)
+- Package-level boundaries are convention, not compiler-enforced — violations are possible and have occurred
 - No incremental build benefits until extraction happens
 - All unit tests live in one `app/src/test` source set

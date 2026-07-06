@@ -8,8 +8,6 @@ A rule's definition is normalized across five Room tables (`rules`, `rule_condit
 
 Meanwhile, observed query patterns only ever filter on rule *metadata* (`is_active`, `is_global`, target packages) — never on condition or field internals. The domain `Rule` model is already `@Serializable`, and Phase 2 needs a versioned JSON representation as the rule-sharing format regardless of how storage is decided.
 
-This decision was deferred from Phase 0/1 specifically to be made "right after Phase 1, before Phase 2 starts" (see `docs/roadmap_tech_debt.md` TD-1). Phase 1 completed 2026-07-06; this is that decision.
-
 ## Decision
 Keep the normalized schema. Do not migrate to a JSON-column storage model at this time.
 

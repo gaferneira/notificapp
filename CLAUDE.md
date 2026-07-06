@@ -90,8 +90,6 @@ core/notification → core/extraction (runs the rule engine)
 - `core/extraction` should be pure Kotlin depending only on domain models
 - No circular dependencies between packages
 
-Phase 0 hardening (rule-execution persistence, pure `RuleEngine`, pluggable actions) has landed — see `docs/adr/009-notification-processing-pipeline.md`, `docs/adr/010-action-executor-multibindings.md`, and `docs/roadmap_tech_debt.md` for details.
-
 ### Future Modularization Path
 
 When the project grows, packages can be extracted into modules:

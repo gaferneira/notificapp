@@ -75,7 +75,6 @@ Contributions are welcome — **including from non-programmers**:
 | [Roadmap](docs/roadmap.md) | Product positioning, phases, what's in/out of scope |
 | [Architecture](docs/ARCHITECTURE.md) | MVI + feature-first structure, rule pipeline, coding standards |
 | [ADRs](docs/adr/) | 12 architecture decision records |
-| [Tech debt](docs/roadmap_tech_debt.md) | Known debt with detailed solutions |
 | [Privacy](PRIVACY.md) | What the app can see, stores, and (never) sends |
 
 ## Tech stack

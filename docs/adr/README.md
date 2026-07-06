@@ -22,7 +22,6 @@ This folder contains the Architecture Decision Records (ADRs) for Notificapp. An
 ## Statuses
 
 - **Accepted** — the decision stands and the code follows it (or the ADR notes known violations explicitly)
-- **Accepted (implementation pending)** — decided, but the refactor hasn't landed yet; see [`docs/roadmap_tech_debt.md`](../roadmap_tech_debt.md) for the implementation plan
 - **Proposed** — under consideration; the ADR records the options and the criteria/trigger for deciding
 - **Superseded by ADR-XXX** — replaced by a later decision (keep the file; history matters)
 

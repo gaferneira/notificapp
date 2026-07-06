@@ -6,7 +6,7 @@
 
 - [ ] Bug fix
 - [ ] New feature
-- [ ] Refactor / tech debt (reference the TD item from `docs/roadmap_tech_debt.md` if applicable)
+- [ ] Refactor / tech debt
 - [ ] Documentation
 - [ ] Extraction rule contribution
 

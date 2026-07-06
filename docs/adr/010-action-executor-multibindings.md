@@ -1,7 +1,7 @@
 # ADR 010 – Action Execution via ActionExecutor Multibindings
 
 ## Status
-Accepted (implemented 2026-07-05 — see `docs/roadmap_tech_debt.md` TD-4/TD-5)
+Accepted
 
 ## Context
 Rule actions are executed in a `when (action.type)` block inside `NotificappListenerService` with a silent `else` for unimplemented types. Every new action (webhook, alarm, AI) requires editing the OS-bound service. Executions are recorded as "triggered" before anything runs, so history can claim an action happened when it failed. Dismiss/snooze additionally require the live `NotificationListenerService` instance, which Hilt cannot inject elsewhere.
