@@ -1,0 +1,12 @@
+Notificapp lets you take control of your Android notifications. Create rules that match notifications and trigger actions — dismiss, snooze, flash alerts, alarms, webhook delivery — and, unlike other notification automation apps, extract the data inside notifications into a structured, reusable dataset.
+
+All rule matching, data extraction, and storage happen entirely on-device. No cloud sync, no analytics, no network access without your explicit configuration.
+
+Common uses:
+
+* Cut through notification noise — auto-dismiss or snooze what doesn't matter, get alerted for what does
+* Turn bank and payment notifications into a spending dataset
+* Turn carrier notifications into delivery status and tracking numbers
+* Bridge extracted data to home automation systems like Home Assistant via webhooks
+
+Notificapp is free and open source software (GPL-3.0). Rules can be exported, shared, and imported as plain JSON — the community rule library grows with every contribution.
