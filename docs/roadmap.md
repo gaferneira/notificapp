@@ -52,6 +52,7 @@ Extraction is one action among many in the rules engine — but it is the **diff
 - **Flash Alert Action** — `FLASH_ALERT` blinks the camera torch a configurable number of times, as a pluggable `ActionExecutor`; skipped without a flash or in battery saver, with photosensitivity-safe clamps on count/duration — **Phase 1 (Complete Action System) is now fully done**
 - **Backtest Against History** — Rule Editor can test an unsaved draft rule against previously captured notifications and preview matches + extracted fields before saving
 - **Dry-Run Mode** — Per-rule toggle: matches are logged as `RuleExecution`s but no actions execute; surfaced via a `DryRunBadge` in Rules List and Notification Detail — **Backtesting and Dry-Run (Phase 2) is now fully done**
+- **Rule Import/Export** — Versioned JSON format (`docs/rule-format.md`), export via the Android share sheet (`FileProvider`), import from file/clipboard with a validation + preview dialog; imported rules always get fresh IDs and start in dry-run mode
 
 ### In Progress
 
@@ -98,14 +99,13 @@ _None currently — see Phase 1 below for what's next._
 - [x] "Test against history" in Rule Editor: run the draft rule against captured notifications and preview matches + extracted fields before saving — `RuleEditorViewModel.testAgainstHistory()` runs the unsaved draft rule (via the existing pure `RuleEngine`) against `NotificationRepository.getAllNotifications()`, filtered to the rule's target apps; results shown in `BacktestResultsBottomSheet`. Purely a preview — nothing is persisted.
 - [x] Per-rule **dry-run mode**: log matches without executing actions — essential safety once dismiss exists (a bad condition silently eating notifications is the worst possible first impression). `Rule.isDryRun` (Room migration 2->3, `RuleEntity.is_dry_run`) gates `ProcessNotificationUseCase.evaluateAndPersist`: dry-run rules never reach `ActionDispatcher`, but the match is still recorded via `RuleExecution.wasDryRun` (also migrated in, `RuleExecutionEntity.was_dry_run`) so the flag is a snapshot at match time, not derived from the rule's current state. Toggle lives in the Rule Editor's metadata step.
 - [x] Surface dry-run results in Rules List / Notification Detail so users can promote a rule to live with confidence — shared `DryRunBadge` composable (`core/ui/components/`) shown next to the rule name in the Rules list, and next to the rule name + as an explanatory note on each dry-run `ExecutionCard` in Notification Detail.
-- [ ] Surface dry-run results in Rules List / Notification Detail so users can promote a rule to live with confidence
 
-#### Rule Import/Export
+#### Rule Import/Export — **Done**
 
-- [ ] Versioned JSON rule format (domain models are already `@Serializable`); document it in `docs/rule-format.md`
-- [ ] Export a rule via Android share sheet
-- [ ] Import a rule from file/clipboard with validation + preview before saving
-- [ ] Import safety: imported rules start in dry-run mode by default
+- [x] Versioned JSON rule format (domain models are already `@Serializable`); documented in `docs/rule-format.md` — `core/rulesharing/RuleJsonCodec.kt` wraps a `Rule` in a `{schemaVersion, rule}` envelope; decode rejects a newer-than-supported `schemaVersion` explicitly rather than guessing
+- [x] Export a rule via Android share sheet — writes the JSON to a cache file, shared through a `FileProvider` (`android:authorities="${applicationId}.fileprovider"`) so no broader file access is granted
+- [x] Import a rule from file/clipboard with validation + preview before saving — `RulesScreen`'s import menu (`ActivityResultContracts.OpenDocument` / clipboard read) feeds decoded text through `RuleJsonCodec.decode`, showing a preview dialog (name, condition/field/action counts, target apps) before the user confirms
+- [x] Import safety: imported rules start in dry-run mode by default — `RuleJsonCodec.withFreshIdentityForImport()` also regenerates the rule's and every nested condition/field/action's ID, so importing the same file twice never collides with itself
 
 #### Community Rules Gallery
 

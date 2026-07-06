@@ -1,6 +1,11 @@
 package dev.gaferneira.notificapp.features.rules.ui
 
+import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,18 +27,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DoNotDisturb
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.LocalShipping
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +55,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -58,11 +69,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -79,6 +92,7 @@ import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
 import dev.gaferneira.notificapp.features.rules.contract.RulesUiState
 import dev.gaferneira.notificapp.features.rules.viewmodel.RulesViewModel
+import java.io.File
 
 @Composable
 fun RulesScreen(
@@ -88,6 +102,7 @@ fun RulesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showFilterSheet by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     // Handle effects
     LaunchedEffect(Unit) {
@@ -98,11 +113,19 @@ fun RulesScreen(
                 }
 
                 is RulesEffect.ShowError -> {
-                    // Could show a snackbar here
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                }
+
+                is RulesEffect.ShowSuccess -> {
+                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
                 }
 
                 is RulesEffect.ShowDeleteConfirmation -> {
                     // Could show a confirmation dialog here
+                }
+
+                is RulesEffect.ShareRule -> {
+                    shareRuleJson(context, effect.ruleName, effect.json)
                 }
             }
         }
@@ -130,6 +153,26 @@ fun RulesScreen(
     )
 }
 
+/**
+ * Writes [json] to a cache file and launches the share sheet for it via a [FileProvider] URI,
+ * so the rule can be sent to any app that accepts a text/JSON attachment (Messages, email,
+ * a cloud-storage "save to" target, etc.) without granting broader file access.
+ */
+private fun shareRuleJson(context: Context, ruleName: String, json: String) {
+    val exportsDir = File(context.cacheDir, "rule-exports").apply { mkdirs() }
+    val fileName = ruleName.ifBlank { "rule" }.replace(Regex("[^A-Za-z0-9_-]"), "_")
+    val file = File(exportsDir, "$fileName.json")
+    file.writeText(json)
+
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "application/json"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share rule"))
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RulesScreenContent(
@@ -139,6 +182,20 @@ internal fun RulesScreenContent(
     onShowFilterSheet: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    var showImportMenu by remember { mutableStateOf(false) }
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        val text = uri?.let {
+            runCatching {
+                context.contentResolver.openInputStream(it)?.bufferedReader()?.use { reader -> reader.readText() }
+            }.getOrNull()
+        }
+        onEvent(RulesEvent.OnRuleTextReceived(text.orEmpty()))
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -169,6 +226,35 @@ internal fun RulesScreenContent(
                             Icon(
                                 imageVector = Icons.Default.Tune,
                                 contentDescription = "Filter and Sort",
+                            )
+                        }
+                    }
+
+                    Box {
+                        IconButton(onClick = { showImportMenu = true }) {
+                            Icon(
+                                imageVector = Icons.Default.FileDownload,
+                                contentDescription = "Import rule",
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showImportMenu,
+                            onDismissRequest = { showImportMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Import from file") },
+                                onClick = {
+                                    showImportMenu = false
+                                    filePickerLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Import from clipboard") },
+                                onClick = {
+                                    showImportMenu = false
+                                    val text = clipboardManager.getText()?.text.orEmpty()
+                                    onEvent(RulesEvent.OnRuleTextReceived(text))
+                                },
                             )
                         }
                     }
@@ -222,14 +308,88 @@ internal fun RulesScreenContent(
                         rules = rulesResource.data ?: emptyList(),
                         searchQuery = uiState.searchQuery,
                         filter = uiState.filter,
-                        onSearchChange = { onEvent(RulesEvent.OnSearchQueryChange(it)) },
-                        onRuleClick = { onEvent(RulesEvent.OnRuleClick(it)) },
-                        onRuleToggleActive = { onEvent(RulesEvent.OnRuleToggleActive(it)) },
+                        onEvent = onEvent,
                     )
                 }
             }
         }
     }
+
+    uiState.importPreview?.let { preview ->
+        ImportPreviewDialog(
+            rule = preview,
+            onConfirm = { onEvent(RulesEvent.OnImportConfirmed) },
+            onDismiss = { onEvent(RulesEvent.OnImportCancelled) },
+        )
+    }
+
+    uiState.importError?.let { error ->
+        AlertDialog(
+            onDismissRequest = { onEvent(RulesEvent.OnDismissImportError) },
+            title = { Text("Couldn't import rule") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = { onEvent(RulesEvent.OnDismissImportError) }) {
+                    Text("OK")
+                }
+            },
+        )
+    }
+}
+
+/**
+ * Confirmation dialog shown after a rule file/clipboard text decodes successfully, before it's
+ * saved. Always mentions dry-run since imported rules start there regardless of the source file.
+ */
+@Composable
+private fun ImportPreviewDialog(
+    rule: Rule,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val appsSummary = rule.targetApps?.takeIf { it.isNotEmpty() }
+        ?.joinToString(", ") { it.name }
+        ?.let { "Apps: $it" }
+        ?: "Apps: All apps"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Import \"${rule.name}\"?") },
+        text = {
+            Column {
+                rule.description?.let { description ->
+                    Text(description, style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                Text(
+                    text = "${rule.conditions.size} condition(s), ${rule.fields.size} field(s), ${rule.actions.size} action(s)",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = appsSummary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "This rule will start in dry-run mode: it will log matches but won't " +
+                        "dismiss, snooze, or alert until you review the results and turn dry-run off.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Import")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
 }
 
 @Composable
@@ -281,45 +441,21 @@ private fun ErrorState(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SuccessState(
     rules: List<Rule>,
     searchQuery: String,
     filter: RuleFilter,
-    onSearchChange: (String) -> Unit,
-    onRuleClick: (String) -> Unit,
-    onRuleToggleActive: (String) -> Unit,
+    onEvent: (RulesEvent) -> Unit,
 ) {
     Column {
-        // Search bar
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            placeholder = { Text("Search rules...") },
-            leadingIcon = {
-                Icon(
-                    Icons.Default.Search,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                focusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
+        RulesSearchBar(
+            searchQuery = searchQuery,
+            onSearchChange = { onEvent(RulesEvent.OnSearchQueryChange(it)) },
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Rules list
         if (rules.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -332,57 +468,77 @@ private fun SuccessState(
                 )
             }
         } else {
-            // Determine grouping based on sort option
-            val groupedRules = when (filter.sortBy) {
-                RuleFilter.SortBy.CATEGORY_ASC -> {
-                    rules.groupBy { it.category ?: "Uncategorized" }
-                }
-                RuleFilter.SortBy.STATUS -> {
-                    rules.groupBy { if (it.isActive) "Enabled" else "Disabled" }
-                }
-                else -> {
-                    // Flat list - no grouping
-                    mapOf("" to rules)
+            RulesList(rules = rules, filter = filter, onEvent = onEvent)
+        }
+    }
+}
+
+@Composable
+private fun RulesSearchBar(
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onSearchChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        placeholder = { Text("Search rules...") },
+        leadingIcon = {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            focusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    )
+}
+
+@Composable
+private fun RulesList(
+    rules: List<Rule>,
+    filter: RuleFilter,
+    onEvent: (RulesEvent) -> Unit,
+) {
+    // Determine grouping based on sort option
+    val groupedRules = when (filter.sortBy) {
+        RuleFilter.SortBy.CATEGORY_ASC -> rules.groupBy { it.category ?: "Uncategorized" }
+        RuleFilter.SortBy.STATUS -> rules.groupBy { if (it.isActive) "Enabled" else "Disabled" }
+        else -> mapOf("" to rules) // Flat list - no grouping
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        groupedRules.forEach { (groupKey, groupRules) ->
+            // Only show header if grouped
+            if (groupKey.isNotEmpty()) {
+                item(key = "header_$groupKey") {
+                    when (filter.sortBy) {
+                        RuleFilter.SortBy.CATEGORY_ASC -> CategoryHeader(category = groupKey, ruleCount = groupRules.size)
+                        RuleFilter.SortBy.STATUS -> StatusHeader(status = groupKey, ruleCount = groupRules.size)
+                        else -> { /* No header for flat list */ }
+                    }
                 }
             }
 
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                groupedRules.forEach { (groupKey, groupRules) ->
-                    // Only show header if grouped
-                    if (groupKey.isNotEmpty()) {
-                        item(key = "header_$groupKey") {
-                            when (filter.sortBy) {
-                                RuleFilter.SortBy.CATEGORY_ASC -> {
-                                    CategoryHeader(
-                                        category = groupKey,
-                                        ruleCount = groupRules.size,
-                                    )
-                                }
-                                RuleFilter.SortBy.STATUS -> {
-                                    StatusHeader(
-                                        status = groupKey,
-                                        ruleCount = groupRules.size,
-                                    )
-                                }
-                                else -> { /* No header for flat list */ }
-                            }
-                        }
-                    }
-
-                    items(
-                        items = groupRules,
-                        key = { it.id },
-                    ) { rule ->
-                        RuleCard(
-                            rule = rule,
-                            onClick = { onRuleClick(rule.id) },
-                            onToggleActive = { onRuleToggleActive(rule.id) },
-                        )
-                    }
-                }
+            items(items = groupRules, key = { it.id }) { rule ->
+                RuleCard(
+                    rule = rule,
+                    onClick = { onEvent(RulesEvent.OnRuleClick(rule.id)) },
+                    onToggleActive = { onEvent(RulesEvent.OnRuleToggleActive(rule.id)) },
+                    onExport = { onEvent(RulesEvent.OnExportRuleClick(rule.id)) },
+                )
             }
         }
     }
@@ -505,6 +661,7 @@ private fun RuleCard(
     rule: Rule,
     onClick: () -> Unit,
     onToggleActive: () -> Unit,
+    onExport: () -> Unit,
 ) {
     val context = LocalContext.current
     val primaryApp = rule.targetApps?.takeIf { it.size == 1 }?.firstOrNull()
@@ -548,79 +705,100 @@ private fun RuleCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Left side: App icon and rule info
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // App icon or placeholder
-                if (appIcon != null) {
-                    Image(
-                        bitmap = appIcon,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = rule.name.firstOrNull()?.uppercase() ?: "?",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
+            RuleCardInfo(rule = rule, appIcon = appIcon, appName = appName, modifier = Modifier.weight(1f))
+            RuleCardActions(isActive = rule.isActive, onToggleActive = onToggleActive, onExport = onExport)
+        }
+    }
+}
 
-                // Rule name and app label
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = rule.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (rule.isDryRun) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            DryRunBadge()
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = if (appName != null) "App: $appName" else "App: All apps",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            // Right side: Actions
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+@Composable
+private fun RuleCardInfo(
+    rule: Rule,
+    appIcon: ImageBitmap?,
+    appName: String?,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (appIcon != null) {
+            Image(
+                bitmap = appIcon,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center,
             ) {
-                // Enable/Disable toggle
-                Switch(
-                    checked = rule.isActive,
-                    onCheckedChange = { onToggleActive() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                        checkedTrackColor = MaterialTheme.colorScheme.primary,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    ),
+                Text(
+                    text = rule.name.firstOrNull()?.uppercase() ?: "?",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
         }
+
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = rule.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (rule.isDryRun) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    DryRunBadge()
+                }
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = if (appName != null) "App: $appName" else "App: All apps",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RuleCardActions(
+    isActive: Boolean,
+    onToggleActive: () -> Unit,
+    onExport: () -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onExport) {
+            Icon(
+                imageVector = Icons.Default.Share,
+                contentDescription = "Export rule",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Switch(
+            checked = isActive,
+            onCheckedChange = { onToggleActive() },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+            ),
+        )
     }
 }
 

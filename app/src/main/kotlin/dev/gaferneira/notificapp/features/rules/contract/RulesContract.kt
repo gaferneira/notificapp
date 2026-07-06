@@ -16,6 +16,10 @@ data class RulesUiState(
     val allRules: List<Rule> = emptyList(),
     val searchQuery: String = "",
     val filter: RuleFilter = RuleFilter(),
+    /** A successfully decoded, not-yet-saved imported rule awaiting user confirmation */
+    val importPreview: Rule? = null,
+    /** Message to show when decoding an imported rule fails */
+    val importError: String? = null,
 )
 
 /**
@@ -29,6 +33,11 @@ sealed interface RulesEvent {
     data object OnAddRuleClick : RulesEvent
     data class OnSearchQueryChange(val query: String) : RulesEvent
     data class OnFilterChange(val filter: RuleFilter) : RulesEvent
+    data class OnExportRuleClick(val ruleId: String) : RulesEvent
+    data class OnRuleTextReceived(val text: String) : RulesEvent
+    data object OnImportConfirmed : RulesEvent
+    data object OnImportCancelled : RulesEvent
+    data object OnDismissImportError : RulesEvent
 }
 
 /**
@@ -38,6 +47,8 @@ sealed interface RulesEffect {
     data class NavigateToRuleEditor(val ruleId: String? = null) : RulesEffect
     data class ShowError(val message: String) : RulesEffect
     data class ShowDeleteConfirmation(val ruleId: String) : RulesEffect
+    data class ShareRule(val ruleName: String, val json: String) : RulesEffect
+    data class ShowSuccess(val message: String) : RulesEffect
 }
 
 /**

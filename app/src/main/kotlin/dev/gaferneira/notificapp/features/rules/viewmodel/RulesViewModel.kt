@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.features.rules.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec
+import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec.withFreshIdentityForImport
 import dev.gaferneira.notificapp.core.ui.Resource
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Rule
@@ -64,6 +66,11 @@ class RulesViewModel @Inject constructor(
             is RulesEvent.OnAddRuleClick -> onAddRuleClick()
             is RulesEvent.OnSearchQueryChange -> onSearchQueryChange(event.query)
             is RulesEvent.OnFilterChange -> onFilterChange(event.filter)
+            is RulesEvent.OnExportRuleClick -> onExportRuleClick(event.ruleId)
+            is RulesEvent.OnRuleTextReceived -> onRuleTextReceived(event.text)
+            RulesEvent.OnImportConfirmed -> onImportConfirmed()
+            RulesEvent.OnImportCancelled -> setState { copy(importPreview = null) }
+            RulesEvent.OnDismissImportError -> setState { copy(importError = null) }
         }
     }
 
@@ -204,5 +211,49 @@ class RulesViewModel @Inject constructor(
 
     private fun onAddRuleClick() {
         sendEffect(RulesEffect.NavigateToRuleEditor())
+    }
+
+    private fun onExportRuleClick(ruleId: String) {
+        viewModelScope.launch {
+            ruleRepository.getRule(ruleId)
+                .onSuccess { rule ->
+                    if (rule == null) {
+                        sendEffect(RulesEffect.ShowError("Rule not found"))
+                        return@onSuccess
+                    }
+                    sendEffect(RulesEffect.ShareRule(ruleName = rule.name, json = RuleJsonCodec.encode(rule)))
+                }
+                .onFailure { e ->
+                    Timber.e(e, "Failed to load rule for export: $ruleId")
+                    sendEffect(RulesEffect.ShowError("Failed to export rule"))
+                }
+        }
+    }
+
+    private fun onRuleTextReceived(text: String) {
+        RuleJsonCodec.decode(text)
+            .onSuccess { rule ->
+                setState { copy(importPreview = rule.withFreshIdentityForImport(), importError = null) }
+            }
+            .onFailure { e ->
+                Timber.w(e, "Failed to decode imported rule")
+                setState { copy(importError = e.message ?: "This doesn't look like a valid rule file") }
+            }
+    }
+
+    private fun onImportConfirmed() {
+        val rule = uiState.value.importPreview ?: return
+        viewModelScope.launch {
+            setState { copy(importPreview = null) }
+            ruleRepository.saveRule(rule)
+                .onSuccess {
+                    Timber.d("Imported rule: ${rule.id}")
+                    sendEffect(RulesEffect.ShowSuccess("Imported \"${rule.name}\" in dry-run mode"))
+                }
+                .onFailure { e ->
+                    Timber.e(e, "Failed to save imported rule")
+                    sendEffect(RulesEffect.ShowError("Failed to import rule"))
+                }
+        }
     }
 }
