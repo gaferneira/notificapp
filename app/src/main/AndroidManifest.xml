@@ -17,6 +17,9 @@
     <!-- Post the ongoing alarm notification with Dismiss/Snooze actions (Android 13+ runtime) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Raise the full-screen, call-style alarm UI over the lock screen (restricted on Android 14+) -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
     <!-- Camera torch for the flash alert action - optional, FlashAlertActionExecutor checks
          availability at runtime and skips gracefully on devices without a flash -->
     <uses-feature
@@ -70,6 +73,18 @@
             android:name=".core.notification.action.AlarmService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Full-screen, call-style alarm UI raised over the lock screen by AlarmService's
+             full-screen intent. singleInstance + noHistory so it never stacks or lingers. -->
+        <activity
+            android:name=".core.notification.action.AlarmActivity"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.Notificapp" />
 
         <!-- Exposes cache/rule-exports/ as content:// URIs for sharing exported rule JSON via
              the share sheet, without granting broader file access. -->

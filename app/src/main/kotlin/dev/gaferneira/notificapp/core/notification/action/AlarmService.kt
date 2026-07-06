@@ -36,6 +36,9 @@ class AlarmService : Service() {
     @Inject
     lateinit var alarmPlayer: AlarmPlayer
 
+    @Inject
+    lateinit var alarmStateHolder: AlarmStateHolder
+
     private var current: AlarmRequest = EMPTY_REQUEST
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -80,6 +83,7 @@ class AlarmService : Service() {
         alarmPlayer.stop()
         alarmPlayer.play(current.soundUri)
         if (current.vibrationEnabled) alarmPlayer.vibrate()
+        alarmStateHolder.setRinging(true)
     }
 
     private fun handleDismiss() {
@@ -98,6 +102,7 @@ class AlarmService : Service() {
      * notification, and stops the service.
      */
     private fun stopAlarm() {
+        alarmStateHolder.setRinging(false)
         alarmPlayer.stop()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -143,6 +148,7 @@ class AlarmService : Service() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setOngoing(true)
             .setAutoCancel(false)
+            .setFullScreenIntent(fullScreenIntent(), true)
             .addAction(0, getString(R.string.alarm_action_dismiss), actionIntent(ACTION_DISMISS, REQUEST_DISMISS))
             .addAction(0, getString(R.string.alarm_action_snooze), actionIntent(ACTION_SNOOZE, REQUEST_SNOOZE))
             .build()
@@ -152,6 +158,18 @@ class AlarmService : Service() {
         val intent = Intent(this, AlarmService::class.java).setAction(action)
         return PendingIntent.getForegroundService(this, requestCode, intent, PENDING_INTENT_FLAGS)
     }
+
+    /**
+     * Full-screen intent that raises the call-style [AlarmActivity]. The system shows this
+     * full-screen over the lock screen / when the screen is off, and degrades to the heads-up
+     * notification otherwise (or when `USE_FULL_SCREEN_INTENT` is not granted).
+     */
+    private fun fullScreenIntent(): PendingIntent = PendingIntent.getActivity(
+        this,
+        REQUEST_FULL_SCREEN,
+        AlarmActivity.intent(this, current),
+        PENDING_INTENT_FLAGS,
+    )
 
     private fun ensureChannel() {
         // The service plays the sound and drives vibration itself, so the channel is silent to
@@ -199,6 +217,7 @@ class AlarmService : Service() {
         private const val REQUEST_DISMISS = 1
         private const val REQUEST_SNOOZE = 2
         private const val REQUEST_RE_RING = 3
+        private const val REQUEST_FULL_SCREEN = 4
 
         private const val PENDING_INTENT_FLAGS =
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -222,5 +241,11 @@ class AlarmService : Service() {
             .putExtra(EXTRA_TITLE, request.title)
             .putExtra(EXTRA_TEXT, request.text)
             .putExtra(EXTRA_APP_NAME, request.appName)
+
+        /** Intent that dismisses the ringing alarm — used by [AlarmActivity]'s Dismiss control. */
+        fun dismissIntent(context: Context): Intent = Intent(context, AlarmService::class.java).setAction(ACTION_DISMISS)
+
+        /** Intent that snoozes the ringing alarm — used by [AlarmActivity]'s Snooze control. */
+        fun snoozeIntent(context: Context): Intent = Intent(context, AlarmService::class.java).setAction(ACTION_SNOOZE)
     }
 }
