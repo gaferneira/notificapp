@@ -11,17 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.CallSplit
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.DataObject
-import androidx.compose.material.icons.filled.HorizontalRule
-import androidx.compose.material.icons.filled.Straighten
-import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,7 +40,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +55,15 @@ import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiState
+import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.FixedPositionConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.JsonPathConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.LineExtractionConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.RegexConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.SectionHeader
+import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.SplitByDelimiterConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.TextAfterKeywordConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.TextBeforeKeywordConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.TextBetweenAnchorsConfig
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.AddFieldViewModel
 import kotlinx.coroutines.launch
 
@@ -419,32 +420,6 @@ private fun MethodTypeDropdown(
 }
 
 @Composable
-private fun SectionHeader(
-    icon: ImageVector,
-    title: String,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(vertical = 4.dp),
-        )
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
-}
-
-@Composable
 private fun HighlightedText(
     text: String,
     highlightStart: Int,
@@ -483,277 +458,6 @@ private fun HighlightedText(
         style = MaterialTheme.typography.bodyMedium,
         modifier = modifier,
     )
-}
-
-@Composable
-private fun FixedPositionConfig(
-    startIndex: Int,
-    endIndex: Int,
-    onStartIndexChange: (Int) -> Unit,
-    onEndIndexChange: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionHeader(
-            icon = Icons.Default.Straighten,
-            title = "POSITION",
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedTextField(
-                value = startIndex.toString(),
-                onValueChange = { onStartIndexChange(it.toIntOrNull() ?: 0) },
-                label = { Text("Start Index") },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = endIndex.toString(),
-                onValueChange = { onEndIndexChange(it.toIntOrNull() ?: 0) },
-                label = { Text("End Index") },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-            )
-        }
-    }
-}
-
-@Composable
-private fun TextBetweenAnchorsConfig(
-    startAnchor: String,
-    endAnchor: String,
-    onStartAnchorChange: (String) -> Unit,
-    onEndAnchorChange: (String) -> Unit,
-    errors: Map<String, String>,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionHeader(
-            icon = Icons.Default.HorizontalRule,
-            title = "ANCHORS",
-        )
-        OutlinedTextField(
-            value = startAnchor,
-            onValueChange = onStartAnchorChange,
-            label = { Text("Start Anchor") },
-            placeholder = { Text("Text before the value") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = errors.contains("startAnchor"),
-            supportingText = errors["startAnchor"]?.let { { Text(it) } },
-        )
-        OutlinedTextField(
-            value = endAnchor,
-            onValueChange = onEndAnchorChange,
-            label = { Text("End Anchor") },
-            placeholder = { Text("Text after the value") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = errors.contains("endAnchor"),
-            supportingText = errors["endAnchor"]?.let { { Text(it) } },
-        )
-    }
-}
-
-@Composable
-private fun RegexConfig(
-    pattern: String,
-    captureGroup: Int,
-    onPatternChange: (String) -> Unit,
-    onCaptureGroupChange: (Int) -> Unit,
-    error: String?,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionHeader(
-            icon = Icons.Default.Code,
-            title = "REGEX PATTERN",
-        )
-        OutlinedTextField(
-            value = pattern,
-            onValueChange = onPatternChange,
-            label = { Text("Regex Pattern") },
-            placeholder = { Text("e.g., (\\d+[.,]?\\d*)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = error != null,
-            supportingText = error?.let { { Text(it) } },
-        )
-        OutlinedTextField(
-            value = captureGroup.toString(),
-            onValueChange = { onCaptureGroupChange(it.toIntOrNull()?.coerceAtLeast(0) ?: 0) },
-            label = { Text("Capture Group") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-    }
-}
-
-@Composable
-private fun TextAfterKeywordConfig(
-    keyword: String,
-    maxLength: Int?,
-    onKeywordChange: (String) -> Unit,
-    onMaxLengthChange: (Int?) -> Unit,
-    error: String?,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionHeader(
-            icon = Icons.Default.TextFields,
-            title = "KEYWORD",
-        )
-        OutlinedTextField(
-            value = keyword,
-            onValueChange = onKeywordChange,
-            label = { Text("Keyword") },
-            placeholder = { Text("Text to search for") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = error != null,
-            supportingText = error?.let { { Text(it) } },
-        )
-        OutlinedTextField(
-            value = maxLength?.toString() ?: "",
-            onValueChange = { onMaxLengthChange(it.toIntOrNull()) },
-            label = { Text("Max Length (optional)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-    }
-}
-
-@Composable
-private fun TextBeforeKeywordConfig(
-    keyword: String,
-    onKeywordChange: (String) -> Unit,
-    error: String?,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionHeader(
-            icon = Icons.Default.TextFields,
-            title = "KEYWORD",
-        )
-        OutlinedTextField(
-            value = keyword,
-            onValueChange = onKeywordChange,
-            label = { Text("Keyword") },
-            placeholder = { Text("Text to search for") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = error != null,
-            supportingText = error?.let { { Text(it) } },
-        )
-    }
-}
-
-@Composable
-private fun LineExtractionConfig(
-    lineNumber: Int,
-    onLineNumberChange: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionHeader(
-            icon = Icons.AutoMirrored.Default.List,
-            title = "LINE",
-        )
-        OutlinedTextField(
-            value = lineNumber.toString(),
-            onValueChange = { onLineNumberChange(it.toIntOrNull()?.coerceAtLeast(1) ?: 1) },
-            label = { Text("Line Number") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-    }
-}
-
-@Composable
-private fun SplitByDelimiterConfig(
-    delimiter: String,
-    takeIndex: Int,
-    onDelimiterChange: (String) -> Unit,
-    onTakeIndexChange: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionHeader(
-            icon = Icons.AutoMirrored.Default.CallSplit,
-            title = "DELIMITER",
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedTextField(
-                value = delimiter,
-                onValueChange = onDelimiterChange,
-                label = { Text("Delimiter") },
-                placeholder = { Text(",") },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = takeIndex.toString(),
-                onValueChange = { onTakeIndexChange(it.toIntOrNull()?.coerceAtLeast(0) ?: 0) },
-                label = { Text("Take Index") },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-            )
-        }
-    }
-}
-
-@Composable
-private fun JsonPathConfig(
-    path: String,
-    onPathChange: (String) -> Unit,
-    error: String?,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        SectionHeader(
-            icon = Icons.Default.DataObject,
-            title = "JSON PATH",
-        )
-        OutlinedTextField(
-            value = path,
-            onValueChange = onPathChange,
-            label = { Text("JSON Path") },
-            placeholder = { Text("e.g., $.amount") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            isError = error != null,
-            supportingText = error?.let { { Text(it) } },
-        )
-    }
 }
 
 @Composable

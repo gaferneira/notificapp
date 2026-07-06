@@ -1,17 +1,10 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui
 
-import android.content.Intent
-import android.media.RingtoneManager
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -34,41 +27,32 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.content.IntentCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
-import dev.gaferneira.notificapp.domain.model.MAX_FLASH_COUNT
-import dev.gaferneira.notificapp.domain.model.MAX_FLASH_DURATION_MS
-import dev.gaferneira.notificapp.domain.model.MIN_FLASH_COUNT
-import dev.gaferneira.notificapp.domain.model.MIN_FLASH_DURATION_MS
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ActionBottomSheetContract
+import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.AlarmOptionsSelector
+import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.FlashOptionsSelector
+import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.SnoozeDurationSelector
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ActionBottomSheetViewModel
 
 /**
@@ -426,333 +410,6 @@ private fun ActionTypeCard(
                 )
             }
         }
-    }
-}
-
-/**
- * Duration presets for quick snooze selection.
- */
-private val SNOOZE_PRESETS = listOf(5, 10, 15, 30, 60)
-
-/**
- * Minimum and maximum snooze duration in minutes.
- */
-private const val MIN_SNOOZE_MINUTES = 1
-private const val MAX_SNOOZE_MINUTES = 120
-
-/**
- * Composable for selecting snooze duration with preset chips and a slider.
- * Provides the best UX for minute selection on mobile.
- *
- * @param selectedMinutes Currently selected duration in minutes
- * @param onDurationChange Callback when duration changes
- * @param modifier Modifier for the component
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SnoozeDurationSelector(
-    selectedMinutes: Int,
-    onDurationChange: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp),
-            )
-            .padding(16.dp),
-    ) {
-        // Header with current selection
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "Snooze duration",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            // Duration display badge
-            Box(
-                modifier = Modifier
-                    .background(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(8.dp),
-                    )
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            ) {
-                Text(
-                    text = formatDurationMinutes(selectedMinutes),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Preset chips for quick selection
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            SNOOZE_PRESETS.forEach { preset ->
-                val isSelected = selectedMinutes == preset
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onDurationChange(preset) },
-                    label = { Text("${preset}m") },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Slider for fine-grained control
-        Text(
-            text = "Or drag to set custom time",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "${MIN_SNOOZE_MINUTES}m",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Slider(
-                value = selectedMinutes.toFloat(),
-                onValueChange = { onDurationChange(it.toInt()) },
-                valueRange = MIN_SNOOZE_MINUTES.toFloat()..MAX_SNOOZE_MINUTES.toFloat(),
-                modifier = Modifier.weight(1f),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                ),
-            )
-
-            Text(
-                text = "${MAX_SNOOZE_MINUTES}m",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-/**
- * Composable for configuring the alarm action: picking an alarm sound via the system ringtone
- * picker and toggling vibration.
- *
- * @param soundUri Currently selected alarm sound URI, or null for the device default
- * @param vibrationEnabled Whether vibration is currently enabled
- * @param onSoundChange Callback when a new sound is picked (null if the user picked the default)
- * @param onVibrationToggle Callback when the vibration toggle changes
- * @param modifier Modifier for the component
- */
-@Composable
-private fun AlarmOptionsSelector(
-    soundUri: String?,
-    vibrationEnabled: Boolean,
-    onSoundChange: (String?) -> Unit,
-    onVibrationToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp),
-            )
-            .padding(16.dp),
-    ) {
-        Text(
-            text = "Alarm options",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        AlarmSoundPickerButton(soundUri = soundUri, onSoundChange = onSoundChange)
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "Vibrate",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Switch(
-                checked = vibrationEnabled,
-                onCheckedChange = onVibrationToggle,
-            )
-        }
-    }
-}
-
-/**
- * Button that opens the system ringtone picker (scoped to alarm sounds) and reports the picked
- * sound URI back, or null if the user picked the device default.
- */
-@Composable
-private fun AlarmSoundPickerButton(
-    soundUri: String?,
-    onSoundChange: (String?) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-
-    val soundPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        val pickedUri = result.data?.let { data ->
-            IntentCompat.getParcelableExtra(data, RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
-        }
-        onSoundChange(pickedUri?.toString())
-    }
-
-    val soundTitle = remember(soundUri) {
-        val uri = soundUri?.let(Uri::parse)
-            ?: RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM)
-        uri?.let { RingtoneManager.getRingtone(context, it)?.getTitle(context) } ?: "Default alarm sound"
-    }
-
-    OutlinedButton(
-        onClick = {
-            val currentUri = soundUri?.let(Uri::parse)
-                ?: RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM)
-            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
-                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
-                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
-                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
-                putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, currentUri)
-            }
-            soundPickerLauncher.launch(intent)
-        },
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-    ) {
-        Text(soundTitle)
-    }
-}
-
-/**
- * Composable for configuring the flash alert action: number of flashes and the duration of each
- * flash phase. Both ranges are clamped by [RuleAction.getFlashCount]/[RuleAction.getFlashDurationMs]
- * as a photosensitivity safety bound, not just here.
- *
- * @param flashCount Currently configured number of flashes
- * @param flashDurationMs Currently configured duration of each flash phase, in milliseconds
- * @param onFlashCountChange Callback when the flash count changes
- * @param onFlashDurationChange Callback when the flash duration changes
- * @param modifier Modifier for the component
- */
-@Composable
-private fun FlashOptionsSelector(
-    flashCount: Int,
-    flashDurationMs: Long,
-    onFlashCountChange: (Int) -> Unit,
-    onFlashDurationChange: (Long) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp),
-            )
-            .padding(16.dp),
-    ) {
-        Text(
-            text = "Flash options",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        FlashCountSlider(flashCount = flashCount, onFlashCountChange = onFlashCountChange)
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        FlashDurationSlider(flashDurationMs = flashDurationMs, onFlashDurationChange = onFlashDurationChange)
-    }
-}
-
-@Composable
-private fun FlashCountSlider(
-    flashCount: Int,
-    onFlashCountChange: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = "Number of flashes: $flashCount",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Slider(
-            value = flashCount.toFloat(),
-            onValueChange = { onFlashCountChange(it.toInt()) },
-            valueRange = MIN_FLASH_COUNT.toFloat()..MAX_FLASH_COUNT.toFloat(),
-            steps = MAX_FLASH_COUNT - MIN_FLASH_COUNT - 1,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-            ),
-        )
-    }
-}
-
-@Composable
-private fun FlashDurationSlider(
-    flashDurationMs: Long,
-    onFlashDurationChange: (Long) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = "Flash speed: ${flashDurationMs}ms per phase",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Slider(
-            value = flashDurationMs.toFloat(),
-            onValueChange = { onFlashDurationChange(it.toLong()) },
-            valueRange = MIN_FLASH_DURATION_MS.toFloat()..MAX_FLASH_DURATION_MS.toFloat(),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-            ),
-        )
     }
 }
 

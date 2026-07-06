@@ -485,13 +485,13 @@ Always run before submitting PRs:
 1. Add the method to `RuleField.ExtractionMethod` (domain model)
 2. Implement in `core/extraction/FieldExtractor` (pure Kotlin, no Android imports)
 3. Add tests in `app/src/test` (pure JVM, no emulator)
-4. Add configuration UI in the Rule Editor's field bottom sheet
+4. Add a config composable in `features/ruleeditor/ui/fieldconfig/` and one `when` branch in `AddFieldBottomSheet.kt`'s `AddFieldBottomSheetContent` (per TD-13)
 
 ### Adding a New Action Type
 
 1. Add the type to `ActionType` (domain model); keep config in `RuleAction.config` (`Map<String, String>`) with typed accessor methods
 2. Implement execution as an `ActionExecutor` (`domain/action/ActionExecutor.kt`) and register it in `core/di/ActionModule.kt` via `@Binds @IntoMap @ActionTypeKey(ActionType.X)` — the `ActionDispatcher` picks it up automatically; no service edits needed
-3. Add configuration UI in the Rule Editor's `ActionBottomSheet`
+3. Add a config composable in `features/ruleeditor/ui/actionconfig/` and one `when` branch in `ActionBottomSheet.kt`'s `ActionsContent` (per TD-13 — don't grow the sheet itself, it only dispatches)
 4. Record execution outcome on the `RuleExecution`
 
 ### Adding a New Screen (Complete OpenSpec + PR Workflow)
