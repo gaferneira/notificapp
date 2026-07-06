@@ -422,6 +422,8 @@ class RuleMatcherTest {
 ### Static Analysis (Detekt)
 `./gradlew detekt` runs complexity/size checks (`LongMethod`, `LongParameterList`, `CyclomaticComplexMethod`) on top of the default ruleset, gated the same as Spotless. Pre-existing debt is grandfathered via `config/detekt/baseline.xml` — new code must pass clean. Regenerate the baseline only when intentionally accepting new debt: `./gradlew detektBaseline`.
 
+**Boy-scout baseline policy (TD-16):** the baseline is meant to shrink over time, not just accumulate. When a PR meaningfully touches a file that already has baseline entries, fix those entries in the same PR and regenerate the baseline (`./gradlew detektBaseline`) — the diff must show the baseline count going *down*. Never regenerate to *add* entries except via the existing explicit rule above (intentionally accepted new debt, called out in the PR description).
+
 ### Manual Verification
 Always run before submitting PRs:
 ```bash

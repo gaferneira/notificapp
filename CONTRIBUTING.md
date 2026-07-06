@@ -42,10 +42,13 @@ cd Notificapp
 
 ```bash
 ./gradlew spotlessApply   # required — CI/pre-commit checks formatting
+./gradlew detekt          # required — CI gates complexity/size checks
 ./gradlew test            # all tests must pass
 ```
 
 Add unit tests for new logic (JUnit 5 + Kotest + MockK; see the Testing sections in `CLAUDE.md`). Extraction-engine changes without tests won't be merged — that code is pure Kotlin and cheap to test.
+
+If your PR meaningfully touches a file with pre-existing Detekt baseline entries (`config/detekt/baseline.xml`), fix them and regenerate the baseline (`./gradlew detektBaseline`) as part of the same PR — see the boy-scout policy in `CLAUDE.md`.
 
 ### Commits and PRs
 
