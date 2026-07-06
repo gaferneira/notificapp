@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -67,6 +68,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.common.Failure
 import dev.gaferneira.notificapp.core.ui.Resource
+import dev.gaferneira.notificapp.core.ui.components.DryRunBadge
 import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
 import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
@@ -579,13 +581,19 @@ private fun RuleCard(
 
                 // Rule name and app label
                 Column {
-                    Text(
-                        text = rule.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = rule.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (rule.isDryRun) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            DryRunBadge()
+                        }
+                    }
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = if (appName != null) "App: $appName" else "App: All apps",
