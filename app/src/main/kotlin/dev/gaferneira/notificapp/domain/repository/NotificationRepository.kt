@@ -48,9 +48,13 @@ interface NotificationRepository {
     ): Flow<PagingData<Notification>>
 
     /**
-     * Get all notifications.
+     * Get the most recently captured notifications, optionally filtered to specific apps.
+     * Used for rule backtesting; bounded by [limit] so a preview can never load the full table.
+     *
+     * @param targetPackages Filter by app package names (null or empty = no app filter)
+     * @param limit Maximum number of notifications to return
      */
-    suspend fun getAllNotifications(): Result<List<Notification>>
+    suspend fun getNotificationsForBacktest(targetPackages: List<String>?, limit: Int): Result<List<Notification>>
 
     /**
      * Get a specific notification by ID.

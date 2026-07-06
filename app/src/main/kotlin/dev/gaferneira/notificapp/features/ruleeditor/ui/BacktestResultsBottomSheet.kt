@@ -94,9 +94,9 @@ private fun BacktestResultsContent(
 @Composable
 private fun BacktestSummary(resultCount: Int, testedCount: Int, modifier: Modifier = Modifier) {
     val summary = if (resultCount == 0) {
-        "No matches found in $testedCount captured notification${if (testedCount == 1) "" else "s"}"
+        "No matches found in the most recent $testedCount captured notification${if (testedCount == 1) "" else "s"}"
     } else {
-        "Matched $resultCount of $testedCount captured notifications"
+        "Matched $resultCount of the most recent $testedCount captured notifications"
     }
     Text(
         text = summary,

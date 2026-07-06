@@ -22,10 +22,20 @@ interface NotificationDao {
     fun getAll(): Flow<List<NotificationEntity>>
 
     /**
-     * Get all notifications synchronously.
+     * Get the most recently captured notifications, bounded by [limit].
+     * Used for rule backtesting so a preview never materializes the full table.
      */
-    @Query("SELECT * FROM notifications ORDER BY timestamp DESC")
-    suspend fun getAllSync(): List<NotificationEntity>
+    @Query("SELECT * FROM notifications ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getRecent(limit: Int): List<NotificationEntity>
+
+    /**
+     * Get the most recently captured notifications for specific apps, bounded by [limit].
+     */
+    @Query(
+        "SELECT * FROM notifications WHERE package_name IN (:packageNames) " +
+            "ORDER BY timestamp DESC LIMIT :limit",
+    )
+    suspend fun getRecentByPackageNames(packageNames: List<String>, limit: Int): List<NotificationEntity>
 
     /**
      * Get notifications for a specific app.

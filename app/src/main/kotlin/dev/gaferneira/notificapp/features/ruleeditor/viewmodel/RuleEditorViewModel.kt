@@ -405,21 +405,15 @@ class RuleEditorViewModel @Inject constructor(
      */
     private fun testAgainstHistory() {
         val draftRule = uiState.value.rule.toEntity()
+        val targetPackages = draftRule.targetApps
+            ?.map { it.packageName }
+            ?.takeIf { it.isNotEmpty() }
 
         viewModelScope.launch {
             setState { copy(isBacktesting = true) }
 
-            notificationRepository.getAllNotifications()
-                .onSuccess { notifications ->
-                    val targetPackages = draftRule.targetApps
-                        ?.map { it.packageName }
-                        ?.takeIf { it.isNotEmpty() }
-                    val candidates = if (targetPackages == null) {
-                        notifications
-                    } else {
-                        notifications.filter { it.packageName in targetPackages }
-                    }
-
+            notificationRepository.getNotificationsForBacktest(targetPackages, BACKTEST_NOTIFICATION_LIMIT)
+                .onSuccess { candidates ->
                     val results = candidates.mapNotNull { notification ->
                         ruleEngine.evaluate(notification, listOf(draftRule)).firstOrNull()?.let { match ->
                             BacktestMatch(notification = notification, extractedData = match.extractedData)
@@ -555,5 +549,10 @@ class RuleEditorViewModel @Inject constructor(
         is ExtractionMethod.JsonPath -> "JSON path: ${method.path}"
         is ExtractionMethod.SmartAmountDetection -> "Smart amount"
         is ExtractionMethod.SmartDateDetection -> "Smart date"
+    }
+
+    private companion object {
+        /** Caps "Test against history" to the most recent notifications so it can't OOM or freeze. */
+        const val BACKTEST_NOTIFICATION_LIMIT = 500
     }
 }

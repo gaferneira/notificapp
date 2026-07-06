@@ -680,7 +680,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `test against history with no captured notifications yields zero matches`() = runTest(testDispatcher) {
             // Given: no notifications have ever been captured
-            coEvery { notificationRepository.getAllNotifications() } returns Result.success(emptyList())
+            coEvery { notificationRepository.getNotificationsForBacktest(any(), any()) } returns Result.success(emptyList())
 
             // When: testing against history
             viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
@@ -703,7 +703,7 @@ class RuleEditorViewModelTest {
 
             val matching = createTestNotification(id = "n1", content = "Total: 100", rawContent = "Total: 100")
             val nonMatching = createTestNotification(id = "n2", content = "no match here", rawContent = "no match here")
-            coEvery { notificationRepository.getAllNotifications() } returns Result.success(listOf(matching, nonMatching))
+            coEvery { notificationRepository.getNotificationsForBacktest(any(), any()) } returns Result.success(listOf(matching, nonMatching))
 
             // When: testing against history
             viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
@@ -723,8 +723,9 @@ class RuleEditorViewModelTest {
             viewModel.onEvent(UiEvent.OnAppsSelected(listOf(AppInfo("com.a", "App A"))))
 
             val fromTargetApp = createTestNotification(id = "n1", packageName = "com.a")
-            val fromOtherApp = createTestNotification(id = "n2", packageName = "com.b")
-            coEvery { notificationRepository.getAllNotifications() } returns Result.success(listOf(fromTargetApp, fromOtherApp))
+            coEvery {
+                notificationRepository.getNotificationsForBacktest(listOf("com.a"), any())
+            } returns Result.success(listOf(fromTargetApp))
 
             // When: testing against history
             viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
@@ -739,7 +740,9 @@ class RuleEditorViewModelTest {
         @Test
         fun `test against history failure surfaces an error and stops the loading state`() = runTest(testDispatcher) {
             // Given: the notification repository fails
-            coEvery { notificationRepository.getAllNotifications() } returns Result.failure(IllegalStateException("db error"))
+            coEvery {
+                notificationRepository.getNotificationsForBacktest(any(), any())
+            } returns Result.failure(IllegalStateException("db error"))
 
             viewModel.effect.test {
                 // When: testing against history
@@ -756,7 +759,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `dismiss backtest results clears them`() = runTest(testDispatcher) {
             // Given: a completed backtest run
-            coEvery { notificationRepository.getAllNotifications() } returns Result.success(emptyList())
+            coEvery { notificationRepository.getNotificationsForBacktest(any(), any()) } returns Result.success(emptyList())
             viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
             testDispatcher.scheduler.advanceUntilIdle()
 

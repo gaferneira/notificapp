@@ -96,12 +96,19 @@ class NotificationRepositoryImpl @Inject constructor(
             .flowOn(ioDispatcher)
     }
 
-    override suspend fun getAllNotifications(): Result<List<Notification>> = withContext(ioDispatcher) {
+    override suspend fun getNotificationsForBacktest(
+        targetPackages: List<String>?,
+        limit: Int,
+    ): Result<List<Notification>> = withContext(ioDispatcher) {
         try {
-            val entities = dao.getAllSync()
+            val entities = if (targetPackages.isNullOrEmpty()) {
+                dao.getRecent(limit)
+            } else {
+                dao.getRecentByPackageNames(targetPackages, limit)
+            }
             Result.success(entities.map { it.toModel() })
         } catch (e: Exception) {
-            Timber.e(e, "Failed to get all notifications")
+            Timber.e(e, "Failed to get notifications for backtest")
             Result.failure(e)
         }
     }
