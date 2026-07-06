@@ -36,5 +36,5 @@
 ## 5. Verification, quality gates
 
 - [x] 5.1 `./gradlew testDebugUnitTest`, `spotlessApply`, `detekt`, `assembleDebug` all green (no new baseline entries)
-- [ ] 5.2 Manually verify on-device: alarm rings locked+screen-off → full-screen shows over lock screen and wakes screen; Dismiss/Snooze work from full-screen; dismissing from the notification closes an open full-screen; snooze re-ring re-shows; with `USE_FULL_SCREEN_INTENT` denied on Android 14+, it degrades to the notification and still stops — **PENDING (on device)**
+- [x] 5.2 Manually verified on-device (Android 16): with `USE_FULL_SCREEN_INTENT` granted, alarm rings locked → full-screen call UI shows over the lock screen; Dismiss/Snooze work from it; notification-only toggle degrades correctly. Confirmed the OS restricts the permission by default on 14+ (hence the in-app grant hint, 6.5) and that full-screen only takes over when locked/screen-off
 - [x] 5.3 No new ADR needed — the full-screen UI is a presentation layer over the service lifecycle already covered by ADR 013

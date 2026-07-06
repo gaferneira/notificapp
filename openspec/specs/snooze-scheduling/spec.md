@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Defines how a snoozed notification's state is persisted and rescheduled so the notification can be re-posted after its snooze window elapses.
+
+## Requirements
 
 ### Requirement: Snoozed notification database tracking
 The system SHALL maintain a `snoozed_notifications` table to track pending snooze state. Each entry SHALL store: id, notification_id, sbn_key, wake_up_time (epoch millis), rule_id, notification_title, notification_content, notification_package_name, and created_at.

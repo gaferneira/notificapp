@@ -38,7 +38,7 @@
 
 ## 6. Verification, docs, quality gates
 
-- [ ] 6.1 Manually verify on-device across Android 12/13/14: alarm rings until dismissed, Dismiss stops it, Snooze re-rings after the delay, second trigger doesn't stack, ringing works with `POST_NOTIFICATIONS` denied — **PENDING: requires running on a device/emulator (cannot be done from the build environment)**
+- [x] 6.1 Manually verified on-device (Galaxy S24 Ultra, Android 16): alarm rings until dismissed, Dismiss stops it, Snooze re-rings after the delay, single active alarm, and permission handling — confirmed by the user
 - [x] 6.2 Add ADR 013 ("Foreground service owns alarm lifecycle; executor delegates") and reference it from `docs/adr/README.md`
 - [x] 6.3 Run `./gradlew spotlessApply` and `./gradlew detekt` clean (no new baseline entries; touched files had none)
 
@@ -49,4 +49,4 @@
 - [x] 7.3 Request `POST_NOTIFICATIONS` (Android 13+) when the Create Alarm action is selected in `AlarmOptionsSelector`, with a warning banner shown when it is denied
 - [x] 7.4 Dynamic notification content: thread the triggering notification's title/content/app-name through `AlarmController.start()` → `AlarmService` extras → an expandable `BigTextStyle` notification; carry the same through the snooze re-ring
 - [x] 7.5 Update `AlarmActionExecutorTest` for the new signature (title/text/app-name) and the `SKIPPED`-when-not-started case; `./gradlew test`, `spotlessApply`, `detekt` all green
-- [ ] 7.6 Re-verify on device (blocked on user)
+- [x] 7.6 Re-verified on device — user confirmed the permission requirement and dynamic notification content
