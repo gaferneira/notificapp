@@ -16,6 +16,7 @@ import androidx.room.PrimaryKey
  * @property category Optional category
  * @property area Optional area/location
  * @property isActive Whether the rule is active
+ * @property isDryRun When true, matches are logged but no actions execute
  * @property isGlobal Whether this rule applies to all apps (true) or specific apps (false)
  * @property createdAt Creation timestamp
  * @property updatedAt Last update timestamp
@@ -44,6 +45,9 @@ data class RuleEntity(
 
     @ColumnInfo(name = "is_active")
     val isActive: Boolean = true,
+
+    @ColumnInfo(name = "is_dry_run", defaultValue = "0")
+    val isDryRun: Boolean = false,
 
     @ColumnInfo(name = "is_global")
     val isGlobal: Boolean = true,

@@ -20,6 +20,8 @@ data class RuleUiModel(
     val description: String = "",
     /** Rule category */
     val category: String = "",
+    /** When true, matches are logged but no actions execute */
+    val isDryRun: Boolean = false,
     /** Target app package names (empty = all apps) */
     val targetApps: List<AppInfo> = emptyList(),
     /** List of configured triggers */
@@ -37,6 +39,7 @@ data class RuleUiModel(
         conditions = triggers,
         actions = actions,
         isActive = true,
+        isDryRun = isDryRun,
         targetApps = targetApps,
         fields = fields,
     )
@@ -50,6 +53,7 @@ data class RuleUiModel(
             name = rule.name,
             description = rule.description ?: "",
             category = rule.category.orEmpty(),
+            isDryRun = rule.isDryRun,
             targetApps = rule.targetApps ?: emptyList(),
             triggers = rule.conditions,
             actions = rule.actions,

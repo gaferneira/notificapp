@@ -29,6 +29,7 @@ object RuleExecutionMapper {
         extractedData = json.encodeToString(domain.extractedData),
         triggeredActions = json.encodeToString(domain.triggeredActions),
         actionOutcomes = domain.actionOutcomes.takeIf { it.isNotEmpty() }?.let { json.encodeToString(it) },
+        wasDryRun = domain.wasDryRun,
         createdAt = domain.createdAt,
     )
 
@@ -45,6 +46,7 @@ object RuleExecutionMapper {
         extractedData = json.decodeFromString(entity.extractedData),
         triggeredActions = json.decodeFromString(entity.triggeredActions),
         actionOutcomes = entity.actionOutcomes?.let { json.decodeFromString<Map<String, ActionOutcome>>(it) } ?: emptyMap(),
+        wasDryRun = entity.wasDryRun,
         createdAt = entity.createdAt,
     )
 

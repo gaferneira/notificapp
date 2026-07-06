@@ -67,6 +67,7 @@ class RuleEditorViewModel @Inject constructor(
             is UiEvent.OnAddDescriptionClicked -> showDescriptionField()
             is UiEvent.OnCategoryChange -> updateCategory(event.category)
             is UiEvent.OnAddCategoryClicked -> showCategoryField()
+            is UiEvent.OnDryRunToggle -> updateDryRun(event.enabled)
             is UiEvent.OnAddConditionClicked -> showMatchingLogicSheet()
             is UiEvent.OnRemoveConditionClicked -> removeCondition(event.conditionId)
             is UiEvent.OnConditionItemClicked -> openConditionForEditing(event.conditionId)
@@ -190,6 +191,10 @@ class RuleEditorViewModel @Inject constructor(
 
     private fun updateCategory(category: String) {
         setState { copy(rule = rule.copy(category = category)) }
+    }
+
+    private fun updateDryRun(enabled: Boolean) {
+        setState { copy(rule = rule.copy(isDryRun = enabled)) }
     }
 
     private fun navigateToStep(step: Int) {

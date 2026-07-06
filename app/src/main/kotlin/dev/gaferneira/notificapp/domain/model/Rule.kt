@@ -16,6 +16,8 @@ data class Rule(
     val category: String? = null,
     /** Whether this rule is active */
     val isActive: Boolean = true,
+    /** When true, matches are logged but no actions execute - a safe way to trial a rule */
+    val isDryRun: Boolean = false,
     /** App scope: null means all apps, or list of specific package names */
     val targetApps: List<AppInfo>? = null,
     /** Triggers that determine when rule applies */

@@ -79,12 +79,14 @@ fun createTestAction(
     config = config,
 )
 
+@Suppress("LongParameterList")
 fun createTestRule(
     id: String = "test-rule-id",
     name: String = "Test Rule",
     description: String? = null,
     category: String? = null,
     isActive: Boolean = true,
+    isDryRun: Boolean = false,
     targetApps: List<AppInfo>? = null,
     conditions: List<RuleCondition> = emptyList(),
     fields: List<RuleField> = emptyList(),
@@ -97,6 +99,7 @@ fun createTestRule(
     description = description,
     category = category,
     isActive = isActive,
+    isDryRun = isDryRun,
     targetApps = targetApps,
     conditions = conditions,
     fields = fields,

@@ -113,6 +113,9 @@ object RuleEditorContract {
         /** Update rule category */
         data class OnCategoryChange(val category: String) : UiEvent()
 
+        /** Toggle dry-run mode for this rule */
+        data class OnDryRunToggle(val enabled: Boolean) : UiEvent()
+
         /** Show category field */
         data object OnAddCategoryClicked : UiEvent()
 

@@ -98,9 +98,15 @@ class ProcessNotificationUseCase @Inject constructor(
 
             val matches = ruleEngine.evaluate(notification, rules)
             val executions = matches.mapNotNull { match ->
+                // Dry-run rules log the match but never reach ActionDispatcher - that's the whole
+                // point of dry-run mode (trial a rule with zero risk of it acting on anything).
                 // Actions execute before the execution record is built/saved (per ADR 010) so the
                 // record reflects what actually happened, not just what was "triggered".
-                val outcomes = actionDispatcher.executeAll(notification, match.rule.actions)
+                val outcomes = if (match.rule.isDryRun) {
+                    emptyMap()
+                } else {
+                    actionDispatcher.executeAll(notification, match.rule.actions)
+                }
                 val execution = match.toExecution(notification.id, outcomes)
                 ruleExecutionRepository.saveExecution(execution, match.rule.fields)
                     .fold(
@@ -135,6 +141,7 @@ class ProcessNotificationUseCase @Inject constructor(
             triggeredActions = enabledActions.map { it.id },
             triggeredRuleActions = enabledActions,
             actionOutcomes = actionOutcomes,
+            wasDryRun = rule.isDryRun,
         )
     }
 }

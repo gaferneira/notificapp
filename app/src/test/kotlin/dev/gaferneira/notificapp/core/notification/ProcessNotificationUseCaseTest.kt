@@ -133,6 +133,36 @@ class ProcessNotificationUseCaseTest {
     }
 
     @Test
+    fun `dry-run rule matches without invoking the action dispatcher, and the execution records the flag`() = runTest(testDispatcher) {
+        // Given: a saved notification and a matching dry-run rule with an enabled action
+        val notification = createTestNotification(title = "ICA Kvantum")
+        val condition = createTestCondition(
+            condition = MatchingCondition.TITLE,
+            operator = MatchingOperator.CONTAINS,
+            value = "ICA",
+        )
+        val action = createTestAction(id = "action-1")
+        val rule = createTestRule(id = "rule-1", isDryRun = true, conditions = listOf(condition), actions = listOf(action))
+
+        coEvery { deduplicator.isDuplicate(notification) } returns false
+        coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
+        coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
+        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+
+        // When: invoking the use case
+        val result = useCase.invoke(notification)
+
+        // Then: the match is recorded with no action outcomes and wasDryRun set, and the
+        // dispatcher is never called - dry-run rules never reach it
+        result.isSuccess shouldBe true
+        val execution = result.getOrThrow().single()
+        execution.wasDryRun shouldBe true
+        execution.actionOutcomes shouldBe emptyMap()
+        execution.triggeredActions shouldBe listOf("action-1")
+        coVerify(exactly = 0) { actionDispatcher.executeAll(any(), any()) }
+    }
+
+    @Test
     fun `evaluateAndPersist does not deduplicate or re-save the notification`() = runTest(testDispatcher) {
         // Given: an already-stored notification with no matching rules
         val notification = createTestNotification()

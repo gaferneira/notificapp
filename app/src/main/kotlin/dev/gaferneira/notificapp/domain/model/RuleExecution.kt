@@ -11,6 +11,7 @@ package dev.gaferneira.notificapp.domain.model
  * @property extractedData Map of field names to extracted values
  * @property triggeredActions List of action IDs that were triggered
  * @property actionOutcomes Map of action ID to the outcome of executing it
+ * @property wasDryRun Snapshot of the rule's dry-run flag at match time
  * @property createdAt When the execution occurred
  */
 data class RuleExecution(
@@ -21,5 +22,7 @@ data class RuleExecution(
     val triggeredActions: List<String>,
     val triggeredRuleActions: List<RuleAction> = emptyList(),
     val actionOutcomes: Map<String, ActionOutcome> = emptyMap(),
+    /** Snapshot of the rule's dry-run flag at match time - actions never ran when true */
+    val wasDryRun: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
 )
