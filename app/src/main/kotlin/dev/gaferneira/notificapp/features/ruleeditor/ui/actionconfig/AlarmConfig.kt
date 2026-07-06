@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
@@ -93,6 +94,42 @@ fun AlarmOptionsSelector(
             checked = options.fullScreenEnabled,
             onCheckedChange = onFullScreenToggle,
         )
+
+        if (options.fullScreenEnabled) {
+            FullScreenIntentPermissionHint()
+        }
+    }
+}
+
+/**
+ * Warns when the full-screen alarm is enabled but the app cannot use full-screen intents (Android
+ * 14+ restricts `USE_FULL_SCREEN_INTENT`). Without the grant, the OS downgrades the call-style
+ * screen to a plain notification, so the toggle appears to do nothing. Routes to the system grant
+ * screen. On Android 13 and below the permission is granted at install, so nothing is shown.
+ */
+@Composable
+private fun FullScreenIntentPermissionHint(modifier: Modifier = Modifier) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+    val context = LocalContext.current
+    val notificationManager = context.getSystemService(NotificationManager::class.java)
+    if (notificationManager?.canUseFullScreenIntent() == true) return
+
+    Column(modifier = modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text(
+            text = stringResource(R.string.alarm_fullscreen_permission_warning),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        TextButton(
+            onClick = {
+                context.startActivity(
+                    Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+                        .setData(Uri.fromParts("package", context.packageName, null)),
+                )
+            },
+        ) {
+            Text(stringResource(R.string.alarm_fullscreen_permission_grant))
+        }
     }
 }
 

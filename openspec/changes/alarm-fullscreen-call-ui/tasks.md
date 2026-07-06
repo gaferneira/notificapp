@@ -31,6 +31,7 @@
 - [x] 6.2 Thread `fullScreenEnabled` through `AlarmRequest` → executor → `AlarmService` extras; only `setFullScreenIntent` when enabled
 - [x] 6.3 Add a "Full-screen alarm (call style)" toggle to `AlarmOptionsSelector`; wire through `ActionBottomSheet` contract/viewmodel (state field + event + confirm + init-for-edit)
 - [x] 6.4 Update `AlarmActionExecutorTest` (new `AlarmRequest` field + full-screen-disabled case); `test`/`spotless`/`detekt`/`assembleDebug` green
+- [x] 6.5 In-app grant path: when full-screen is enabled but `canUseFullScreenIntent()` is false (Android 14+), show a hint routing to `ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT` — device testing on Android 16 showed the OS silently downgrades to notification without the grant, making the toggle look inert
 
 ## 5. Verification, quality gates
 

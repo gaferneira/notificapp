@@ -137,4 +137,6 @@
     <string name="alarm_action_snooze">Snooze</string>
     <string name="alarm_permission_warning">Allow notifications for Notificapp so the alarm can show its Dismiss and Snooze controls. Without this permission the alarm will not ring.</string>
     <string name="alarm_permission_grant">Allow notifications</string>
+    <string name="alarm_fullscreen_permission_warning">Allow full-screen alarms so the call-style screen can appear over the lock screen. Without it, this alarm shows only as a notification.</string>
+    <string name="alarm_fullscreen_permission_grant">Allow full-screen alarms</string>
 </resources>
