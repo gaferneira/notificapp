@@ -50,6 +50,7 @@ Extraction is one action among many in the rules engine — but it is the **diff
 - **Notification Content Filtering** — `NotificappListenerService.shouldSkipNotification` skips notifications without title/content, ongoing system notifications, and stale (>`MAX_AGE_MS`) notifications
 - **Alarm Action** — `CREATE_ALARM` plays an alarm sound (system ringtone picker, defaults to the device's default alarm sound) and optionally vibrates, as a pluggable `ActionExecutor`
 - **Flash Alert Action** — `FLASH_ALERT` blinks the camera torch a configurable number of times, as a pluggable `ActionExecutor`; skipped without a flash or in battery saver, with photosensitivity-safe clamps on count/duration — **Phase 1 (Complete Action System) is now fully done**
+- **Backtest Against History** — Rule Editor can test an unsaved draft rule against previously captured notifications and preview matches + extracted fields before saving
 
 ### In Progress
 
@@ -93,7 +94,7 @@ _None currently — see Phase 1 below for what's next._
 
 #### Backtesting and Dry-Run
 
-- [ ] "Test against history" in Rule Editor: run the draft rule against captured notifications and preview matches + extracted fields before saving
+- [x] "Test against history" in Rule Editor: run the draft rule against captured notifications and preview matches + extracted fields before saving — `RuleEditorViewModel.testAgainstHistory()` runs the unsaved draft rule (via the existing pure `RuleEngine`) against `NotificationRepository.getAllNotifications()`, filtered to the rule's target apps; results shown in `BacktestResultsBottomSheet`. Purely a preview — nothing is persisted.
 - [ ] Per-rule **dry-run mode**: log matches without executing actions — essential safety once dismiss exists (a bad condition silently eating notifications is the worst possible first impression)
 - [ ] Surface dry-run results in Rules List / Notification Detail so users can promote a rule to live with confidence
 

@@ -6,6 +6,7 @@ import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
 
 /**
@@ -54,6 +55,12 @@ object RuleEditorContract {
         val showCategory: Boolean = false,
         /** Whether to show the delete confirmation dialog */
         val showDeleteConfirmation: Boolean = false,
+        /** Whether a "test against history" run is in progress */
+        val isBacktesting: Boolean = false,
+        /** Results of the last "test against history" run, or null if never run */
+        val backtestResults: List<BacktestMatch>? = null,
+        /** Number of historical notifications tested in the last backtest run */
+        val backtestTestedCount: Int = 0,
     ) {
         /** Whether the form is valid */
         val isValid: Boolean
@@ -154,6 +161,12 @@ object RuleEditorContract {
 
         /** Action saved from ActionBottomSheet (add or update) */
         data class OnActionSaved(val action: RuleAction) : UiEvent()
+
+        /** Test the current draft rule against captured notification history */
+        data object OnTestAgainstHistoryClicked : UiEvent()
+
+        /** Dismiss the "test against history" results */
+        data object OnDismissBacktestResults : UiEvent()
 
         /** Save the rule */
         data object OnSaveClicked : UiEvent()

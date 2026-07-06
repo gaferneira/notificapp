@@ -14,12 +14,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -175,49 +178,7 @@ private fun RuleEditorScreenContent(
                 }
             }
 
-            // Bottom sheets
-            if (uiState.isMatchingLogicSheetVisible) {
-                MatchingLogicBottomSheet(
-                    initialCondition = uiState.editingCondition,
-                    onConditionSaved = { condition ->
-                        onEvent(UiEvent.OnConditionSaved(condition))
-                    },
-                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-                )
-            }
-
-            if (uiState.isAppSheetVisible) {
-                AppSelectionPicker(
-                    selectedApps = uiState.rule.targetApps,
-                    enabledApps = uiState.enabledApps,
-                    onConfirm = { apps ->
-                        onEvent(UiEvent.OnAppsSelected(apps))
-                    },
-                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-                )
-            }
-
-            if (uiState.isActionSheetVisible) {
-                ActionBottomSheet(
-                    initialAction = uiState.editingAction,
-                    onActionSaved = { action ->
-                        onEvent(UiEvent.OnActionSaved(action))
-                    },
-                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-                )
-            }
-
-            if (uiState.isFieldSheetVisible) {
-                // Add Field Bottom Sheet
-                AddFieldBottomSheet(
-                    fieldToEdit = uiState.editingField,
-                    notification = uiState.sampleNotification,
-                    onFieldSaved = { field ->
-                        onEvent(UiEvent.OnFieldSaved(field))
-                    },
-                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-                )
-            }
+            RuleEditorBottomSheets(uiState = uiState, onEvent = onEvent)
 
             // Delete confirmation dialog
             if (uiState.showDeleteConfirmation) {
@@ -242,6 +203,63 @@ private fun RuleEditorScreenContent(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun RuleEditorBottomSheets(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+) {
+    if (uiState.isMatchingLogicSheetVisible) {
+        MatchingLogicBottomSheet(
+            initialCondition = uiState.editingCondition,
+            onConditionSaved = { condition ->
+                onEvent(UiEvent.OnConditionSaved(condition))
+            },
+            onDismiss = { onEvent(UiEvent.OnDismissSheet) },
+        )
+    }
+
+    if (uiState.isAppSheetVisible) {
+        AppSelectionPicker(
+            selectedApps = uiState.rule.targetApps,
+            enabledApps = uiState.enabledApps,
+            onConfirm = { apps ->
+                onEvent(UiEvent.OnAppsSelected(apps))
+            },
+            onDismiss = { onEvent(UiEvent.OnDismissSheet) },
+        )
+    }
+
+    if (uiState.isActionSheetVisible) {
+        ActionBottomSheet(
+            initialAction = uiState.editingAction,
+            onActionSaved = { action ->
+                onEvent(UiEvent.OnActionSaved(action))
+            },
+            onDismiss = { onEvent(UiEvent.OnDismissSheet) },
+        )
+    }
+
+    if (uiState.isFieldSheetVisible) {
+        AddFieldBottomSheet(
+            fieldToEdit = uiState.editingField,
+            notification = uiState.sampleNotification,
+            onFieldSaved = { field ->
+                onEvent(UiEvent.OnFieldSaved(field))
+            },
+            onDismiss = { onEvent(UiEvent.OnDismissSheet) },
+        )
+    }
+
+    uiState.backtestResults?.let { results ->
+        BacktestResultsBottomSheet(
+            results = results,
+            testedCount = uiState.backtestTestedCount,
+            fields = uiState.rule.fields,
+            onDismiss = { onEvent(UiEvent.OnDismissBacktestResults) },
+        )
     }
 }
 
@@ -309,6 +327,24 @@ private fun LogicStep(
             onClick = { onEvent(UiEvent.OnAddActionClicked) },
             modifier = Modifier.fillMaxWidth(),
         )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Test against history
+        OutlinedButton(
+            onClick = { onEvent(UiEvent.OnTestAgainstHistoryClicked) },
+            enabled = !uiState.isBacktesting,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(if (uiState.isBacktesting) "Testing..." else "Test against history")
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
 

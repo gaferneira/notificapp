@@ -2,6 +2,7 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.domain.model.ActionType
@@ -16,6 +17,7 @@ import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
+import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -33,6 +35,7 @@ class RuleEditorViewModel @Inject constructor(
     private val ruleRepository: RuleRepository,
     private val notificationRepository: NotificationRepository,
     private val selectedAppRepository: SelectedAppRepository,
+    private val ruleEngine: RuleEngine,
     private val navigationHandler: NavigationHandler,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
@@ -79,6 +82,8 @@ class RuleEditorViewModel @Inject constructor(
             is UiEvent.OnFieldSaved -> onFieldSaved(event.field)
             is UiEvent.OnConditionSaved -> onConditionSaved(event.condition)
             is UiEvent.OnActionSaved -> onActionSaved(event.action)
+            UiEvent.OnTestAgainstHistoryClicked -> testAgainstHistory()
+            UiEvent.OnDismissBacktestResults -> dismissBacktestResults()
             is UiEvent.OnSaveClicked -> saveRule()
             is UiEvent.OnBackClicked -> onBackClicked()
             is UiEvent.OnDismissError -> dismissError()
@@ -386,6 +391,54 @@ class RuleEditorViewModel @Inject constructor(
             )
         }
         dismissBottomSheet()
+    }
+
+    /**
+     * Test the current draft rule (as configured in the editor, not yet saved) against
+     * previously captured notification history. Purely a preview: no [RuleEngine] match is
+     * persisted, and no actions run.
+     */
+    private fun testAgainstHistory() {
+        val draftRule = uiState.value.rule.toEntity()
+
+        viewModelScope.launch {
+            setState { copy(isBacktesting = true) }
+
+            notificationRepository.getAllNotifications()
+                .onSuccess { notifications ->
+                    val targetPackages = draftRule.targetApps
+                        ?.map { it.packageName }
+                        ?.takeIf { it.isNotEmpty() }
+                    val candidates = if (targetPackages == null) {
+                        notifications
+                    } else {
+                        notifications.filter { it.packageName in targetPackages }
+                    }
+
+                    val results = candidates.mapNotNull { notification ->
+                        ruleEngine.evaluate(notification, listOf(draftRule)).firstOrNull()?.let { match ->
+                            BacktestMatch(notification = notification, extractedData = match.extractedData)
+                        }
+                    }
+
+                    setState {
+                        copy(
+                            isBacktesting = false,
+                            backtestResults = results,
+                            backtestTestedCount = candidates.size,
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    Timber.e(e, "Failed to test rule against history")
+                    setState { copy(isBacktesting = false) }
+                    sendEffect(UiEffect.ShowError("Failed to test against history"))
+                }
+        }
+    }
+
+    private fun dismissBacktestResults() {
+        setState { copy(backtestResults = null) }
     }
 
     private fun saveRule() {

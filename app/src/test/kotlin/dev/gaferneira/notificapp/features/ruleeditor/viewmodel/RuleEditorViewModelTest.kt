@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import app.cash.turbine.test
+import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
@@ -65,6 +66,7 @@ class RuleEditorViewModelTest {
             ruleRepository = ruleRepository,
             notificationRepository = notificationRepository,
             selectedAppRepository = selectedAppRepository,
+            ruleEngine = RuleEngine(),
             navigationHandler = navigationHandler,
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -651,6 +653,100 @@ class RuleEditorViewModelTest {
             val state = viewModel.uiState.value
             state.rule.fields shouldBe listOf(updated)
             state.isFieldSheetVisible shouldBe false
+        }
+    }
+
+    @Nested
+    inner class TestAgainstHistoryTests {
+
+        @Test
+        fun `test against history with no captured notifications yields zero matches`() = runTest(testDispatcher) {
+            // Given: no notifications have ever been captured
+            coEvery { notificationRepository.getAllNotifications() } returns Result.success(emptyList())
+
+            // When: testing against history
+            viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: results are empty and nothing was tested
+            val state = viewModel.uiState.value
+            state.isBacktesting shouldBe false
+            state.backtestResults shouldBe emptyList()
+            state.backtestTestedCount shouldBe 0
+        }
+
+        @Test
+        fun `test against history matches notifications whose conditions match and extracts fields`() = runTest(testDispatcher) {
+            // Given: a draft rule matching content containing "Total" with an extraction field
+            val condition = createTestCondition(value = "Total")
+            viewModel.onEvent(UiEvent.OnConditionSaved(condition))
+            val field = createTestField(method = ExtractionMethod.TextAfterKeyword(keyword = "Total: "))
+            viewModel.onEvent(UiEvent.OnFieldSaved(field))
+
+            val matching = createTestNotification(id = "n1", content = "Total: 100", rawContent = "Total: 100")
+            val nonMatching = createTestNotification(id = "n2", content = "no match here", rawContent = "no match here")
+            coEvery { notificationRepository.getAllNotifications() } returns Result.success(listOf(matching, nonMatching))
+
+            // When: testing against history
+            viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: only the matching notification is returned, with its field extracted
+            val state = viewModel.uiState.value
+            state.backtestTestedCount shouldBe 2
+            state.backtestResults?.map { it.notification.id } shouldBe listOf("n1")
+            state.backtestResults?.first()?.extractedData?.get(field.id) shouldBe "100"
+        }
+
+        @Test
+        fun `test against history filters candidates to the rule's target apps`() = runTest(testDispatcher) {
+            // Given: a draft rule that always matches, scoped to a single target app
+            viewModel.onEvent(UiEvent.OnConditionSaved(createTestCondition()))
+            viewModel.onEvent(UiEvent.OnAppsSelected(listOf(AppInfo("com.a", "App A"))))
+
+            val fromTargetApp = createTestNotification(id = "n1", packageName = "com.a")
+            val fromOtherApp = createTestNotification(id = "n2", packageName = "com.b")
+            coEvery { notificationRepository.getAllNotifications() } returns Result.success(listOf(fromTargetApp, fromOtherApp))
+
+            // When: testing against history
+            viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: only the notification from the target app is tested and matched
+            val state = viewModel.uiState.value
+            state.backtestTestedCount shouldBe 1
+            state.backtestResults?.map { it.notification.id } shouldBe listOf("n1")
+        }
+
+        @Test
+        fun `test against history failure surfaces an error and stops the loading state`() = runTest(testDispatcher) {
+            // Given: the notification repository fails
+            coEvery { notificationRepository.getAllNotifications() } returns Result.failure(IllegalStateException("db error"))
+
+            viewModel.effect.test {
+                // When: testing against history
+                viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                // Then: a ShowError effect is sent and the loading state clears
+                awaitItem() shouldBe UiEffect.ShowError("Failed to test against history")
+                cancelAndIgnoreRemainingEvents()
+            }
+            viewModel.uiState.value.isBacktesting shouldBe false
+        }
+
+        @Test
+        fun `dismiss backtest results clears them`() = runTest(testDispatcher) {
+            // Given: a completed backtest run
+            coEvery { notificationRepository.getAllNotifications() } returns Result.success(emptyList())
+            viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // When: dismissing the results
+            viewModel.onEvent(UiEvent.OnDismissBacktestResults)
+
+            // Then: results are cleared
+            viewModel.uiState.value.backtestResults shouldBe null
         }
     }
 
