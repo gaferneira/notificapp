@@ -7,7 +7,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
 import dev.gaferneira.notificapp.core.notification.action.AlarmActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.AlarmController
 import dev.gaferneira.notificapp.core.notification.action.AlarmPlayer
+import dev.gaferneira.notificapp.core.notification.action.AndroidAlarmController
 import dev.gaferneira.notificapp.core.notification.action.AndroidAlarmPlayer
 import dev.gaferneira.notificapp.core.notification.action.AndroidTorchController
 import dev.gaferneira.notificapp.core.notification.action.DismissActionExecutor
@@ -17,6 +19,7 @@ import dev.gaferneira.notificapp.core.notification.action.SnoozeActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.TorchController
 import dev.gaferneira.notificapp.domain.action.ActionExecutor
 import dev.gaferneira.notificapp.domain.model.ActionType
+import javax.inject.Singleton
 
 /**
  * Map key annotation for binding [ActionExecutor] implementations by [ActionType].
@@ -67,9 +70,18 @@ internal abstract class ActionModule {
     abstract fun bindAlarm(impl: AlarmActionExecutor): ActionExecutor
 
     /**
-     * Binds the real Android-backed [AlarmPlayer] used by [AlarmActionExecutor].
+     * Binds the [AlarmController] used by [AlarmActionExecutor] to start the alarm foreground
+     * service.
      */
     @Binds
+    abstract fun bindAlarmController(impl: AndroidAlarmController): AlarmController
+
+    /**
+     * Binds the real Android-backed [AlarmPlayer], used by `AlarmService`. Scoped [Singleton] so
+     * `stop()` (on dismiss/snooze) acts on the same player instance that `play()` started.
+     */
+    @Binds
+    @Singleton
     abstract fun bindAlarmPlayer(impl: AndroidAlarmPlayer): AlarmPlayer
 
     /**

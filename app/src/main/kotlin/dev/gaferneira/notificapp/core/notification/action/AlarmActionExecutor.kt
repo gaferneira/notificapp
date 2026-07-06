@@ -7,18 +7,29 @@ import dev.gaferneira.notificapp.domain.model.RuleAction
 import javax.inject.Inject
 
 /**
- * Executes [dev.gaferneira.notificapp.domain.model.ActionType.CREATE_ALARM] by playing an alarm
- * sound (and optionally vibrating) through [AlarmPlayer].
+ * Executes [dev.gaferneira.notificapp.domain.model.ActionType.CREATE_ALARM] by starting the alarm
+ * foreground service (via [AlarmController]), which then owns the ringing until the user dismisses
+ * or snoozes it.
+ *
+ * Per ADR 013 this executor delegates: a returned [ActionOutcome.SUCCESS] means "the alarm was
+ * successfully started," not "the alarm has finished ringing" — the ring outlives this call under
+ * the service's ownership. It returns [ActionOutcome.SKIPPED] when the alarm cannot be started
+ * safely (e.g. app notifications disabled, which would leave the alarm with no way to be stopped).
  */
 class AlarmActionExecutor @Inject constructor(
-    private val alarmPlayer: AlarmPlayer,
+    private val alarmController: AlarmController,
 ) : ActionExecutor {
 
     override suspend fun execute(notification: Notification, action: RuleAction): ActionOutcome {
-        alarmPlayer.play(action.getAlarmSoundUri())
-        if (action.isAlarmVibrationEnabled()) {
-            alarmPlayer.vibrate()
-        }
-        return ActionOutcome.SUCCESS
+        val started = alarmController.start(
+            AlarmRequest(
+                soundUri = action.getAlarmSoundUri(),
+                vibrationEnabled = action.isAlarmVibrationEnabled(),
+                title = notification.title ?: notification.appName,
+                text = notification.content.orEmpty(),
+                appName = notification.appName,
+            ),
+        )
+        return if (started) ActionOutcome.SUCCESS else ActionOutcome.SKIPPED
     }
 }

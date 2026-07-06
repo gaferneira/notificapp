@@ -127,4 +127,14 @@
     <string name="clear_all">Clear All</string>
     <string name="apply">Apply</string>
     <string name="no_filters_available">No filter options available. Create more rules with different categories or target apps.</string>
+
+    <!-- Alarm action (ringing notification) -->
+    <string name="alarm_channel_name">Alarms</string>
+    <string name="alarm_channel_description">Ringing alarms triggered by your rules</string>
+    <string name="alarm_notification_title">Alarm</string>
+    <string name="alarm_notification_text">A rule triggered an alarm</string>
+    <string name="alarm_action_dismiss">Dismiss</string>
+    <string name="alarm_action_snooze">Snooze</string>
+    <string name="alarm_permission_warning">Allow notifications for Notificapp so the alarm can show its Dismiss and Snooze controls. Without this permission the alarm will not ring.</string>
+    <string name="alarm_permission_grant">Allow notifications</string>
 </resources>

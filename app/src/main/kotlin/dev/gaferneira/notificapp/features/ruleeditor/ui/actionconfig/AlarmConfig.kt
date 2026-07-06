@@ -1,8 +1,11 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig
 
+import android.Manifest
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -18,14 +21,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.IntentCompat
+import dev.gaferneira.notificapp.R
 
 /**
  * Composable for configuring the alarm action: picking an alarm sound via the system ringtone
@@ -63,6 +74,8 @@ fun AlarmOptionsSelector(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        AlarmNotificationPermissionGate()
+
         AlarmSoundPickerButton(soundUri = soundUri, onSoundChange = onSoundChange)
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -81,6 +94,57 @@ fun AlarmOptionsSelector(
                 checked = vibrationEnabled,
                 onCheckedChange = onVibrationToggle,
             )
+        }
+    }
+}
+
+/**
+ * Requests notification permission when the alarm action is configured, and warns the user when it
+ * is missing. The alarm's Dismiss/Snooze controls live on the ongoing notification, so without this
+ * permission the alarm is refused at trigger time (it would otherwise be unstoppable).
+ */
+@Composable
+private fun AlarmNotificationPermissionGate(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var notificationsEnabled by remember {
+        mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled())
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) {
+        notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+
+    // Ask up front when the alarm action is selected (Android 13+). On older versions the
+    // permission is granted at install, so there is nothing to request.
+    LaunchedEffect(Unit) {
+        if (!notificationsEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    if (notificationsEnabled) return
+
+    Column(modifier = modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+        Text(
+            text = stringResource(R.string.alarm_permission_warning),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        TextButton(
+            onClick = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    context.startActivity(
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName),
+                    )
+                }
+            },
+        ) {
+            Text(stringResource(R.string.alarm_permission_grant))
         }
     }
 }

@@ -10,6 +10,13 @@
     <!-- Vibration for the alarm action -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Foreground service that owns a ringing alarm (looping audio) until dismissed/snoozed -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!-- Post the ongoing alarm notification with Dismiss/Snooze actions (Android 13+ runtime) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Camera torch for the flash alert action - optional, FlashAlertActionExecutor checks
          availability at runtime and skips gracefully on devices without a flash -->
     <uses-feature
@@ -56,6 +63,13 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Foreground service that owns a ringing CREATE_ALARM alarm: looping audio + repeating
+             vibration + the ongoing Dismiss/Snooze notification, until the user acts on it. -->
+        <service
+            android:name=".core.notification.action.AlarmService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- Exposes cache/rule-exports/ as content:// URIs for sharing exported rule JSON via
              the share sheet, without granting broader file access. -->
