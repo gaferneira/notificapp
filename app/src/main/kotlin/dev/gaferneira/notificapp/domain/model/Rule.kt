@@ -1,13 +1,12 @@
 package dev.gaferneira.notificapp.domain.model
 
-import kotlinx.serialization.Serializable
-
 /**
  * Domain model representing an extraction rule.
  *
- * Rules define patterns to extract structured data from notifications.
+ * Rules define patterns to extract structured data from notifications. Not `@Serializable`: the
+ * wire format for import/export is defined by the DTOs in `core/rulesharing/dto/`, independent of
+ * this model's property names (see TD-9 in `docs/roadmap_tech_debt.md`).
  */
-@Serializable
 data class Rule(
     val id: String,
     val name: String,

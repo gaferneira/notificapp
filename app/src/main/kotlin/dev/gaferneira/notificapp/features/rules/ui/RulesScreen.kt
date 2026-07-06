@@ -318,6 +318,7 @@ internal fun RulesScreenContent(
     uiState.importPreview?.let { preview ->
         ImportPreviewDialog(
             rule = preview,
+            skippedActionCount = uiState.importSkippedActions.size,
             onConfirm = { onEvent(RulesEvent.OnImportConfirmed) },
             onDismiss = { onEvent(RulesEvent.OnImportCancelled) },
         )
@@ -344,6 +345,7 @@ internal fun RulesScreenContent(
 @Composable
 private fun ImportPreviewDialog(
     rule: Rule,
+    skippedActionCount: Int,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -370,6 +372,15 @@ private fun ImportPreviewDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (skippedActionCount > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "$skippedActionCount action(s) require a newer version of Notificapp " +
+                            "and will be skipped.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "This rule will start in dry-run mode: it will log matches but won't " +

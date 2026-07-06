@@ -2,7 +2,7 @@
 
 Notificapp rules can be exported to a JSON file (or clipboard text) and imported back — by you, on another device, or by anyone using a rule you shared. This document specifies that format.
 
-See `docs/adr/011-rule-definition-storage.md` for why this is a wire format only: storage stays the 5 normalized Room tables it always was. Import/export just serializes the same `@Serializable` domain models used everywhere else in the app (`core/rulesharing/RuleJsonCodec.kt`).
+See `docs/adr/011-rule-definition-storage.md` for why this is a wire format only: storage stays the 5 normalized Room tables it always was. The DTOs in `core/rulesharing/dto/` (not the domain models) are the canonical definition of this format — every field carries an explicit `@SerialName`, so a domain-model rename never changes exported JSON. `core/rulesharing/RuleWireMapper.kt` maps between the two; `core/rulesharing/RuleJsonCodec.kt` encodes/decodes. A golden-file test (`app/src/test/resources/rule-export-v1.json`) locks this exact shape — any change to it that isn't a deliberate `schemaVersion` bump is a test failure, not a silent break for every rule file already exported by users.
 
 ## Envelope
 
@@ -28,7 +28,7 @@ Every exported file is a single JSON object:
 | `category` | string? | Optional. |
 | `isActive` | boolean | Ignored on import — imported rules are always activated. |
 | `isDryRun` | boolean | Ignored on import — **imported rules always start in dry-run mode**, regardless of what's in the file. This is a deliberate safety rule: you review what an imported rule would have done (via "Test against history" and its dry-run execution log) before trusting it to act on real notifications. See `docs/adr/` and the roadmap's Backtesting and Dry-Run section. |
-| `targetApps` | array of `{packageName, appName}` \| `null` | `null` or an empty array means "all apps". |
+| `targetApps` | array of `{packageName, name}` \| `null` | `null` or an empty array means "all apps". |
 | `conditions` | array of condition objects | See below. IDs are regenerated on import. |
 | `fields` | array of field objects | See below. IDs are regenerated on import. |
 | `actions` | array of action objects | See below. IDs are regenerated on import. |
@@ -78,7 +78,7 @@ Every exported file is a single JSON object:
 { "id": "...", "type": "save_data", "isEnabled": true, "config": {} }
 ```
 
-`type` is one of: `save_data`, `dismiss_notification`, `snooze_notification`, `create_alarm`, `flash_alert`.
+`type` is one of: `save_data`, `dismiss_notification`, `snooze_notification`, `create_alarm`, `flash_alert`. Unlike `conditions[].condition`/`.operator` and `fields[].method.type`, an unrecognized `type` here does not fail the import — that one action is dropped and reported to the user, and the rest of the rule still imports. This lets a rule exported from a newer app version (with an action type this version doesn't have yet) still import in a degraded but usable form.
 
 `config` is a free-form `Map<String, String>` whose keys depend on `type` (e.g. `snooze_duration_minutes` for `snooze_notification`, `flash_count`/`flash_duration_ms` for `flash_alert`) — see the constants in `domain/model/RuleAction.kt`.
 
@@ -97,7 +97,7 @@ A rule that extracts a payment amount from bank notifications and saves it, expo
     "isActive": true,
     "isDryRun": false,
     "targetApps": [
-      { "packageName": "com.bank.example", "appName": "Example Bank" }
+      { "packageName": "com.bank.example", "name": "Example Bank" }
     ],
     "conditions": [
       { "id": "c1", "condition": "text_content", "operator": "contains", "value": "Payment received" }
@@ -127,3 +127,4 @@ Three rules apply on every import, regardless of what the source file contains:
 1. **Fresh identity** — the rule and every nested condition/field/action get a newly generated ID. Importing the same file twice creates two independent rules, never a collision.
 2. **Dry-run by default** — `isDryRun` is always forced to `true`. You get to see what an imported rule would have matched and extracted before it can dismiss, snooze, alert, or otherwise act on a real notification.
 3. **Schema version check** — if `schemaVersion` is newer than this app version understands, import is rejected with an explicit error rather than guessing at an unfamiliar shape.
+4. **Unrecognized actions are skipped, not fatal** — see the `actions[]` section above. Everything else in the rule (conditions, fields, remaining actions) still imports.

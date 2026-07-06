@@ -18,6 +18,8 @@ data class RulesUiState(
     val filter: RuleFilter = RuleFilter(),
     /** A successfully decoded, not-yet-saved imported rule awaiting user confirmation */
     val importPreview: Rule? = null,
+    /** Wire names of actions dropped from [importPreview] because this app version doesn't recognize them */
+    val importSkippedActions: List<String> = emptyList(),
     /** Message to show when decoding an imported rule fails */
     val importError: String? = null,
 )

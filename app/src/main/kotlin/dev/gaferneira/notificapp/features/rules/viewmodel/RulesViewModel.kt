@@ -69,7 +69,7 @@ class RulesViewModel @Inject constructor(
             is RulesEvent.OnExportRuleClick -> onExportRuleClick(event.ruleId)
             is RulesEvent.OnRuleTextReceived -> onRuleTextReceived(event.text)
             RulesEvent.OnImportConfirmed -> onImportConfirmed()
-            RulesEvent.OnImportCancelled -> setState { copy(importPreview = null) }
+            RulesEvent.OnImportCancelled -> setState { copy(importPreview = null, importSkippedActions = emptyList()) }
             RulesEvent.OnDismissImportError -> setState { copy(importError = null) }
         }
     }
@@ -232,8 +232,14 @@ class RulesViewModel @Inject constructor(
 
     private fun onRuleTextReceived(text: String) {
         RuleJsonCodec.decode(text)
-            .onSuccess { rule ->
-                setState { copy(importPreview = rule.withFreshIdentityForImport(), importError = null) }
+            .onSuccess { result ->
+                setState {
+                    copy(
+                        importPreview = result.rule.withFreshIdentityForImport(),
+                        importSkippedActions = result.skippedActions,
+                        importError = null,
+                    )
+                }
             }
             .onFailure { e ->
                 Timber.w(e, "Failed to decode imported rule")
@@ -244,7 +250,7 @@ class RulesViewModel @Inject constructor(
     private fun onImportConfirmed() {
         val rule = uiState.value.importPreview ?: return
         viewModelScope.launch {
-            setState { copy(importPreview = null) }
+            setState { copy(importPreview = null, importSkippedActions = emptyList()) }
             ruleRepository.saveRule(rule)
                 .onSuccess {
                     Timber.d("Imported rule: ${rule.id}")

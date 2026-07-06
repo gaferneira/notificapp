@@ -1,6 +1,8 @@
 package dev.gaferneira.notificapp.core.rulesharing
 
 import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec.withFreshIdentityForImport
+import dev.gaferneira.notificapp.core.rulesharing.dto.RULE_EXPORT_SCHEMA_VERSION
+import dev.gaferneira.notificapp.core.rulesharing.dto.RuleExportDto
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
@@ -33,7 +35,9 @@ class RuleJsonCodecTest {
             ),
         ),
         fields = listOf(
-            createTestField(id = "f1", name = "Amount", method = ExtractionMethod.SmartAmountDetection),
+            // A method with its own fields, not just a zero-argument "smart" one - regression
+            // coverage for the classDiscriminator/property-name collision this DTO layer fixes.
+            createTestField(id = "f1", name = "Amount", method = ExtractionMethod.TextAfterKeyword(keyword = "Total: ", maxLength = 20)),
         ),
         actions = listOf(createTestAction(id = "a1", type = ActionType.SAVE_DATA)),
     )
@@ -46,7 +50,7 @@ class RuleJsonCodecTest {
 
         // Then: decoding succeeds and every field survives the round trip
         decoded.isSuccess shouldBe true
-        val decodedRule = decoded.getOrThrow()
+        val decodedRule = decoded.getOrThrow().rule
         decodedRule.name shouldBe rule.name
         decodedRule.category shouldBe rule.category
         decodedRule.targetApps shouldBe rule.targetApps
@@ -67,7 +71,7 @@ class RuleJsonCodecTest {
     @Test
     fun `decode rejects a schema version newer than this app understands`() {
         // Given: an envelope claiming a future schema version
-        val futureExport = RuleExport(schemaVersion = RULE_EXPORT_SCHEMA_VERSION + 1, rule = rule)
+        val futureExport = RuleExportDto(schemaVersion = RULE_EXPORT_SCHEMA_VERSION + 1, rule = rule.toDto().rule)
         val json = Json.encodeToString(futureExport)
 
         // When: decoding it
@@ -96,6 +100,35 @@ class RuleJsonCodecTest {
         val result = RuleJsonCodec.decode("not json at all")
 
         // Then: decoding fails rather than throwing
+        result.isFailure shouldBe true
+    }
+
+    @Test
+    fun `decode drops an unrecognized action but keeps the rest of the rule`() {
+        // Given: a rule whose JSON has an action type this app version doesn't recognize
+        val encoded = RuleJsonCodec.encode(rule)
+        val tampered = encoded.replace("\"save_data\"", "\"send_webhook\"")
+
+        // When: decoding it
+        val result = RuleJsonCodec.decode(tampered)
+
+        // Then: decoding succeeds, the unrecognized action is dropped and reported
+        result.isSuccess shouldBe true
+        val importResult = result.getOrThrow()
+        importResult.rule.actions shouldBe emptyList()
+        importResult.skippedActions shouldBe listOf("send_webhook")
+    }
+
+    @Test
+    fun `decode fails on an unrecognized condition operator`() {
+        // Given: a rule whose JSON has an operator this app version doesn't recognize
+        val encoded = RuleJsonCodec.encode(rule)
+        val tampered = encoded.replace("\"contains\"", "\"fuzzy_match\"")
+
+        // When: decoding it
+        val result = RuleJsonCodec.decode(tampered)
+
+        // Then: decoding fails rather than silently dropping or misinterpreting the condition
         result.isFailure shouldBe true
     }
 

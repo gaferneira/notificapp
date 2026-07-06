@@ -1,13 +1,17 @@
 package dev.gaferneira.notificapp.core.rulesharing
 
+import dev.gaferneira.notificapp.core.rulesharing.dto.RULE_EXPORT_SCHEMA_VERSION
+import dev.gaferneira.notificapp.core.rulesharing.dto.RuleExportDto
 import dev.gaferneira.notificapp.domain.model.Rule
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
 /**
  * Encodes/decodes a [Rule] to and from the versioned JSON wire format used for rule
- * export/import and the community rules gallery. Pure Kotlin, no I/O - reading the source
- * JSON (file, clipboard) and writing the imported [Rule] are the caller's responsibility.
+ * export/import and the community rules gallery, via the DTO layer in `core/rulesharing/dto/`
+ * (the canonical definition of the wire format - see `docs/rule-format.md`). Pure Kotlin, no I/O -
+ * reading the source JSON (file, clipboard) and writing the imported [Rule] are the caller's
+ * responsibility.
  */
 object RuleJsonCodec {
 
@@ -20,22 +24,24 @@ object RuleJsonCodec {
     /**
      * Serialize [rule] to its shareable JSON representation.
      */
-    fun encode(rule: Rule): String = json.encodeToString(RuleExport(rule = rule))
+    fun encode(rule: Rule): String = json.encodeToString(rule.toDto())
 
     /**
-     * Parse [source] into a [Rule], validating the envelope's schema version and that the rule
-     * has a name. Returns [Result.failure] with a user-presentable message on any problem -
-     * malformed JSON, an unsupported (newer) schema version, or a blank name.
+     * Parse [source] into a [RuleImportResult], validating the envelope's schema version and that
+     * the rule has a name. Returns [Result.failure] with a user-presentable message on any
+     * problem - malformed JSON, an unsupported (newer) schema version, a blank name, or an
+     * unrecognized condition/extraction method. Actions this app version doesn't recognize are
+     * dropped rather than failing the import - see [RuleImportResult.skippedActions].
      */
-    fun decode(source: String): Result<Rule> = runCatching {
-        val export = json.decodeFromString<RuleExport>(source)
+    fun decode(source: String): Result<RuleImportResult> = runCatching {
+        val export = json.decodeFromString<RuleExportDto>(source)
         require(export.schemaVersion <= RULE_EXPORT_SCHEMA_VERSION) {
             "This rule was exported from a newer version of Notificapp and can't be imported here."
         }
         require(export.rule.name.isNotBlank()) {
             "This rule has no name."
         }
-        export.rule
+        export.toDomain()
     }
 
     /**

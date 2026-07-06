@@ -1,0 +1,208 @@
+{
+    "schemaVersion": 1,
+    "rule": {
+        "id": "fixture-rule-id",
+        "name": "Golden Fixture Rule",
+        "description": "Exercises every action type, extraction method, and operator",
+        "category": "Testing",
+        "isActive": true,
+        "isDryRun": false,
+        "targetApps": [
+            {
+                "packageName": "com.bank.example",
+                "name": "Example Bank",
+                "category": "Finance"
+            },
+            {
+                "packageName": "com.example.other",
+                "name": "Other App",
+                "category": null
+            }
+        ],
+        "conditions": [
+            {
+                "id": "cond-contains",
+                "condition": "text_content",
+                "operator": "contains",
+                "value": "Total"
+            },
+            {
+                "id": "cond-starts",
+                "condition": "title",
+                "operator": "starts_with",
+                "value": "Payment"
+            },
+            {
+                "id": "cond-ends",
+                "condition": "app_name",
+                "operator": "ends_with",
+                "value": "Bank"
+            },
+            {
+                "id": "cond-equals",
+                "condition": "package_name",
+                "operator": "equals",
+                "value": "com.bank.example"
+            },
+            {
+                "id": "cond-regex",
+                "condition": "raw_content",
+                "operator": "regex_match",
+                "value": "\\d+"
+            },
+            {
+                "id": "cond-not-contains",
+                "condition": "text_content",
+                "operator": "not_contains",
+                "value": "spam"
+            }
+        ],
+        "fields": [
+            {
+                "id": "field-fixed",
+                "name": "Fixed Position",
+                "fieldType": "string",
+                "isRequired": false,
+                "method": {
+                    "type": "fixed_position",
+                    "startIndex": 0,
+                    "endIndex": 10
+                }
+            },
+            {
+                "id": "field-anchors",
+                "name": "Between Anchors",
+                "fieldType": "string",
+                "isRequired": false,
+                "method": {
+                    "type": "text_between_anchors",
+                    "startAnchor": "Total: ",
+                    "endAnchor": " kr"
+                }
+            },
+            {
+                "id": "field-regex",
+                "name": "Regex",
+                "fieldType": "string",
+                "isRequired": false,
+                "method": {
+                    "type": "regex",
+                    "pattern": "(\\d+)",
+                    "captureGroup": 1
+                }
+            },
+            {
+                "id": "field-after",
+                "name": "After Keyword",
+                "fieldType": "currency",
+                "isRequired": false,
+                "method": {
+                    "type": "text_after_keyword",
+                    "keyword": "Total: ",
+                    "maxLength": 20
+                }
+            },
+            {
+                "id": "field-before",
+                "name": "Before Keyword",
+                "fieldType": "string",
+                "isRequired": false,
+                "method": {
+                    "type": "text_before_keyword",
+                    "keyword": " kr"
+                }
+            },
+            {
+                "id": "field-line",
+                "name": "Line",
+                "fieldType": "string",
+                "isRequired": false,
+                "method": {
+                    "type": "line_extraction",
+                    "lineNumber": 2
+                }
+            },
+            {
+                "id": "field-split",
+                "name": "Split",
+                "fieldType": "number",
+                "isRequired": false,
+                "method": {
+                    "type": "split_by_delimiter",
+                    "delimiter": ",",
+                    "takeIndex": 0
+                }
+            },
+            {
+                "id": "field-json",
+                "name": "Json Path",
+                "fieldType": "string",
+                "isRequired": false,
+                "method": {
+                    "type": "json_path",
+                    "path": "$.amount"
+                }
+            },
+            {
+                "id": "field-smart-amount",
+                "name": "Smart Amount",
+                "fieldType": "currency",
+                "isRequired": false,
+                "method": {
+                    "type": "smart_amount"
+                }
+            },
+            {
+                "id": "field-smart-date",
+                "name": "Smart Date",
+                "fieldType": "date",
+                "isRequired": false,
+                "method": {
+                    "type": "smart_date"
+                }
+            }
+        ],
+        "actions": [
+            {
+                "id": "action-save",
+                "type": "save_data",
+                "isEnabled": true,
+                "config": {}
+            },
+            {
+                "id": "action-dismiss",
+                "type": "dismiss_notification",
+                "isEnabled": true,
+                "config": {}
+            },
+            {
+                "id": "action-snooze",
+                "type": "snooze_notification",
+                "isEnabled": true,
+                "config": {
+                    "snooze_duration_minutes": "30"
+                }
+            },
+            {
+                "id": "action-alarm",
+                "type": "create_alarm",
+                "isEnabled": true,
+                "config": {
+                    "alarm_sound_uri": "content://media/alarm/1",
+                    "alarm_vibration_enabled": "true"
+                }
+            },
+            {
+                "id": "action-flash",
+                "type": "flash_alert",
+                "isEnabled": true,
+                "config": {
+                    "flash_count": "5",
+                    "flash_duration_ms": "300"
+                }
+            }
+        ],
+        "createdAt": 1751500000000,
+        "updatedAt": 1751500000000
+    }
+}

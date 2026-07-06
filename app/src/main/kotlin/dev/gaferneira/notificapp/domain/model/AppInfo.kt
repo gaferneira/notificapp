@@ -1,11 +1,8 @@
 package dev.gaferneira.notificapp.domain.model
 
-import kotlinx.serialization.Serializable
-
 /**
- * Information about an installed app.
+ * Information about an installed app. Not `@Serializable`: see [Rule].
  */
-@Serializable
 data class AppInfo(
     /** Package name (unique identifier) */
     val packageName: String,

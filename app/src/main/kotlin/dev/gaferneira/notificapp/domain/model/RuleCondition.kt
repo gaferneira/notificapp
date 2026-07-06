@@ -6,9 +6,9 @@ import kotlinx.serialization.Serializable
 /**
  * Domain model representing a rule trigger (matching condition).
  *
- * Defines when a rule should be applied based on notification properties.
+ * Defines when a rule should be applied based on notification properties. Not `@Serializable`:
+ * see [Rule].
  */
-@Serializable
 data class RuleCondition(
     val id: String,
     /** For CONDITION type: what to match against */

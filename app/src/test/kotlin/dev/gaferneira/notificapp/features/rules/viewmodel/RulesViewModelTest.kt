@@ -2,9 +2,11 @@ package dev.gaferneira.notificapp.features.rules.viewmodel
 
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
+import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestRule
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -103,6 +105,26 @@ class RulesViewModelTest {
             preview.isActive shouldBe true
             (preview.id != "rule-1") shouldBe true
             viewModel.uiState.value.importError shouldBe null
+        }
+
+        @Test
+        fun `receiving rule text with an unrecognized action surfaces it as skipped`() {
+            // Given: a rule encoded normally, then tampered to carry an action type this app
+            // version doesn't recognize (e.g. exported from a newer version)
+            val rule = createTestRule(
+                id = "rule-1",
+                name = "Bank payment",
+                actions = listOf(createTestAction(type = ActionType.SAVE_DATA)),
+            )
+            val json = RuleJsonCodec.encode(rule).replace("\"save_data\"", "\"send_webhook\"")
+
+            // When: the text is received
+            viewModel.onEvent(RulesEvent.OnRuleTextReceived(json))
+
+            // Then: the preview still succeeds and reports the skipped action
+            val state = viewModel.uiState.value
+            state.importPreview.shouldNotBeNull()
+            state.importSkippedActions shouldBe listOf("send_webhook")
         }
 
         @Test
