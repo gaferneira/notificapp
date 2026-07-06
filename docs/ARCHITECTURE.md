@@ -118,15 +118,16 @@ app/src/main/kotlin/dev/gaferneira/notificapp/
 ```
 features → domain (models + repository interfaces)
 features → core/ui (MVI base, navigation)
+features → core/* pure-Kotlin services (core/extraction's RuleEngine, core/rulesharing's RuleJsonCodec - Android-free, no core/data/domain.repository imports of their own)
 core/data → domain (repository implementations)
 core/extraction → domain (RuleEngine, RuleMatcher, FieldExtractor)
 core/notification → core/extraction (notification processing)
 ```
 
 **Rules:**
-- Features only depend on domain models, repository interfaces, and core/ui
+- Features depend on domain models, repository interfaces, core/ui, and pure-Kotlin `core/*` services (e.g. `RuleEditorViewModel` → `RuleEngine` for backtesting, `RulesViewModel` → `RuleJsonCodec` for import/export) — never on `core/data` (DAOs/entities) or Android-facing `core/notification` internals directly
 - core/data implements domain repository interfaces
-- core/extraction is pure Kotlin with no Android dependencies
+- core/extraction and core/rulesharing are pure Kotlin with no Android dependencies
 - No circular dependencies between packages
 
 ### Future Modularization Path

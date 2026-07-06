@@ -79,13 +79,14 @@ Notificapp/
 ```
 features → domain (models + repository interfaces)
 features → core/ui (MVI base, navigation)
+features → core/* pure-Kotlin services (e.g. RuleEngine, RuleJsonCodec - Android-free, no core/data/domain.repository imports of their own)
 core/data → domain (implements repository interfaces)
 core/extraction → domain
 core/notification → core/extraction (runs the rule engine)
 ```
 
 **Dependency Rules:**
-- Features only depend on domain models, repository interfaces, and `core/ui`
+- Features depend on domain models, repository interfaces, `core/ui`, and pure-Kotlin `core/*` services (e.g. `RuleEditorViewModel` → `RuleEngine`, `RulesViewModel` → `RuleJsonCodec`) — never on `core/data` or Android-facing `core/notification` internals directly
 - `core/data` implements repository interfaces defined in `domain/repository`
 - `core/extraction` should be pure Kotlin depending only on domain models
 - No circular dependencies between packages

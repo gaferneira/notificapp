@@ -12,7 +12,7 @@ Notificapp targets F-Droid as its primary distribution channel (see `docs/roadma
 
 1. Bump `versionCode` (+1) and `versionName` in `app/build.gradle.kts`.
 2. Write `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` — plain text, user-facing, one file per `versionCode`.
-3. Verify the Room migration chain covers every previously-shipped schema version (`APP_DATABASE_MIGRATIONS` in `core/data/local/migration/`) — see TD-10/TD-2 in `docs/roadmap_tech_debt.md` on why a gap here is catastrophic, not cosmetic.
+3. Verify the Room migration chain covers every previously-shipped schema version (`APP_DATABASE_MIGRATIONS` in `core/data/local/migration/`). `AppDatabaseMigrationTest` is the test that catches a gap here, but it's an `androidTest` and needs an emulator — CI (`.github/workflows/ci.yml`) does not run it. Run it manually before every release: `./gradlew connectedDebugAndroidTest`.
 4. Run the full local gate: `./gradlew spotlessApply detekt test assembleDebug`.
 5. Commit the version bump and changelog together, then tag: `git tag v<versionName>`.
 6. Push the tag.

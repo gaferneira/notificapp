@@ -33,7 +33,7 @@ Rationale: no evidence has emerged during Phases 0–1 that rule shape is actual
 
 ## Amendment (2026-07-06, TD-9): wire format moved to a dedicated DTO layer
 
-The original decision above (paragraph 2) had import/export serialize the domain models (`Rule`, `RuleCondition`, `RuleField`, `RuleAction`) directly — their `@Serializable` annotations *were* the wire format. `docs/roadmap_tech_debt.md` TD-9 identified this as unsafe once real users and shared rule files exist: any domain rename would silently break every previously-exported rule.
+The original decision above (paragraph 2) had import/export serialize the domain models (`Rule`, `RuleCondition`, `RuleField`, `RuleAction`) directly — their `@Serializable` annotations *were* the wire format. We identified this as unsafe once real users and shared rule files exist: any domain rename would silently break every previously-exported rule.
 
 **What changed:** `core/rulesharing/dto/` (`RuleExportDto`, `RuleDto`, `ConditionDto`, `FieldDto`, `ExtractionMethodDto`, `ActionDto`, `AppInfoDto`) is now the canonical, explicitly `@SerialName`-pinned wire format, with `RuleWireMapper` converting to/from the domain models. `Rule`, `RuleCondition`, and `AppInfo` are no longer `@Serializable` at all. `RuleField.ExtractionMethod` keeps `@Serializable` because Room's `RuleFieldMapper` still serializes it directly for column storage (per the original ADR's "storage stays exactly as-is" decision) — that dual use is now documented in code rather than incidental.
 

@@ -62,6 +62,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,7 +93,12 @@ import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
 import dev.gaferneira.notificapp.features.rules.contract.RulesUiState
 import dev.gaferneira.notificapp.features.rules.viewmodel.RulesViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.InputStream
 
 @Composable
 fun RulesScreen(
@@ -154,15 +160,38 @@ fun RulesScreen(
 }
 
 /**
+ * A single exported rule is a few KB at most; this is a generous cap against a malicious or
+ * corrupt "rule" file blowing up memory on import.
+ */
+private const val MAX_IMPORT_FILE_SIZE_BYTES = 1 * 1024 * 1024
+
+/**
+ * Reads up to [maxBytes] from this stream, returning null (without buffering the rest of the
+ * stream into memory) if it contains more than that.
+ */
+private fun InputStream.readUpTo(maxBytes: Int): ByteArray? {
+    val buffer = ByteArrayOutputStream()
+    val chunk = ByteArray(DEFAULT_BUFFER_SIZE)
+    while (true) {
+        val read = read(chunk)
+        if (read == -1) break
+        if (buffer.size() + read > maxBytes) return null
+        buffer.write(chunk, 0, read)
+    }
+    return buffer.toByteArray()
+}
+
+/**
  * Writes [json] to a cache file and launches the share sheet for it via a [FileProvider] URI,
  * so the rule can be sent to any app that accepts a text/JSON attachment (Messages, email,
  * a cloud-storage "save to" target, etc.) without granting broader file access.
  */
-private fun shareRuleJson(context: Context, ruleName: String, json: String) {
-    val exportsDir = File(context.cacheDir, "rule-exports").apply { mkdirs() }
-    val fileName = ruleName.ifBlank { "rule" }.replace(Regex("[^A-Za-z0-9_-]"), "_")
-    val file = File(exportsDir, "$fileName.json")
-    file.writeText(json)
+private suspend fun shareRuleJson(context: Context, ruleName: String, json: String) {
+    val file = withContext(Dispatchers.IO) {
+        val exportsDir = File(context.cacheDir, "rule-exports").apply { mkdirs() }
+        val fileName = ruleName.ifBlank { "rule" }.replace(Regex("[^A-Za-z0-9_-]"), "_")
+        File(exportsDir, "$fileName.json").apply { writeText(json) }
+    }
 
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     val intent = Intent(Intent.ACTION_SEND).apply {
@@ -184,16 +213,25 @@ internal fun RulesScreenContent(
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val coroutineScope = rememberCoroutineScope()
     var showImportMenu by remember { mutableStateOf(false) }
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
-        val text = uri?.let {
-            runCatching {
-                context.contentResolver.openInputStream(it)?.bufferedReader()?.use { reader -> reader.readText() }
-            }.getOrNull()
+        // A null uri means the user cancelled the picker - not an import attempt, so don't
+        // surface an error dialog for it.
+        if (uri == null) return@rememberLauncherForActivityResult
+
+        coroutineScope.launch {
+            val text = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.readUpTo(MAX_IMPORT_FILE_SIZE_BYTES)?.decodeToString()
+                    }
+                }.getOrNull()
+            }
+            onEvent(RulesEvent.OnRuleTextReceived(text.orEmpty()))
         }
-        onEvent(RulesEvent.OnRuleTextReceived(text.orEmpty()))
     }
 
     Scaffold(

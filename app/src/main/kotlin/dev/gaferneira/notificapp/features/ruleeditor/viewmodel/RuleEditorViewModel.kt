@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.core.di.Dispatcher
+import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
@@ -19,7 +21,9 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
@@ -37,6 +41,7 @@ class RuleEditorViewModel @Inject constructor(
     private val selectedAppRepository: SelectedAppRepository,
     private val ruleEngine: RuleEngine,
     private val navigationHandler: NavigationHandler,
+    @Dispatcher(DispatcherType.Default) private val defaultDispatcher: CoroutineDispatcher,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
     init {
@@ -414,9 +419,13 @@ class RuleEditorViewModel @Inject constructor(
 
             notificationRepository.getNotificationsForBacktest(targetPackages, BACKTEST_NOTIFICATION_LIMIT)
                 .onSuccess { candidates ->
-                    val results = candidates.mapNotNull { notification ->
-                        ruleEngine.evaluate(notification, listOf(draftRule)).firstOrNull()?.let { match ->
-                            BacktestMatch(notification = notification, extractedData = match.extractedData)
+                    // Evaluating up to BACKTEST_NOTIFICATION_LIMIT notifications runs regex/JSON
+                    // extraction per candidate - CPU work that doesn't belong on Main.
+                    val results = withContext(defaultDispatcher) {
+                        candidates.mapNotNull { notification ->
+                            ruleEngine.evaluate(notification, listOf(draftRule)).firstOrNull()?.let { match ->
+                                BacktestMatch(notification = notification, extractedData = match.extractedData)
+                            }
                         }
                     }
 

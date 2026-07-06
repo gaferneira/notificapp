@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.notification.action
 
 import android.content.Context
+import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
@@ -19,7 +20,16 @@ class AndroidAlarmPlayer @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : AlarmPlayer {
 
+    private var activeRingtone: Ringtone? = null
+
+    /**
+     * Stops any alarm sound already playing from a previous match before starting a new one -
+     * without this, rapid consecutive matches stack overlapping, unstoppable alarm sounds.
+     */
+    @Synchronized
     override fun play(soundUri: String?) {
+        activeRingtone?.let { if (it.isPlaying) it.stop() }
+
         val uri = soundUri?.let(Uri::parse)
             ?: RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
@@ -29,6 +39,7 @@ class AndroidAlarmPlayer @Inject constructor(
             Timber.w("No ringtone resolved for alarm sound URI: $uri")
             return
         }
+        activeRingtone = ringtone
         ringtone.play()
     }
 

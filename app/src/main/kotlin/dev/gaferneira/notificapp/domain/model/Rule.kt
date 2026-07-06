@@ -5,7 +5,7 @@ package dev.gaferneira.notificapp.domain.model
  *
  * Rules define patterns to extract structured data from notifications. Not `@Serializable`: the
  * wire format for import/export is defined by the DTOs in `core/rulesharing/dto/`, independent of
- * this model's property names (see TD-9 in `docs/roadmap_tech_debt.md`).
+ * this model's property names.
  */
 data class Rule(
     val id: String,

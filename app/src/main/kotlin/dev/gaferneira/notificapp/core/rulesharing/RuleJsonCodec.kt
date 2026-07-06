@@ -3,6 +3,7 @@ package dev.gaferneira.notificapp.core.rulesharing
 import dev.gaferneira.notificapp.core.rulesharing.dto.RULE_EXPORT_SCHEMA_VERSION
 import dev.gaferneira.notificapp.core.rulesharing.dto.RuleExportDto
 import dev.gaferneira.notificapp.domain.model.Rule
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
@@ -34,7 +35,11 @@ object RuleJsonCodec {
      * dropped rather than failing the import - see [RuleImportResult.skippedActions].
      */
     fun decode(source: String): Result<RuleImportResult> = runCatching {
-        val export = json.decodeFromString<RuleExportDto>(source)
+        val export = try {
+            json.decodeFromString<RuleExportDto>(source)
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException("This doesn't look like a valid rule file.", e)
+        }
         require(export.schemaVersion <= RULE_EXPORT_SCHEMA_VERSION) {
             "This rule was exported from a newer version of Notificapp and can't be imported here."
         }

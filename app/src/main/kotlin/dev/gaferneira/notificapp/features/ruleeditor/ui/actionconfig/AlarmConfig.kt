@@ -109,7 +109,11 @@ private fun AlarmSoundPickerButton(
     val soundTitle = remember(soundUri) {
         val uri = soundUri?.let(Uri::parse)
             ?: RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM)
-        uri?.let { RingtoneManager.getRingtone(context, it)?.getTitle(context) } ?: "Default alarm sound"
+        // getRingtone/getTitle touch the content resolver and can throw SecurityException on some
+        // devices for a URI this app no longer has access to (e.g. a picked ringtone whose
+        // permission grant lapsed) - fall back to the default label rather than crashing.
+        uri?.let { runCatching { RingtoneManager.getRingtone(context, it)?.getTitle(context) }.getOrNull() }
+            ?: "Default alarm sound"
     }
 
     OutlinedButton(

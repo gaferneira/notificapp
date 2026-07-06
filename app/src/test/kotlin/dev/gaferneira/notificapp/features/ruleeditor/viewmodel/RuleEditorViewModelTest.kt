@@ -68,6 +68,7 @@ class RuleEditorViewModelTest {
             selectedAppRepository = selectedAppRepository,
             ruleEngine = RuleEngine(),
             navigationHandler = navigationHandler,
+            defaultDispatcher = testDispatcher,
         )
         testDispatcher.scheduler.advanceUntilIdle()
     }
