@@ -103,8 +103,8 @@ app/src/main/kotlin/dev/gaferneira/notificapp/
 ├── features/                  # Feature screens (one package per screen/feature)
 │   ├── appselection/          # App selection screen
 │   ├── inbox/                 # Inbox screen - list of notifications
-│   ├── notification/          # Notification system integration (NotificationListenerService, 
-│   │                          # NotificationNormalizer, NotificationDeduplicator)
+│   ├── notification/          # Notification system integration (NotificappListenerService,
+│   │                          # RawNotificationReader - the Android-facing boundary)
 │   ├── notificationdetail/    # Notification detail screen
 │   ├── onboarding/            # Onboarding screen
 │   ├── ruleeditor/            # Rule editor screen with UI components
@@ -198,7 +198,7 @@ flowchart LR
 ### Step-by-Step Flow
 
 1. **Capture**: `NotificationListenerService` receives notification from Android system; filters (enabled app, has content, not system ongoing, not too old)
-2. **Normalize**: `NotificationNormalizer` transforms Android's `StatusBarNotification` into domain `Notification` model
+2. **Normalize**: `StatusBarNotification.toRawData()` reads the Android-specific fields into a plain `RawNotificationData`, then pure-Kotlin `NotificationNormalizer` transforms it into the domain `Notification` model
 3. **Process**: the service delegates the normalized notification to `ProcessNotificationUseCase`, which owns the rest of the pipeline
 4. **Deduplicate**: `NotificationDeduplicator` checks for duplicates (same content within time window)
 5. **Persist**: `NotificationRepository` saves new notification to database
@@ -210,8 +210,8 @@ flowchart LR
 ### Design Rationale
 
 **Separation of Concerns:**
-- `features/notification` package handles Android-specific APIs only (`NotificappListenerService`, `NotificationNormalizer`); `core/notification` holds the pipeline orchestration (`ProcessNotificationUseCase`, `ActionDispatcher`, per-action `ActionExecutor`s), which is reused by `features/notificationdetail` and is pure Kotlin aside from the `SystemNotificationController` boundary
-- `NotificationNormalizer` lives in `features/notification` (app-specific logic); `NotificationDeduplicator` is pure Kotlin and lives in `core/notification`
+- `features/notification` package handles Android-specific APIs only (`NotificappListenerService`, `RawNotificationReader`'s `StatusBarNotification.toRawData()`/`PackageManager.resolveAppName()`); `core/notification` holds `NotificationNormalizer`, `NotificationDeduplicator`, and pipeline orchestration (`ProcessNotificationUseCase`, `ActionDispatcher`, per-action `ActionExecutor`s), which is reused by `features/notificationdetail` and is pure Kotlin aside from the `SystemNotificationController` boundary
+- `NotificationNormalizer` takes a plain `RawNotificationData` (no Android imports) and is unit-tested on the JVM; only the thin `RawNotificationReader` extension functions touch `StatusBarNotification`/`PackageManager` directly
 - `core/extraction` contains `RuleEngine`, `RuleMatcher`, `FieldExtractor` — pure Kotlin, no Android or persistence dependencies
 - `domain` models are the contract between layers
 
@@ -412,7 +412,7 @@ data class ExtractedFieldValue(
 
 - Rule loading (via `RuleRepository`) and persistence (via `RuleExecutionRepository`) live in `core/notification/ProcessNotificationUseCase`, not in `core/extraction` — this keeps `core/extraction → domain` as the only dependency direction
 - `RuleMatch` (`domain/model/RuleMatch.kt`) is the pure evaluation result returned by `RuleEngine`, before it is converted into a persisted `RuleExecution`
-- **Notification normalization** (`NotificationNormalizer`) lives in `features/notification/`, not extraction (app-specific logic, handles Android APIs). `NotificationDeduplicator` is pure Kotlin and lives in `core/notification/` with `ProcessNotificationUseCase`
+- **Notification normalization** (`NotificationNormalizer`) lives in `core/notification/`, not extraction — it's pure Kotlin (takes `RawNotificationData`, no Android imports; TD-14). Only the thin `RawNotificationReader` extension functions in `features/notification/` touch `StatusBarNotification`/`PackageManager`. `NotificationDeduplicator` is also pure Kotlin and lives in `core/notification/` with `ProcessNotificationUseCase`
 
 ## Coding Standards
 
@@ -473,7 +473,7 @@ data class ExtractedFieldValue(
 
 **Current Status:**
 
-- 88 passing tests in `app/src/test`: `RuleMatcherTest` (all 6 operators), `FieldExtractorTest` (all 10 extraction methods), `RuleEngineTest`, `ProcessNotificationUseCaseTest`, `ActionDispatcherTest`, and per-executor tests, with shared fixtures in `testutil/TestFixtures.kt`
+- 229 passing tests in `app/src/test`: `RuleMatcherTest` (all 6 operators), `FieldExtractorTest` (all 10 extraction methods), `RuleEngineTest`, `ProcessNotificationUseCaseTest`, `ActionDispatcherTest`, per-executor tests, `NotificationNormalizerTest`, `RuleJsonCodecTest`/`RuleJsonCodecGoldenFileTest`, and four ViewModel test suites, with shared fixtures in `testutil/TestFixtures.kt`
 - `useJUnitPlatform()` wired in `app/build.gradle.kts`; `./gradlew test` is a real, meaningful gate
 - ViewModel and repository tests are still pending
 

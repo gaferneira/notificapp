@@ -1,7 +1,7 @@
 # ADR 011 – Rule Definition Storage: Normalized Tables, JSON as Wire Format Only
 
 ## Status
-Accepted (2026-07-06) — normalized schema stays as the storage source of truth; JSON is the Phase 2 import/export wire format only, not a storage migration
+Accepted (2026-07-06) — normalized schema stays as the storage source of truth; JSON is the Phase 2 import/export wire format only, not a storage migration. Amended (2026-07-06, TD-9): the wire format is now a dedicated DTO layer rather than the domain models directly — see Amendment below.
 
 ## Context
 A rule's definition is normalized across five Room tables (`rules`, `rule_conditions`, `rule_fields`, `rule_actions`, `rule_target_apps`). The product concept of "what a rule is" is still maturing (OR-groups, nested conditions, and AI-generated rules are all plausible — see `docs/roadmap.md`), and every shape change costs a multi-table migration plus mapper churn across five entity mappers.
@@ -30,3 +30,13 @@ Rationale: no evidence has emerged during Phases 0–1 that rule shape is actual
 - Rule-shape changes would become code-only (no Room migration) as long as the JSON schema versioning is respected
 - Import/export and Room persistence would share one serialization format
 - Querying inside definitions would require SQLite JSON1 functions or in-memory filtering
+
+## Amendment (2026-07-06, TD-9): wire format moved to a dedicated DTO layer
+
+The original decision above (paragraph 2) had import/export serialize the domain models (`Rule`, `RuleCondition`, `RuleField`, `RuleAction`) directly — their `@Serializable` annotations *were* the wire format. `docs/roadmap_tech_debt.md` TD-9 identified this as unsafe once real users and shared rule files exist: any domain rename would silently break every previously-exported rule.
+
+**What changed:** `core/rulesharing/dto/` (`RuleExportDto`, `RuleDto`, `ConditionDto`, `FieldDto`, `ExtractionMethodDto`, `ActionDto`, `AppInfoDto`) is now the canonical, explicitly `@SerialName`-pinned wire format, with `RuleWireMapper` converting to/from the domain models. `Rule`, `RuleCondition`, and `AppInfo` are no longer `@Serializable` at all. `RuleField.ExtractionMethod` keeps `@Serializable` because Room's `RuleFieldMapper` still serializes it directly for column storage (per the original ADR's "storage stays exactly as-is" decision) — that dual use is now documented in code rather than incidental.
+
+**What did not change:** storage is still the five normalized tables; JSON is still wire-format-only, produced from and consumed into those tables via the existing mappers. This amendment only closes the "one Kotlin class shape defines the domain model, the wire format, and DB column content simultaneously" gap from the original decision — it doesn't revisit the normalized-vs-JSON-storage question itself.
+
+See `docs/rule-format.md` for the wire format specification and `app/src/test/resources/rule-export-v1.json` for the format locked as a golden-file test.

@@ -52,10 +52,11 @@ Extraction is one action among many in the rules engine — but it is the **diff
 - **Backtest Against History** — Rule Editor can test an unsaved draft rule against previously captured notifications and preview matches + extracted fields before saving
 - **Dry-Run Mode** — Per-rule toggle: matches are logged as `RuleExecution`s but no actions execute; surfaced via a `DryRunBadge` in Rules List and Notification Detail — **Backtesting and Dry-Run (Phase 2) is now fully done**
 - **Rule Import/Export** — Versioned JSON format (`docs/rule-format.md`), export via the Android share sheet (`FileProvider`), import from file/clipboard with a validation + preview dialog; imported rules always get fresh IDs and start in dry-run mode
+- **Tech-debt hardening before Phase 3** — all of `docs/roadmap_tech_debt.md` TD-9..TD-16 resolved: rule-sharing wire format decoupled from domain models via DTOs (`core/rulesharing/dto/`), destructive Room migration fallback gated to debug builds, backtesting query bounded, GitHub Actions CI added, `ActionBottomSheet`/`AddFieldBottomSheet` split into per-type config composables, `NotificationNormalizer` made pure Kotlin with test coverage, release/Fastlane scaffolding added, Detekt baseline shrink policy documented
 
 ### In Progress
 
-- **Tech-debt hardening before Phase 3** — see `docs/roadmap_tech_debt.md` (TD-9..TD-16): freeze the rule-sharing wire format behind DTOs (must land before any rule file exists outside the repo), gate destructive Room migrations to debug builds, bound the backtesting query, and stand up CI before community contributions open.
+Nothing currently in progress — ready to start Phase 3.
 
 ---
 
@@ -222,7 +223,7 @@ With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 se
 - [ ] `rules/` directory in the GitHub repo with community-contributed, tested rules for popular apps (e.g., "Revolut transaction", "DHL tracking", "Amazon delivery"), organized by app/category
 - [ ] Contribution guide + PR template for submitting rules
 - [ ] In-app: "Browse community rules" entry point that explains how to import gallery rules (no network access in-app — user downloads/pastes JSON, keeping the local-first promise)
-- [ ] CI validation of `rules/*.json`: a JVM test decodes every gallery file through `RuleJsonCodec` so a malformed contribution can't merge (depends on TD-9's frozen wire format and TD-12's pipeline)
+- [ ] CI validation of `rules/*.json`: a JVM test decodes every gallery file through `RuleJsonCodec` so a malformed contribution can't merge (TD-9's wire format and TD-12's pipeline are both done, so this is now unblocked)
 
 ### Repo Infrastructure
 
@@ -232,7 +233,7 @@ With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 se
 - [x] Issue templates (bug, feature, rule request) and PR template in `.github/`
 - [x] `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1)
 - [x] `SECURITY.md` (private vulnerability reporting policy)
-- [ ] CI: Spotless + Detekt + unit tests + debug build on every PR — **now urgent** (TD-12 in `docs/roadmap_tech_debt.md`): must land before community rule/code contributions open
+- [x] CI: Spotless + Detekt + unit tests + debug build on every PR (`.github/workflows/ci.yml`, TD-12)
 - [x] License decision — **GPL-3.0** (`LICENSE`): keeps forks open-source, fits the F-Droid audience and trust story
 
 ### Trust & Privacy
@@ -245,7 +246,7 @@ With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 se
 
 - [ ] **F-Droid as the primary channel** — local-first, no trackers, notification-listener-based is an F-Droid darling profile, and it's where the target audience lives
 - [ ] Reproducible builds; keep proprietary deps (AICore) out of the main flavor
-- [ ] Fastlane metadata (descriptions, screenshots) for the F-Droid listing
+- [ ] Fastlane metadata for the F-Droid listing — descriptions and versioning/release-checklist scaffolding done (`fastlane/metadata/`, `docs/RELEASING.md`, TD-15); screenshots still needed
 
 ---
 

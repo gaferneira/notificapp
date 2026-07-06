@@ -8,20 +8,22 @@ This document details every technical debt item identified in the July 6, 2026 a
 
 | ID    | Item | Priority | Effort | Status |
 |-------|------|----------|--------|--------|
-| TD-9  | Rule-sharing wire format is coupled to domain models (and to DB columns) | P0 | Medium | Open |
-| TD-10 | `fallbackToDestructiveMigration()` active in release builds | P0 | Small | Open |
-| TD-11 | Backtesting loads the entire notification table into memory | P1 | Small | Open |
-| TD-12 | No CI pipeline (blocking for community contributions) | P1 | Small | Open |
-| TD-13 | `ActionBottomSheet` / `AddFieldBottomSheet` are per-type config monoliths | P2 | Medium | Open |
-| TD-14 | `NotificationNormalizer` has zero test coverage | P2 | Medium | Open |
-| TD-15 | Release hygiene: static `versionCode`, no Fastlane changelogs | P3 | Small | Open |
-| TD-16 | Detekt baseline holds 299 grandfathered findings | P3 | Policy | Open |
+| TD-9  | Rule-sharing wire format is coupled to domain models (and to DB columns) | P0 | Medium | Resolved |
+| TD-10 | `fallbackToDestructiveMigration()` active in release builds | P0 | Small | Resolved |
+| TD-11 | Backtesting loads the entire notification table into memory | P1 | Small | Resolved |
+| TD-12 | No CI pipeline (blocking for community contributions) | P1 | Small | Resolved |
+| TD-13 | `ActionBottomSheet` / `AddFieldBottomSheet` are per-type config monoliths | P2 | Medium | Resolved |
+| TD-14 | `NotificationNormalizer` has zero test coverage | P2 | Medium | Resolved |
+| TD-15 | Release hygiene: static `versionCode`, no Fastlane changelogs | P3 | Small | Resolved |
+| TD-16 | Detekt baseline holds 299 grandfathered findings | P3 | Policy | Resolved (policy documented; baseline count now tracked as it shrinks) |
 
-Recommended order: **TD-9 and TD-10 first** — both are cheap now and catastrophic to retrofit once real users and shared rule files exist. Then TD-12 (before the repo invites contributions), TD-11, TD-13, TD-14, and the P3 items opportunistically.
+All eight items resolved 2026-07-06 on `refactor/tech-debt`. Notably, implementing TD-9's golden-file test surfaced and fixed a real pre-existing bug: `RuleJsonCodec.encode()` threw for every `ExtractionMethod` except the two zero-argument "smart" ones, because the domain sealed class's self-declared `type` property collided with kotlinx's default polymorphic JSON discriminator — undetected because no prior test encoded any other extraction method through the codec.
 
 ---
 
 ## TD-9: Rule-sharing wire format is coupled to domain models (P0)
+
+**Status: Resolved** — commit `c2f6db5`.
 
 ### Context
 
@@ -104,9 +106,13 @@ From then on, *any* accidental wire-format change — a rename, a default change
 - Renaming a domain property compiles without touching any JSON output (proven by the golden test).
 - Importing a rule containing an unknown action type succeeds with a visible "skipped" notice.
 
+**Deviations from the plan above:** `RuleImportResult` shipped without `skippedFields` — only actions get lenient unknown-value handling (matching the acceptance criteria and the near-term motivation, Phase 4's webhook action). An unrecognized extraction method fails the whole import, same as an unrecognized condition operator, since a field that can't extract is as meaningless as a condition that can't evaluate; there's no equivalent near-term driver for field-level leniency. `RuleImportResult` lives in its own file (`RuleImportResult.kt`) rather than inline in the mapper, to satisfy Detekt's one-top-level-declaration-per-file convention. Implementing the golden-file test surfaced and fixed a real bug — see the note at the top of this document.
+
 ---
 
 ## TD-10: `fallbackToDestructiveMigration()` active in release builds (P0)
+
+**Status: Resolved** — commit `337b393`.
 
 ### Context
 
@@ -137,6 +143,8 @@ Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
 ---
 
 ## TD-11: Backtesting loads the entire notification table into memory (P1)
+
+**Status: Resolved** — commit `16996b4`.
 
 ### Context
 
@@ -170,6 +178,8 @@ suspend fun getRecentByPackageNames(packageNames: List<String>, limit: Int): Lis
 ---
 
 ## TD-12: No CI pipeline (P1 — blocking for community contributions)
+
+**Status: Resolved** — commit `684787b`.
 
 ### Context
 
@@ -219,6 +229,8 @@ Notes:
 
 ## TD-13: `ActionBottomSheet` / `AddFieldBottomSheet` are per-type config monoliths (P2)
 
+**Status: Resolved** — commit `0eba254`.
+
 ### Context
 
 `ActionBottomSheet.kt` is 806 lines: the sheet scaffolding plus `SnoozeDurationSelector`, `AlarmOptionsSelector`, `AlarmSoundPickerButton`, `FlashOptionsSelector`, `FlashCountSlider`, `FlashDurationSlider` — every action's configuration UI inlined. `AddFieldBottomSheet.kt` is 857 lines with the same pattern across 10 extraction methods. Phase 4's webhook action brings the largest config UI yet (saved-webhook picker + inline creation + payload field checkboxes); dropped into this file it lands well past 1,200 lines. This also degrades the documented "Adding a New Action Type" recipe: step 3 currently means "grow the monolith."
@@ -254,6 +266,8 @@ fun SnoozeConfig(
 ---
 
 ## TD-14: `NotificationNormalizer` has zero test coverage (P2)
+
+**Status: Resolved** — commit `04ff915`.
 
 ### Context
 
@@ -292,6 +306,8 @@ data class RawNotificationData(
 
 ## TD-15: Release hygiene — static `versionCode`, no Fastlane changelogs (P3)
 
+**Status: Resolved** — commit `c79720b`.
+
 ### Context
 
 `app/build.gradle.kts` has `versionCode = 1`, `versionName = "1.0"`, unchanged since project start. The roadmap's Distribution section already plans Fastlane metadata for F-Droid, but version history can't be retrofitted — F-Droid builds are keyed to tagged versions and changelog files are keyed to `versionCode`.
@@ -315,6 +331,8 @@ fastlane/metadata/android/en-US/
 ---
 
 ## TD-16: Detekt baseline holds 299 grandfathered findings (P3 — policy)
+
+**Status: Resolved** — commit `094132c`.
 
 ### Context
 

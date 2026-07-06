@@ -10,7 +10,7 @@
 - **Dependency Injection**: Hilt
 - **Navigation**: Navigation3 with custom Navigator (ADR 007)
 - **Build System**: Gradle with Kotlin DSL
-- **Testing**: JUnit 5, Kotest, MockK, Turbine — 211 passing unit tests in `app/src/test` (extraction engine, use case, action executors, rule import/export codec, `RuleEditorViewModel`/`AddFieldViewModel`/`NotificationDetailViewModel`/`RulesViewModel`); most other ViewModels and UI tests still pending
+- **Testing**: JUnit 5, Kotest, MockK, Turbine — 229 passing unit tests in `app/src/test` (extraction engine, use case, action executors, notification normalization, rule import/export codec with a golden-file wire-format test, `RuleEditorViewModel`/`AddFieldViewModel`/`NotificationDetailViewModel`/`RulesViewModel`); most other ViewModels and UI tests still pending
 - **Structure**: Monolithic (single app module) with clean package separation, designed for future modularization
 
 ## Quick Reference
@@ -46,7 +46,7 @@ Notificapp/
 │   │   │   │   └── repository/    # Repository implementations
 │   │   │   ├── di/                # Hilt modules (Database, Repository, Dispatchers, Coil)
 │   │   │   ├── extraction/        # Rule engine (RuleEngine, RuleMatcher, FieldExtractor)
-│   │   │   ├── notification/      # ProcessNotificationUseCase, NotificationDeduplicator,
+│   │   │   ├── notification/      # NotificationNormalizer, ProcessNotificationUseCase, NotificationDeduplicator,
 │   │   │   │                      # action/ (ActionDispatcher, per-type ActionExecutors)
 │   │   │   └── ui/
 │   │   │       ├── mvi/           # MviViewModel, CollectOneOffEffects
@@ -60,7 +60,7 @@ Notificapp/
 │   │   ├── features/              # One package per feature: contract/ + ui/ + viewmodel/
 │   │   │   ├── appselection/
 │   │   │   ├── inbox/
-│   │   │   ├── notification/      # NotificappListenerService, NotificationNormalizer
+│   │   │   ├── notification/      # NotificappListenerService, RawNotificationReader (Android boundary)
 │   │   │   ├── notificationdetail/
 │   │   │   ├── onboarding/
 │   │   │   ├── ruleeditor/        # also has domain/ (RuleUiModel) and ui/components/
@@ -203,7 +203,7 @@ Before making any code changes:
 - `FieldExtractor` - Extracts fields using 10 extraction methods (regex, anchors, keywords, JSON path, smart amount/date, ...; pure Kotlin)
 - `RuleEngine` - Pure `evaluate(notification, rules): List<RuleMatch>`; zero I/O, zero coroutines, zero `core.data`/`domain.repository` imports. Rule loading and persistence live in `core/notification/ProcessNotificationUseCase`, which saves via `RuleExecutionRepository`
 
-**Notification normalization** (`NotificationNormalizer`) lives in `features/notification/`, not here — it handles Android APIs. `NotificationDeduplicator` is pure Kotlin and lives in `core/notification/` alongside `ProcessNotificationUseCase`.
+**Notification normalization** (`NotificationNormalizer`) is pure Kotlin (takes `RawNotificationData`, no Android imports) and lives in `core/notification/` alongside `NotificationDeduplicator` and `ProcessNotificationUseCase`. Only the thin `RawNotificationReader` extension functions in `features/notification/` touch the Android-specific `StatusBarNotification`/`PackageManager` APIs.
 
 **Key Rules:**
 - `RuleMatcher` and `FieldExtractor` must stay pure Kotlin (no Android imports) — this is critical for testability
@@ -319,7 +319,7 @@ The skill may create delta specs in `openspec/changes/[name]/specs/`:
 
 ## Testing Standards
 
-> **Current status:** `app/src/test` has 211 passing tests covering `RuleMatcher` (all 6 operators), `FieldExtractor` (all 10 extraction methods), `RuleEngine`, `ProcessNotificationUseCase`, `ActionDispatcher`, the per-action executors, `NotificationDeduplicator`, `RuleJsonCodec` (import/export), and four ViewModels (`RuleEditorViewModel`, `AddFieldViewModel`, `NotificationDetailViewModel`, `RulesViewModel`), with shared fixtures in `testutil/TestFixtures.kt`. Most other ViewModels, repositories, and normalization still have no tests — follow the standards below when adding them.
+> **Current status:** `app/src/test` has 229 passing tests covering `RuleMatcher` (all 6 operators), `FieldExtractor` (all 10 extraction methods), `RuleEngine`, `ProcessNotificationUseCase`, `ActionDispatcher`, the per-action executors, `NotificationDeduplicator`, `NotificationNormalizer` (pure Kotlin since TD-14), `RuleJsonCodec` (import/export, including a golden-file test locking the wire format), and four ViewModels (`RuleEditorViewModel`, `AddFieldViewModel`, `NotificationDetailViewModel`, `RulesViewModel`), with shared fixtures in `testutil/TestFixtures.kt`. Most other ViewModels and repositories still have no tests — follow the standards below when adding them.
 
 ### Unit Tests
 - **Framework**: JUnit 5 with Kotest assertions
