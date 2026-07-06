@@ -6,7 +6,7 @@ This document details every technical debt item identified in the July 2026 arch
 
 | ID    | Item | Priority | Effort | Status |
 |-------|------|----------|--------|--------|
-| TD-1  | Rule storage schema: normalized tables vs JSON column | Decision | — | Open (ADR 011 `Proposed`) — decide right after Phase 1, before Phase 2 starts |
+| TD-1  | Rule storage schema: normalized tables vs JSON column | Decision | — | **Decided** — keep normalized schema; JSON is Phase 2 wire format only (ADR 011 `Accepted`) |
 | TD-2  | Room destructive migration silently wipes data on schema bump | P0 | Small | **Done** — `MIGRATION_1_2` registered, fallback kept only as a safety net until first public release |
 | TD-3  | `NotificationDeduplicator.recentHashes` unsynchronized map | P1 | Small | **Done** — check-then-act wrapped in a `Mutex` |
 | TD-4  | `FieldExtractor` JSON parser has no recursion depth guard | P1 | Small | **Done** — depth-guarded, throws a caught exception past 32 levels |
@@ -34,9 +34,9 @@ The rule definition is normalized across 5 tables (`RuleEntity`, `RuleConditionE
 
 ### Recommendation
 
-**Reevaluate before starting Roadmap Phase 2** (rule import/export makes the JSON representation canonical anyway). If migrating: keep a thin `rules` table (`id`, `name`, `is_active`, `is_global`, timestamps) + `rule_target_apps` (queried for matching) + a `definition TEXT` column holding the serialized conditions/fields/actions. Include a `schema_version` field inside the JSON for forward migration of rule definitions. Do **not** do this preemptively — only if Phase 2 work confirms rule shape is still churning.
+**Decided 2026-07-06 (Phase 1 complete): keep the normalized schema.** JSON is Phase 2's import/export *wire format* only, serialized from/to the existing `@Serializable` domain models — not a storage migration. No evidence emerged during Phases 0–1 that rule shape is actually churning, and no query pattern needs JSON-internal filtering, so migrating storage now would be speculative. Revisit only if rule shape genuinely starts churning later (OR-groups, AI-generated rules) or dual maintenance of wire format + mappers becomes a real burden.
 
-Tracked formally in `docs/adr/011-rule-definition-storage.md` (status: `Proposed`). Timing note: Phase 2's first task is "define the versioned JSON rule format" — that decision and this one are the same decision. Make the call explicitly right after Phase 1 wraps, as a dedicated short design pass, rather than letting it get decided implicitly by whatever Phase 2 code gets written first.
+Tracked formally in `docs/adr/011-rule-definition-storage.md` (status: `Accepted`).
 
 ---
 

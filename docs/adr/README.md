@@ -16,7 +16,7 @@ This folder contains the Architecture Decision Records (ADRs) for Notificapp. An
 | [008](008-injected-dispatchers.md) | Injected Coroutine Dispatchers | Accepted |
 | [009](009-notification-processing-pipeline.md) | Notification Processing Pipeline as a Use Case | Accepted |
 | [010](010-action-executor-multibindings.md) | Action Execution via ActionExecutor Multibindings | Accepted |
-| [011](011-rule-definition-storage.md) | Rule Definition Storage: Normalized Tables vs JSON Column | Proposed (decide before Roadmap Phase 2) |
+| [011](011-rule-definition-storage.md) | Rule Definition Storage: Normalized Tables, JSON as Wire Format Only | Accepted |
 | [012](012-local-first-network-policy.md) | Local-First Network Policy and Distribution | Accepted |
 
 ## Statuses
