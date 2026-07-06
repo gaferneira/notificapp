@@ -4,7 +4,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import dev.gaferneira.notificapp.features.notification.NotificationNormalizer
+import dev.gaferneira.notificapp.core.notification.NotificationNormalizer
 import javax.inject.Singleton
 
 /**

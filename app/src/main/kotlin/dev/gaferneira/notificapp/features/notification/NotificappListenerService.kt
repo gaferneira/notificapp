@@ -5,6 +5,7 @@ import android.service.notification.StatusBarNotification
 import dagger.hilt.android.AndroidEntryPoint
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.core.notification.NotificationNormalizer
 import dev.gaferneira.notificapp.core.notification.ProcessNotificationUseCase
 import dev.gaferneira.notificapp.core.notification.action.SystemNotificationController
 import dev.gaferneira.notificapp.core.notification.action.SystemNotificationControllerHolder
@@ -107,7 +108,8 @@ class NotificappListenerService :
         serviceScope.launch {
             try {
                 // Normalize the notification
-                val notification = normalizer.normalize(sbn, packageManager)
+                val appName = packageManager.resolveAppName(packageName)
+                val notification = normalizer.normalize(sbn.toRawData(), appName)
 
                 // Run the full pipeline: dedup, save, evaluate rules, execute actions, persist executions
                 processNotificationUseCase(notification)
