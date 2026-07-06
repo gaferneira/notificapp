@@ -33,6 +33,8 @@ class ActionBottomSheetViewModel @Inject constructor() :
             is ActionBottomSheetContract.UiEvent.OnSnoozeDurationChange -> updateSnoozeDuration(event.minutes)
             is ActionBottomSheetContract.UiEvent.OnAlarmSoundChange -> updateAlarmSound(event.uri)
             is ActionBottomSheetContract.UiEvent.OnAlarmVibrationToggle -> updateAlarmVibration(event.enabled)
+            is ActionBottomSheetContract.UiEvent.OnFlashCountChange -> updateFlashCount(event.count)
+            is ActionBottomSheetContract.UiEvent.OnFlashDurationChange -> updateFlashDuration(event.durationMs)
             is ActionBottomSheetContract.UiEvent.OnConfirm -> confirm()
             is ActionBottomSheetContract.UiEvent.OnDismiss -> dismiss()
         }
@@ -48,6 +50,8 @@ class ActionBottomSheetViewModel @Inject constructor() :
                 snoozeDurationMinutes = action.getSnoozeDurationMinutes(),
                 alarmSoundUri = action.getAlarmSoundUri(),
                 alarmVibrationEnabled = action.isAlarmVibrationEnabled(),
+                flashCount = action.getFlashCount(),
+                flashDurationMs = action.getFlashDurationMs(),
                 validationError = null,
             )
         }
@@ -80,6 +84,18 @@ class ActionBottomSheetViewModel @Inject constructor() :
         }
     }
 
+    private fun updateFlashCount(count: Int) {
+        setState {
+            copy(flashCount = count)
+        }
+    }
+
+    private fun updateFlashDuration(durationMs: Long) {
+        setState {
+            copy(flashDurationMs = durationMs)
+        }
+    }
+
     private fun confirm() {
         val state = uiState.value
         val actionType = state.actionType ?: return
@@ -97,6 +113,13 @@ class ActionBottomSheetViewModel @Inject constructor() :
                     id = actionId ?: UUID.randomUUID().toString(),
                     soundUri = state.alarmSoundUri,
                     vibrationEnabled = state.alarmVibrationEnabled,
+                )
+            }
+            ActionType.FLASH_ALERT -> {
+                RuleAction.createFlashAlert(
+                    id = actionId ?: UUID.randomUUID().toString(),
+                    flashCount = state.flashCount,
+                    flashDurationMs = state.flashDurationMs,
                 )
             }
             else -> {

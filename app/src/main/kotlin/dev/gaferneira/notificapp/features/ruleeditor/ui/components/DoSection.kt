@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.NotificationsPaused
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -92,6 +93,7 @@ private fun ActionCard(
         ActionType.DISMISS_NOTIFICATION -> Icons.Default.Delete
         ActionType.CREATE_ALARM -> Icons.Default.Alarm
         ActionType.SNOOZE_NOTIFICATION -> Icons.Default.NotificationsPaused
+        ActionType.FLASH_ALERT -> Icons.Default.FlashOn
     }
 
     // Get subtitle text for actions with configuration

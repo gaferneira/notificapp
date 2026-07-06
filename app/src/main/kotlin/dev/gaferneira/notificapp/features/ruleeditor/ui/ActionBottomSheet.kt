@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.NotificationsPaused
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Button
@@ -62,6 +63,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.MAX_FLASH_COUNT
+import dev.gaferneira.notificapp.domain.model.MAX_FLASH_DURATION_MS
+import dev.gaferneira.notificapp.domain.model.MIN_FLASH_COUNT
+import dev.gaferneira.notificapp.domain.model.MIN_FLASH_DURATION_MS
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ActionBottomSheetContract
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ActionBottomSheetViewModel
@@ -252,6 +257,22 @@ private fun ActionsContent(
             },
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        ActionTypeCard(
+            title = "Flash alert",
+            description = "Blink the camera flash when this rule matches",
+            icon = Icons.Default.FlashOn,
+            isSelected = uiState.actionType == ActionType.FLASH_ALERT,
+            onClick = {
+                onEvent(
+                    ActionBottomSheetContract.UiEvent.OnActionTypeChange(
+                        ActionType.FLASH_ALERT,
+                    ),
+                )
+            },
+        )
+
         // Show snooze duration selector when snooze is selected
         if (uiState.actionType == ActionType.SNOOZE_NOTIFICATION) {
             Spacer(modifier = Modifier.height(16.dp))
@@ -276,6 +297,22 @@ private fun ActionsContent(
                 },
                 onVibrationToggle = { enabled ->
                     onEvent(ActionBottomSheetContract.UiEvent.OnAlarmVibrationToggle(enabled))
+                },
+            )
+        }
+
+        // Show flash options when the flash alert action is selected
+        if (uiState.actionType == ActionType.FLASH_ALERT) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            FlashOptionsSelector(
+                flashCount = uiState.flashCount,
+                flashDurationMs = uiState.flashDurationMs,
+                onFlashCountChange = { count ->
+                    onEvent(ActionBottomSheetContract.UiEvent.OnFlashCountChange(count))
+                },
+                onFlashDurationChange = { durationMs ->
+                    onEvent(ActionBottomSheetContract.UiEvent.OnFlashDurationChange(durationMs))
                 },
             )
         }
@@ -622,6 +659,100 @@ private fun AlarmSoundPickerButton(
         shape = RoundedCornerShape(12.dp),
     ) {
         Text(soundTitle)
+    }
+}
+
+/**
+ * Composable for configuring the flash alert action: number of flashes and the duration of each
+ * flash phase. Both ranges are clamped by [RuleAction.getFlashCount]/[RuleAction.getFlashDurationMs]
+ * as a photosensitivity safety bound, not just here.
+ *
+ * @param flashCount Currently configured number of flashes
+ * @param flashDurationMs Currently configured duration of each flash phase, in milliseconds
+ * @param onFlashCountChange Callback when the flash count changes
+ * @param onFlashDurationChange Callback when the flash duration changes
+ * @param modifier Modifier for the component
+ */
+@Composable
+private fun FlashOptionsSelector(
+    flashCount: Int,
+    flashDurationMs: Long,
+    onFlashCountChange: (Int) -> Unit,
+    onFlashDurationChange: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(16.dp),
+            )
+            .padding(16.dp),
+    ) {
+        Text(
+            text = "Flash options",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        FlashCountSlider(flashCount = flashCount, onFlashCountChange = onFlashCountChange)
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        FlashDurationSlider(flashDurationMs = flashDurationMs, onFlashDurationChange = onFlashDurationChange)
+    }
+}
+
+@Composable
+private fun FlashCountSlider(
+    flashCount: Int,
+    onFlashCountChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "Number of flashes: $flashCount",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Slider(
+            value = flashCount.toFloat(),
+            onValueChange = { onFlashCountChange(it.toInt()) },
+            valueRange = MIN_FLASH_COUNT.toFloat()..MAX_FLASH_COUNT.toFloat(),
+            steps = MAX_FLASH_COUNT - MIN_FLASH_COUNT - 1,
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun FlashDurationSlider(
+    flashDurationMs: Long,
+    onFlashDurationChange: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "Flash speed: ${flashDurationMs}ms per phase",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Slider(
+            value = flashDurationMs.toFloat(),
+            onValueChange = { onFlashDurationChange(it.toLong()) },
+            valueRange = MIN_FLASH_DURATION_MS.toFloat()..MAX_FLASH_DURATION_MS.toFloat(),
+            colors = SliderDefaults.colors(
+                thumbColor = MaterialTheme.colorScheme.primary,
+                activeTrackColor = MaterialTheme.colorScheme.primary,
+            ),
+        )
     }
 }
 

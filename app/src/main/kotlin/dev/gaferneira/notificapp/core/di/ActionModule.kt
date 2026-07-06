@@ -9,9 +9,12 @@ import dagger.multibindings.IntoMap
 import dev.gaferneira.notificapp.core.notification.action.AlarmActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.AlarmPlayer
 import dev.gaferneira.notificapp.core.notification.action.AndroidAlarmPlayer
+import dev.gaferneira.notificapp.core.notification.action.AndroidTorchController
 import dev.gaferneira.notificapp.core.notification.action.DismissActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.FlashAlertActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SaveDataActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SnoozeActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.TorchController
 import dev.gaferneira.notificapp.domain.action.ActionExecutor
 import dev.gaferneira.notificapp.domain.model.ActionType
 
@@ -68,4 +71,18 @@ internal abstract class ActionModule {
      */
     @Binds
     abstract fun bindAlarmPlayer(impl: AndroidAlarmPlayer): AlarmPlayer
+
+    /**
+     * Binds the executor for [ActionType.FLASH_ALERT].
+     */
+    @Binds
+    @IntoMap
+    @ActionTypeKey(ActionType.FLASH_ALERT)
+    abstract fun bindFlashAlert(impl: FlashAlertActionExecutor): ActionExecutor
+
+    /**
+     * Binds the real Android-backed [TorchController] used by [FlashAlertActionExecutor].
+     */
+    @Binds
+    abstract fun bindTorchController(impl: AndroidTorchController): TorchController
 }

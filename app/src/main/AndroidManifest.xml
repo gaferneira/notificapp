@@ -10,6 +10,12 @@
     <!-- Vibration for the alarm action -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Camera torch for the flash alert action - optional, FlashAlertActionExecutor checks
+         availability at runtime and skips gracefully on devices without a flash -->
+    <uses-feature
+        android:name="android.hardware.camera.flash"
+        android:required="false" />
+
     <!-- Query all packages - needed for Android 11+ to see installed apps -->
     <queries>
         <intent>

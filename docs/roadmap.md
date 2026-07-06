@@ -49,6 +49,7 @@ Extraction is one action among many in the rules engine — but it is the **diff
 - **Snooze/Dismiss Actions** — `SNOOZE_NOTIFICATION` (configurable duration picker) and `DISMISS_NOTIFICATION`, each as a pluggable `ActionExecutor`, with per-action outcome shown in Notification Detail
 - **Notification Content Filtering** — `NotificappListenerService.shouldSkipNotification` skips notifications without title/content, ongoing system notifications, and stale (>`MAX_AGE_MS`) notifications
 - **Alarm Action** — `CREATE_ALARM` plays an alarm sound (system ringtone picker, defaults to the device's default alarm sound) and optionally vibrates, as a pluggable `ActionExecutor`
+- **Flash Alert Action** — `FLASH_ALERT` blinks the camera torch a configurable number of times, as a pluggable `ActionExecutor`; skipped without a flash or in battery saver, with photosensitivity-safe clamps on count/duration — **Phase 1 (Complete Action System) is now fully done**
 
 ### In Progress
 
@@ -60,7 +61,7 @@ _None currently — see Phase 1 below for what's next._
 
 ### Phase 1: Complete Action System
 
-**Goal:** Round out the action system on top of the refactored pipeline. Snooze/Dismiss, Alarms, and per-action outcome feedback are done; Flash Alerts remains.
+**Goal:** Round out the action system on top of the refactored pipeline. All four actions (Snooze, Dismiss, Alarm, Flash Alert) and per-action outcome feedback are done - Phase 1 is complete.
 
 #### Snooze and Dismiss — **Done**
 
@@ -74,12 +75,12 @@ _None currently — see Phase 1 below for what's next._
 - [x] Create form to add an alarm with options (alarm sound via system ringtone picker, vibration toggle)
 - [x] Implement `CREATE_ALARM` handler as an `ActionExecutor` (plays sound + vibrates through an `AlarmPlayer` abstraction, kept testable per ADR 010's pattern)
 
-#### Flash Alerts
+#### Flash Alerts — **Done**
 
-- [ ] Add `FLASH_ALERT` action type: blink the camera torch when a rule matches (`CameraManager.setTorchMode` — no runtime permission required)
-- [ ] Configuration UI in `ActionBottomSheet`: number of flashes and flash duration (stored in `RuleAction.config`)
-- [ ] Implement `FlashAlertActionExecutor`; return `SKIPPED` on devices without a torch
-- [ ] Safety: cap flash frequency (photosensitivity) and skip when battery saver is on
+- [x] Add `FLASH_ALERT` action type: blink the camera torch when a rule matches (`CameraManager.setTorchMode` — no runtime permission required)
+- [x] Configuration UI in `ActionBottomSheet`: number of flashes and flash duration (stored in `RuleAction.config`)
+- [x] Implement `FlashAlertActionExecutor`; return `SKIPPED` on devices without a torch
+- [x] Safety: flash count/duration are clamped server-side (not just in the UI) to a photosensitivity-safe range (max 10 flashes, min 200ms per phase -> capped at 2.5Hz); skipped entirely when battery saver is on
 
 #### Feedback and Safety
 

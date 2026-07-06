@@ -195,4 +195,5 @@ val RuleAction.displayName: String
         ActionType.DISMISS_NOTIFICATION -> "Delete notification"
         ActionType.CREATE_ALARM -> "Create alarm"
         ActionType.SNOOZE_NOTIFICATION -> "Snooze notification"
+        ActionType.FLASH_ALERT -> "Flash alert"
     }

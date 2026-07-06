@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.features.ruleeditor.contract
 
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_VIBRATION_ENABLED
+import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COUNT
+import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_DURATION_MS
 import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_DURATION_MINUTES
 import dev.gaferneira.notificapp.domain.model.RuleAction
 
@@ -26,6 +28,10 @@ object ActionBottomSheetContract {
         val alarmSoundUri: String? = null,
         /** Whether the alarm should also vibrate (for CREATE_ALARM type) */
         val alarmVibrationEnabled: Boolean = DEFAULT_ALARM_VIBRATION_ENABLED,
+        /** Number of torch flashes (for FLASH_ALERT type) */
+        val flashCount: Int = DEFAULT_FLASH_COUNT,
+        /** Duration of each flash phase in milliseconds (for FLASH_ALERT type) */
+        val flashDurationMs: Long = DEFAULT_FLASH_DURATION_MS,
         /** Validation error message, if any */
         val validationError: String? = null,
     ) {
@@ -53,6 +59,12 @@ object ActionBottomSheetContract {
 
         /** Toggle whether the alarm should also vibrate */
         data class OnAlarmVibrationToggle(val enabled: Boolean) : UiEvent()
+
+        /** Update the number of torch flashes */
+        data class OnFlashCountChange(val count: Int) : UiEvent()
+
+        /** Update the duration of each flash phase in milliseconds */
+        data class OnFlashDurationChange(val durationMs: Long) : UiEvent()
 
         /** Confirm and create/update action */
         data object OnConfirm : UiEvent()
