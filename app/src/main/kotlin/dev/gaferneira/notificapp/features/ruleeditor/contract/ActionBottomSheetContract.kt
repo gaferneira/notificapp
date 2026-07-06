@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_FULLSCREEN_ENABLED
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_VIBRATION_ENABLED
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COUNT
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_DURATION_MS
@@ -28,6 +29,8 @@ object ActionBottomSheetContract {
         val alarmSoundUri: String? = null,
         /** Whether the alarm should also vibrate (for CREATE_ALARM type) */
         val alarmVibrationEnabled: Boolean = DEFAULT_ALARM_VIBRATION_ENABLED,
+        /** Whether the alarm shows the full-screen call-style UI (for CREATE_ALARM type) */
+        val alarmFullScreenEnabled: Boolean = DEFAULT_ALARM_FULLSCREEN_ENABLED,
         /** Number of torch flashes (for FLASH_ALERT type) */
         val flashCount: Int = DEFAULT_FLASH_COUNT,
         /** Duration of each flash phase in milliseconds (for FLASH_ALERT type) */
@@ -59,6 +62,9 @@ object ActionBottomSheetContract {
 
         /** Toggle whether the alarm should also vibrate */
         data class OnAlarmVibrationToggle(val enabled: Boolean) : UiEvent()
+
+        /** Toggle whether the alarm shows the full-screen call-style UI */
+        data class OnAlarmFullScreenToggle(val enabled: Boolean) : UiEvent()
 
         /** Update the number of torch flashes */
         data class OnFlashCountChange(val count: Int) : UiEvent()

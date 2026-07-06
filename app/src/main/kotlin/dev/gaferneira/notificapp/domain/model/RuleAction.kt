@@ -30,6 +30,18 @@ const val ALARM_VIBRATION_ENABLED_KEY = "alarm_vibration_enabled"
 const val DEFAULT_ALARM_VIBRATION_ENABLED = true
 
 /**
+ * Configuration key for whether the alarm shows the full-screen, call-style UI (vs. only the
+ * ongoing notification).
+ */
+const val ALARM_FULLSCREEN_ENABLED_KEY = "alarm_fullscreen_enabled"
+
+/**
+ * Default full-screen setting for the alarm action — on, so the alarm commands the screen like a
+ * call by default; users can switch to notification-only per alarm.
+ */
+const val DEFAULT_ALARM_FULLSCREEN_ENABLED = true
+
+/**
  * Configuration key for the number of torch flashes.
  */
 const val FLASH_COUNT_KEY = "flash_count"
@@ -94,6 +106,12 @@ data class RuleAction(
         ?: DEFAULT_ALARM_VIBRATION_ENABLED
 
     /**
+     * Whether the alarm shows the full-screen, call-style UI, or the default if not set.
+     */
+    fun isAlarmFullScreenEnabled(): Boolean = config[ALARM_FULLSCREEN_ENABLED_KEY]?.toBooleanStrictOrNull()
+        ?: DEFAULT_ALARM_FULLSCREEN_ENABLED
+
+    /**
      * Get the number of torch flashes, clamped to a photosensitivity-safe range regardless of
      * what's stored in config (defense in depth against a malformed or imported rule).
      */
@@ -129,6 +147,7 @@ data class RuleAction(
             id: String,
             soundUri: String? = null,
             vibrationEnabled: Boolean = DEFAULT_ALARM_VIBRATION_ENABLED,
+            fullScreenEnabled: Boolean = DEFAULT_ALARM_FULLSCREEN_ENABLED,
             isEnabled: Boolean = true,
         ): RuleAction = RuleAction(
             id = id,
@@ -137,6 +156,7 @@ data class RuleAction(
             config = buildMap {
                 soundUri?.let { put(ALARM_SOUND_URI_KEY, it) }
                 put(ALARM_VIBRATION_ENABLED_KEY, vibrationEnabled.toString())
+                put(ALARM_FULLSCREEN_ENABLED_KEY, fullScreenEnabled.toString())
             },
         )
 

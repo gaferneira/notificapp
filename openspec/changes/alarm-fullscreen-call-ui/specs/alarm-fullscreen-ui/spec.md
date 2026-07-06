@@ -46,6 +46,18 @@ When a ringing alarm stops for any reason — dismissed or snoozed from the noti
 - **THEN** the alarm stops
 - **AND** the open full-screen alarm UI closes
 
+### Requirement: User can choose the alarm presentation style per alarm
+When configuring a `CREATE_ALARM` action, the user SHALL be able to choose whether that alarm uses the full-screen, call-style UI or only the ongoing notification. The choice SHALL be persisted with the action's config and honored at ring time: a notification-only alarm SHALL NOT attach a full-screen intent.
+
+#### Scenario: Alarm configured for notification only
+- **WHEN** the user turns off the full-screen (call-style) option for an alarm action and the alarm later rings
+- **THEN** only the ongoing notification is shown
+- **AND** no full-screen UI is raised
+
+#### Scenario: Alarm configured for full-screen
+- **WHEN** the user leaves the full-screen (call-style) option on for an alarm action and the alarm later rings
+- **THEN** the full-screen UI is presented (subject to the platform's full-screen-intent permission)
+
 ### Requirement: Degrade to the notification when full-screen intent is unavailable
 On Android versions where `USE_FULL_SCREEN_INTENT` is a restricted permission (14+) and it has not been granted, the system SHALL still ring the alarm and SHALL still surface the ongoing Dismiss/Snooze notification; the full-screen UI is a best-effort enhancement and its absence SHALL NOT prevent the alarm from being seen or stopped.
 

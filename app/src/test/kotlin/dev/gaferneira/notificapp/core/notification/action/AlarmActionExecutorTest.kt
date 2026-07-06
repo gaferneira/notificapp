@@ -32,6 +32,7 @@ class AlarmActionExecutorTest {
                 AlarmRequest(
                     soundUri = null,
                     vibrationEnabled = true,
+                    fullScreenEnabled = true,
                     title = "Payment received",
                     text = "You got \$50",
                     appName = "Bank",
@@ -92,6 +93,24 @@ class AlarmActionExecutorTest {
         outcome shouldBe ActionOutcome.SUCCESS
         verify(exactly = 1) {
             alarmController.start(match { !it.vibrationEnabled })
+        }
+    }
+
+    @Test
+    fun `alarm action with full-screen disabled starts the alarm without full-screen`() = runTest {
+        // Given: an alarm action with the full-screen (call-style) option turned off
+        val alarmController = mockk<AlarmController>()
+        every { alarmController.start(any()) } returns true
+        val executor = AlarmActionExecutor(alarmController)
+        val notification = createTestNotification()
+        val action = RuleAction.createAlarm(id = "action-1", fullScreenEnabled = false)
+
+        // When: executing the action
+        executor.execute(notification, action)
+
+        // Then: the request carries fullScreenEnabled = false
+        verify(exactly = 1) {
+            alarmController.start(match { !it.fullScreenEnabled })
         }
     }
 

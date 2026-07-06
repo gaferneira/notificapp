@@ -25,6 +25,7 @@ class AlarmActionExecutor @Inject constructor(
             AlarmRequest(
                 soundUri = action.getAlarmSoundUri(),
                 vibrationEnabled = action.isAlarmVibrationEnabled(),
+                fullScreenEnabled = action.isAlarmFullScreenEnabled(),
                 title = notification.title ?: notification.appName,
                 text = notification.content.orEmpty(),
                 appName = notification.appName,

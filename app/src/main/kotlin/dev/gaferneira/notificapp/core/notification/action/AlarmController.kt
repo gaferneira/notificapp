@@ -7,6 +7,7 @@ package dev.gaferneira.notificapp.core.notification.action
 data class AlarmRequest(
     val soundUri: String?,
     val vibrationEnabled: Boolean,
+    val fullScreenEnabled: Boolean,
     val title: String,
     val text: String,
     val appName: String,

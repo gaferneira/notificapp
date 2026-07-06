@@ -50,6 +50,7 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ActionBottomSheetContract
+import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.AlarmOptions
 import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.AlarmOptionsSelector
 import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.FlashOptionsSelector
 import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.SnoozeDurationSelector
@@ -274,13 +275,19 @@ private fun ActionsContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             AlarmOptionsSelector(
-                soundUri = uiState.alarmSoundUri,
-                vibrationEnabled = uiState.alarmVibrationEnabled,
+                options = AlarmOptions(
+                    soundUri = uiState.alarmSoundUri,
+                    vibrationEnabled = uiState.alarmVibrationEnabled,
+                    fullScreenEnabled = uiState.alarmFullScreenEnabled,
+                ),
                 onSoundChange = { uri ->
                     onEvent(ActionBottomSheetContract.UiEvent.OnAlarmSoundChange(uri))
                 },
                 onVibrationToggle = { enabled ->
                     onEvent(ActionBottomSheetContract.UiEvent.OnAlarmVibrationToggle(enabled))
+                },
+                onFullScreenToggle = { enabled ->
+                    onEvent(ActionBottomSheetContract.UiEvent.OnAlarmFullScreenToggle(enabled))
                 },
             )
         }

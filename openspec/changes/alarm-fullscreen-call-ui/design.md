@@ -19,8 +19,10 @@ Constraints:
 
 **Non-Goals:**
 - Any change to ring/stop/snooze behavior, audio, or scheduling.
-- Per-rule "use full screen" toggles or custom full-screen layouts per rule.
+- Custom full-screen layouts per rule (a single call-style screen for all alarms).
 - Dismissing the keyguard / authenticating the user (we show over it, we don't unlock it).
+
+**Added after device feedback:** a per-alarm "Full-screen alarm (call style)" toggle in the rule editor (default on), stored in the action config like sound/vibration; when off, the alarm stays notification-only (no full-screen intent attached). This was originally a non-goal but requested during verification.
 
 ## Decisions
 

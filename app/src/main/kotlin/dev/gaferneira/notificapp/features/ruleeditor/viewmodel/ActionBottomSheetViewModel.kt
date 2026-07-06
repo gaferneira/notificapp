@@ -33,6 +33,7 @@ class ActionBottomSheetViewModel @Inject constructor() :
             is ActionBottomSheetContract.UiEvent.OnSnoozeDurationChange -> updateSnoozeDuration(event.minutes)
             is ActionBottomSheetContract.UiEvent.OnAlarmSoundChange -> updateAlarmSound(event.uri)
             is ActionBottomSheetContract.UiEvent.OnAlarmVibrationToggle -> updateAlarmVibration(event.enabled)
+            is ActionBottomSheetContract.UiEvent.OnAlarmFullScreenToggle -> updateAlarmFullScreen(event.enabled)
             is ActionBottomSheetContract.UiEvent.OnFlashCountChange -> updateFlashCount(event.count)
             is ActionBottomSheetContract.UiEvent.OnFlashDurationChange -> updateFlashDuration(event.durationMs)
             is ActionBottomSheetContract.UiEvent.OnConfirm -> confirm()
@@ -50,6 +51,7 @@ class ActionBottomSheetViewModel @Inject constructor() :
                 snoozeDurationMinutes = action.getSnoozeDurationMinutes(),
                 alarmSoundUri = action.getAlarmSoundUri(),
                 alarmVibrationEnabled = action.isAlarmVibrationEnabled(),
+                alarmFullScreenEnabled = action.isAlarmFullScreenEnabled(),
                 flashCount = action.getFlashCount(),
                 flashDurationMs = action.getFlashDurationMs(),
                 validationError = null,
@@ -84,6 +86,12 @@ class ActionBottomSheetViewModel @Inject constructor() :
         }
     }
 
+    private fun updateAlarmFullScreen(enabled: Boolean) {
+        setState {
+            copy(alarmFullScreenEnabled = enabled)
+        }
+    }
+
     private fun updateFlashCount(count: Int) {
         setState {
             copy(flashCount = count)
@@ -113,6 +121,7 @@ class ActionBottomSheetViewModel @Inject constructor() :
                     id = actionId ?: UUID.randomUUID().toString(),
                     soundUri = state.alarmSoundUri,
                     vibrationEnabled = state.alarmVibrationEnabled,
+                    fullScreenEnabled = state.alarmFullScreenEnabled,
                 )
             }
             ActionType.FLASH_ALERT -> {

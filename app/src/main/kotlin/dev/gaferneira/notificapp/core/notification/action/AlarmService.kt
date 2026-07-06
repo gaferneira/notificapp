@@ -16,6 +16,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import dagger.hilt.android.AndroidEntryPoint
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_FULLSCREEN_ENABLED
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_VIBRATION_ENABLED
 import timber.log.Timber
 import javax.inject.Inject
@@ -138,7 +139,7 @@ class AlarmService : Service() {
 
     private fun buildNotification(): Notification {
         val text = current.text.ifBlank { getString(R.string.alarm_notification_text) }
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(current.title.ifBlank { getString(R.string.alarm_notification_title) })
             .setContentText(text)
@@ -148,10 +149,15 @@ class AlarmService : Service() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setOngoing(true)
             .setAutoCancel(false)
-            .setFullScreenIntent(fullScreenIntent(), true)
             .addAction(0, getString(R.string.alarm_action_dismiss), actionIntent(ACTION_DISMISS, REQUEST_DISMISS))
             .addAction(0, getString(R.string.alarm_action_snooze), actionIntent(ACTION_SNOOZE, REQUEST_SNOOZE))
-            .build()
+
+        // Only raise the call-style full-screen UI when this alarm is configured for it; otherwise
+        // it stays a plain (heads-up) notification.
+        if (current.fullScreenEnabled) {
+            builder.setFullScreenIntent(fullScreenIntent(), true)
+        }
+        return builder.build()
     }
 
     private fun actionIntent(action: String, requestCode: Int): PendingIntent {
@@ -195,6 +201,7 @@ class AlarmService : Service() {
     private fun Intent.toAlarmRequest(): AlarmRequest = AlarmRequest(
         soundUri = getStringExtra(EXTRA_SOUND_URI),
         vibrationEnabled = getBooleanExtra(EXTRA_VIBRATION_ENABLED, DEFAULT_ALARM_VIBRATION_ENABLED),
+        fullScreenEnabled = getBooleanExtra(EXTRA_FULLSCREEN_ENABLED, DEFAULT_ALARM_FULLSCREEN_ENABLED),
         title = getStringExtra(EXTRA_TITLE).orEmpty(),
         text = getStringExtra(EXTRA_TEXT).orEmpty(),
         appName = getStringExtra(EXTRA_APP_NAME).orEmpty(),
@@ -210,6 +217,7 @@ class AlarmService : Service() {
 
         private const val EXTRA_SOUND_URI = "extra_sound_uri"
         private const val EXTRA_VIBRATION_ENABLED = "extra_vibration_enabled"
+        private const val EXTRA_FULLSCREEN_ENABLED = "extra_fullscreen_enabled"
         private const val EXTRA_TITLE = "extra_title"
         private const val EXTRA_TEXT = "extra_text"
         private const val EXTRA_APP_NAME = "extra_app_name"
@@ -228,6 +236,7 @@ class AlarmService : Service() {
         private val EMPTY_REQUEST = AlarmRequest(
             soundUri = null,
             vibrationEnabled = DEFAULT_ALARM_VIBRATION_ENABLED,
+            fullScreenEnabled = DEFAULT_ALARM_FULLSCREEN_ENABLED,
             title = "",
             text = "",
             appName = "",
@@ -238,6 +247,7 @@ class AlarmService : Service() {
             .setAction(ACTION_START)
             .putExtra(EXTRA_SOUND_URI, request.soundUri)
             .putExtra(EXTRA_VIBRATION_ENABLED, request.vibrationEnabled)
+            .putExtra(EXTRA_FULLSCREEN_ENABLED, request.fullScreenEnabled)
             .putExtra(EXTRA_TITLE, request.title)
             .putExtra(EXTRA_TEXT, request.text)
             .putExtra(EXTRA_APP_NAME, request.appName)

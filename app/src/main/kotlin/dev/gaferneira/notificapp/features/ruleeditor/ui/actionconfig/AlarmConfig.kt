@@ -40,20 +40,20 @@ import dev.gaferneira.notificapp.R
 
 /**
  * Composable for configuring the alarm action: picking an alarm sound via the system ringtone
- * picker and toggling vibration.
+ * picker and toggling vibration and the full-screen call-style UI.
  *
- * @param soundUri Currently selected alarm sound URI, or null for the device default
- * @param vibrationEnabled Whether vibration is currently enabled
+ * @param options Current alarm configuration (sound, vibration, full-screen)
  * @param onSoundChange Callback when a new sound is picked (null if the user picked the default)
  * @param onVibrationToggle Callback when the vibration toggle changes
+ * @param onFullScreenToggle Callback when the full-screen (call-style) toggle changes
  * @param modifier Modifier for the component
  */
 @Composable
 fun AlarmOptionsSelector(
-    soundUri: String?,
-    vibrationEnabled: Boolean,
+    options: AlarmOptions,
     onSoundChange: (String?) -> Unit,
     onVibrationToggle: (Boolean) -> Unit,
+    onFullScreenToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -76,25 +76,50 @@ fun AlarmOptionsSelector(
 
         AlarmNotificationPermissionGate()
 
-        AlarmSoundPickerButton(soundUri = soundUri, onSoundChange = onSoundChange)
+        AlarmSoundPickerButton(soundUri = options.soundUri, onSoundChange = onSoundChange)
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "Vibrate",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Switch(
-                checked = vibrationEnabled,
-                onCheckedChange = onVibrationToggle,
-            )
-        }
+        AlarmToggleRow(
+            label = "Vibrate",
+            checked = options.vibrationEnabled,
+            onCheckedChange = onVibrationToggle,
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        AlarmToggleRow(
+            label = "Full-screen alarm (call style)",
+            checked = options.fullScreenEnabled,
+            onCheckedChange = onFullScreenToggle,
+        )
+    }
+}
+
+/**
+ * A labeled switch row used for the alarm's on/off options (vibration, full-screen).
+ */
+@Composable
+private fun AlarmToggleRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
     }
 }
 

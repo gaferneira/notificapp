@@ -25,6 +25,13 @@
 - [x] 4.4 Collects `AlarmStateHolder.isRinging` and `finish()`es when it becomes false (covers dismiss-from-notification and superseding rings)
 - [x] 4.5 `@Preview` for the call-style screen
 
+## 6. Per-alarm style toggle (from device feedback)
+
+- [x] 6.1 Add `ALARM_FULLSCREEN_ENABLED_KEY` + `DEFAULT_ALARM_FULLSCREEN_ENABLED` (true) + `isAlarmFullScreenEnabled()` to `RuleAction`; `createAlarm` takes `fullScreenEnabled`
+- [x] 6.2 Thread `fullScreenEnabled` through `AlarmRequest` → executor → `AlarmService` extras; only `setFullScreenIntent` when enabled
+- [x] 6.3 Add a "Full-screen alarm (call style)" toggle to `AlarmOptionsSelector`; wire through `ActionBottomSheet` contract/viewmodel (state field + event + confirm + init-for-edit)
+- [x] 6.4 Update `AlarmActionExecutorTest` (new `AlarmRequest` field + full-screen-disabled case); `test`/`spotless`/`detekt`/`assembleDebug` green
+
 ## 5. Verification, quality gates
 
 - [x] 5.1 `./gradlew testDebugUnitTest`, `spotlessApply`, `detekt`, `assembleDebug` all green (no new baseline entries)
