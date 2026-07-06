@@ -2,11 +2,13 @@ package dev.gaferneira.notificapp.core.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dev.gaferneira.notificapp.BuildConfig
 import dev.gaferneira.notificapp.core.data.local.AppDatabase
 import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
@@ -37,11 +39,14 @@ object DatabaseModule {
         "notificapp_database",
     )
         .addMigrations(*APP_DATABASE_MIGRATIONS)
-        // Safety net only, not a substitute for migrations above. Remove entirely before the
-        // first public release - until then it only
-        // protects schema bumps that haven't shipped an explicit Migration yet.
-        .fallbackToDestructiveMigration()
+        .applyDebugOnlyFallback()
         .build()
+
+    /**
+     * Debug builds may skip migrations during development; release builds must crash loudly on a
+     * missing migration rather than silently wiping user data (TD-10).
+     */
+    private fun RoomDatabase.Builder<AppDatabase>.applyDebugOnlyFallback(): RoomDatabase.Builder<AppDatabase> = if (BuildConfig.DEBUG) fallbackToDestructiveMigration() else this
 
     /**
      * Provides the SelectedAppDao.
