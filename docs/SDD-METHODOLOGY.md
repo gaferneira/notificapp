@@ -1,21 +1,21 @@
-# OpenSpec Methodology
+# SDD Methodology
 
 ## Overview
 
-OpenSpec is a specification-driven development workflow where **detailed specifications drive implementation, testing, and validation**. Specifications serve as the single source of truth that connects user requirements to code implementation.
+This project follows Spec-Driven Development (SDD): **detailed specifications drive implementation, testing, and validation**. Specifications serve as the single source of truth that connects user requirements to code implementation.
 
-This methodology uses skills that automate the OpenSpec workflow using the `openspec` CLI tool.
+The folder structure and artifact names (`proposal.md`, `design.md`, `tasks.md`, delta specs) are borrowed from the [OpenSpec](https://github.com/Fission-AI/OpenSpec) naming convention, but this methodology defines a **folder structure and artifact format, not a dependency on that or any other specific tool**. Any developer, AI agent, or script can drive the workflow with its own commands/logic as long as it reads and writes the artifacts described below in the locations described below. Using the actual OpenSpec CLI is optional — some contributors may use it, others may not; either way the artifacts it reads and writes are the same ones this document specifies.
 
 ### Scope and Portability
 
 Two things are deliberately kept separate:
 
-- **The specs (`openspec/specs/`) are the canonical, tool-agnostic source of truth.** They are plain markdown with Gherkin scenarios — readable and maintainable by any human, AI tool, or future SDD standard without the OpenSpec tooling.
-- **The workflow (proposals, `changes/` lifecycle, slash commands) is replaceable maintainer tooling.** It is how maintainers and AI-agent sessions work on this repo; it is *not* a requirement for external contributors (see `CONTRIBUTING.md`), and it can be swapped if a better SDD standard emerges without touching the specs' value.
+- **The specs (`openspec/specs/`) are the canonical source of truth.** They are plain markdown with Gherkin scenarios — readable and maintainable by any human, AI tool, or future SDD standard.
+- **The workflow (proposals, `changes/` lifecycle) is just a folder convention.** How a given session or tool produces/consumes `proposal.md`, `design.md`, `tasks.md` is up to that tool — this document does not prescribe commands.
 
 ### Branch Hygiene: `main` Holds Only Archived Changes
 
-Active changes (`openspec/changes/[name]/`) live **exclusively on feature branches** — created there, worked there, and archived (`/opsx-archive`) *before* the branch merges. `main` only ever contains `openspec/changes/archive/`. If a change is abandoned, its branch dies with it and nothing lands on `main`. This keeps the repo clean (no half-finished proposals rotting on `main`) while preserving what tracking `changes/` buys: PR diffs that include proposal/design/tasks for reviewers, and agent sessions that can resume `tasks.md` from any machine.
+Active changes (`openspec/changes/[name]/`) live **exclusively on feature branches** — created there, worked there, and archived *before* the branch merges. `main` only ever contains `openspec/changes/archive/`. If a change is abandoned, its branch dies with it and nothing lands on `main`. This keeps the repo clean (no half-finished proposals rotting on `main`) while preserving what tracking `changes/` buys: PR diffs that include proposal/design/tasks for reviewers, and agent sessions that can resume `tasks.md` from any machine.
 
 ### Core Principle
 
@@ -37,7 +37,7 @@ Proposal/Design (Why/How) → Spec (What it does) → Implementation Plan (Steps
 
 ```
 openspec/
-├── config.yaml           # OpenSpec configuration
+├── config.yaml           # Optional, gitignored — only used if a contributor runs the OpenSpec CLI
 ├── specs/               # Detailed Gherkin specifications
 │   ├── action-execution/
 │   │   └── spec.md
@@ -81,48 +81,29 @@ feature/                # Implementation modules
 
 ---
 
-## Workflow with AI Agents
+## Workflow Phases
 
-The OpenSpec workflow can be executed by multiple AI agents (Firebender, Antigravity, etc.) or manually by developers. While Firebender provides built-in slash commands for automation, Antigravity follows the same principles using `implementation_plan.md` and `task.md` to orchestrate the work.
+The workflow below can be driven by any developer, AI agent, or automation — this document describes the artifacts each phase must produce, not the commands used to produce them.
 
 ### Phase 1: Proposal & Design
 
-Use the skill to create a change with all planning artifacts:
+Create `openspec/changes/[name]/` with planning artifacts:
 
-```
-/opsx-propose "[change-name]"
-```
-
-**What it does:**
-- Creates `openspec/changes/[name]/` directory with `.openspec.yaml`
-- Automatically generates `proposal.md` (what & why)
-- Automatically generates `design.md` (how)
-- Automatically generates `tasks.md` (implementation steps)
-
-**Example:**
-```
-/opsx-propose "add-dark-mode"
-```
-
-**You'll get:**
 ```
 openspec/changes/add-dark-mode/
-├── .openspec.yaml      # Change configuration
 ├── proposal.md         # Intent, scope, approach
 ├── design.md           # Technical decisions, trade-offs
 └── tasks.md            # Implementation checklist
 ```
 
-**Then review and edit:**
-- Edit `proposal.md` to refine the intent and scope.
-- Edit `design.md` to add technical details.
-- Edit `tasks.md` or create a more detailed `implementation_plan.md` (recommended for Antigravity) to bridge the gap between design and code.
+- `proposal.md` — what & why
+- `design.md` — how, including technical trade-offs
+- `tasks.md` — an implementation checklist, or a more detailed `implementation_plan.md` to bridge design and code
 
 ### Phase 2: Specification
 
-The `/opsx-propose` command may also create delta specs in `openspec/changes/[name]/specs/`.
+New or modified capabilities get a delta spec in `openspec/changes/[name]/specs/`:
 
-**For new capabilities**, the skill creates:
 ```
 openspec/changes/[name]/specs/
 └── [capability]/
@@ -150,39 +131,10 @@ openspec/changes/[name]/specs/
 ...
 ```
 
-### Phase 3: Tasks & Implementation (Automated)
+### Phase 3: Tasks & Implementation
 
-Use the skill to implement tasks:
+Work through `tasks.md`, marking each task complete (`- [ ]` → `- [x]`) as it's finished. Follow the project's existing architectural patterns (see `docs/ARCHITECTURE.md`):
 
-```
-/opsx-apply [change-name]
-```
-
-**What it does:**
-- Reads all context files (proposal, design, tasks, specs)
-- Implements each pending task from `tasks.md`
-- Automatically marks tasks complete (`- [ ]` → `- [x]`)
-- Continues until all tasks are done or blocked
-
-**Example:**
-```
-/opsx-apply add-dark-mode
-```
-
-**You'll see:**
-```
-## Implementing: add-dark-mode (schema: spec-driven)
-
-Working on task 1/7: Create ThemeContext with light/dark state
-[...implementation happening...]
-✓ Task complete
-
-Working on task 2/7: Add CSS custom properties for colors
-[...implementation happening...]
-✓ Task complete
-```
-
-**Key patterns to follow:**
 - MVI architecture with `MviViewModel` base class
 - Repository pattern with interface/implementation separation
 - Sealed classes for state, events, and effects
@@ -191,61 +143,19 @@ Working on task 2/7: Add CSS custom properties for colors
 
 ### Phase 4: Validation
 
-Use Firebender commands to validate implementation against specs:
-
-```
-/validate-spec openspec/specs/chat/001-message-streaming.md
-```
-
-This verifies:
-- All scenarios have corresponding tests
+Verify before merging:
+- All scenarios in the delta spec have corresponding tests
 - Implementation matches spec requirements
 - Coverage is complete
 
-### Phase 5: Archive (Automated)
+### Phase 5: Archive
 
-Use the skill to archive a completed change:
-
-```
-/opsx-archive [change-name]
-```
-
-**What it does:**
-- Checks for incomplete artifacts and tasks (warns if any)
-- Syncs delta specs to main `openspec/specs/` directory
+Once implementation and validation are complete:
+- Sync delta specs into the main `openspec/specs/` directory
   - ADDED requirements appended to main spec
   - MODIFIED requirements replace existing
   - REMOVED requirements deleted from main spec
-- Moves change to `openspec/changes/archive/YYYY-MM-DD-[name]/`
-
-**Example:**
-```
-/opsx-archive add-dark-mode
-```
-
-**Result:**
-```
-## Archive Complete
-
-**Change:** add-dark-mode
-**Schema:** spec-driven
-**Archived to:** openspec/changes/archive/2025-01-24-add-dark-mode/
-**Specs:** ✓ Synced to main specs
-```
-
----
-
-## Firebender Skill Commands Reference
-
-| Command | Purpose | When to Use |
-|---------|---------|-------------|
-| `/opsx-propose "[name]"` | Create new change with all artifacts | Starting a new feature/modification |
-| `/opsx-apply [name]` | Implement tasks from a change | Ready to write code |
-| `/opsx-archive [name]` | Archive completed change | All tasks done |
-| `/opsx-explore [topic]` | Explore mode for discovery | Thinking/research phase |
-| `/validate-spec [path]` | Check spec implementation | After implementation |
-| `/generate-test [path]` | Generate test skeleton | After spec is written |
-| `/validate-all-specs` | Validate entire project | Before releases |
+- Move the change to `openspec/changes/archive/YYYY-MM-DD-[name]/`
 
 ---
 
@@ -290,21 +200,14 @@ Use Gherkin Given-When-Then format:
 
 When requirements change:
 
-1. **Create a change proposal** to track the modification:
-   ```
-   /opsx-propose "update-guardrail-display"
-   ```
-
+1. **Create a change** to track the modification: `openspec/changes/[name]/`
 2. **Edit the delta spec** in `openspec/changes/[name]/specs/[capability]/spec.md`
    - Use MODIFIED section for changes
    - Use ADDED section for new requirements
    - Use REMOVED section for deleted requirements
-
 3. **Update tasks** in `tasks.md` to reflect implementation work
-
-4. **Implement changes** with `/opsx-apply`
-
-5. **Archive** with `/opsx-archive` to merge changes into main specs
+4. **Implement changes**
+5. **Archive** the change to merge changes into main specs
 
 ---
 
@@ -321,84 +224,31 @@ Create a **new spec file** when:
 
 ---
 
-## MVI Implementation (unchanged)
-
-The MVI pattern implementation remains consistent regardless of workflow.
-
-### ViewModel Structure
-
-```kotlin
-@HiltViewModel
-class ExampleViewModel @Inject constructor(
-    private val repository: ExampleRepository
-) : MviViewModel<ExampleUiState, ExampleEvent, ExampleEffect>(ExampleUiState()) {
-    
-    override fun onEvent(event: ExampleEvent) {
-        when (event) {
-            is ExampleEvent.LoadData -> loadData()
-            is ExampleEvent.OnItemClick -> handleItemClick(event.id)
-        }
-    }
-}
-
-object ExampleContract {
-    data class UiState(
-        val items: List<Item> = emptyList(),
-        val isLoading: Boolean = false,
-        val error: UiText? = null,
-    )
-    
-    sealed class UiEvent {
-        data object LoadData : UiEvent()
-        data class OnItemClick(val id: String) : UiEvent()
-    }
-    
-    sealed class UiEffect {
-        data class NavigateToDetail(val id: String) : UiEffect()
-    }
-}
-```
-
-**Reference**: `docs/ARCHITECTURE.md` - "MVI Pattern Implementation" section
-
----
-
 ## Checklist for OpenSpec Compliance
 
 Before marking a feature complete:
 
-- [ ] Change proposal created with `/opsx-propose`
-- [ ] Artifacts reviewed and edited (proposal.md, design.md, tasks.md)
+- [ ] Change created with `proposal.md`, `design.md`, `tasks.md`
+- [ ] Artifacts reviewed and edited
 - [ ] Delta spec created with ADDED/MODIFIED/REMOVED sections
 - [ ] Spec includes: Feature link, ADR refs, Manager, State, UI Components, Test file
-- [ ] Implementation complete with `/opsx-apply`
+- [ ] Implementation complete, tasks marked done
 - [ ] ViewModel extends `MviViewModel` per ADR 001
 - [ ] Contract object with UiState/UiEvent/UiEffect per ADR 002
 - [ ] KDoc references spec file
 - [ ] Tests generated and passing
-- [ ] `/validate-spec` shows coverage
-- [ ] Change archived with `/opsx-archive`
+- [ ] Spec coverage verified against implementation
+- [ ] Change archived, delta specs merged into main specs
 - [ ] Code formatted with Spotless
 
 ---
 
-## Migration from Legacy SDD
-
-### Old Structure (deprecated)
-```
-docs/specs/[area]/00X-feature.md  ← No longer used for new specs
-```
-
-### New Structure
+## Structure
 ```
 openspec/specs/[area]/00X-feature.md  ← Main specs (updated via archive)
-openspec/changes/[name]/  ← Active changes (use /opsx-propose)
+openspec/changes/[name]/  ← Active changes
 openspec/changes/archive/YYYY-MM-DD-[name]/  ← History
 ```
-
-### Existing Legacy Specs
-Legacy specs in `docs/specs/` remain valid for reference but new specs should be created in `openspec/specs/` via the skill workflow. Consider migrating legacy specs to OpenSpec format when making significant modifications.
-
 ---
 
 ## Example PR Description
@@ -420,10 +270,7 @@ Implements guardrail persistence per spec `openspec/specs/chat/002-guardrail-saf
 - All scenarios tested
 
 ## Validation
-```
-/validate-spec openspec/specs/chat/002-guardrail-safety-system.md
-✅ 14/14 scenarios implemented
-```
+14/14 scenarios implemented and covered by tests.
 
 ## Test Plan
 - [x] Unit tests for guardrail mapping
@@ -435,22 +282,16 @@ Implements guardrail persistence per spec `openspec/specs/chat/002-guardrail-saf
 
 ## Summary
 
-OpenSpec methodology with skills ensures:
-1. **Automated proposal & design** - `/opsx-propose` creates all artifacts
-2. **Clear requirements** - Delta specs with ADDED/MODIFIED/REMOVED
-3. **Automated implementation** - `/opsx-apply` implements tasks
-4. **Traceable history** - `/opsx-archive` preserves changes
-5. **Validation tools** - `/validate-spec` enforces compliance
+OpenSpec methodology ensures:
+1. **Clear requirements** - Delta specs with ADDED/MODIFIED/REMOVED
+2. **Traceable history** - Archived changes preserve proposal/design/tasks
+3. **Validation** - Spec coverage checked before archiving
 
-The workflow is: **Propose → [Review/Edit] → Apply → Validate → Archive**.
+The workflow is: **Propose → [Review/Edit] → Specify → Implement → Validate → Archive**, driven by whatever tooling or agent logic the developer chooses.
 
 ---
 
 ## Resources
 
 - [OpenSpec Documentation](https://github.com/Fission-AI/OpenSpec)
-- [Firebender OpenSpec Skills](.firebender/commands/)
-- [Now in Android](https://github.com/android/nowinandroid) - Architecture inspiration
-- [Jetpack Compose Documentation](https://developer.android.com/jetpack/compose)
-- [MVI Architecture](https://hannesdorfmann.com/android/model-view-intent/)
 - [Gherkin Reference](https://cucumber.io/docs/gherkin/reference/)

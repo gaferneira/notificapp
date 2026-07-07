@@ -268,37 +268,7 @@ object InboxContract {
 
 ## OpenSpec-Driven Development Workflow
 
-**All feature implementations MUST follow OpenSpec:**
-
-### Phase 1: Proposal & Design
-```
-/opsx-propose "[change-name]"
-```
-- Automatically creates `openspec/changes/[name]/` with all artifacts
-- Generates `proposal.md` (what & why), `design.md` (how), `tasks.md` (implementation steps)
-- Edit these files to refine the content
-
-### Phase 2: Specification
-The skill may create delta specs in `openspec/changes/[name]/specs/`:
-- Use Gherkin Given-When-Then format
-- Include ADDED/MODIFIED/REMOVED sections
-- Reference related features, ADRs, repositories, UI components, test files
-
-### Phase 3: Tasks & Implementation
-```
-/opsx-apply [change-name]
-```
-- Reads all context files (proposal, design, tasks, specs)
-- Implements each pending task from `tasks.md`, marking tasks complete
-- Continues until all tasks are done or blocked
-
-### Phase 4: Validation & Archive
-```
-/validate-spec openspec/specs/[area]/spec.md
-/opsx-archive [change-name]
-```
-- Verify all scenarios have tests and implementation
-- Archive merges delta specs to main specs; change moves to `openspec/changes/archive/`
+**All feature implementations MUST follow OpenSpec.** This is a folder/artifact convention, not a specific tool — drive it with whatever command, script, or agent logic you have, as long as it produces these artifacts in these locations.
 
 **Reference:** `docs/SDD-METHODOLOGY.md` - Complete OpenSpec workflow guide
 
@@ -390,29 +360,7 @@ class RuleMatcherTest {
 ./gradlew assembleRelease
 ```
 
-## Firebender Commands
-
-### OpenSpec Workflow Commands (Firebender Skills)
-| Command                  | Purpose | When to Use |
-|--------------------------|---------|-------------|
-| `/opsx-propose "[name]"` | Create new change with all artifacts | Starting a new feature/modification |
-| `/opsx-apply [name]`     | Implement tasks from a change | Ready to write code |
-| `/opsx-archive [name]`   | Archive completed change | All tasks done |
-| `/opsx-explore [topic]`  | Explore mode for discovery | Thinking/research phase |
-
-### PR Creation Commands
-| Command | Purpose | When to Use |
-|---------|---------|-------------|
-| `/create-pr` | PR generation | Any code changes locally or in the current branch |
-
-### Validation & Testing Commands
-| Command | Purpose | When to Use |
-|---------|---------|-------------|
-| `/validate-spec [path]` | Check spec implementation | After implementation |
-| `/generate-test [path]` | Generate test skeleton | After spec is written |
-| `/validate-all-specs` | Validate entire project | Before releases |
-
-**Reference:** `docs/SDD-METHODOLOGY.md` - Complete OpenSpec workflow
+**Reference:** `docs/SDD-METHODOLOGY.md` - Complete OpenSpec workflow (tool-agnostic; use whatever commands/agent your session provides)
 
 ## Code Quality Gates
 
@@ -497,12 +445,12 @@ Always run before submitting PRs:
 
 ### Adding a New Screen (Complete OpenSpec + PR Workflow)
 
-1. Create change with `/opsx-propose "[change-name]"` (creates proposal, design, tasks)
+1. Create change: `openspec/changes/[change-name]/` with `proposal.md`, `design.md`, `tasks.md`
 2. Review and edit generated artifacts in `openspec/changes/[name]/`
-3. Implement with `/opsx-apply [change-name]` (skill implements all tasks)
-4. Validate with `/validate-spec openspec/specs/[area]/spec.md`
-5. Archive with `/opsx-archive [change-name]`
-6. Create PR with `/create-pr --change [change-name] [ticket-number] [ticket-title]`
+3. Implement each task in `tasks.md`, marking it complete as you go
+4. Validate: confirm all scenarios in `openspec/specs/[area]/spec.md` have tests and implementation
+5. Archive: merge delta specs into main specs, move the change to `openspec/changes/archive/`
+6. Create PR referencing the change and spec
 
 ## Navigation Guidelines
 
