@@ -1,13 +1,21 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.core.di.Dispatcher
+import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.FieldExtractor
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
+import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiState
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
 
@@ -18,12 +26,22 @@ import javax.inject.Inject
  * is committed to the parent (via [UiEffect.Committed]) only when the user confirms; cancelling
  * discards it. Self-contained with no dependencies on the parent RuleEditorViewModel, mirroring
  * [MatchingLogicViewModel].
+ *
+ * Also owns a preview-only "browse history" affordance: when opened with no entry-flow sample, the
+ * user can pick a recent notification from a bounded history list as an override sample. The
+ * override never reaches the committed fields and is discarded on confirm/dismiss.
  */
 @HiltViewModel
-class ExtractDataViewModel @Inject constructor() : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
+class ExtractDataViewModel @Inject constructor(
+    private val notificationRepository: NotificationRepository,
+    @Dispatcher(DispatcherType.Default) private val defaultDispatcher: CoroutineDispatcher,
+) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
-    /** Notification text used by auto-generate, captured on init */
-    private var sampleText: String? = null
+    /** Sample text derived from the entry-flow notification on Init; null when opened to edit a rule. */
+    private var entrySampleText: String? = null
+
+    /** Effective text driving preview + auto-generate: entry sample always wins over the override. */
+    private fun effectiveSampleText(): String? = entrySampleText ?: uiState.value.overrideNotification?.let { it.content ?: it.title ?: it.rawContent }
 
     override fun onEvent(event: UiEvent) {
         when (event) {
@@ -38,11 +56,14 @@ class ExtractDataViewModel @Inject constructor() : MviViewModel<UiState, UiEvent
             is UiEvent.OnDismissFieldSheet -> setState { copy(isFieldSheetVisible = false, editingFieldId = null) }
             is UiEvent.OnConfirm -> confirm()
             is UiEvent.OnDismiss -> dismiss()
+            is UiEvent.OnBrowseHistoryOpened -> onBrowseHistoryOpened(event.targetPackages)
+            is UiEvent.OnHistoryNotificationSelected -> onHistoryNotificationSelected(event.notification)
+            is UiEvent.OnOverrideCleared -> onOverrideCleared()
         }
     }
 
     private fun init(event: UiEvent.Init) {
-        sampleText = event.sampleText
+        entrySampleText = event.sampleText
         setState {
             UiState(
                 fields = event.initialFields,
@@ -53,11 +74,11 @@ class ExtractDataViewModel @Inject constructor() : MviViewModel<UiState, UiEvent
     }
 
     /**
-     * Recomputes [UiState.previewResults] from the current draft fields against [sampleText].
-     * Empty when [sampleText] is null/blank. Called after init and every field-list mutation.
+     * Recomputes [UiState.previewResults] from the current draft fields against [effectiveSampleText].
+     * Empty when the effective text is null/blank. Called after init and every field-list mutation.
      */
     private fun recomputePreviews() {
-        val text = sampleText
+        val text = effectiveSampleText()
         val previews = if (text.isNullOrBlank()) {
             emptyMap()
         } else {
@@ -66,8 +87,39 @@ class ExtractDataViewModel @Inject constructor() : MviViewModel<UiState, UiEvent
         setState { copy(previewResults = previews) }
     }
 
+    private fun onBrowseHistoryOpened(targetPackages: List<String>?) {
+        setState { copy(isBrowsingHistory = true, isLoadingHistory = true) }
+        viewModelScope.launch(defaultDispatcher) {
+            notificationRepository.getNotificationsForBacktest(targetPackages = targetPackages, limit = HISTORY_LIMIT)
+                .onSuccess { results ->
+                    setState { copy(historyResults = results, isLoadingHistory = false) }
+                }
+                .onFailure {
+                    Timber.w(it, "Failed to load notification history")
+                    setState { copy(historyResults = emptyList(), isLoadingHistory = false) }
+                }
+        }
+    }
+
+    private fun onHistoryNotificationSelected(notification: Notification) {
+        setState {
+            copy(
+                overrideNotification = notification,
+                isBrowsingHistory = false,
+                historyResults = emptyList(),
+                isLoadingHistory = false,
+            )
+        }
+        recomputePreviews()
+    }
+
+    private fun onOverrideCleared() {
+        setState { copy(overrideNotification = null) }
+        recomputePreviews()
+    }
+
     private fun autoGenerate() {
-        val text = sampleText.orEmpty()
+        val text = effectiveSampleText().orEmpty()
         if (text.isEmpty()) {
             sendEffect(UiEffect.ShowError("No notification text available to analyze"))
             return
@@ -121,8 +173,12 @@ class ExtractDataViewModel @Inject constructor() : MviViewModel<UiState, UiEvent
 
     private fun dismiss() {
         // Reset for next open and discard the draft.
-        sampleText = null
+        entrySampleText = null
         setState { UiState() }
         sendEffect(UiEffect.Dismiss)
+    }
+
+    private companion object {
+        private const val HISTORY_LIMIT = 25
     }
 }

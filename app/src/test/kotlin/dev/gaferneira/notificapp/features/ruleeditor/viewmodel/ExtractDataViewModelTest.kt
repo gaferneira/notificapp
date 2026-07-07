@@ -3,10 +3,16 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.core.extraction.ExtractionResult
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
+import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
 import dev.gaferneira.notificapp.testutil.createTestField
+import dev.gaferneira.notificapp.testutil.createTestNotification
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -22,13 +28,17 @@ import org.junit.jupiter.api.Test
 class ExtractDataViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
+    private val notificationRepository = mockk<NotificationRepository>()
 
     private lateinit var viewModel: ExtractDataViewModel
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = ExtractDataViewModel()
+        viewModel = ExtractDataViewModel(
+            notificationRepository = notificationRepository,
+            defaultDispatcher = testDispatcher,
+        )
     }
 
     @AfterEach
@@ -452,6 +462,186 @@ class ExtractDataViewModelTest {
 
             // Then: previewResults is reset to empty
             viewModel.uiState.value.previewResults shouldBe emptyMap()
+        }
+    }
+
+    @Nested
+    inner class OverrideTests {
+
+        @Test
+        fun `selecting a history notification sets the override and collapses the list`() {
+            // Given: the sheet is browsing history
+            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+            val notification = createTestNotification(id = "n1", content = "Total: 42 kr")
+
+            // When: selecting it
+            viewModel.onEvent(UiEvent.OnHistoryNotificationSelected(notification))
+
+            // Then: the override is set and the list is collapsed
+            val state = viewModel.uiState.value
+            state.overrideNotification shouldBe notification
+            state.isBrowsingHistory shouldBe false
+        }
+
+        @Test
+        fun `selecting an override recomputes previews against its text with no stale results`() {
+            // Given: a draft field whose pattern matches the override's text but not the prior (null) sample
+            val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = null))
+            viewModel.uiState.value.previewResults shouldBe emptyMap()
+
+            val notification = createTestNotification(id = "n1", content = "Total: 153 kr")
+
+            // When: selecting the override
+            viewModel.onEvent(UiEvent.OnHistoryNotificationSelected(notification))
+
+            // Then: previews reflect the override's text, not stale/empty results
+            viewModel.uiState.value.previewResults["f1"] shouldBe ExtractionResult.Success(
+                value = "153",
+                startIndex = 7,
+                endIndex = 10,
+            )
+        }
+
+        @Test
+        fun `clearing the override resets it to null and previews reset to empty`() {
+            // Given: an override is selected in the edit flow (no entry sample)
+            val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = true, sampleText = null))
+            viewModel.onEvent(
+                UiEvent.OnHistoryNotificationSelected(createTestNotification(id = "n1", content = "Total: 153 kr")),
+            )
+            viewModel.uiState.value.overrideNotification shouldNotBe null
+
+            // When: clearing the override
+            viewModel.onEvent(UiEvent.OnOverrideCleared)
+
+            // Then: the override is null and previews reset to empty
+            val state = viewModel.uiState.value
+            state.overrideNotification shouldBe null
+            state.previewResults shouldBe emptyMap()
+        }
+
+        @Test
+        fun `entry-flow sample takes precedence over any override`() {
+            // Given: an entry-flow sample was provided on Init
+            val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+            viewModel.onEvent(
+                UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = "Entry: 10 kr"),
+            )
+            val entryPreview = viewModel.uiState.value.previewResults["f1"]
+
+            // When: selecting a history override with different matching text
+            viewModel.onEvent(
+                UiEvent.OnHistoryNotificationSelected(createTestNotification(id = "n1", content = "Override: 999 kr")),
+            )
+
+            // Then: previews still reflect the entry sample, unaffected by the override
+            viewModel.uiState.value.previewResults["f1"] shouldBe entryPreview
+        }
+
+        @Test
+        fun `confirm after selecting an override emits Committed with only the draft fields`() = runTest(testDispatcher) {
+            // Given: a draft field and a selected override
+            val field = createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection)
+            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(
+                UiEvent.OnHistoryNotificationSelected(createTestNotification(id = "n1", content = "Total: 153 kr")),
+            )
+
+            viewModel.effect.test {
+                // When: confirming
+                viewModel.onEvent(UiEvent.OnConfirm)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                // Then: Committed carries only the draft fields, no override/notification data
+                awaitItem() shouldBe UiEffect.Committed(listOf(field))
+                awaitItem() shouldBe UiEffect.Dismiss
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
+        fun `dismiss clears the override back to null`() = runTest(testDispatcher) {
+            // Given: an override was selected
+            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(
+                UiEvent.OnHistoryNotificationSelected(createTestNotification(id = "n1", content = "Total: 153 kr")),
+            )
+
+            viewModel.effect.test {
+                // When: dismissing
+                viewModel.onEvent(UiEvent.OnDismiss)
+                testDispatcher.scheduler.advanceUntilIdle()
+                awaitItem() shouldBe UiEffect.Dismiss
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            // Then: the override is cleared
+            viewModel.uiState.value.overrideNotification shouldBe null
+        }
+    }
+
+    @Nested
+    inner class HistoryBrowseTests {
+
+        @Test
+        fun `opening history sets loading state synchronously then loads results once`() = runTest(testDispatcher) {
+            // Given: a stubbed bounded history fetch
+            val history = listOf(createTestNotification(id = "n1"), createTestNotification(id = "n2"))
+            coEvery { notificationRepository.getNotificationsForBacktest(null, 25) } returns Result.success(history)
+            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+
+            // When: opening the history list
+            viewModel.onEvent(UiEvent.OnBrowseHistoryOpened)
+
+            // Then: loading state is set synchronously, before the fetch completes
+            val loadingState = viewModel.uiState.value
+            loadingState.isBrowsingHistory shouldBe true
+            loadingState.isLoadingHistory shouldBe true
+
+            // When: the fetch completes
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: the repository was called exactly once and results land in state
+            coVerify(exactly = 1) { notificationRepository.getNotificationsForBacktest(null, 25) }
+            val loadedState = viewModel.uiState.value
+            loadedState.isLoadingHistory shouldBe false
+            loadedState.historyResults shouldBe history
+        }
+
+        @Test
+        fun `empty history results in an empty list with loading false`() = runTest(testDispatcher) {
+            // Given: the repository returns zero notifications
+            coEvery { notificationRepository.getNotificationsForBacktest(null, 25) } returns Result.success(emptyList())
+            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+
+            // When: opening the history list and letting the fetch complete
+            viewModel.onEvent(UiEvent.OnBrowseHistoryOpened)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: results are empty and loading is false (distinct from mid-flight loading)
+            val state = viewModel.uiState.value
+            state.historyResults shouldBe emptyList()
+            state.isLoadingHistory shouldBe false
+        }
+
+        @Test
+        fun `a failed fetch clears loading and results without propagating the exception`() = runTest(testDispatcher) {
+            // Given: the repository fetch fails
+            coEvery {
+                notificationRepository.getNotificationsForBacktest(null, 25)
+            } returns Result.failure(IllegalStateException("boom"))
+            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+
+            // When: opening the history list and letting the fetch complete
+            viewModel.onEvent(UiEvent.OnBrowseHistoryOpened)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: no exception propagates, and state resolves to the empty/not-loading resting state
+            val state = viewModel.uiState.value
+            state.isLoadingHistory shouldBe false
+            state.historyResults shouldBe emptyList()
         }
     }
 }

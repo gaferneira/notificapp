@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
 import dev.gaferneira.notificapp.core.extraction.ExtractionResult
+import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
 
 /**
@@ -30,6 +31,17 @@ object ExtractDataContract {
          * text is blank or null.
          */
         val previewResults: Map<String, ExtractionResult> = emptyMap(),
+        /**
+         * Preview-only notification chosen from history when no entry-flow sample was supplied.
+         * Never persisted, never threaded to RuleEditorViewModel, never used for matching.
+         */
+        val overrideNotification: Notification? = null,
+        /** True while the inline history list is expanded in the preview slot. */
+        val isBrowsingHistory: Boolean = false,
+        /** True while the one-shot history fetch is in flight (loading state in the list). */
+        val isLoadingHistory: Boolean = false,
+        /** Bounded, unfiltered recent-history results, fetched once per list open. */
+        val historyResults: List<Notification> = emptyList(),
     ) {
         /** Confirm is only allowed once the draft has at least one field */
         val canConfirm: Boolean
@@ -74,6 +86,15 @@ object ExtractDataContract {
 
         /** Dismiss the sheet, discarding the draft */
         data object OnDismiss : UiEvent()
+
+        /** User tapped the browse-history icon; expand the inline list and trigger the one-shot fetch. */
+        data class OnBrowseHistoryOpened(val targetPackages : List<String>?) : UiEvent()
+
+        /** User tapped a row in the history list; set it as the preview-only override. */
+        data class OnHistoryNotificationSelected(val notification: Notification) : UiEvent()
+
+        /** User tapped the "X" on the preview card; clear the override, return to the browse-icon state. */
+        data object OnOverrideCleared : UiEvent()
     }
 
     /**

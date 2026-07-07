@@ -244,6 +244,7 @@ private fun RuleEditorBottomSheets(
                     initialFields = uiState.rule.fields,
                     isEditingAction = editing?.type == ActionType.SAVE_DATA,
                     notification = uiState.sampleNotification,
+                    targetPackages = uiState.rule.targetApps.map { it.packageName }.takeIf { it.isNotEmpty() },
                     onCommitted = { fields -> onEvent(UiEvent.OnExtractDataCommitted(fields)) },
                     onDismiss = { onEvent(UiEvent.OnDismissSheet) },
                 )

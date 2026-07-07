@@ -142,4 +142,9 @@
 
     <!-- Extract-data sheet field preview -->
     <string name="extract_preview_no_match">No match in sample notification</string>
+
+    <!-- Extract-data sheet browse-history -->
+    <string name="extract_history_open_cd">Browse notification history</string>
+    <string name="extract_history_clear_override_cd">Clear selected notification</string>
+    <string name="extract_history_empty">No notification history available</string>
 </resources>
