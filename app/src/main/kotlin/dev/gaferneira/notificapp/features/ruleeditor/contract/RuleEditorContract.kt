@@ -39,8 +39,14 @@ object RuleEditorContract {
         val isMatchingLogicSheetVisible: Boolean = false,
         /** Whether app selection bottom sheet is visible */
         val isAppSheetVisible: Boolean = false,
-        /** Whether action bottom sheet is visible */
+        /** Whether the action type-picker dialog is visible */
+        val isActionTypePickerVisible: Boolean = false,
+        /** Pre-selected type for a NEW config action, seeding the action sheet (null when editing) */
+        val pendingActionType: ActionType? = null,
+        /** Whether action bottom sheet is visible (config actions: snooze/alarm/dismiss/flash) */
         val isActionSheetVisible: Boolean = false,
+        /** Action id awaiting remove confirmation because it is an Extract-data action with fields */
+        val pendingExtractDataRemovalId: String? = null,
         /** Whether field bottom sheet is visible */
         val isFieldSheetVisible: Boolean = false,
         /** ID of the condition currently being edited in the bottom sheet, or null for new condition */
@@ -134,14 +140,32 @@ object RuleEditorContract {
         /** Apps selected from AppBottomSheet */
         data class OnAppsSelected(val apps: List<AppInfo>) : UiEvent()
 
-        /** Show action bottom sheet */
+        /** Show the action type-picker dialog */
         data object OnAddActionClicked : UiEvent()
+
+        /** An action type was chosen in the picker dialog */
+        data class OnActionTypeSelected(val type: ActionType) : UiEvent()
+
+        /** Dismiss the action type-picker dialog */
+        data object OnDismissActionTypePicker : UiEvent()
+
+        /** Toggle an action's enabled state */
+        data class OnToggleActionClicked(val actionId: String, val enabled: Boolean) : UiEvent()
 
         /** Click on an action item to edit it */
         data class OnEditActionClicked(val actionId: String) : UiEvent()
 
         /** Remove an action from the list */
         data class OnRemoveActionClicked(val actionId: String) : UiEvent()
+
+        /** Confirm removing an Extract-data action, clearing its fields */
+        data object OnConfirmExtractDataRemoval : UiEvent()
+
+        /** Dismiss the Extract-data removal confirmation */
+        data object OnDismissExtractDataRemoval : UiEvent()
+
+        /** Dismiss the add/edit field sheet only (leaves the Extract-data sheet open) */
+        data object OnDismissFieldSheet : UiEvent()
 
         /** Auto-generate extraction fields */
         data object OnAutoGenerateClicked : UiEvent()
@@ -162,7 +186,7 @@ object RuleEditorContract {
         /** Condition saved from MatchingLogicBottomSheet (add or update) */
         data class OnConditionSaved(val condition: RuleCondition) : UiEvent()
 
-        /** Action saved from ActionBottomSheet (add or update) */
+        /** Action saved from a type-scoped action sheet (add or update) */
         data class OnActionSaved(val action: RuleAction) : UiEvent()
 
         /** Test the current draft rule against captured notification history */
@@ -204,12 +228,3 @@ object RuleEditorContract {
 
 val RuleCondition.displayText: String
     get() = "${condition?.displayName()} ${operator?.displayName()} '$value'"
-
-val RuleAction.displayName: String
-    get() = when (type) {
-        ActionType.SAVE_DATA -> "Save to Data tab"
-        ActionType.DISMISS_NOTIFICATION -> "Delete notification"
-        ActionType.CREATE_ALARM -> "Create alarm"
-        ActionType.SNOOZE_NOTIFICATION -> "Snooze notification"
-        ActionType.FLASH_ALERT -> "Flash alert"
-    }

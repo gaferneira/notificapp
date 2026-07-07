@@ -181,6 +181,13 @@ data class RuleAction(
 }
 
 /**
+ * Whether this list contains an enabled `SAVE_DATA` ("Extract data") action. When false, a matched
+ * rule's extracted field values are not persisted - the Extract-data action is the gate for
+ * extraction persistence (see `ProcessNotificationUseCase`).
+ */
+fun List<RuleAction>.hasEnabledSaveDataAction(): Boolean = any { it.type == ActionType.SAVE_DATA && it.isEnabled }
+
+/**
  * Type of action to perform when rule matches.
  */
 @Serializable

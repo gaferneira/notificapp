@@ -23,7 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import dev.gaferneira.notificapp.features.ruleeditor.ui.formatDurationMinutes
+import dev.gaferneira.notificapp.util.formatDurationMinutes
 
 /**
  * Duration presets for quick snooze selection.

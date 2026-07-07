@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.ruleeditor.ui
+package dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

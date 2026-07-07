@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.ruleeditor.ui
+package dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +15,6 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -55,15 +54,15 @@ import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiState
-import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.FixedPositionConfig
-import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.JsonPathConfig
-import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.LineExtractionConfig
-import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.RegexConfig
-import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.SectionHeader
-import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.SplitByDelimiterConfig
-import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.TextAfterKeywordConfig
-import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.TextBeforeKeywordConfig
-import dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig.TextBetweenAnchorsConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.FixedPositionConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.JsonPathConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.LineExtractionConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.RegexConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.SectionHeader
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.SplitByDelimiterConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.TextAfterKeywordConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.TextBeforeKeywordConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.TextBetweenAnchorsConfig
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.AddFieldViewModel
 import kotlinx.coroutines.launch
 
@@ -345,18 +344,6 @@ private fun AddFieldBottomSheetContent(
                     PreviewResultCard(result = uiState.previewResult)
                 }
             }
-
-            // Add Field Button
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = { onEvent(UiEvent.OnSaveClicked) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = uiState.isValid,
-            ) {
-                Text("Add Field")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

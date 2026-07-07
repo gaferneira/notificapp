@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.ruleeditor.ui.fieldconfig
+package dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row

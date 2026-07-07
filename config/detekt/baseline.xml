@@ -20,8 +20,6 @@
     <ID>InstanceOfCheckForException:NotificationDetailViewModel.kt$NotificationDetailViewModel$e is CancellationException</ID>
     <ID>InstanceOfCheckForException:ProcessNotificationUseCase.kt$ProcessNotificationUseCase$e is CancellationException</ID>
     <ID>InstanceOfCheckForException:RuleExecutionRepositoryImpl.kt$RuleExecutionRepositoryImpl$e is CancellationException</ID>
-    <ID>LongMethod:ActionBottomSheet.kt$@Composable private fun ActionTypeCard( title: String, description: String, icon: ImageVector, isSelected: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:ActionBottomSheet.kt$@Composable private fun ActionsContent( modifier: Modifier = Modifier, uiState: ActionBottomSheetContract.UiState, onEvent: (ActionBottomSheetContract.UiEvent) -&gt; Unit, )</ID>
     <ID>LongMethod:AddFieldBottomSheet.kt$@Composable private fun PreviewResultCard( result: AddFieldContract.PreviewResult, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AddFieldBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun AddFieldBottomSheetContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, onClose: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AddFieldViewModel.kt$AddFieldViewModel$private fun initialize(field: RuleField?, notification: Notification?)</ID>
@@ -30,9 +28,7 @@
     <ID>LongMethod:AppSelectionScreen.kt$@Composable private fun AppListItem( app: AppInfo, isSelected: Boolean, onToggled: (Boolean) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AppSelectionScreen.kt$@Composable private fun AppSelectionScreenContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AppSelectionViewModel.kt$AppSelectionViewModel$private fun loadAppsWithNotifications(packageManager: PackageManager): List&lt;AppInfo&gt;</ID>
-    <ID>LongMethod:DataExtractionSection.kt$@Composable fun DataExtractionSection( fields: List&lt;RuleField&gt;, onAutoGenerate: () -&gt; Unit, onAddField: () -&gt; Unit, onEditField: (String) -&gt; Unit, onRemoveField: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:DataExtractionSection.kt$@Composable private fun ExtractionFieldItem( field: RuleField, onClick: () -&gt; Unit, onRemove: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:DoSection.kt$@Composable private fun ActionCard( action: RuleAction, onToggle: () -&gt; Unit, onRemove: () -&gt; Unit, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:FieldExtractor.kt$FieldExtractor$private fun parseJsonArray(json: String, depth: Int = 0): List&lt;Any?&gt;</ID>
     <ID>LongMethod:FieldExtractor.kt$FieldExtractor$private fun parseJsonObject(json: String, depth: Int = 0): Map&lt;String, Any?&gt;</ID>
     <ID>LongMethod:InboxFilterBottomSheet.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun FilterBottomSheetContent( uiState: InboxFilterContract.UiState, onEvent: (InboxFilterContract.UiEvent) -&gt; Unit, )</ID>
@@ -60,7 +56,6 @@
     <ID>LongMethod:SnoozeConfig.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun SnoozeDurationSelector( selectedMinutes: Int, onDurationChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WhenSection.kt$@Composable private fun AppsCard( selectedApps: List&lt;AppInfo&gt;, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WhenSection.kt$@Composable private fun ConditionCard( condition: RuleCondition, onClick: () -&gt; Unit, onRemove: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongParameterList:ActionBottomSheet.kt$( title: String, description: String, icon: ImageVector, isSelected: Boolean, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:DataExtractionSection.kt$( fields: List&lt;RuleField&gt;, onAutoGenerate: () -&gt; Unit, onAddField: () -&gt; Unit, onEditField: (String) -&gt; Unit, onRemoveField: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:InboxFilterBottomSheet.kt$( currentSelectedApps: List&lt;String&gt;, onFilterApplied: (List&lt;String&gt;, InboxFilterContract.Status) -&gt; Unit, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, currentStatusFilter: InboxFilterContract.Status = InboxFilterContract.Status.ALL, viewModel: InboxFilterBottomSheetViewModel = hiltViewModel(), )</ID>
     <ID>LongParameterList:KeywordConfig.kt$( keyword: String, maxLength: Int?, onKeywordChange: (String) -&gt; Unit, onMaxLengthChange: (Int?) -&gt; Unit, error: String?, modifier: Modifier = Modifier, )</ID>

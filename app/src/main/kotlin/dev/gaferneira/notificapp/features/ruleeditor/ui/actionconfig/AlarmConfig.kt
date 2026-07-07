@@ -24,7 +24,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -161,9 +160,10 @@ private fun AlarmToggleRow(
 }
 
 /**
- * Requests notification permission when the alarm action is configured, and warns the user when it
- * is missing. The alarm's Dismiss/Snooze controls live on the ongoing notification, so without this
- * permission the alarm is refused at trigger time (it would otherwise be unstoppable).
+ * Warns the user when notification permission is missing and offers a manual grant. The alarm's
+ * Dismiss/Snooze controls live on the ongoing notification, so without this permission the alarm is
+ * refused at trigger time (it would otherwise be unstoppable). The permission is *requested* when
+ * the user commits the alarm action (the sheet's "Add" button), not when this warning renders.
  */
 @Composable
 private fun AlarmNotificationPermissionGate(modifier: Modifier = Modifier) {
@@ -176,14 +176,6 @@ private fun AlarmNotificationPermissionGate(modifier: Modifier = Modifier) {
         contract = ActivityResultContracts.RequestPermission(),
     ) {
         notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
-    }
-
-    // Ask up front when the alarm action is selected (Android 13+). On older versions the
-    // permission is granted at install, so there is nothing to request.
-    LaunchedEffect(Unit) {
-        if (!notificationsEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
     }
 
     if (notificationsEnabled) return

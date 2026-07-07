@@ -9,10 +9,11 @@ import javax.inject.Inject
 /**
  * Executes [dev.gaferneira.notificapp.domain.model.ActionType.SAVE_DATA].
  *
- * This is a no-op: extracted field data is already persisted as part of the rule execution
- * pipeline (`RuleExecutionRepository.saveExecution`) regardless of this action type. Registering
- * an explicit, always-succeeding executor makes `SAVE_DATA` a truthful `SUCCESS` in execution
- * history instead of silently falling through to `SKIPPED` for lack of a handler.
+ * This is a no-op: extraction persistence is a pipeline concern, not an executor side effect.
+ * `ProcessNotificationUseCase` gates whether extracted field values are saved on the presence of an
+ * enabled `SAVE_DATA` action; this executor only reports the action ran. Registering an explicit,
+ * always-succeeding executor makes `SAVE_DATA` a truthful `SUCCESS` in execution history instead of
+ * silently falling through to `SKIPPED` for lack of a handler.
  */
 class SaveDataActionExecutor @Inject constructor() : ActionExecutor {
 

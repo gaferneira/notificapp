@@ -447,42 +447,135 @@ class RuleEditorViewModelTest {
     inner class ActionsTests {
 
         @Test
-        fun `add action clicked shows the action sheet`() {
+        fun `add action clicked shows the type picker`() {
             // When: clicking add action
             viewModel.onEvent(UiEvent.OnAddActionClicked)
 
-            // Then: the action sheet becomes visible
-            viewModel.uiState.value.isActionSheetVisible shouldBe true
+            // Then: the type-picker dialog becomes visible
+            viewModel.uiState.value.isActionTypePickerVisible shouldBe true
         }
 
         @Test
-        fun `edit action clicked shows the sheet with the editing id set`() {
-            // When: clicking edit on an action
-            viewModel.onEvent(UiEvent.OnEditActionClicked("action-1"))
+        fun `selecting a config type opens the action sheet seeded with that type`() {
+            // Given: the picker is open
+            viewModel.onEvent(UiEvent.OnAddActionClicked)
+
+            // When: selecting a config action type
+            viewModel.onEvent(UiEvent.OnActionTypeSelected(ActionType.CREATE_ALARM))
+
+            // Then: the picker closes and the action sheet opens seeded with that type
+            val state = viewModel.uiState.value
+            state.isActionTypePickerVisible shouldBe false
+            state.isActionSheetVisible shouldBe true
+            state.pendingActionType shouldBe ActionType.CREATE_ALARM
+            state.editingActionId shouldBe null
+        }
+
+        @Test
+        fun `selecting Dismiss adds it directly without opening a sheet`() {
+            // Given: the picker is open
+            viewModel.onEvent(UiEvent.OnAddActionClicked)
+
+            // When: selecting Dismiss (no configuration)
+            viewModel.onEvent(UiEvent.OnActionTypeSelected(ActionType.DISMISS_NOTIFICATION))
+
+            // Then: the dismiss action is added directly and no config sheet opens
+            val state = viewModel.uiState.value
+            state.rule.actions.map { it.type } shouldBe listOf(ActionType.DISMISS_NOTIFICATION)
+            state.isActionSheetVisible shouldBe false
+            state.pendingActionType shouldBe null
+        }
+
+        @Test
+        fun `editing a Dismiss action is a no-op (nothing to configure)`() {
+            // Given: an existing dismiss action
+            viewModel.onEvent(UiEvent.OnActionTypeSelected(ActionType.DISMISS_NOTIFICATION))
+            val dismissId = viewModel.uiState.value.rule.actions.single().id
+
+            // When: tapping it to edit
+            viewModel.onEvent(UiEvent.OnEditActionClicked(dismissId))
+
+            // Then: no sheet opens
+            val state = viewModel.uiState.value
+            state.isActionSheetVisible shouldBe false
+            state.isExtractDataSheetVisible shouldBe false
+        }
+
+        @Test
+        fun `selecting Extract data adds the SAVE_DATA action up front and opens the extract sheet`() {
+            // Given: the picker is open
+            viewModel.onEvent(UiEvent.OnAddActionClicked)
+
+            // When: selecting Extract data
+            viewModel.onEvent(UiEvent.OnActionTypeSelected(ActionType.SAVE_DATA))
+
+            // Then: a SAVE_DATA action exists and the Extract-data sheet is shown
+            val state = viewModel.uiState.value
+            state.rule.actions.map { it.type } shouldBe listOf(ActionType.SAVE_DATA)
+            state.isExtractDataSheetVisible shouldBe true
+            state.isActionSheetVisible shouldBe false
+        }
+
+        @Test
+        fun `editing a config action opens the sheet with the editing id set`() {
+            // Given: an existing config action
+            viewModel.onEvent(UiEvent.OnActionTypeSelected(ActionType.CREATE_ALARM))
+            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "alarm-1", type = ActionType.CREATE_ALARM)))
+
+            // When: editing it
+            viewModel.onEvent(UiEvent.OnEditActionClicked("alarm-1"))
 
             // Then: the sheet opens with the editing id set
             val state = viewModel.uiState.value
-            state.editingActionId shouldBe "action-1"
+            state.editingActionId shouldBe "alarm-1"
             state.isActionSheetVisible shouldBe true
         }
 
         @Test
-        fun `remove action clicked removes the action`() {
-            // Given: a saved action
-            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "action-1")))
+        fun `editing an Extract data action opens the extract sheet, not the config sheet`() {
+            // Given: an existing SAVE_DATA action
+            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "save-1", type = ActionType.SAVE_DATA)))
+
+            // When: editing it
+            viewModel.onEvent(UiEvent.OnEditActionClicked("save-1"))
+
+            // Then: the Extract-data sheet opens and no config-edit state is set
+            val state = viewModel.uiState.value
+            state.isExtractDataSheetVisible shouldBe true
+            state.isActionSheetVisible shouldBe false
+            state.editingActionId shouldBe null
+        }
+
+        @Test
+        fun `editing an unknown action id is a no-op`() {
+            // When: editing an id that isn't on the rule
+            viewModel.onEvent(UiEvent.OnEditActionClicked("nope"))
+
+            // Then: nothing opens
+            val state = viewModel.uiState.value
+            state.isActionSheetVisible shouldBe false
+            state.isExtractDataSheetVisible shouldBe false
+        }
+
+        @Test
+        fun `removing a config action removes it without confirmation`() {
+            // Given: a saved config action
+            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "alarm-1", type = ActionType.CREATE_ALARM)))
 
             // When: removing it
-            viewModel.onEvent(UiEvent.OnRemoveActionClicked("action-1"))
+            viewModel.onEvent(UiEvent.OnRemoveActionClicked("alarm-1"))
 
-            // Then: the action list is empty
-            viewModel.uiState.value.rule.actions shouldBe emptyList()
+            // Then: the action list is empty and no confirmation was requested
+            val state = viewModel.uiState.value
+            state.rule.actions shouldBe emptyList()
+            state.pendingExtractDataRemovalId shouldBe null
         }
 
         @Test
         fun `action saved with no editing id appends a new action and closes the sheet`() {
-            // Given: the action sheet is open for a new action
-            viewModel.onEvent(UiEvent.OnAddActionClicked)
-            val action = createTestAction(id = "action-1")
+            // Given: the action sheet is open for a new config action
+            viewModel.onEvent(UiEvent.OnActionTypeSelected(ActionType.CREATE_ALARM))
+            val action = createTestAction(id = "alarm-1", type = ActionType.CREATE_ALARM)
 
             // When: saving the action
             viewModel.onEvent(UiEvent.OnActionSaved(action))
@@ -491,16 +584,17 @@ class RuleEditorViewModelTest {
             val state = viewModel.uiState.value
             state.rule.actions shouldBe listOf(action)
             state.isActionSheetVisible shouldBe false
+            state.pendingActionType shouldBe null
         }
 
         @Test
         fun `action saved while editing updates the existing action and clears editing state`() {
-            // Given: an existing action being edited
-            val original = createTestAction(id = "action-1", isEnabled = true)
+            // Given: an existing config action being edited
+            val original = createTestAction(id = "alarm-1", type = ActionType.CREATE_ALARM, isEnabled = true)
             viewModel.onEvent(UiEvent.OnActionSaved(original))
-            viewModel.onEvent(UiEvent.OnEditActionClicked("action-1"))
+            viewModel.onEvent(UiEvent.OnEditActionClicked("alarm-1"))
 
-            val updated = createTestAction(id = "action-1", isEnabled = false)
+            val updated = createTestAction(id = "alarm-1", type = ActionType.CREATE_ALARM, isEnabled = false)
 
             // When: saving the updated action
             viewModel.onEvent(UiEvent.OnActionSaved(updated))
@@ -510,6 +604,57 @@ class RuleEditorViewModelTest {
             state.rule.actions shouldBe listOf(updated)
             state.editingActionId shouldBe null
             state.isActionSheetVisible shouldBe false
+        }
+
+        @Test
+        fun `toggling an action flips its enabled state`() {
+            // Given: an enabled config action
+            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "alarm-1", type = ActionType.CREATE_ALARM, isEnabled = true)))
+
+            // When: toggling it off
+            viewModel.onEvent(UiEvent.OnToggleActionClicked("alarm-1", enabled = false))
+
+            // Then: the action is disabled
+            viewModel.uiState.value.rule.actions.single().isEnabled shouldBe false
+        }
+
+        @Test
+        fun `removing Extract data with fields asks for confirmation before clearing`() {
+            // Given: an Extract-data action with a field
+            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "save-1", type = ActionType.SAVE_DATA)))
+            viewModel.onEvent(UiEvent.OnFieldSaved(createTestField(method = ExtractionMethod.RegexPattern("\\d+"))))
+
+            // When: removing the Extract-data action
+            viewModel.onEvent(UiEvent.OnRemoveActionClicked("save-1"))
+
+            // Then: removal is pending confirmation; nothing is removed yet
+            val pending = viewModel.uiState.value
+            pending.pendingExtractDataRemovalId shouldBe "save-1"
+            pending.rule.actions.map { it.type } shouldBe listOf(ActionType.SAVE_DATA)
+            pending.rule.fields.size shouldBe 1
+
+            // When: confirming
+            viewModel.onEvent(UiEvent.OnConfirmExtractDataRemoval)
+
+            // Then: the action and its fields are cleared
+            val confirmed = viewModel.uiState.value
+            confirmed.rule.actions shouldBe emptyList()
+            confirmed.rule.fields shouldBe emptyList()
+            confirmed.pendingExtractDataRemovalId shouldBe null
+        }
+
+        @Test
+        fun `removing empty Extract data clears without confirmation`() {
+            // Given: an Extract-data action with no fields
+            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "save-1", type = ActionType.SAVE_DATA)))
+
+            // When: removing it
+            viewModel.onEvent(UiEvent.OnRemoveActionClicked("save-1"))
+
+            // Then: removed immediately, no confirmation
+            val state = viewModel.uiState.value
+            state.rule.actions shouldBe emptyList()
+            state.pendingExtractDataRemovalId shouldBe null
         }
     }
 

@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.ruleeditor.ui.components
+package dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,13 +34,49 @@ import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
 
 /**
- * The "And then" data extraction section.
- * Shows extraction fields with auto-generate button in the header.
+ * The "Extract data" action sheet. Unlike the other action types, `SAVE_DATA` has no scalar config
+ * form - it owns the rule's extraction fields. This sheet hosts the field manager (add / edit /
+ * remove / auto-generate); field values are only persisted while this action is present and enabled
+ * (see the extraction-gating in `ProcessNotificationUseCase`).
+ *
+ * Fields live on the parent `RuleEditorViewModel` (`rule.fields`), so all field callbacks route to
+ * the parent - this sheet is a presentation container, not a separate source of truth.
  */
 @Composable
-fun DataExtractionSection(
+fun ExtractDataBottomSheet(
+    fields: List<RuleField>,
+    callbacks: ExtractionFieldCallbacks,
+    onDismiss: () -> Unit,
+) {
+    ActionConfigSheet(
+        title = "Extract data",
+        confirmLabel = "Done",
+        onConfirm = onDismiss,
+        onDismiss = onDismiss,
+    ) {
+        ActionSheetDescription("Extract and store data fields from the notification.")
+        DataExtractionSection(
+            fields = fields,
+            onAutoGenerate = callbacks.onAutoGenerate,
+            onAddField = callbacks.onAddField,
+            onEditField = callbacks.onEditField,
+            onRemoveField = callbacks.onRemoveField,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * The data-extraction field manager, hosted inside the Extract-data ("Extract data") action sheet.
+ * Shows the extraction fields with add/edit/remove and an auto-generate shortcut.
+ */
+@Composable
+private fun DataExtractionSection(
     fields: List<RuleField>,
     onAutoGenerate: () -> Unit,
     onAddField: () -> Unit,
@@ -52,36 +88,20 @@ fun DataExtractionSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Header with title and auto-generate button
+        // Description with auto-generate shortcut
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(
+            Text(
+                text = "Define the data fields you want to extract from the notification text using rules.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "And then",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "(Data Extraction)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    text = "Define the data fields you want to extract from the notification text using rules.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
 
             // Auto-generate button
             IconButton(

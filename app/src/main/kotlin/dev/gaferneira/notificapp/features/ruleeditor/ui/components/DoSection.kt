@@ -13,11 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.NotificationsPaused
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -35,8 +31,8 @@ import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleAction
-import dev.gaferneira.notificapp.features.ruleeditor.contract.displayName
-import dev.gaferneira.notificapp.features.ruleeditor.ui.formatDurationMinutes
+import dev.gaferneira.notificapp.util.formatDurationMinutes
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 
 /**
  * The "Do" section showing configured actions.
@@ -45,9 +41,8 @@ import dev.gaferneira.notificapp.features.ruleeditor.ui.formatDurationMinutes
 @Composable
 fun DoSection(
     actions: List<RuleAction>,
-    onToggleAction: (String, Boolean) -> Unit,
-    onRemoveAction: (String) -> Unit,
-    onEditAction: (String) -> Unit,
+    extractDataFieldCount: Int,
+    callbacks: ActionCardCallbacks,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -72,41 +67,36 @@ fun DoSection(
         actions.forEach { action ->
             ActionCard(
                 action = action,
-                onToggle = { onToggleAction(action.id, !action.isEnabled) },
-                onRemove = { onRemoveAction(action.id) },
-                onClick = { onEditAction(action.id) },
+                subtitle = action.cardSubtitle(extractDataFieldCount),
+                onToggle = { callbacks.onToggle(action.id, !action.isEnabled) },
+                onRemove = { callbacks.onRemove(action.id) },
+                onClick = { callbacks.onEdit(action.id) },
             )
         }
     }
 }
 
+/** Secondary line for an action card: snooze duration, extract-data field count, or none. */
+private fun RuleAction.cardSubtitle(extractDataFieldCount: Int): String? = when (type) {
+    ActionType.SNOOZE_NOTIFICATION -> formatDurationMinutes(getSnoozeDurationMinutes())
+    ActionType.SAVE_DATA -> when (extractDataFieldCount) {
+        0 -> "No fields yet"
+        1 -> "1 field"
+        else -> "$extractDataFieldCount fields"
+    }
+    else -> null
+}
+
 @Composable
 private fun ActionCard(
     action: RuleAction,
+    subtitle: String?,
     onToggle: () -> Unit,
     onRemove: () -> Unit,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    val icon = when (action.type) {
-        ActionType.SAVE_DATA -> Icons.AutoMirrored.Filled.List
-        ActionType.DISMISS_NOTIFICATION -> Icons.Default.Delete
-        ActionType.CREATE_ALARM -> Icons.Default.Alarm
-        ActionType.SNOOZE_NOTIFICATION -> Icons.Default.NotificationsPaused
-        ActionType.FLASH_ALERT -> Icons.Default.FlashOn
-    }
-
-    // Get subtitle text for actions with configuration
-    val subtitle = when (action.type) {
-        ActionType.SNOOZE_NOTIFICATION -> {
-            val minutes = action.getSnoozeDurationMinutes()
-            formatDurationMinutes(minutes)
-        }
-        else -> null
-    }
-
     Card(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
@@ -122,60 +112,85 @@ private fun ActionCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            ActionCardLabel(
+                action = action,
+                subtitle = subtitle,
                 modifier = Modifier.weight(1f),
-            ) {
-                // Icon container
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
+            )
 
-                Spacer(modifier = Modifier.width(12.dp))
+            ActionCardControls(
+                isEnabled = action.isEnabled,
+                onToggle = onToggle,
+                onRemove = onRemove,
+            )
+        }
+    }
+}
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = action.displayName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    subtitle?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
+@Composable
+private fun ActionCardLabel(
+    action: RuleAction,
+    subtitle: String?,
+    modifier: Modifier = Modifier,
+) {
+    val meta = action.type.ui()
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = meta.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(20.dp),
+            )
+        }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Toggle switch
-                Switch(
-                    checked = action.isEnabled,
-                    onCheckedChange = { onToggle() },
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = meta.label,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+            )
+            subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-
-                // Remove button
-                IconButton(onClick = onRemove) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Remove action",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
             }
+        }
+    }
+}
+
+@Composable
+private fun ActionCardControls(
+    isEnabled: Boolean,
+    onToggle: () -> Unit,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Switch(
+            checked = isEnabled,
+            onCheckedChange = { onToggle() },
+        )
+
+        IconButton(onClick = onRemove) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Remove action",
+                tint = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }
@@ -197,9 +212,12 @@ private fun DoSectionPreview() {
                     isEnabled = false,
                 ),
             ),
-            onToggleAction = { _, _ -> },
-            onRemoveAction = {},
-            onEditAction = {},
+            extractDataFieldCount = 2,
+            callbacks = ActionCardCallbacks(
+                onToggle = { _, _ -> },
+                onRemove = {},
+                onEdit = {},
+            ),
             modifier = Modifier.padding(16.dp),
         )
     }
@@ -211,9 +229,12 @@ private fun DoSectionEmptyPreview() {
     NotificappTheme {
         DoSection(
             actions = emptyList(),
-            onToggleAction = { _, _ -> },
-            onRemoveAction = {},
-            onEditAction = {},
+            extractDataFieldCount = 2,
+            callbacks = ActionCardCallbacks(
+                onToggle = { _, _ -> },
+                onRemove = {},
+                onEdit = {},
+            ),
             modifier = Modifier.padding(16.dp),
         )
     }
@@ -236,9 +257,12 @@ private fun DoSectionWithSnoozePreview() {
                     isEnabled = true,
                 ),
             ),
-            onToggleAction = { _, _ -> },
-            onRemoveAction = {},
-            onEditAction = {},
+            extractDataFieldCount = 2,
+            callbacks = ActionCardCallbacks(
+                onToggle = { _, _ -> },
+                onRemove = {},
+                onEdit = {},
+            ),
             modifier = Modifier.padding(16.dp),
         )
     }

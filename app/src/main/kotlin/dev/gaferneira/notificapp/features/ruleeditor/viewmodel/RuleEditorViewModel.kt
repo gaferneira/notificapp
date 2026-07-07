@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.collections.plus
 
 /**
  * ViewModel for the Rule Editor screen.
@@ -78,9 +79,15 @@ class RuleEditorViewModel @Inject constructor(
             is UiEvent.OnConditionItemClicked -> openConditionForEditing(event.conditionId)
             is UiEvent.OnAppsClicked -> showAppSheet()
             is UiEvent.OnAppsSelected -> onAppsSelected(event.apps)
-            is UiEvent.OnAddActionClicked -> showActionSheet()
+            is UiEvent.OnAddActionClicked -> showActionTypePicker()
+            is UiEvent.OnActionTypeSelected -> onActionTypeSelected(event.type)
+            is UiEvent.OnDismissActionTypePicker -> setState { copy(isActionTypePickerVisible = false) }
+            is UiEvent.OnToggleActionClicked -> toggleAction(event.actionId, event.enabled)
             is UiEvent.OnEditActionClicked -> openActionForEditing(event.actionId)
             is UiEvent.OnRemoveActionClicked -> removeAction(event.actionId)
+            is UiEvent.OnConfirmExtractDataRemoval -> confirmExtractDataRemoval()
+            is UiEvent.OnDismissExtractDataRemoval -> setState { copy(pendingExtractDataRemovalId = null) }
+            is UiEvent.OnDismissFieldSheet -> dismissFieldSheet()
             is UiEvent.OnAutoGenerateClicked -> autoGenerateExtraction()
             is UiEvent.OnAddFieldClicked -> addField()
             is UiEvent.OnEditFieldClicked -> openFieldForEditing(event.fieldId)
@@ -266,22 +273,76 @@ class RuleEditorViewModel @Inject constructor(
         }
     }
 
-    private fun showActionSheet() {
-        setState { copy(isActionSheetVisible = true) }
+    private fun showActionTypePicker() {
+        setState { copy(isActionTypePickerVisible = true) }
+    }
+
+    private fun onActionTypeSelected(type: ActionType) {
+        setState { copy(isActionTypePickerVisible = false) }
+        when (type) {
+            // Dismiss has no configuration, so there is no sheet - it is added directly.
+            ActionType.DISMISS_NOTIFICATION -> setState {
+                copy(rule = rule.copy(actions = rule.actions + RuleAction(id = UUID.randomUUID().toString(), type = type)))
+            }
+            // Snooze / alarm / flash each open their own type-scoped configuration sheet.
+            else -> setState {
+                copy(
+                    pendingActionType = type,
+                    editingActionId = null,
+                    isActionSheetVisible = true,
+                )
+            }
+        }
     }
 
     private fun openActionForEditing(actionId: String) {
+        val action = uiState.value.rule.actions.find { it.id == actionId } ?: return
+        when (action.type) {
+            // Dismiss has no configuration to edit.
+            ActionType.DISMISS_NOTIFICATION -> Unit
+            else -> setState {
+                copy(
+                    editingActionId = actionId,
+                    isActionSheetVisible = true,
+                )
+            }
+        }
+    }
+
+    private fun toggleAction(actionId: String, enabled: Boolean) {
         setState {
             copy(
-                editingActionId = actionId,
-                isActionSheetVisible = true,
+                rule = rule.copy(
+                    actions = rule.actions.map { if (it.id == actionId) it.copy(isEnabled = enabled) else it },
+                ),
             )
         }
     }
 
     private fun removeAction(actionId: String) {
+        val action = uiState.value.rule.actions.find { it.id == actionId } ?: return
+        if (action.type == ActionType.SAVE_DATA && uiState.value.rule.fields.isNotEmpty()) {
+            // Removing Extract-data clears its fields - confirm before the destructive step.
+            setState { copy(pendingExtractDataRemovalId = actionId) }
+        } else {
+            performRemoveAction(actionId, clearFields = action.type == ActionType.SAVE_DATA)
+        }
+    }
+
+    private fun confirmExtractDataRemoval() {
+        val actionId = uiState.value.pendingExtractDataRemovalId ?: return
+        performRemoveAction(actionId, clearFields = true)
+    }
+
+    private fun performRemoveAction(actionId: String, clearFields: Boolean) {
         setState {
-            copy(rule = rule.copy(actions = rule.actions.filter { it.id != actionId }))
+            copy(
+                rule = rule.copy(
+                    actions = rule.actions.filter { it.id != actionId },
+                    fields = if (clearFields) emptyList() else rule.fields,
+                ),
+                pendingExtractDataRemovalId = null,
+            )
         }
     }
 
@@ -294,6 +355,7 @@ class RuleEditorViewModel @Inject constructor(
                     rule = rule.copy(actions = rule.actions.map { if (it.id == editingId) action else it }),
                     isActionSheetVisible = false,
                     editingActionId = null,
+                    pendingActionType = null,
                 )
             }
         } else {
@@ -302,6 +364,7 @@ class RuleEditorViewModel @Inject constructor(
                 copy(
                     rule = rule.copy(actions = rule.actions + action),
                     isActionSheetVisible = false,
+                    pendingActionType = null,
                 )
             }
         }
@@ -357,8 +420,18 @@ class RuleEditorViewModel @Inject constructor(
     }
 
     private fun addField() {
+        val actions = uiState.value.rule.actions
+        val updateRule = uiState.value.rule.copy(
+            actions = if (actions.any { it.type == ActionType.SAVE_DATA }) {
+                actions
+            } else {
+                actions + RuleAction(id = UUID.randomUUID().toString(), type = ActionType.SAVE_DATA)
+            }
+        )
+
         setState {
             copy(
+                rule = updateRule,
                 isFieldSheetVisible = true,
                 editingFieldId = null, // Clear editing state for new field
             )
@@ -400,7 +473,17 @@ class RuleEditorViewModel @Inject constructor(
                 rule = rule.copy(fields = updatedFields),
             )
         }
-        dismissBottomSheet()
+        // Close only the field sheet; the Extract-data sheet underneath stays open.
+        dismissFieldSheet()
+    }
+
+    private fun dismissFieldSheet() {
+        setState {
+            copy(
+                isFieldSheetVisible = false,
+                editingFieldId = null,
+            )
+        }
     }
 
     /**
@@ -509,6 +592,7 @@ class RuleEditorViewModel @Inject constructor(
                 editingFieldId = null,
                 editingConditionId = null,
                 editingActionId = null,
+                pendingActionType = null,
             )
         }
     }

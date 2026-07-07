@@ -3,13 +3,16 @@ package dev.gaferneira.notificapp.core.notification
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.notification.action.ActionDispatcher
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
+import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestCondition
+import dev.gaferneira.notificapp.testutil.createTestField
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import dev.gaferneira.notificapp.testutil.createTestRule
 import io.kotest.matchers.shouldBe
@@ -201,6 +204,84 @@ class ProcessNotificationUseCaseTest {
         result shouldBe Result.success(emptyList())
         coVerify(exactly = 0) { deduplicator.isDuplicate(any()) }
         coVerify(exactly = 0) { notificationRepository.saveNotification(any()) }
+    }
+
+    @Test
+    fun `fields are persisted when the matched rule has an enabled Extract-data action`() = runTest(testDispatcher) {
+        // Given: a matching rule with fields and an enabled SAVE_DATA (Extract data) action
+        val notification = createTestNotification(title = "ICA Kvantum")
+        val condition = createTestCondition(
+            condition = MatchingCondition.TITLE,
+            operator = MatchingOperator.CONTAINS,
+            value = "ICA",
+        )
+        val fields = listOf(createTestField(method = RuleField.ExtractionMethod.RegexPattern("\\d+")))
+        val action = createTestAction(id = "action-1", type = ActionType.SAVE_DATA, isEnabled = true)
+        val rule = createTestRule(id = "rule-1", conditions = listOf(condition), actions = listOf(action), fields = fields)
+
+        coEvery { deduplicator.isDuplicate(notification) } returns false
+        coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
+        coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
+        coEvery { actionDispatcher.executeAll(notification, rule.actions) } returns mapOf("action-1" to ActionOutcome.SUCCESS)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+
+        // When: invoking the use case
+        useCase.invoke(notification)
+
+        // Then: the execution is saved with the rule's fields
+        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(any(), fields) }
+    }
+
+    @Test
+    fun `fields are not persisted when no enabled Extract-data action is present`() = runTest(testDispatcher) {
+        // Given: a matching rule with fields but whose only action is a dismiss (no SAVE_DATA)
+        val notification = createTestNotification(title = "ICA Kvantum")
+        val condition = createTestCondition(
+            condition = MatchingCondition.TITLE,
+            operator = MatchingOperator.CONTAINS,
+            value = "ICA",
+        )
+        val fields = listOf(createTestField(method = RuleField.ExtractionMethod.RegexPattern("\\d+")))
+        val dismiss = createTestAction(id = "dismiss-1", type = ActionType.DISMISS_NOTIFICATION, isEnabled = true)
+        val rule = createTestRule(id = "rule-1", conditions = listOf(condition), actions = listOf(dismiss), fields = fields)
+
+        coEvery { deduplicator.isDuplicate(notification) } returns false
+        coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
+        coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
+        coEvery { actionDispatcher.executeAll(notification, rule.actions) } returns mapOf("dismiss-1" to ActionOutcome.SUCCESS)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+
+        // When: invoking the use case
+        useCase.invoke(notification)
+
+        // Then: the execution is still saved (dismiss ran), but with no fields to persist
+        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(any(), emptyList()) }
+    }
+
+    @Test
+    fun `fields are not persisted when the Extract-data action is disabled`() = runTest(testDispatcher) {
+        // Given: a matching rule with fields and a disabled SAVE_DATA action
+        val notification = createTestNotification(title = "ICA Kvantum")
+        val condition = createTestCondition(
+            condition = MatchingCondition.TITLE,
+            operator = MatchingOperator.CONTAINS,
+            value = "ICA",
+        )
+        val fields = listOf(createTestField(method = RuleField.ExtractionMethod.RegexPattern("\\d+")))
+        val disabledSaveData = createTestAction(id = "save-1", type = ActionType.SAVE_DATA, isEnabled = false)
+        val rule = createTestRule(id = "rule-1", conditions = listOf(condition), actions = listOf(disabledSaveData), fields = fields)
+
+        coEvery { deduplicator.isDuplicate(notification) } returns false
+        coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
+        coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
+        coEvery { actionDispatcher.executeAll(notification, rule.actions) } returns emptyMap()
+        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+
+        // When: invoking the use case
+        useCase.invoke(notification)
+
+        // Then: no fields are persisted
+        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(any(), emptyList()) }
     }
 
     @Test

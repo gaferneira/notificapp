@@ -4,11 +4,13 @@ import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleConditionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
+import java.util.UUID
 
 /**
  * Mapper functions for converting between Rule domain models and RuleEntity database models.
@@ -41,10 +43,30 @@ object RuleMapper {
         targetApps = if (entity.isGlobal) null else targetApps,
         conditions = RuleConditionMapper.toDomainList(conditionEntities),
         fields = RuleFieldMapper.toDomainList(fieldEntities),
-        actions = RuleActionMapper.toDomainList(actionEntities),
+        actions = normalizeActions(
+            RuleActionMapper.toDomainList(actionEntities),
+            RuleFieldMapper.toDomainList(fieldEntities),
+        ),
         createdAt = entity.createdAt,
         updatedAt = entity.updatedAt,
     )
+
+    /**
+     * Back-compat normalization: extraction fields and the `SAVE_DATA` action used to be
+     * decoupled, so a stored rule can have fields with no `SAVE_DATA` action. Synthesize an enabled
+     * one so its field values keep being persisted after Extract-data gating is introduced. A rule
+     * that already has a (possibly disabled) `SAVE_DATA` action reflects a deliberate post-change
+     * state and is left untouched.
+     */
+    @androidx.annotation.VisibleForTesting
+    internal fun normalizeActions(actions: List<RuleAction>, fields: List<RuleField>): List<RuleAction> {
+        val hasSaveDataAction = actions.any { it.type == ActionType.SAVE_DATA }
+        return if (fields.isNotEmpty() && !hasSaveDataAction) {
+            actions + RuleAction(id = UUID.randomUUID().toString(), type = ActionType.SAVE_DATA)
+        } else {
+            actions
+        }
+    }
 
     /**
      * Convert an Rule domain model to a RuleEntity.

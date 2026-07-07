@@ -60,9 +60,15 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
+import dev.gaferneira.notificapp.features.ruleeditor.domain.availableActionTypes
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.AddFieldBottomSheet
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.ExtractDataBottomSheet
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.ExtractionFieldCallbacks
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.MatchingLogicBottomSheet
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionCardCallbacks
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionTypePickerDialog
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AppSelectionPicker
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DataExtractionSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DoSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.WhenSection
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.RuleEditorViewModel
@@ -214,6 +220,73 @@ private fun RuleEditorBottomSheets(
     uiState: UiState,
     onEvent: (UiEvent) -> Unit,
 ) {
+    ConditionAndAppSheets(uiState = uiState, onEvent = onEvent)
+
+    if (uiState.isActionTypePickerVisible) {
+        ActionTypePickerDialog(
+            availableTypes = availableActionTypes(uiState.rule.actions.map { it.type }),
+            onTypeSelected = { type -> onEvent(UiEvent.OnActionTypeSelected(type)) },
+            onDismiss = { onEvent(UiEvent.OnDismissActionTypePicker) },
+        )
+    }
+
+    if (uiState.isActionSheetVisible) {
+        val editing = uiState.editingAction
+        val onSave: (RuleAction) -> Unit = { action -> onEvent(UiEvent.OnActionSaved(action)) }
+        val onSheetDismiss: () -> Unit = { onEvent(UiEvent.OnDismissSheet) }
+        when (editing?.type ?: uiState.pendingActionType) {
+            ActionType.SNOOZE_NOTIFICATION ->
+                SnoozeBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
+            ActionType.CREATE_ALARM ->
+                AlarmBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
+            ActionType.FLASH_ALERT ->
+                FlashBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
+            ActionType.SAVE_DATA ->
+                ExtractDataBottomSheet(
+                        fields = uiState.rule.fields,
+                        callbacks = ExtractionFieldCallbacks(
+                            onAutoGenerate = { onEvent(UiEvent.OnAutoGenerateClicked) },
+                            onAddField = { onEvent(UiEvent.OnAddFieldClicked) },
+                            onEditField = { onEvent(UiEvent.OnEditFieldClicked(it)) },
+                            onRemoveField = { onEvent(UiEvent.OnRemoveFieldClicked(it)) },
+                        ),
+                        onDismiss = { onEvent(UiEvent.OnDismissSheet) },
+                    )
+            // Dismiss adds directly (no sheet) and Extract-data uses its own sheet.
+            else -> Unit
+        }
+    }
+
+    if (uiState.isFieldSheetVisible) {
+        AddFieldBottomSheet(
+            fieldToEdit = uiState.editingField,
+            notification = uiState.sampleNotification,
+            onFieldSaved = { field ->
+                onEvent(UiEvent.OnFieldSaved(field))
+            },
+            onDismiss = { onEvent(UiEvent.OnDismissFieldSheet) },
+        )
+    }
+
+    if (uiState.pendingExtractDataRemovalId != null) {
+        ExtractDataRemovalDialog(onEvent = onEvent)
+    }
+
+    uiState.backtestResults?.let { results ->
+        BacktestResultsBottomSheet(
+            results = results,
+            testedCount = uiState.backtestTestedCount,
+            fields = uiState.rule.fields,
+            onDismiss = { onEvent(UiEvent.OnDismissBacktestResults) },
+        )
+    }
+}
+
+@Composable
+private fun ConditionAndAppSheets(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+) {
     if (uiState.isMatchingLogicSheetVisible) {
         MatchingLogicBottomSheet(
             initialCondition = uiState.editingCondition,
@@ -234,36 +307,27 @@ private fun RuleEditorBottomSheets(
             onDismiss = { onEvent(UiEvent.OnDismissSheet) },
         )
     }
+}
 
-    if (uiState.isActionSheetVisible) {
-        ActionBottomSheet(
-            initialAction = uiState.editingAction,
-            onActionSaved = { action ->
-                onEvent(UiEvent.OnActionSaved(action))
-            },
-            onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-        )
-    }
-
-    if (uiState.isFieldSheetVisible) {
-        AddFieldBottomSheet(
-            fieldToEdit = uiState.editingField,
-            notification = uiState.sampleNotification,
-            onFieldSaved = { field ->
-                onEvent(UiEvent.OnFieldSaved(field))
-            },
-            onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-        )
-    }
-
-    uiState.backtestResults?.let { results ->
-        BacktestResultsBottomSheet(
-            results = results,
-            testedCount = uiState.backtestTestedCount,
-            fields = uiState.rule.fields,
-            onDismiss = { onEvent(UiEvent.OnDismissBacktestResults) },
-        )
-    }
+@Composable
+private fun ExtractDataRemovalDialog(
+    onEvent: (UiEvent) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { onEvent(UiEvent.OnDismissExtractDataRemoval) },
+        title = { Text("Remove Extract data?") },
+        text = { Text("This will also delete the extraction fields configured for this rule. This cannot be undone.") },
+        confirmButton = {
+            TextButton(onClick = { onEvent(UiEvent.OnConfirmExtractDataRemoval) }) {
+                Text("Remove", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onEvent(UiEvent.OnDismissExtractDataRemoval) }) {
+                Text("Cancel")
+            }
+        },
+    )
 }
 
 @Composable
@@ -302,34 +366,27 @@ private fun LogicStep(
             )
         }
 
-        // Data Extraction Section
-        DataExtractionSection(
-            fields = uiState.rule.fields,
-            onAutoGenerate = { onEvent(UiEvent.OnAutoGenerateClicked) },
-            onAddField = { onEvent(UiEvent.OnAddFieldClicked) },
-            onEditField = { onEvent(UiEvent.OnEditFieldClicked(it)) },
-            onRemoveField = { onEvent(UiEvent.OnRemoveFieldClicked(it)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        // Do Section
+        // Do Section (Extract data lives here as an action; its fields are edited in its sheet)
         DoSection(
             actions = uiState.rule.actions,
-            onToggleAction = { _, _ ->
-                // For now, we toggle by removing and re-adding (simplified)
-                // In a full implementation, we'd have a specific toggle event
-            },
-            onRemoveAction = { onEvent(UiEvent.OnRemoveActionClicked(it)) },
-            onEditAction = { onEvent(UiEvent.OnEditActionClicked(it)) },
+            extractDataFieldCount = uiState.rule.fields.size,
+            callbacks = ActionCardCallbacks(
+                onToggle = { id, enabled -> onEvent(UiEvent.OnToggleActionClicked(id, enabled)) },
+                onRemove = { onEvent(UiEvent.OnRemoveActionClicked(it)) },
+                onEdit = { onEvent(UiEvent.OnEditActionClicked(it)) },
+            ),
             modifier = Modifier.fillMaxWidth(),
         )
 
-        // Add action button
-        AddButton(
-            text = "Add action",
-            onClick = { onEvent(UiEvent.OnAddActionClicked) },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        // Add action button - hidden once every action type is configured (one action per type)
+        val canAddAction = availableActionTypes(uiState.rule.actions.map { it.type }).isNotEmpty()
+        if (canAddAction) {
+            AddButton(
+                text = "Add action",
+                onClick = { onEvent(UiEvent.OnAddActionClicked) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 

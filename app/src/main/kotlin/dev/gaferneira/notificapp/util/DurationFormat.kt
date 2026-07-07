@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.ruleeditor.ui
+package dev.gaferneira.notificapp.util
 
 /**
  * Formats minutes into a human-readable duration string.
