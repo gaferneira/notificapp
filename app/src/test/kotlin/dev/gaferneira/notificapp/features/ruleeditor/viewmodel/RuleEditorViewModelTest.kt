@@ -498,7 +498,6 @@ class RuleEditorViewModelTest {
             // Then: no sheet opens
             val state = viewModel.uiState.value
             state.isActionSheetVisible shouldBe false
-            state.isExtractDataSheetVisible shouldBe false
         }
 
         @Test
@@ -512,8 +511,7 @@ class RuleEditorViewModelTest {
             // Then: a SAVE_DATA action exists and the Extract-data sheet is shown
             val state = viewModel.uiState.value
             state.rule.actions.map { it.type } shouldBe listOf(ActionType.SAVE_DATA)
-            state.isExtractDataSheetVisible shouldBe true
-            state.isActionSheetVisible shouldBe false
+            state.isActionSheetVisible shouldBe true
         }
 
         @Test
@@ -541,8 +539,7 @@ class RuleEditorViewModelTest {
 
             // Then: the Extract-data sheet opens and no config-edit state is set
             val state = viewModel.uiState.value
-            state.isExtractDataSheetVisible shouldBe true
-            state.isActionSheetVisible shouldBe false
+            state.isActionSheetVisible shouldBe true
             state.editingActionId shouldBe null
         }
 
@@ -554,7 +551,6 @@ class RuleEditorViewModelTest {
             // Then: nothing opens
             val state = viewModel.uiState.value
             state.isActionSheetVisible shouldBe false
-            state.isExtractDataSheetVisible shouldBe false
         }
 
         @Test
