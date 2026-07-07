@@ -47,14 +47,10 @@ object RuleEditorContract {
         val isActionSheetVisible: Boolean = false,
         /** Action id awaiting remove confirmation because it is an Extract-data action with fields */
         val pendingExtractDataRemovalId: String? = null,
-        /** Whether field bottom sheet is visible */
-        val isFieldSheetVisible: Boolean = false,
         /** ID of the condition currently being edited in the bottom sheet, or null for new condition */
         val editingConditionId: String? = null,
         /** ID of the action currently being edited in the bottom sheet, or null for new action */
         val editingActionId: String? = null,
-        /** ID of the field currently being edited in the bottom sheet, or null for new field */
-        val editingFieldId: String? = null,
         /** Whether to show the description field (true if description is not empty) */
         val showDescription: Boolean = false,
         /** Whether to show the category field (true if category is not empty) */
@@ -68,10 +64,6 @@ object RuleEditorContract {
         /** Number of historical notifications tested in the last backtest run */
         val backtestTestedCount: Int = 0,
     ) {
-        /** Whether the form is valid */
-        val isValid: Boolean
-            get() = rule.name.isNotBlank() &&
-                validationErrors.isEmpty()
 
         /** Whether we can test extraction */
         val canTestExtraction: Boolean
@@ -85,10 +77,6 @@ object RuleEditorContract {
         /** Get the action being edited, if any */
         val editingAction: RuleAction?
             get() = editingActionId?.let { id -> rule.actions.find { it.id == id } }
-
-        /** Get the field being edited, if any */
-        val editingField: RuleField?
-            get() = editingFieldId?.let { id -> rule.fields.find { it.id == id } }
     }
 
     /**
@@ -164,23 +152,8 @@ object RuleEditorContract {
         /** Dismiss the Extract-data removal confirmation */
         data object OnDismissExtractDataRemoval : UiEvent()
 
-        /** Dismiss the add/edit field sheet only (leaves the Extract-data sheet open) */
-        data object OnDismissFieldSheet : UiEvent()
-
-        /** Auto-generate extraction fields */
-        data object OnAutoGenerateClicked : UiEvent()
-
-        /** Add a new extraction field */
-        data object OnAddFieldClicked : UiEvent()
-
-        /** Edit an existing extraction field */
-        data class OnEditFieldClicked(val fieldId: String) : UiEvent()
-
-        /** Remove an extraction field */
-        data class OnRemoveFieldClicked(val fieldId: String) : UiEvent()
-
-        /** Add field result returned from AddFieldScreen */
-        data class OnFieldSaved(val field: RuleField) : UiEvent()
+        /** Extract-data draft confirmed: commit these fields and ensure the SAVE_DATA action exists */
+        data class OnExtractDataCommitted(val fields: List<RuleField>) : UiEvent()
         data object OnDismissSheet : UiEvent()
 
         /** Condition saved from MatchingLogicBottomSheet (add or update) */

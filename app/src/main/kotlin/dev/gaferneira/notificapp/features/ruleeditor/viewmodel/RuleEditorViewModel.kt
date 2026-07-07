@@ -12,7 +12,6 @@ import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
-import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
@@ -87,12 +86,7 @@ class RuleEditorViewModel @Inject constructor(
             is UiEvent.OnRemoveActionClicked -> removeAction(event.actionId)
             is UiEvent.OnConfirmExtractDataRemoval -> confirmExtractDataRemoval()
             is UiEvent.OnDismissExtractDataRemoval -> setState { copy(pendingExtractDataRemovalId = null) }
-            is UiEvent.OnDismissFieldSheet -> dismissFieldSheet()
-            is UiEvent.OnAutoGenerateClicked -> autoGenerateExtraction()
-            is UiEvent.OnAddFieldClicked -> addField()
-            is UiEvent.OnEditFieldClicked -> openFieldForEditing(event.fieldId)
-            is UiEvent.OnRemoveFieldClicked -> removeField(event.fieldId)
-            is UiEvent.OnFieldSaved -> onFieldSaved(event.field)
+            is UiEvent.OnExtractDataCommitted -> onExtractDataCommitted(event.fields)
             is UiEvent.OnConditionSaved -> onConditionSaved(event.condition)
             is UiEvent.OnActionSaved -> onActionSaved(event.action)
             UiEvent.OnTestAgainstHistoryClicked -> testAgainstHistory()
@@ -370,118 +364,23 @@ class RuleEditorViewModel @Inject constructor(
         }
     }
 
-    private fun autoGenerateExtraction() {
-        val sampleText = uiState.value.sampleNotification?.let { notification ->
-            notification.content ?: notification.title ?: notification.rawContent
-        } ?: ""
-
-        if (sampleText.isEmpty()) {
-            sendEffect(UiEffect.ShowError("No notification text available to analyze"))
-            return
-        }
-
-        // Find number patterns in the text
-        val numberPattern = Regex("""\d+[.,]?\d*""")
-        val matches = numberPattern.findAll(sampleText).toList()
-
-        if (matches.isEmpty()) {
-            sendEffect(UiEffect.ShowError("No numbers found in the notification"))
-            return
-        }
-
-        val newFields = matches.mapIndexed { index, matchResult ->
-            RuleField(
-                id = UUID.randomUUID().toString(),
-                name = if (matches.size == 1) "Amount" else "Amount ${index + 1}",
-                method = ExtractionMethod.LineExtraction(10),
-            )
-        }
-
-        // Also add a Save to Data action if not already present
-        val hasSaveAction = uiState.value.rule.actions.any { it.type == ActionType.SAVE_DATA }
-        val newActions = if (!hasSaveAction) {
-            uiState.value.rule.actions + RuleAction(
-                id = UUID.randomUUID().toString(),
-                type = ActionType.SAVE_DATA,
-                isEnabled = true,
-            )
-        } else {
-            uiState.value.rule.actions
-        }
-
+    /**
+     * Commit the Extract-data draft from [ExtractDataViewModel]. The `SAVE_DATA` action and its
+     * fields reach the rule only here (commit-on-confirm): the action is added if absent
+     * (one-action-per-type), and the rule's fields are replaced with the confirmed draft.
+     */
+    private fun onExtractDataCommitted(fields: List<RuleField>) {
         setState {
-            copy(
-                rule = rule.copy(
-                    fields = newFields,
-                    actions = newActions,
-                ),
-            )
-        }
-    }
-
-    private fun addField() {
-        val actions = uiState.value.rule.actions
-        val updateRule = uiState.value.rule.copy(
-            actions = if (actions.any { it.type == ActionType.SAVE_DATA }) {
-                actions
+            val actions = if (rule.actions.any { it.type == ActionType.SAVE_DATA }) {
+                rule.actions
             } else {
-                actions + RuleAction(id = UUID.randomUUID().toString(), type = ActionType.SAVE_DATA)
-            }
-        )
-
-        setState {
-            copy(
-                rule = updateRule,
-                isFieldSheetVisible = true,
-                editingFieldId = null, // Clear editing state for new field
-            )
-        }
-    }
-
-    private fun openFieldForEditing(fieldId: String) {
-        setState {
-            copy(
-                isFieldSheetVisible = true,
-                editingFieldId = fieldId,
-            )
-        }
-    }
-
-    private fun removeField(fieldId: String) {
-        setState {
-            copy(
-                rule = rule.copy(fields = rule.fields.filter { it.id != fieldId }),
-            )
-        }
-    }
-
-    private fun onFieldSaved(field: RuleField) {
-        val currentState = uiState.value
-        val existingFieldId = currentState.editingFieldId
-
-        setState {
-            val updatedFields = if (existingFieldId != null) {
-                // Update existing field
-                rule.fields.map {
-                    if (it.id == existingFieldId) field else it
-                }
-            } else {
-                // Add new field
-                rule.fields + field
+                rule.actions + RuleAction(id = UUID.randomUUID().toString(), type = ActionType.SAVE_DATA)
             }
             copy(
-                rule = rule.copy(fields = updatedFields),
-            )
-        }
-        // Close only the field sheet; the Extract-data sheet underneath stays open.
-        dismissFieldSheet()
-    }
-
-    private fun dismissFieldSheet() {
-        setState {
-            copy(
-                isFieldSheetVisible = false,
-                editingFieldId = null,
+                rule = rule.copy(fields = fields, actions = actions),
+                isActionSheetVisible = false,
+                editingActionId = null,
+                pendingActionType = null,
             )
         }
     }
@@ -585,11 +484,9 @@ class RuleEditorViewModel @Inject constructor(
     private fun dismissBottomSheet() {
         setState {
             copy(
-                isFieldSheetVisible = false,
                 isActionSheetVisible = false,
                 isMatchingLogicSheetVisible = false,
                 isAppSheetVisible = false,
-                editingFieldId = null,
                 editingConditionId = null,
                 editingActionId = null,
                 pendingActionType = null,
@@ -629,19 +526,6 @@ class RuleEditorViewModel @Inject constructor(
                     sendEffect(UiEffect.ShowError("Failed to delete rule"))
                 }
         }
-    }
-
-    private fun getMethodSummary(method: ExtractionMethod): String = when (method) {
-        is ExtractionMethod.FixedPosition -> "Chars ${method.startIndex}-${method.endIndex}"
-        is ExtractionMethod.TextBetweenAnchors -> "Between '${method.startAnchor}' and '${method.endAnchor}'"
-        is ExtractionMethod.RegexPattern -> "Regex pattern"
-        is ExtractionMethod.TextAfterKeyword -> "After '${method.keyword}'"
-        is ExtractionMethod.TextBeforeKeyword -> "Before '${method.keyword}'"
-        is ExtractionMethod.LineExtraction -> "Line ${method.lineNumber}"
-        is ExtractionMethod.SplitByDelimiter -> "Split by '${method.delimiter}'"
-        is ExtractionMethod.JsonPath -> "JSON path: ${method.path}"
-        is ExtractionMethod.SmartAmountDetection -> "Smart amount"
-        is ExtractionMethod.SmartDateDetection -> "Smart date"
     }
 
     private companion object {

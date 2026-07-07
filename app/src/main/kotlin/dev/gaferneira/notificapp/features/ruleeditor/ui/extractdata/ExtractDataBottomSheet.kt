@@ -25,63 +25,116 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
+import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract
+import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.confirmLabelFor
+import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ExtractDataViewModel
 
 /**
  * The "Extract data" action sheet. Unlike the other action types, `SAVE_DATA` has no scalar config
  * form - it owns the rule's extraction fields. This sheet hosts the field manager (add / edit /
- * remove / auto-generate); field values are only persisted while this action is present and enabled
- * (see the extraction-gating in `ProcessNotificationUseCase`).
+ * remove / auto-generate) plus the nested add/edit-field sheet.
  *
- * Fields live on the parent `RuleEditorViewModel` (`rule.fields`), so all field callbacks route to
- * the parent - this sheet is a presentation container, not a separate source of truth.
+ * The fields are edited on a draft owned by [ExtractDataViewModel]; they reach the rule only when the
+ * user confirms (Add/Update). Cancelling or dismissing discards the draft. This mirrors the
+ * MatchingLogic sub-sheet: the ViewModel emits [ExtractDataContract.UiEffect.Committed]/`Dismiss`,
+ * which this composable maps to [onCommitted]/[onDismiss] for the parent.
+ *
+ * @param initialFields seed for the draft (empty for a new action, the action's fields when editing)
+ * @param isEditingAction true when editing an existing Extract-data action (drives Add vs Update)
+ * @param notification sample notification used for field preview and auto-generate
+ * @param onCommitted called with the draft fields when the user confirms
+ * @param onDismiss called when the sheet should be dismissed (discarding the draft)
  */
 @Composable
 fun ExtractDataBottomSheet(
-    fields: List<RuleField>,
-    callbacks: ExtractionFieldCallbacks,
+    initialFields: List<RuleField>,
+    isEditingAction: Boolean,
+    notification: Notification?,
+    onCommitted: (List<RuleField>) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val viewModel: ExtractDataViewModel = hiltViewModel()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.onEvent(
+            UiEvent.Init(
+                initialFields = initialFields,
+                isEditingAction = isEditingAction,
+                sampleText = notification?.let { it.content ?: it.title ?: it.rawContent },
+            ),
+        )
+    }
+
+    CollectOneOffEffects(viewModel.effect) { effect ->
+        when (effect) {
+            is ExtractDataContract.UiEffect.Committed -> onCommitted(effect.fields)
+            is ExtractDataContract.UiEffect.Dismiss -> onDismiss()
+            // Non-fatal auto-generate feedback; no UI surface here, matching the prior behavior.
+            is ExtractDataContract.UiEffect.ShowError -> Unit
+        }
+    }
+
     ActionConfigSheet(
         title = "Extract data",
-        confirmLabel = "Done",
-        onConfirm = onDismiss,
-        onDismiss = onDismiss,
+        confirmLabel = confirmLabelFor(uiState.isEditingAction),
+        // A null onConfirm disables the button while the draft has no fields.
+        onConfirm = if (uiState.canConfirm) {
+            { viewModel.onEvent(UiEvent.OnConfirm) }
+        } else {
+            null
+        },
+        onDismiss = { viewModel.onEvent(UiEvent.OnDismiss) },
     ) {
         ActionSheetDescription("Extract and store data fields from the notification.")
         DataExtractionSection(
-            fields = fields,
-            onAutoGenerate = callbacks.onAutoGenerate,
-            onAddField = callbacks.onAddField,
-            onEditField = callbacks.onEditField,
-            onRemoveField = callbacks.onRemoveField,
+            fields = uiState.fields,
+            onEvent = viewModel::onEvent,
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
+    // Nested add/edit-field sheet, driven by the same ViewModel's draft.
+    if (uiState.isFieldSheetVisible) {
+        AddFieldBottomSheet(
+            fieldToEdit = uiState.editingField,
+            notification = notification,
+            onFieldSaved = { viewModel.onEvent(UiEvent.OnFieldSaved(it)) },
+            onDismiss = { viewModel.onEvent(UiEvent.OnDismissFieldSheet) },
         )
     }
 }
 
 /**
- * The data-extraction field manager, hosted inside the Extract-data ("Extract data") action sheet.
- * Shows the extraction fields with add/edit/remove and an auto-generate shortcut.
+ * The data-extraction field manager, hosted inside the Extract-data sheet. Shows the extraction
+ * fields with add/edit/remove and an auto-generate shortcut. Field actions are routed to the sheet's
+ * ViewModel via [onEvent].
  */
 @Composable
 private fun DataExtractionSection(
     fields: List<RuleField>,
-    onAutoGenerate: () -> Unit,
-    onAddField: () -> Unit,
-    onEditField: (String) -> Unit,
-    onRemoveField: (String) -> Unit,
+    onEvent: (UiEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -105,7 +158,7 @@ private fun DataExtractionSection(
 
             // Auto-generate button
             IconButton(
-                onClick = onAutoGenerate,
+                onClick = { onEvent(UiEvent.OnAutoGenerate) },
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(8.dp))
@@ -123,15 +176,15 @@ private fun DataExtractionSection(
         fields.forEach { field ->
             ExtractionFieldItem(
                 field = field,
-                onClick = { onEditField(field.id) },
-                onRemove = { onRemoveField(field.id) },
+                onClick = { onEvent(UiEvent.OnEditFieldClicked(field.id)) },
+                onRemove = { onEvent(UiEvent.OnRemoveFieldClicked(field.id)) },
             )
         }
 
         // Add field button (outlined style)
         AddButton(
             text = "Add field",
-            onClick = onAddField,
+            onClick = { onEvent(UiEvent.OnAddFieldClicked) },
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -144,24 +197,6 @@ private fun ExtractionFieldItem(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val iconColor = when (field.name.lowercase()) {
-        "amount", "price", "total" -> MaterialTheme.colorScheme.tertiaryContainer
-        "merchant", "store", "seller" -> MaterialTheme.colorScheme.secondaryContainer
-        else -> MaterialTheme.colorScheme.primaryContainer
-    }
-
-    val iconTint = when (field.name.lowercase()) {
-        "amount", "price", "total" -> MaterialTheme.colorScheme.tertiary
-        "merchant", "store", "seller" -> MaterialTheme.colorScheme.secondary
-        else -> MaterialTheme.colorScheme.primary
-    }
-
-    val icon = when (field.name.lowercase()) {
-        "amount", "price", "total" -> Icons.Default.Payments
-        "merchant", "store", "seller" -> Icons.Default.Store
-        else -> Icons.Default.Payments
-    }
-
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -179,41 +214,7 @@ private fun ExtractionFieldItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f),
-            ) {
-                // Field icon
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(iconColor),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column {
-                    Text(
-                        text = field.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = field.method.toString(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            ExtractionFieldInfo(field = field, modifier = Modifier.weight(1f))
 
             // Drag handle and delete
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -238,6 +239,67 @@ private fun ExtractionFieldItem(
     }
 }
 
+/** Leading icon plus the field's name and extraction-method summary. */
+@Composable
+private fun ExtractionFieldInfo(
+    field: RuleField,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(field.iconContainerColor()),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = field.icon(),
+                contentDescription = null,
+                tint = field.iconTint(),
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column {
+            Text(
+                text = field.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = field.method.toString(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RuleField.iconContainerColor(): Color = when (name.lowercase()) {
+    "amount", "price", "total" -> MaterialTheme.colorScheme.tertiaryContainer
+    "merchant", "store", "seller" -> MaterialTheme.colorScheme.secondaryContainer
+    else -> MaterialTheme.colorScheme.primaryContainer
+}
+
+@Composable
+private fun RuleField.iconTint(): Color = when (name.lowercase()) {
+    "amount", "price", "total" -> MaterialTheme.colorScheme.tertiary
+    "merchant", "store", "seller" -> MaterialTheme.colorScheme.secondary
+    else -> MaterialTheme.colorScheme.primary
+}
+
+private fun RuleField.icon(): ImageVector = when (name.lowercase()) {
+    "merchant", "store", "seller" -> Icons.Default.Store
+    else -> Icons.Default.Payments
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun DataExtractionSectionPreview() {
@@ -255,10 +317,7 @@ private fun DataExtractionSectionPreview() {
                     method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
                 ),
             ),
-            onAutoGenerate = {},
-            onAddField = {},
-            onEditField = {},
-            onRemoveField = {},
+            onEvent = {},
             modifier = Modifier.padding(16.dp),
         )
     }
@@ -270,10 +329,7 @@ private fun DataExtractionSectionEmptyPreview() {
     NotificappTheme {
         DataExtractionSection(
             fields = emptyList(),
-            onAutoGenerate = {},
-            onAddField = {},
-            onEditField = {},
-            onRemoveField = {},
+            onEvent = {},
             modifier = Modifier.padding(16.dp),
         )
     }

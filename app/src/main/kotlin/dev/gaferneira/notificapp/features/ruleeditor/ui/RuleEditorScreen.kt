@@ -61,16 +61,14 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
 import dev.gaferneira.notificapp.features.ruleeditor.domain.availableActionTypes
-import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.AddFieldBottomSheet
-import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.ExtractDataBottomSheet
-import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.ExtractionFieldCallbacks
-import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.MatchingLogicBottomSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionCardCallbacks
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionTypePickerDialog
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AppSelectionPicker
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DoSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.WhenSection
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.ExtractDataBottomSheet
+import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.MatchingLogicBottomSheet
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.RuleEditorViewModel
 
 @Composable
@@ -243,29 +241,15 @@ private fun RuleEditorBottomSheets(
                 FlashBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
             ActionType.SAVE_DATA ->
                 ExtractDataBottomSheet(
-                        fields = uiState.rule.fields,
-                        callbacks = ExtractionFieldCallbacks(
-                            onAutoGenerate = { onEvent(UiEvent.OnAutoGenerateClicked) },
-                            onAddField = { onEvent(UiEvent.OnAddFieldClicked) },
-                            onEditField = { onEvent(UiEvent.OnEditFieldClicked(it)) },
-                            onRemoveField = { onEvent(UiEvent.OnRemoveFieldClicked(it)) },
-                        ),
-                        onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-                    )
+                    initialFields = uiState.rule.fields,
+                    isEditingAction = editing?.type == ActionType.SAVE_DATA,
+                    notification = uiState.sampleNotification,
+                    onCommitted = { fields -> onEvent(UiEvent.OnExtractDataCommitted(fields)) },
+                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
+                )
             // Dismiss adds directly (no sheet) and Extract-data uses its own sheet.
             else -> Unit
         }
-    }
-
-    if (uiState.isFieldSheetVisible) {
-        AddFieldBottomSheet(
-            fieldToEdit = uiState.editingField,
-            notification = uiState.sampleNotification,
-            onFieldSaved = { field ->
-                onEvent(UiEvent.OnFieldSaved(field))
-            },
-            onDismiss = { onEvent(UiEvent.OnDismissFieldSheet) },
-        )
     }
 
     if (uiState.pendingExtractDataRemovalId != null) {

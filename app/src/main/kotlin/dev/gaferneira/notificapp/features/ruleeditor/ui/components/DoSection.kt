@@ -31,8 +31,8 @@ import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleAction
-import dev.gaferneira.notificapp.util.formatDurationMinutes
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
+import dev.gaferneira.notificapp.util.formatDurationMinutes
 
 /**
  * The "Do" section showing configured actions.

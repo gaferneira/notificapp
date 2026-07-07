@@ -501,17 +501,20 @@ class RuleEditorViewModelTest {
         }
 
         @Test
-        fun `selecting Extract data adds the SAVE_DATA action up front and opens the extract sheet`() {
+        fun `selecting Extract data opens the extract sheet without creating the action`() {
             // Given: the picker is open
             viewModel.onEvent(UiEvent.OnAddActionClicked)
 
             // When: selecting Extract data
             viewModel.onEvent(UiEvent.OnActionTypeSelected(ActionType.SAVE_DATA))
 
-            // Then: a SAVE_DATA action exists and the Extract-data sheet is shown
+            // Then: the sheet opens seeded for a new action, but no SAVE_DATA action is created yet
+            // (commit-on-confirm: the action is only added when the draft is confirmed)
             val state = viewModel.uiState.value
-            state.rule.actions.map { it.type } shouldBe listOf(ActionType.SAVE_DATA)
+            state.rule.actions shouldBe emptyList()
             state.isActionSheetVisible shouldBe true
+            state.pendingActionType shouldBe ActionType.SAVE_DATA
+            state.editingActionId shouldBe null
         }
 
         @Test
@@ -530,17 +533,18 @@ class RuleEditorViewModelTest {
         }
 
         @Test
-        fun `editing an Extract data action opens the extract sheet, not the config sheet`() {
+        fun `editing an Extract data action opens the extract sheet in edit mode`() {
             // Given: an existing SAVE_DATA action
-            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "save-1", type = ActionType.SAVE_DATA)))
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(listOf(createTestField(method = ExtractionMethod.SmartAmountDetection))))
+            val saveId = viewModel.uiState.value.rule.actions.single { it.type == ActionType.SAVE_DATA }.id
 
             // When: editing it
-            viewModel.onEvent(UiEvent.OnEditActionClicked("save-1"))
+            viewModel.onEvent(UiEvent.OnEditActionClicked(saveId))
 
-            // Then: the Extract-data sheet opens and no config-edit state is set
+            // Then: the Extract-data sheet opens with the editing id set so the sheet shows "Update"
             val state = viewModel.uiState.value
             state.isActionSheetVisible shouldBe true
-            state.editingActionId shouldBe null
+            state.editingActionId shouldBe saveId
         }
 
         @Test
@@ -616,16 +620,17 @@ class RuleEditorViewModelTest {
 
         @Test
         fun `removing Extract data with fields asks for confirmation before clearing`() {
-            // Given: an Extract-data action with a field
-            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "save-1", type = ActionType.SAVE_DATA)))
-            viewModel.onEvent(UiEvent.OnFieldSaved(createTestField(method = ExtractionMethod.RegexPattern("\\d+"))))
+            // Given: an Extract-data action committed with a field
+            val field = createTestField(method = ExtractionMethod.RegexPattern("\\d+"))
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(listOf(field)))
+            val saveId = viewModel.uiState.value.rule.actions.single { it.type == ActionType.SAVE_DATA }.id
 
             // When: removing the Extract-data action
-            viewModel.onEvent(UiEvent.OnRemoveActionClicked("save-1"))
+            viewModel.onEvent(UiEvent.OnRemoveActionClicked(saveId))
 
             // Then: removal is pending confirmation; nothing is removed yet
             val pending = viewModel.uiState.value
-            pending.pendingExtractDataRemovalId shouldBe "save-1"
+            pending.pendingExtractDataRemovalId shouldBe saveId
             pending.rule.actions.map { it.type } shouldBe listOf(ActionType.SAVE_DATA)
             pending.rule.fields.size shouldBe 1
 
@@ -641,7 +646,7 @@ class RuleEditorViewModelTest {
 
         @Test
         fun `removing empty Extract data clears without confirmation`() {
-            // Given: an Extract-data action with no fields
+            // Given: a legacy Extract-data action with no fields (e.g. loaded from an older rule)
             viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "save-1", type = ActionType.SAVE_DATA)))
 
             // When: removing it
@@ -655,164 +660,42 @@ class RuleEditorViewModelTest {
     }
 
     @Nested
-    inner class AutoGenerateExtractionTests {
+    inner class ExtractDataCommitTests {
 
         @Test
-        fun `auto generate without a sample notification sends a ShowError effect`() = runTest(testDispatcher) {
-            viewModel.effect.test {
-                // When: auto-generating without a loaded sample notification
-                viewModel.onEvent(UiEvent.OnAutoGenerateClicked)
-                testDispatcher.scheduler.advanceUntilIdle()
+        fun `committing extract data adds a SAVE_DATA action and sets the fields`() {
+            // Given: a rule with no actions
+            val fields = listOf(
+                createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection),
+                createTestField(id = "f2", method = ExtractionMethod.SmartDateDetection),
+            )
 
-                // Then: a ShowError effect is sent
-                awaitItem() shouldBe UiEffect.ShowError("No notification text available to analyze")
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
+            // When: committing the extract-data draft
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(fields))
 
-        @Test
-        fun `auto generate with no numbers in the sample text sends a ShowError effect`() = runTest(testDispatcher) {
-            // Given: a sample notification with no digits
-            val notification = createTestNotification(content = "no numbers here")
-            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
-            viewModel.onEvent(UiEvent.LoadSampleNotification(notification.id))
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            viewModel.effect.test {
-                // When: auto-generating
-                viewModel.onEvent(UiEvent.OnAutoGenerateClicked)
-                testDispatcher.scheduler.advanceUntilIdle()
-
-                // Then: a ShowError effect is sent
-                awaitItem() shouldBe UiEffect.ShowError("No numbers found in the notification")
-                cancelAndIgnoreRemainingEvents()
-            }
-        }
-
-        @Test
-        fun `auto generate with a single number creates one Amount field and a save action`() = runTest(testDispatcher) {
-            // Given: a sample notification with a single number
-            val notification = createTestNotification(content = "Total: 153,50 kr")
-            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
-            viewModel.onEvent(UiEvent.LoadSampleNotification(notification.id))
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            // When: auto-generating
-            viewModel.onEvent(UiEvent.OnAutoGenerateClicked)
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            // Then: a single "Amount" field is generated and a SAVE_DATA action is added
+            // Then: a single SAVE_DATA action is added and the rule's fields are set
             val state = viewModel.uiState.value
-            state.rule.fields.map { it.name } shouldBe listOf("Amount")
             state.rule.actions.map { it.type } shouldBe listOf(ActionType.SAVE_DATA)
+            state.rule.fields shouldBe fields
+            state.isActionSheetVisible shouldBe false
+            state.editingActionId shouldBe null
+            state.pendingActionType shouldBe null
         }
 
         @Test
-        fun `auto generate with multiple numbers creates indexed Amount fields`() = runTest(testDispatcher) {
-            // Given: a sample notification with two numbers
-            val notification = createTestNotification(content = "153,50 kr and 20,00 kr")
-            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
-            viewModel.onEvent(UiEvent.LoadSampleNotification(notification.id))
-            testDispatcher.scheduler.advanceUntilIdle()
+        fun `committing extract data again replaces the fields without duplicating the action`() {
+            // Given: an already-committed extract-data action
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(listOf(createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection))))
+            val saveId = viewModel.uiState.value.rule.actions.single().id
 
-            // When: auto-generating
-            viewModel.onEvent(UiEvent.OnAutoGenerateClicked)
-            testDispatcher.scheduler.advanceUntilIdle()
+            // When: committing a different set of fields (edit flow)
+            val updated = listOf(createTestField(id = "f2", method = ExtractionMethod.SmartDateDetection))
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(updated))
 
-            // Then: fields are named "Amount 1" and "Amount 2"
-            viewModel.uiState.value.rule.fields.map { it.name } shouldBe listOf("Amount 1", "Amount 2")
-        }
-
-        @Test
-        fun `auto generate does not duplicate the save action when one already exists`() = runTest(testDispatcher) {
-            // Given: a sample notification with a number and an existing SAVE_DATA action
-            val notification = createTestNotification(content = "153,50 kr")
-            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
-            viewModel.onEvent(UiEvent.LoadSampleNotification(notification.id))
-            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "action-1", type = ActionType.SAVE_DATA)))
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            // When: auto-generating
-            viewModel.onEvent(UiEvent.OnAutoGenerateClicked)
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            // Then: only the original SAVE_DATA action remains
-            viewModel.uiState.value.rule.actions.map { it.id } shouldBe listOf("action-1")
-        }
-    }
-
-    @Nested
-    inner class FieldsTests {
-
-        @Test
-        fun `add field clicked shows the field sheet and clears the editing id`() {
-            // Given: an existing editing id from a prior edit
-            viewModel.onEvent(UiEvent.OnEditFieldClicked("field-1"))
-
-            // When: clicking add field
-            viewModel.onEvent(UiEvent.OnAddFieldClicked)
-
-            // Then: the sheet is visible with no editing id
+            // Then: the same single SAVE_DATA action remains and the fields are replaced
             val state = viewModel.uiState.value
-            state.isFieldSheetVisible shouldBe true
-            state.editingFieldId shouldBe null
-        }
-
-        @Test
-        fun `edit field clicked shows the sheet with the editing id set`() {
-            // When: clicking edit on a field
-            viewModel.onEvent(UiEvent.OnEditFieldClicked("field-1"))
-
-            // Then: the sheet opens with the editing id set
-            val state = viewModel.uiState.value
-            state.isFieldSheetVisible shouldBe true
-            state.editingFieldId shouldBe "field-1"
-        }
-
-        @Test
-        fun `remove field clicked removes the field`() {
-            // Given: a saved field
-            val field = createTestField(id = "field-1", method = ExtractionMethod.SmartAmountDetection)
-            viewModel.onEvent(UiEvent.OnFieldSaved(field))
-
-            // When: removing it
-            viewModel.onEvent(UiEvent.OnRemoveFieldClicked("field-1"))
-
-            // Then: the field list is empty
-            viewModel.uiState.value.rule.fields shouldBe emptyList()
-        }
-
-        @Test
-        fun `field saved with no editing id appends a new field and dismisses the sheet`() {
-            // Given: the field sheet is open for a new field
-            viewModel.onEvent(UiEvent.OnAddFieldClicked)
-            val field = createTestField(id = "field-1", method = ExtractionMethod.SmartAmountDetection)
-
-            // When: saving the field
-            viewModel.onEvent(UiEvent.OnFieldSaved(field))
-
-            // Then: the field is appended and the sheet closes
-            val state = viewModel.uiState.value
-            state.rule.fields shouldBe listOf(field)
-            state.isFieldSheetVisible shouldBe false
-        }
-
-        @Test
-        fun `field saved while editing updates the existing field`() {
-            // Given: an existing field being edited
-            val original = createTestField(id = "field-1", name = "Old", method = ExtractionMethod.SmartAmountDetection)
-            viewModel.onEvent(UiEvent.OnFieldSaved(original))
-            viewModel.onEvent(UiEvent.OnEditFieldClicked("field-1"))
-
-            val updated = createTestField(id = "field-1", name = "New", method = ExtractionMethod.SmartAmountDetection)
-
-            // When: saving the updated field
-            viewModel.onEvent(UiEvent.OnFieldSaved(updated))
-
-            // Then: the field is replaced and the sheet closes
-            val state = viewModel.uiState.value
-            state.rule.fields shouldBe listOf(updated)
-            state.isFieldSheetVisible shouldBe false
+            state.rule.actions.map { it.id } shouldBe listOf(saveId)
+            state.rule.fields shouldBe updated
         }
     }
 
@@ -841,7 +724,7 @@ class RuleEditorViewModelTest {
             val condition = createTestCondition(value = "Total")
             viewModel.onEvent(UiEvent.OnConditionSaved(condition))
             val field = createTestField(method = ExtractionMethod.TextAfterKeyword(keyword = "Total: "))
-            viewModel.onEvent(UiEvent.OnFieldSaved(field))
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(listOf(field)))
 
             val matching = createTestNotification(id = "n1", content = "Total: 100", rawContent = "Total: 100")
             val nonMatching = createTestNotification(id = "n2", content = "no match here", rawContent = "no match here")
@@ -1112,7 +995,6 @@ class RuleEditorViewModelTest {
             // Given: multiple sheets open with editing ids set
             viewModel.onEvent(UiEvent.OnConditionItemClicked("cond-1"))
             viewModel.onEvent(UiEvent.OnEditActionClicked("action-1"))
-            viewModel.onEvent(UiEvent.OnEditFieldClicked("field-1"))
             viewModel.onEvent(UiEvent.OnAppsClicked)
 
             // When: dismissing the sheet
@@ -1120,11 +1002,9 @@ class RuleEditorViewModelTest {
 
             // Then: every sheet visibility flag and editing id resets
             val state = viewModel.uiState.value
-            state.isFieldSheetVisible shouldBe false
             state.isActionSheetVisible shouldBe false
             state.isMatchingLogicSheetVisible shouldBe false
             state.isAppSheetVisible shouldBe false
-            state.editingFieldId shouldBe null
             state.editingConditionId shouldBe null
             state.editingActionId shouldBe null
         }

@@ -25,17 +25,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
- * Shared scaffold for the type-scoped action configuration sheets (snooze, alarm, flash). Each type
- * has its own sheet composable that owns its state and validation; this scaffold only provides the
- * common chrome - title, scroll, and the Cancel/confirm buttons - so per-type logic stays isolated
- * in its own file. Sheets render their own supporting copy with [ActionSheetDescription].
+ * Shared scaffold for the type-scoped action configuration sheets (snooze, alarm, flash, extract
+ * data). Each type has its own sheet composable that owns its state and validation; this scaffold
+ * only provides the common chrome - title, scroll, and the Cancel/confirm buttons - so per-type logic
+ * stays isolated in its own file. Sheets render their own supporting copy with [ActionSheetDescription].
+ *
+ * Pass a null [onConfirm] to render the confirm button disabled (e.g. while the sheet's input is
+ * incomplete).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionConfigSheet(
     title: String,
     confirmLabel: String,
-    onConfirm: () -> Unit,
+    onConfirm: (() -> Unit)?,
     onDismiss: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -78,7 +81,8 @@ fun ActionConfigSheet(
                 }
 
                 Button(
-                    onClick = onConfirm,
+                    onClick = { onConfirm?.invoke() },
+                    enabled = onConfirm != null,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                 ) {
