@@ -139,4 +139,7 @@
     <string name="alarm_permission_grant">Allow notifications</string>
     <string name="alarm_fullscreen_permission_warning">Allow full-screen alarms so the call-style screen can appear over the lock screen. Without it, this alarm shows only as a notification.</string>
     <string name="alarm_fullscreen_permission_grant">Allow full-screen alarms</string>
+
+    <!-- Extract-data sheet field preview -->
+    <string name="extract_preview_no_match">No match in sample notification</string>
 </resources>

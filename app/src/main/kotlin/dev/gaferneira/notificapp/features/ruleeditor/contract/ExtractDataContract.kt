@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
+import dev.gaferneira.notificapp.core.extraction.ExtractionResult
 import dev.gaferneira.notificapp.domain.model.RuleField
 
 /**
@@ -23,6 +24,12 @@ object ExtractDataContract {
         val isFieldSheetVisible: Boolean = false,
         /** ID of the field currently being edited in the nested sheet, or null for a new field */
         val editingFieldId: String? = null,
+        /**
+         * Live extraction preview per committed field, keyed by [RuleField.id]. Recomputed after
+         * every draft mutation (init, field saved, removed, auto-generate); empty when the sample
+         * text is blank or null.
+         */
+        val previewResults: Map<String, ExtractionResult> = emptyMap(),
     ) {
         /** Confirm is only allowed once the draft has at least one field */
         val canConfirm: Boolean

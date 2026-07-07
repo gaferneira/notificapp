@@ -32,11 +32,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.extraction.ExtractionResult
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.Notification
@@ -47,6 +50,7 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContrac
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.NotificationPreviewCard
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.confirmLabelFor
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ExtractDataViewModel
 
@@ -110,6 +114,8 @@ fun ExtractDataBottomSheet(
         ActionSheetDescription("Extract and store data fields from the notification.")
         DataExtractionSection(
             fields = uiState.fields,
+            notification = notification,
+            previewResults = uiState.previewResults,
             onEvent = viewModel::onEvent,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -134,6 +140,8 @@ fun ExtractDataBottomSheet(
 @Composable
 private fun DataExtractionSection(
     fields: List<RuleField>,
+    notification: Notification?,
+    previewResults: Map<String, ExtractionResult>,
     onEvent: (UiEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -154,22 +162,30 @@ private fun DataExtractionSection(
                 modifier = Modifier.weight(1f),
             )
 
-            Spacer(modifier = Modifier.width(8.dp))
+            if (notification != null) {
+                Spacer(modifier = Modifier.width(8.dp))
 
-            // Auto-generate button
-            IconButton(
-                onClick = { onEvent(UiEvent.OnAutoGenerate) },
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AutoFixHigh,
-                    contentDescription = "Auto-generate extraction",
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+                // Auto-generate button
+                IconButton(
+                    onClick = { onEvent(UiEvent.OnAutoGenerate) },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoFixHigh,
+                        contentDescription = "Auto-generate extraction",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
+        }
+
+        // Live preview of the sample notification with the current fields' extracted values,
+        // reusing the same card style as "Test against history" results.
+        if (notification != null) {
+            SampleNotificationPreview(notification = notification, fields = fields, previewResults = previewResults)
         }
 
         // Field cards
@@ -190,6 +206,31 @@ private fun DataExtractionSection(
     }
 }
 
+/** Resolves each field's extraction result against [notification] and renders the shared preview card. */
+@Composable
+private fun SampleNotificationPreview(
+    notification: Notification,
+    fields: List<RuleField>,
+    previewResults: Map<String, ExtractionResult>,
+    modifier: Modifier = Modifier,
+) {
+    val noMatchLabel = stringResource(R.string.extract_preview_no_match)
+    val extractedFields = fields.mapNotNull { field ->
+        when (val result = previewResults[field.id]) {
+            is ExtractionResult.Success -> field.name to result.value
+            is ExtractionResult.Failure -> field.name to noMatchLabel
+            null -> null
+        }
+    }
+    NotificationPreviewCard(
+        appName = notification.appName,
+        title = notification.title,
+        content = notification.content,
+        extractedFields = extractedFields,
+        modifier = modifier.fillMaxWidth(),
+    )
+}
+
 @Composable
 private fun ExtractionFieldItem(
     field: RuleField,
@@ -207,32 +248,32 @@ private fun ExtractionFieldItem(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ExtractionFieldInfo(field = field, modifier = Modifier.weight(1f))
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ExtractionFieldInfo(field = field, modifier = Modifier.weight(1f))
 
-            // Drag handle and delete
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.DragHandle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                IconButton(onClick = onRemove) {
+                // Drag handle and delete
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Remove field",
-                        tint = MaterialTheme.colorScheme.error,
+                        imageVector = Icons.Default.DragHandle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
                     )
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    IconButton(onClick = onRemove) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Remove field",
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
         }
@@ -317,6 +358,19 @@ private fun DataExtractionSectionPreview() {
                     method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
                 ),
             ),
+            notification = Notification(
+                id = "1",
+                packageName = "com.example.bank",
+                appName = "Bank App",
+                title = "Payment received",
+                content = "ICA Kvantum charged you 153.50 kr",
+                rawContent = "ICA Kvantum charged you 153.50 kr",
+                timestamp = 0L,
+            ),
+            previewResults = mapOf(
+                "1" to ExtractionResult.Success(value = "ICA Kvantum"),
+                "2" to ExtractionResult.Failure("Pattern did not match"),
+            ),
             onEvent = {},
             modifier = Modifier.padding(16.dp),
         )
@@ -329,6 +383,8 @@ private fun DataExtractionSectionEmptyPreview() {
     NotificappTheme {
         DataExtractionSection(
             fields = emptyList(),
+            notification = null,
+            previewResults = emptyMap(),
             onEvent = {},
             modifier = Modifier.padding(16.dp),
         )

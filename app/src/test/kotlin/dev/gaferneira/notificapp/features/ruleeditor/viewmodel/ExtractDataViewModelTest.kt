@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import app.cash.turbine.test
+import dev.gaferneira.notificapp.core.extraction.ExtractionResult
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
@@ -285,6 +286,172 @@ class ExtractDataViewModelTest {
             val state = viewModel.uiState.value
             state.fields shouldBe emptyList()
             state.isEditingAction shouldBe false
+        }
+    }
+
+    @Nested
+    inner class PreviewResultsTests {
+
+        @Test
+        fun `init with sample text populates a preview entry per field keyed by field id`() {
+            // Given: two fields, one whose regex matches the sample text and one that doesn't
+            val matching = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+            val nonMatching = createTestField(id = "f2", method = ExtractionMethod.RegexPattern("NOPE"))
+
+            // When: initializing with a non-blank sample text
+            viewModel.onEvent(
+                UiEvent.Init(
+                    initialFields = listOf(matching, nonMatching),
+                    isEditingAction = false,
+                    sampleText = "Total: 153 kr",
+                ),
+            )
+
+            // Then: previewResults has one entry per field, keyed by field id
+            val previews = viewModel.uiState.value.previewResults
+            previews.keys shouldBe setOf("f1", "f2")
+        }
+
+        @Test
+        fun `a field whose method matches the sample text yields a Success preview`() {
+            // Given: a field whose regex matches the sample text
+            val matching = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+
+            // When: initializing with matching sample text
+            viewModel.onEvent(
+                UiEvent.Init(initialFields = listOf(matching), isEditingAction = false, sampleText = "Total: 153 kr"),
+            )
+
+            // Then: the preview entry is a Success with the extracted value
+            viewModel.uiState.value.previewResults["f1"] shouldBe ExtractionResult.Success(
+                value = "153",
+                startIndex = 7,
+                endIndex = 10,
+            )
+        }
+
+        @Test
+        fun `a field whose method does not match the sample text yields a Failure preview`() {
+            // Given: a field whose regex does not match the sample text
+            val nonMatching = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("NOPE"))
+
+            // When: initializing with non-matching sample text
+            viewModel.onEvent(
+                UiEvent.Init(initialFields = listOf(nonMatching), isEditingAction = false, sampleText = "Total: 153 kr"),
+            )
+
+            // Then: the preview entry is a Failure, not a missing key or an exception
+            viewModel.uiState.value.previewResults["f1"] shouldBe ExtractionResult.Failure("Pattern did not match")
+        }
+
+        @Test
+        fun `field saved as a new field recomputes previews to include the new key`() {
+            // Given: init with a sample text and no fields
+            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = "Total: 153 kr"))
+            viewModel.onEvent(UiEvent.OnAddFieldClicked)
+            val newField = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+
+            // When: saving the new field
+            viewModel.onEvent(UiEvent.OnFieldSaved(newField))
+
+            // Then: previewResults keyset matches the post-mutation fields keyset
+            viewModel.uiState.value.previewResults.keys shouldBe setOf("f1")
+        }
+
+        @Test
+        fun `field saved while editing recomputes the edited key's preview value`() {
+            // Given: an existing field with a non-matching pattern
+            val original = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("NOPE"))
+            viewModel.onEvent(
+                UiEvent.Init(initialFields = listOf(original), isEditingAction = true, sampleText = "Total: 153 kr"),
+            )
+            viewModel.onEvent(UiEvent.OnEditFieldClicked("f1"))
+
+            // When: replacing it with a field that matches
+            val updated = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+            viewModel.onEvent(UiEvent.OnFieldSaved(updated))
+
+            // Then: the preview for "f1" updates to a Success
+            viewModel.uiState.value.previewResults["f1"] shouldBe ExtractionResult.Success(
+                value = "153",
+                startIndex = 7,
+                endIndex = 10,
+            )
+        }
+
+        @Test
+        fun `remove field clicked drops the removed field's preview key`() {
+            // Given: two fields with previews computed
+            val field1 = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+            val field2 = createTestField(id = "f2", method = ExtractionMethod.RegexPattern("""\d+"""))
+            viewModel.onEvent(
+                UiEvent.Init(initialFields = listOf(field1, field2), isEditingAction = false, sampleText = "Total: 153 kr"),
+            )
+
+            // When: removing one field
+            viewModel.onEvent(UiEvent.OnRemoveFieldClicked("f1"))
+
+            // Then: only the remaining field's key is present
+            viewModel.uiState.value.previewResults.keys shouldBe setOf("f2")
+        }
+
+        @Test
+        fun `auto generate recomputes previews for the newly generated fields`() {
+            // Given: init with a two-line sample text (auto-generate targets line 10 for its single field,
+            // which exists on line 2 of a multi-line sample containing one number)
+            val multiLineSample = (1..9).joinToString("\n") { "filler" } + "\nTotal: 153 kr"
+            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = multiLineSample))
+
+            // When: auto-generating
+            viewModel.onEvent(UiEvent.OnAutoGenerate)
+
+            // Then: previewResults has an entry keyed by the generated field's id, with a Success result
+            // extracting the target line's content
+            val state = viewModel.uiState.value
+            val generatedId = state.fields.single().id
+            state.previewResults.keys shouldBe setOf(generatedId)
+            (state.previewResults.getValue(generatedId) as ExtractionResult.Success).value shouldBe "Total: 153 kr"
+        }
+
+        @Test
+        fun `init with null sample text produces empty previewResults without throwing`() {
+            // Given/When: initializing with a field but null sample text
+            val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = null))
+
+            // Then: previewResults is empty, no exception is thrown
+            viewModel.uiState.value.previewResults shouldBe emptyMap()
+        }
+
+        @Test
+        fun `init with blank sample text produces empty previewResults without throwing`() {
+            // Given/When: initializing with a field but blank sample text
+            val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = "   "))
+
+            // Then: previewResults is empty, no exception is thrown
+            viewModel.uiState.value.previewResults shouldBe emptyMap()
+        }
+
+        @Test
+        fun `dismiss resets previewResults to empty along with the rest of state`() = runTest(testDispatcher) {
+            // Given: a draft with a computed preview
+            val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
+            viewModel.onEvent(
+                UiEvent.Init(initialFields = listOf(field), isEditingAction = true, sampleText = "Total: 153 kr"),
+            )
+            viewModel.uiState.value.previewResults.keys shouldBe setOf("f1")
+
+            viewModel.effect.test {
+                // When: dismissing
+                viewModel.onEvent(UiEvent.OnDismiss)
+                testDispatcher.scheduler.advanceUntilIdle()
+                awaitItem() shouldBe UiEffect.Dismiss
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            // Then: previewResults is reset to empty
+            viewModel.uiState.value.previewResults shouldBe emptyMap()
         }
     }
 }

@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.core.extraction.FieldExtractor
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
@@ -48,6 +49,21 @@ class ExtractDataViewModel @Inject constructor() : MviViewModel<UiState, UiEvent
                 isEditingAction = event.isEditingAction,
             )
         }
+        recomputePreviews()
+    }
+
+    /**
+     * Recomputes [UiState.previewResults] from the current draft fields against [sampleText].
+     * Empty when [sampleText] is null/blank. Called after init and every field-list mutation.
+     */
+    private fun recomputePreviews() {
+        val text = sampleText
+        val previews = if (text.isNullOrBlank()) {
+            emptyMap()
+        } else {
+            uiState.value.fields.associate { field -> field.id to FieldExtractor.extract(text, field) }
+        }
+        setState { copy(previewResults = previews) }
     }
 
     private fun autoGenerate() {
@@ -71,10 +87,12 @@ class ExtractDataViewModel @Inject constructor() : MviViewModel<UiState, UiEvent
             )
         }
         setState { copy(fields = newFields) }
+        recomputePreviews()
     }
 
     private fun removeField(fieldId: String) {
         setState { copy(fields = fields.filter { it.id != fieldId }) }
+        recomputePreviews()
     }
 
     private fun onFieldSaved(field: RuleField) {
@@ -90,6 +108,7 @@ class ExtractDataViewModel @Inject constructor() : MviViewModel<UiState, UiEvent
                 editingFieldId = null,
             )
         }
+        recomputePreviews()
     }
 
     private fun confirm() {
