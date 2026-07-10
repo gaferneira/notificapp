@@ -88,7 +88,7 @@ object ExtractDataContract {
         data object OnDismiss : UiEvent()
 
         /** User tapped the browse-history icon; expand the inline list and trigger the one-shot fetch. */
-        data class OnBrowseHistoryOpened(val targetPackages : List<String>?) : UiEvent()
+        data class OnBrowseHistoryOpened(val targetPackages: List<String>?) : UiEvent()
 
         /** User tapped a row in the history list; set it as the preview-only override. */
         data class OnHistoryNotificationSelected(val notification: Notification) : UiEvent()

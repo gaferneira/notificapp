@@ -49,11 +49,13 @@ import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.extraction.ExtractionResult
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
@@ -120,7 +122,7 @@ fun ExtractDataBottomSheet(
         },
         onDismiss = { viewModel.onEvent(UiEvent.OnDismiss) },
     ) {
-        ActionSheetDescription("Extract and store data fields from the notification.")
+        ActionSheetDescription(ActionType.SAVE_DATA.ui().description)
         DataExtractionSection(
             entryNotification = notification,
             effectiveNotification = effectiveNotification,

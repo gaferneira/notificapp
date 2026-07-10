@@ -5,8 +5,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_DURATION_MINUTES
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.SnoozeDurationSelector
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
@@ -43,7 +45,7 @@ fun SnoozeBottomSheet(
         },
         onDismiss = onDismiss,
     ) {
-        ActionSheetDescription("Temporarily dismiss the notification and bring it back later.")
+        ActionSheetDescription(ActionType.SNOOZE_NOTIFICATION.ui().description)
         SnoozeDurationSelector(
             selectedMinutes = minutes,
             onDurationChange = { minutes = it },

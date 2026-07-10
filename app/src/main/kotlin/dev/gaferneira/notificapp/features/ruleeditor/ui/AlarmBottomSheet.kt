@@ -11,9 +11,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationManagerCompat
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_FULLSCREEN_ENABLED
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_VIBRATION_ENABLED
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.AlarmOptions
 import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.AlarmOptionsSelector
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
@@ -64,7 +66,7 @@ fun AlarmBottomSheet(
         },
         onDismiss = onDismiss,
     ) {
-        ActionSheetDescription("Play an alarm sound and vibrate when this rule matches.")
+        ActionSheetDescription(ActionType.CREATE_ALARM.ui().description)
         AlarmOptionsSelector(
             options = AlarmOptions(
                 soundUri = soundUri,

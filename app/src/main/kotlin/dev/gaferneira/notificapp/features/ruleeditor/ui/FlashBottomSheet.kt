@@ -6,9 +6,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COUNT
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_DURATION_MS
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.FlashOptionsSelector
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
@@ -47,7 +49,7 @@ fun FlashBottomSheet(
         },
         onDismiss = onDismiss,
     ) {
-        ActionSheetDescription("Blink the camera flash when this rule matches.")
+        ActionSheetDescription(ActionType.FLASH_ALERT.ui().description)
         FlashOptionsSelector(
             flashCount = flashCount,
             flashDurationMs = flashDurationMs,
