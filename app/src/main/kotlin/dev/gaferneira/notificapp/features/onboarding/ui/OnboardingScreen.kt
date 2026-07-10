@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.onboarding.ui
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,6 +49,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -159,6 +163,7 @@ private fun OnboardingScreenContent(
                     }
                     OnboardingContract.OnboardingStep.PERMISSION_EXPLANATION -> {
                         PermissionExplanationContent(
+                            showPermissionDeniedHint = uiState.showPermissionDeniedHint,
                             onEvent = onEvent,
                             modifier = Modifier.fillMaxSize(),
                         )
@@ -298,7 +303,7 @@ private fun ValueStatementContent(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "PROCESSED LOCALLY ON YOUR DEVICE",
+                    text = "Processed locally on your device.",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp),
@@ -370,7 +375,9 @@ private fun NotificationCardRow(
     statusColor: Color,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clearAndSetSemantics { contentDescription = "$title, $subtitle" },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -420,12 +427,77 @@ private fun NotificationCardRow(
     }
 }
 
+/** Back button, screen title and headline for the Permission Explanation step. */
+@Composable
+private fun PermissionExplanationHeader(onBackClicked: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onBackClicked) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Go back",
+                tint = MaterialTheme.colorScheme.onBackground,
+            )
+        }
+
+        Text(
+            text = "Permissions",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center,
+        )
+
+        // Empty space to balance the back button
+        Spacer(modifier = Modifier.size(48.dp))
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    Text(
+        text = "Enable Notification Access",
+        style = MaterialTheme.typography.headlineLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onBackground,
+        lineHeight = MaterialTheme.typography.headlineLarge.fontSize * 1.2,
+    )
+}
+
+/** The three "why we need this" bullet rows on the Permission Explanation step. */
+@Composable
+private fun PermissionDetails() {
+    PermissionDetailItem(
+        icon = Icons.Default.Notifications,
+        title = "Read notification text to extract data",
+        description = "Parses specific information like order numbers or dates.",
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    PermissionDetailItem(
+        icon = Icons.Default.Settings,
+        title = "Only process apps you select",
+        description = "You maintain full control over which apps are monitored.",
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    PermissionDetailItem(
+        icon = Icons.Default.Lock,
+        title = "No data ever leaves your device",
+        description = "Privacy-first design with 100% local processing.",
+    )
+}
+
 /**
  * Permission Explanation screen - Second step of onboarding.
  * Explains why we need notification access and provides grant button.
  */
 @Composable
 private fun PermissionExplanationContent(
+    showPermissionDeniedHint: Boolean,
     onEvent: (UiEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -434,43 +506,7 @@ private fun PermissionExplanationContent(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp),
     ) {
-        // Header with back button and title
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = { onEvent(UiEvent.OnBackClicked) },
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Go back",
-                    tint = MaterialTheme.colorScheme.onBackground,
-                )
-            }
-
-            Text(
-                text = "Permissions",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center,
-            )
-
-            // Empty space to balance the back button
-            Spacer(modifier = Modifier.size(48.dp))
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Title
-        Text(
-            text = "Enable Notification Access",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            lineHeight = MaterialTheme.typography.headlineLarge.fontSize * 1.2,
-        )
+        PermissionExplanationHeader(onBackClicked = { onEvent(UiEvent.OnBackClicked) })
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -479,30 +515,14 @@ private fun PermissionExplanationContent(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Permission details
-        PermissionDetailItem(
-            icon = Icons.Default.Notifications,
-            title = "Read notification text to extract data",
-            description = "Parses specific information like order numbers or dates.",
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        PermissionDetailItem(
-            icon = Icons.Default.Settings,
-            title = "Only process apps you select",
-            description = "You maintain full control over which apps are monitored.",
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        PermissionDetailItem(
-            icon = Icons.Default.Lock,
-            title = "No data ever leaves your device",
-            description = "Privacy-first design with 100% local processing.",
-        )
+        PermissionDetails()
 
         Spacer(modifier = Modifier.weight(1f))
+
+        if (showPermissionDeniedHint) {
+            PermissionDeniedHint()
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         // Grant Access button
         Button(
@@ -549,7 +569,11 @@ private fun PermissionExplanationContent(
 }
 
 /**
- * Permission toggle card showing the notification access toggle.
+ * Permission toggle card showing the notification access status.
+ *
+ * The actual toggle lives in system settings, not in this app - rendering a
+ * fake `Switch`-shaped control here would look interactive but do nothing,
+ * which teaches distrust right before the highest-friction step of onboarding.
  */
 @Composable
 private fun PermissionToggleCard() {
@@ -560,87 +584,97 @@ private fun PermissionToggleCard() {
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
         ),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Toggle row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            // Icon
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
             ) {
-                // Icon
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .size(24.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-
-                // Text
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Notification Access",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = "Allow app to read alerts",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-
-                // Toggle (decorative - actual toggle is in system settings)
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp, 28.dp)
-                            .padding(4.dp),
-                        contentAlignment = Alignment.CenterEnd,
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color.White,
-                            modifier = Modifier.size(20.dp),
-                        ) {}
-                    }
-                }
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Text
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Notification Access",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "Allow app to read alerts",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
-            // Illustration area
+            // Non-interactive status - the real toggle is in system settings
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surface,
             ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    // Decorative gear/cog icon representing system settings
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = "Enabled in system settings",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Inline warning shown after the user returns from system settings without
+ * actually granting notification access, so a failed grant isn't silent.
+ */
+@Composable
+private fun PermissionDeniedHint() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.WarningAmber,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Text(
+                text = "Access not enabled yet — tap Grant Access to try again.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
         }
     }
 }
@@ -715,6 +749,34 @@ private fun OnboardingScreenPermissionExplanationPreview() {
         OnboardingScreenContent(
             uiState = OnboardingContract.UiState(
                 currentStep = OnboardingContract.OnboardingStep.PERMISSION_EXPLANATION,
+            ),
+            onEvent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, device = "id:pixel_5")
+@Composable
+private fun OnboardingScreenPermissionDeniedPreview() {
+    NotificappTheme {
+        OnboardingScreenContent(
+            uiState = OnboardingContract.UiState(
+                currentStep = OnboardingContract.OnboardingStep.PERMISSION_EXPLANATION,
+                showPermissionDeniedHint = true,
+            ),
+            onEvent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, device = "id:pixel_5", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun OnboardingScreenPermissionDeniedPreviewDark() {
+    NotificappTheme {
+        OnboardingScreenContent(
+            uiState = OnboardingContract.UiState(
+                currentStep = OnboardingContract.OnboardingStep.PERMISSION_EXPLANATION,
+                showPermissionDeniedHint = true,
             ),
             onEvent = {},
         )

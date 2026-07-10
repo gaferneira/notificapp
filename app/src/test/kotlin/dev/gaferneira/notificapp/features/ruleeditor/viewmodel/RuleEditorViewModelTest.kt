@@ -312,20 +312,20 @@ class RuleEditorViewModelTest {
 
         @Test
         fun `dry run toggle updates the rule's dry-run flag`() {
-            // Given: dry-run is off by default
-            viewModel.uiState.value.rule.isDryRun shouldBe false
-
-            // When: enabling dry-run
-            viewModel.onEvent(UiEvent.OnDryRunToggle(true))
-
-            // Then: the rule's dry-run flag is enabled
+            // Given: dry-run is on by default for new rules
             viewModel.uiState.value.rule.isDryRun shouldBe true
 
-            // When: disabling it again
+            // When: disabling dry-run
             viewModel.onEvent(UiEvent.OnDryRunToggle(false))
 
-            // Then: the flag clears
+            // Then: the rule's dry-run flag is disabled
             viewModel.uiState.value.rule.isDryRun shouldBe false
+
+            // When: enabling it again
+            viewModel.onEvent(UiEvent.OnDryRunToggle(true))
+
+            // Then: the flag is set
+            viewModel.uiState.value.rule.isDryRun shouldBe true
         }
     }
 

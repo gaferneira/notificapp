@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.settings.ui
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,9 +21,12 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,21 +43,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.BuildConfig
 import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
 import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.core.ui.utils.OnResumeEffect
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEffect
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEvent
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiState
 import dev.gaferneira.notificapp.features.settings.viewmodel.SettingsViewModel
+import dev.gaferneira.notificapp.util.openNotificationListenerSettings
 
 /**
  * Settings screen for app configuration.
@@ -66,7 +77,6 @@ import dev.gaferneira.notificapp.features.settings.viewmodel.SettingsViewModel
 @Composable
 fun SettingsScreen(
     navigateTo: (Screen, NavOptions?) -> Unit,
-    modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -83,47 +93,43 @@ fun SettingsScreen(
         }
     }
 
+    // Re-check listener status when returning to Settings (e.g. from system settings)
+    OnResumeEffect { viewModel.onEvent(UiEvent.OnResume) }
+
     SettingsScreenContent(
         uiState = uiState,
         onEvent = viewModel::onEvent,
         navigateTo = navigateTo,
-        modifier = modifier,
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreenContent(
     uiState: UiState,
     onEvent: (UiEvent) -> Unit,
     navigateTo: (Screen, NavOptions?) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Surface(
-                color = MaterialTheme.colorScheme.background,
-                shadowElevation = 4.dp,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
-                ) {
-                    Text(
-                        text = "Settings",
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    Text(
-                        text = "Manage your app preferences",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                    )
-                }
-            }
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            text = "Settings",
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = "Manage your app preferences",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+            )
         },
         bottomBar = {
             MainBottomNav(
@@ -168,10 +174,25 @@ private fun SettingsList(
     onEvent: (UiEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+
     LazyColumn(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        // Listener health - the most important status on this screen, since the
+        // entire app is inert if this permission is revoked or killed by the OS.
+        item {
+            ListenerStatusCard(
+                isActive = uiState.isNotificationListenerActive,
+                onEnableClick = { openNotificationListenerSettings(context) },
+            )
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         // Monitored Apps Section - Simplified
         item {
             SectionHeader(title = "Monitored Apps")
@@ -196,29 +217,7 @@ private fun SettingsList(
         }
 
         item {
-            SettingsCard {
-                // Collection Enabled Toggle
-                ToggleSettingItem(
-                    icon = Icons.Default.Notifications,
-                    iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Data Collection",
-                    subtitle = if (uiState.isCollectionEnabled) "Active - monitoring notifications" else "Paused - not collecting data",
-                    checked = uiState.isCollectionEnabled,
-                    onCheckedChange = { onEvent(UiEvent.OnCollectionToggled(it)) },
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-
-                // Show App Icons Toggle
-                ToggleSettingItem(
-                    icon = Icons.Default.Apps,
-                    iconTint = MaterialTheme.colorScheme.secondary,
-                    title = "Show App Icons",
-                    subtitle = "Display app icons in lists",
-                    checked = uiState.showAppIcons,
-                    onCheckedChange = { onEvent(UiEvent.OnShowAppIconsToggled(it)) },
-                )
-            }
+            GeneralSettingsCard(uiState = uiState, onEvent = onEvent)
         }
 
         item {
@@ -237,6 +236,35 @@ private fun SettingsList(
         item {
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+/** Data Collection + Show App Icons toggles, grouped under "General". */
+@Composable
+private fun GeneralSettingsCard(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+) {
+    SettingsCard {
+        ToggleSettingItem(
+            icon = Icons.Default.Notifications,
+            iconTint = MaterialTheme.colorScheme.primary,
+            title = "Data Collection",
+            subtitle = if (uiState.isCollectionEnabled) "Active - monitoring notifications" else "Paused - not collecting data",
+            checked = uiState.isCollectionEnabled,
+            onCheckedChange = { onEvent(UiEvent.OnCollectionToggled(it)) },
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+        ToggleSettingItem(
+            icon = Icons.Default.Apps,
+            iconTint = MaterialTheme.colorScheme.secondary,
+            title = "Show App Icons",
+            subtitle = "Display app icons in lists",
+            checked = uiState.showAppIcons,
+            onCheckedChange = { onEvent(UiEvent.OnShowAppIconsToggled(it)) },
+        )
     }
 }
 
@@ -269,19 +297,86 @@ private fun SettingsCard(
     }
 }
 
+/**
+ * Notification listener health - surfaced as its own card since the entire app
+ * is inert when this permission is revoked or killed by the OS.
+ */
+@Composable
+private fun ListenerStatusCard(
+    isActive: Boolean,
+    onEnableClick: () -> Unit,
+) {
+    val containerColor = if (isActive) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.errorContainer
+    }
+    val contentColor = if (isActive) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onErrorContainer
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                imageVector = if (isActive) Icons.Default.Notifications else Icons.Default.NotificationsOff,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(28.dp),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isActive) "Notification access active" else "Notification access disabled",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = contentColor,
+                )
+                if (!isActive) {
+                    Text(
+                        text = "Notificapp can't see notifications until this is re-enabled.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor,
+                    )
+                }
+            }
+            if (!isActive) {
+                Button(onClick = onEnableClick) {
+                    Text("Enable")
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun MonitoredAppsCard(
     appsCount: Int,
     onSelectApps: () -> Unit,
 ) {
+    val hasNoMonitoredApps = appsCount == 0
+    val containerColor = if (hasNoMonitoredApps) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onSelectApps),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-        ),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
         Row(
             modifier = Modifier
@@ -315,13 +410,17 @@ private fun MonitoredAppsCard(
 
                 Column {
                     Text(
-                        text = "$appsCount app${if (appsCount == 1) "" else "s"} monitored",
+                        text = if (hasNoMonitoredApps) {
+                            "No apps monitored"
+                        } else {
+                            "$appsCount app${if (appsCount == 1) "" else "s"} monitored"
+                        },
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = "Tap to manage apps",
+                        text = if (hasNoMonitoredApps) "Select apps to start" else "Tap to manage apps",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -351,8 +450,12 @@ private fun ToggleSettingItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .clickable { onCheckedChange(!checked) },
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -392,10 +495,12 @@ private fun ToggleSettingItem(
             )
         }
 
-        // Toggle
+        // Toggle - onCheckedChange is null so the row's toggleable modifier
+        // is the single source of truth for taps; avoids double-firing when
+        // both the row and the switch handle the same touch.
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = null,
         )
     }
 }
@@ -428,7 +533,7 @@ private fun AboutCard() {
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(24.dp),
                         )
                     }
@@ -441,7 +546,7 @@ private fun AboutCard() {
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = "Version 1.0.0",
+                        text = "Version ${BuildConfig.VERSION_NAME}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -529,6 +634,42 @@ private fun SettingsScreenEmptyPreview() {
             uiState = UiState(
                 monitoredApps = emptyList(),
                 isNotificationListenerActive = true,
+                isCollectionEnabled = true,
+                showAppIcons = true,
+                isLoading = false,
+            ),
+            onEvent = {},
+            navigateTo = { _, _ -> },
+        )
+    }
+}
+
+@Preview(showBackground = true, device = "id:pixel_5")
+@Composable
+private fun SettingsScreenListenerDisabledPreview() {
+    NotificappTheme {
+        SettingsScreenContent(
+            uiState = UiState(
+                monitoredApps = listOf(SelectedApp("com.test", "Test App", true)),
+                isNotificationListenerActive = false,
+                isCollectionEnabled = true,
+                showAppIcons = true,
+                isLoading = false,
+            ),
+            onEvent = {},
+            navigateTo = { _, _ -> },
+        )
+    }
+}
+
+@Preview(showBackground = true, device = "id:pixel_5", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun SettingsScreenListenerDisabledPreviewDark() {
+    NotificappTheme {
+        SettingsScreenContent(
+            uiState = UiState(
+                monitoredApps = listOf(SelectedApp("com.test", "Test App", true)),
+                isNotificationListenerActive = false,
                 isCollectionEnabled = true,
                 showAppIcons = true,
                 isLoading = false,

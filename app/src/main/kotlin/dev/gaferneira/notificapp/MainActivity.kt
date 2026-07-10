@@ -1,9 +1,7 @@
 package dev.gaferneira.notificapp
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -54,6 +52,8 @@ import dev.gaferneira.notificapp.features.onboarding.ui.OnboardingScreen
 import dev.gaferneira.notificapp.features.ruleeditor.ui.RuleEditorScreen
 import dev.gaferneira.notificapp.features.rules.ui.RulesScreen
 import dev.gaferneira.notificapp.features.settings.ui.SettingsScreen
+import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
+import dev.gaferneira.notificapp.util.openNotificationListenerSettings
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
@@ -183,7 +183,7 @@ fun Notificapp(
             entryProvider = entryProvider {
                 entry<Screen.Onboarding> {
                     OnboardingScreen(
-                        onOpenNotificationSettings = { openNotificationSettings(context) },
+                        onOpenNotificationSettings = { openNotificationListenerSettings(context) },
                     )
                 }
 
@@ -236,7 +236,7 @@ fun Notificapp(
  */
 suspend fun determineAppFlowState(context: Context, repository: SelectedAppRepository): AppFlowState {
     // First check notification permission
-    if (!isNotificationServiceEnabled(context)) {
+    if (!isNotificationListenerEnabled(context)) {
         return AppFlowState.ONBOARDING
     }
 
@@ -254,28 +254,6 @@ suspend fun determineAppFlowState(context: Context, repository: SelectedAppRepos
         // If we can't check, default to app selection
         AppFlowState.APP_SELECTION
     }
-}
-
-/**
- * Check if notification listener service is enabled for this app.
- */
-private fun isNotificationServiceEnabled(context: Context): Boolean {
-    val packageName = context.packageName
-    val flat = Settings.Secure.getString(
-        context.contentResolver,
-        "enabled_notification_listeners",
-    )
-    return flat?.contains(packageName) == true
-}
-
-/**
- * Open system notification listener settings.
- */
-private fun openNotificationSettings(context: Context) {
-    val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-    context.startActivity(intent)
 }
 
 /**

@@ -593,7 +593,7 @@ class ExtractDataViewModelTest {
             viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
 
             // When: opening the history list
-            viewModel.onEvent(UiEvent.OnBrowseHistoryOpened)
+            viewModel.onEvent(UiEvent.OnBrowseHistoryOpened(null))
 
             // Then: loading state is set synchronously, before the fetch completes
             val loadingState = viewModel.uiState.value
@@ -617,7 +617,7 @@ class ExtractDataViewModelTest {
             viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
 
             // When: opening the history list and letting the fetch complete
-            viewModel.onEvent(UiEvent.OnBrowseHistoryOpened)
+            viewModel.onEvent(UiEvent.OnBrowseHistoryOpened(null))
             testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: results are empty and loading is false (distinct from mid-flight loading)
@@ -635,7 +635,7 @@ class ExtractDataViewModelTest {
             viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
 
             // When: opening the history list and letting the fetch complete
-            viewModel.onEvent(UiEvent.OnBrowseHistoryOpened)
+            viewModel.onEvent(UiEvent.OnBrowseHistoryOpened(null))
             testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: no exception propagates, and state resolves to the empty/not-loading resting state

@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.appselection.ui
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -40,6 +41,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +50,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
@@ -71,6 +76,7 @@ import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionCont
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEvent
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiState
 import dev.gaferneira.notificapp.features.appselection.viewmodel.AppSelectionViewModel
+import kotlinx.coroutines.launch
 
 /**
  * App Selection screen for choosing which apps to monitor.
@@ -78,9 +84,6 @@ import dev.gaferneira.notificapp.features.appselection.viewmodel.AppSelectionVie
  * Shows installed apps with search functionality and allows user to select
  * which apps to monitor for notification extraction.
  *
- * @param onNavigateToMainApp Callback when navigation to main app is needed
- * @param onNavigateBack Callback when navigating back is needed
- * @param onShowError Callback when showing an error message
  * @param modifier Modifier for the screen
  * @param viewModel ViewModel for state management
  */
@@ -91,12 +94,17 @@ fun AppSelectionScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     // Handle effects
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
             when (effect) {
                 is UiEffect.ShowError -> {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(effect.message)
+                    }
                 }
             }
         }
@@ -118,6 +126,7 @@ fun AppSelectionScreen(
     AppSelectionScreenContent(
         uiState = uiState,
         onEvent = viewModel::onEvent,
+        snackbarHostState = snackbarHostState,
         modifier = modifier,
     )
 }
@@ -127,41 +136,15 @@ private fun AppSelectionScreenContent(
     uiState: UiState,
     onEvent: (UiEvent) -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (uiState.isInitialSetup == false) {
-                // Show back button when accessed from settings
-                Surface(
-                    modifier = Modifier.systemBarsPadding(),
-                    color = MaterialTheme.colorScheme.background,
-                    shadowElevation = 4.dp,
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(
-                            onClick = { onEvent(UiEvent.OnBackClicked) },
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Go back",
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
-                        Text(
-                            text = "Select Apps",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
-                    }
-                }
+                AppSelectionBackBar(onBackClick = { onEvent(UiEvent.OnBackClicked) })
             }
         },
     ) { paddingValues ->
@@ -175,59 +158,14 @@ private fun AppSelectionScreenContent(
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // Page indicator dots (only for initial setup)
             if (uiState.isInitialSetup == true) {
-                PageIndicator()
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = "Select Data Sources",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Subtitle
-                Text(
-                    text = "Choose the apps you want to monitor. You can change this later.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
+                InitialSetupHeader()
             }
 
-            // Selected apps count
-            if (uiState.hasSelection) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Text(
-                            text = "${uiState.selectedCount} app${if (uiState.selectedCount == 1) "" else "s"} selected",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium,
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
+            // Selected apps count - reserves a fixed-height slot so toggling
+            // the first app doesn't push the search field/list up and down.
+            SelectionCountBanner(hasSelection = uiState.hasSelection, selectedCount = uiState.selectedCount)
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Search field
             SearchField(
@@ -239,42 +177,13 @@ private fun AppSelectionScreenContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             // App list or loading/error states
-            Box(
+            AppSelectionListContent(
+                uiState = uiState,
+                onEvent = onEvent,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-            ) {
-                when {
-                    uiState.isLoading -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
-                    uiState.error != null -> {
-                        ErrorState(
-                            message = uiState.error,
-                            onRetry = { onEvent(UiEvent.OnRefresh) },
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
-                    uiState.filteredApps.isEmpty() -> {
-                        EmptyState(
-                            searchQuery = uiState.searchQuery,
-                            modifier = Modifier.align(Alignment.Center),
-                        )
-                    }
-                    else -> {
-                        AppList(
-                            apps = uiState.filteredApps,
-                            selectedPackages = uiState.selectedPackageNames,
-                            onAppToggled = { packageName, isSelected ->
-                                onEvent(UiEvent.OnAppToggled(packageName, isSelected))
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-                }
-            }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -287,6 +196,11 @@ private fun AppSelectionScreenContent(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            if (!uiState.hasSelection) {
+                Spacer(modifier = Modifier.height(8.dp))
+                ContinueDisabledHint()
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
 
             // Security footer
@@ -297,19 +211,177 @@ private fun AppSelectionScreenContent(
     }
 }
 
+/** Onboarding has 3 real steps: Value Statement, Permission Explanation, App Selection. */
+private const val ONBOARDING_TOTAL_STEPS = 3
+private const val ONBOARDING_STEP_APP_SELECTION = 2
+
+private val SELECTION_BANNER_HEIGHT = 40.dp
+
+/** Back bar shown when this screen is reached from Settings rather than onboarding. */
+@Composable
+private fun AppSelectionBackBar(onBackClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.systemBarsPadding(),
+        color = MaterialTheme.colorScheme.background,
+        shadowElevation = 4.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Go back",
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            Text(
+                text = "Select Apps",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(start = 8.dp),
+            )
+        }
+    }
+}
+
+/** Headline, subtitle and progress dots shown only during initial onboarding setup. */
+@Composable
+private fun InitialSetupHeader(modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        PageIndicator(currentStep = ONBOARDING_STEP_APP_SELECTION, totalSteps = ONBOARDING_TOTAL_STEPS)
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Select Data Sources",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Choose the apps you want to monitor. You can change this later.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
 /**
- * Page indicator dots at the top.
+ * Selected-apps count banner. Always reserves [SELECTION_BANNER_HEIGHT] so toggling
+ * the first app doesn't push the search field/list up and down.
  */
 @Composable
-private fun PageIndicator() {
+private fun SelectionCountBanner(hasSelection: Boolean, selectedCount: Int, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxWidth().height(SELECTION_BANNER_HEIGHT)) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = hasSelection,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Text(
+                        text = "$selectedCount app${if (selectedCount == 1) "" else "s"} selected",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Helper text shown under a disabled Continue/Save button. */
+@Composable
+private fun ContinueDisabledHint(modifier: Modifier = Modifier) {
+    Text(
+        text = "Select at least one app to continue",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+        modifier = modifier.fillMaxWidth(),
+        textAlign = TextAlign.Center,
+    )
+}
+
+/** Switches between loading, error, empty and populated app-list states. */
+@Composable
+private fun AppSelectionListContent(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier) {
+        when {
+            uiState.isLoading -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+            uiState.error != null -> {
+                ErrorState(
+                    message = uiState.error,
+                    onRetry = { onEvent(UiEvent.OnRefresh) },
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+            uiState.filteredApps.isEmpty() -> {
+                EmptyState(
+                    searchQuery = uiState.searchQuery,
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
+            else -> {
+                AppList(
+                    apps = uiState.filteredApps,
+                    selectedPackages = uiState.selectedPackageNames,
+                    onAppToggled = { packageName, isSelected ->
+                        onEvent(UiEvent.OnAppToggled(packageName, isSelected))
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Page indicator dots at the top, reflecting the real onboarding progress
+ * instead of a hardcoded step count.
+ *
+ * @param currentStep Zero-based index of the active step.
+ * @param totalSteps Total number of steps in the flow.
+ */
+@Composable
+private fun PageIndicator(currentStep: Int, totalSteps: Int, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 4 dots total, with the 3rd one active (blue)
-        repeat(4) { index ->
-            val isActive = index == 2
+        repeat(totalSteps) { index ->
+            val isActive = index == currentStep
             val color = if (isActive) {
                 MaterialTheme.colorScheme.primary
             } else {
@@ -658,6 +730,29 @@ private fun ErrorState(
 @Preview(showBackground = true, device = "id:pixel_5")
 @Composable
 private fun AppSelectionScreenInitialSetupPreview() {
+    NotificappTheme {
+        AppSelectionScreenContent(
+            uiState = UiState(
+                availableApps = listOf(
+                    AppInfo("com.google.android.gm", "Gmail", "Email"),
+                    AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
+                    AppInfo("com.revolut.revolut", "Revolut", "Financial"),
+                    AppInfo("com.amazon.mShop.android.shopping", "Amazon", "Shopping"),
+                    AppInfo("com.microsoft.office.outlook", "Outlook", "Email"),
+                    AppInfo("com.uber", "Uber", null),
+                ),
+                selectedPackageNames = setOf("com.google.android.gm"),
+                isLoading = false,
+                isInitialSetup = true,
+            ),
+            onEvent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, device = "id:pixel_5", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun AppSelectionScreenInitialSetupPreviewDark() {
     NotificappTheme {
         AppSelectionScreenContent(
             uiState = UiState(

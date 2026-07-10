@@ -1,16 +1,16 @@
 package dev.gaferneira.notificapp.features.inbox.ui
 
+import android.content.res.Configuration
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,9 +19,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,9 +32,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -40,15 +45,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -66,13 +74,17 @@ import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.core.ui.utils.OnResumeEffect
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEffect
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEvent
+import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract.Status
 import dev.gaferneira.notificapp.features.inbox.contract.InboxListItem
 import dev.gaferneira.notificapp.features.inbox.contract.InboxUiState
 import dev.gaferneira.notificapp.features.inbox.contract.NotificationItem
 import dev.gaferneira.notificapp.features.inbox.viewmodel.InboxViewModel
+import dev.gaferneira.notificapp.util.openNotificationListenerSettings
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 
 /**
  * Inbox Screen displaying paginated notifications with 2-hour time headers.
@@ -85,12 +97,13 @@ import kotlinx.coroutines.flow.flowOf
  */
 @Composable
 fun InboxScreen(
-    modifier: Modifier = Modifier,
     navigateTo: (Screen, NavOptions?) -> Unit,
     viewModel: InboxViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val notifications = viewModel.notifications.collectAsLazyPagingItems()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     // Handle effects
     LaunchedEffect(Unit) {
@@ -101,21 +114,23 @@ fun InboxScreen(
                 }
 
                 is InboxEffect.ShowError -> {
-                    // TODO: Show snackbar or toast
-                }
-                InboxEffect.ShowPermissionRequired -> {
-                    // TODO: Show permission dialog
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(effect.message)
+                    }
                 }
             }
         }
     }
+
+    // Re-check listener status when returning to the inbox (e.g. from system settings)
+    OnResumeEffect { viewModel.onEvent(InboxEvent.OnResume) }
 
     InboxScreenContent(
         uiState = uiState,
         notifications = notifications,
         onEvent = viewModel::onEvent,
         navigateTo = navigateTo,
-        modifier = modifier,
+        snackbarHostState = snackbarHostState,
     )
 }
 
@@ -126,37 +141,19 @@ private fun InboxScreenContent(
     notifications: LazyPagingItems<InboxListItem>,
     onEvent: (InboxEvent) -> Unit,
     navigateTo: (Screen, NavOptions?) -> Unit,
-    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     var showFilterSheet by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val hasActiveFilters = uiState.selectedApps.isNotEmpty() || uiState.statusFilter != Status.ALL
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Inbox",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            text = "Live Notification Feed",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showFilterSheet = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = "Filter and Sort",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                },
+            InboxTopBar(
+                hasActiveFilters = hasActiveFilters,
+                onFilterClick = { showFilterSheet = true },
             )
         },
         bottomBar = {
@@ -172,36 +169,25 @@ private fun InboxScreenContent(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
         ) {
-            // Search bar
-            OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = { onEvent(InboxEvent.OnSearchQueryChange(it)) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                placeholder = { Text("Search notifications...") },
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    focusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                ),
+            if (!uiState.isNotificationListenerActive) {
+                PermissionRequiredBanner(
+                    onEnableClick = { openNotificationListenerSettings(context) },
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+
+            InboxSearchField(
+                query = uiState.searchQuery,
+                onQueryChange = { onEvent(InboxEvent.OnSearchQueryChange(it)) },
             )
 
             // Notification list with paging
             NotificationList(
                 notifications = notifications,
+                isNotificationListenerActive = uiState.isNotificationListenerActive,
                 onNotificationClick = { onEvent(InboxEvent.OnNotificationClick(it)) },
                 onRetry = { notifications.retry() },
+                onEnableAccessClick = { openNotificationListenerSettings(context) },
             )
         }
 
@@ -220,11 +206,74 @@ private fun InboxScreenContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InboxTopBar(hasActiveFilters: Boolean, onFilterClick: () -> Unit) {
+    TopAppBar(
+        title = {
+            Column {
+                Text(
+                    text = "Inbox",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "Live Notification Feed",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        actions = {
+            IconButton(onClick = onFilterClick) {
+                BadgedBox(
+                    badge = { if (hasActiveFilters) Badge() },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Filter and Sort",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun InboxSearchField(query: String, onQueryChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        placeholder = { Text("Search notifications...") },
+        leadingIcon = {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        singleLine = true,
+        shape = RoundedCornerShape(12.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            focusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    )
+}
+
 @Composable
 private fun NotificationList(
     notifications: LazyPagingItems<InboxListItem>,
+    isNotificationListenerActive: Boolean,
     onNotificationClick: (String) -> Unit,
     onRetry: () -> Unit,
+    onEnableAccessClick: () -> Unit,
 ) {
     // Handle load states
     when (val refreshState = notifications.loadState.refresh) {
@@ -239,7 +288,10 @@ private fun NotificationList(
         }
         is LoadState.NotLoading -> {
             if (notifications.itemCount == 0) {
-                EmptyState()
+                EmptyState(
+                    isNotificationListenerActive = isNotificationListenerActive,
+                    onEnableAccessClick = onEnableAccessClick,
+                )
             } else {
                 NotificationColumn(
                     notifications = notifications,
@@ -370,17 +422,91 @@ private fun ErrorState(
     }
 }
 
+/**
+ * Empty state. Distinguishes the two possible causes: listener access
+ * revoked entirely, versus access granted but nothing captured yet.
+ */
 @Composable
-private fun EmptyState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
+private fun EmptyState(
+    isNotificationListenerActive: Boolean,
+    onEnableAccessClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = "No notifications yet\nEnable notification access in settings",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Icon(
+            imageVector = Icons.Default.NotificationsOff,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        if (isNotificationListenerActive) {
+            Text(
+                text = "No notifications yet",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        } else {
+            Text(
+                text = "Notification access is disabled",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onEnableAccessClick) {
+                Text("Enable access")
+            }
+        }
+    }
+}
+
+/**
+ * Persistent warning shown when notification listener access is revoked -
+ * without this, the inbox silently stops filling and the empty state lies.
+ */
+@Composable
+private fun PermissionRequiredBanner(
+    onEnableClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.NotificationsOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "Notification access disabled — Notificapp can't see notifications.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            OutlinedButton(
+                onClick = onEnableClick,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onErrorContainer),
+            ) {
+                Text("Enable")
+            }
+        }
     }
 }
 
@@ -411,13 +537,10 @@ private fun NotificationCard(
 ) {
     val context = LocalContext.current
 
-    // Status based on whether rules have been applied
+    // An unprocessed notification (no matching rule yet) is the normal state
+    // for a new user, not a failure - only "processed" gets a positive accent.
+    // Red is reserved for actual errors elsewhere in the app.
     val isProcessed = notification.isProcessed
-    val statusColor = if (isProcessed) {
-        Color(0x802B962B)
-    } else {
-        MaterialTheme.colorScheme.error // Red for unprocessed
-    }
 
     // Load app icon
     val appIcon: ImageBitmap? = remember(notification.appPackageName) {
@@ -442,17 +565,6 @@ private fun NotificationCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Status indicator bar on the left
-            Box(
-                modifier = Modifier
-                    .width(2.dp)
-                    .heightIn(min = 60.dp)
-                    .fillMaxHeight()
-                    .background(statusColor),
-            )
-
-            Spacer(Modifier.width(4.dp))
-
             // App icon
             Box(
                 modifier = Modifier
@@ -550,30 +662,28 @@ private fun NotificationCard(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Status icon - circular background with icon inside
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                color = statusColor,
-                                shape = CircleShape,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (isProcessed) {
+                    // Status - only processed notifications get a visible, positive
+                    // accent. Unprocessed is the normal state and gets no indicator.
+                    if (isProcessed) {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.semantics(mergeDescendants = true) {
+                                contentDescription =
+                                    "${notification.appliedRulesCount} rule${if (notification.appliedRulesCount > 1) "s" else ""} applied"
+                            },
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "${notification.appliedRulesCount} rule${if (notification.appliedRulesCount > 1) "s" else ""} applied",
-                                tint = MaterialTheme.colorScheme.background,
-                                modifier = Modifier.size(24.dp),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(18.dp),
                             )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Circle,
-                                contentDescription = "No rules applied",
-                                tint = MaterialTheme.colorScheme.onError,
-                                modifier = Modifier.size(24.dp),
+                            Text(
+                                text = "${notification.appliedRulesCount} rule${if (notification.appliedRulesCount > 1) "s" else ""}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary,
                             )
                         }
                     }
@@ -586,6 +696,66 @@ private fun NotificationCard(
 @Preview(showBackground = true)
 @Composable
 fun PreviewInboxScreen() {
+    val previewItems = listOf(
+        InboxListItem.NotificationRow(
+            notification = NotificationItem(
+                id = "3",
+                appName = "WhatsApp",
+                appPackageName = "com.whatsapp",
+                title = "John Doe",
+                content = "Hey, are we still meeting at 8?",
+                timestamp = System.currentTimeMillis(),
+                formattedTime = "18:42",
+                isProcessed = false,
+            ),
+        ),
+        InboxListItem.NotificationRow(
+            notification = NotificationItem(
+                id = "2",
+                appName = "Gmail",
+                appPackageName = "com.google.android.gm",
+                title = "Meeting reminder",
+                content = "Your meeting starts in 15 minutes",
+                timestamp = System.currentTimeMillis() - 1000 * 60 * 15,
+                formattedTime = "18:25",
+                isProcessed = true,
+            ),
+        ),
+        InboxListItem.TimeHeader(
+            timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 2,
+            label = "2 hours ago",
+        ),
+        InboxListItem.NotificationRow(
+            notification = NotificationItem(
+                id = "1",
+                appName = "Slack",
+                appPackageName = "com.Slack",
+                title = "New message in #general",
+                content = "Alice: Great work on the release!",
+                timestamp = System.currentTimeMillis() - 1000 * 60 * 60 * 2,
+                formattedTime = "16:30",
+                isProcessed = true,
+            ),
+        ),
+    )
+
+    NotificappTheme {
+        // Create a fake LazyPagingItems for preview
+        val pagingData = PagingData.from(previewItems)
+        val lazyPagingItems = flowOf(pagingData).collectAsLazyPagingItems()
+
+        InboxScreenContent(
+            uiState = InboxUiState(),
+            notifications = lazyPagingItems,
+            onEvent = {},
+            navigateTo = { _, _ -> },
+        )
+    }
+}
+
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun PreviewInboxScreenDark() {
     val previewItems = listOf(
         InboxListItem.NotificationRow(
             notification = NotificationItem(

@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.notificationdetail.ui
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,16 +36,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -98,23 +104,12 @@ private fun NotificationDetailScreenContent(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { Text("Executions - ${uiState.notification?.appName ?: "Notification"}") },
+                title = { Text(uiState.notification?.appName ?: "Notification") },
                 navigationIcon = {
                     IconButton(onClick = { onEvent(UiEvent.OnBackClicked) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { onEvent(UiEvent.OnRefreshClicked) },
-                        enabled = !uiState.isLoading,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh Rules",
                         )
                     }
                 },
@@ -142,14 +137,15 @@ private fun NotificationDetailScreenContent(
                 uiState.error != null -> {
                     ErrorState(
                         message = uiState.error,
-                        onRetry = { /* Reload */ },
+                        onRetry = { onEvent(UiEvent.OnRetryClicked) },
                         modifier = Modifier.align(Alignment.Center),
                     )
                 }
                 uiState.notification != null -> {
                     NotificationDetailContent(
-                        notification = uiState.notification,
-                        executions = uiState.executions,
+                        uiState = uiState,
+                        onRefreshClicked = { onEvent(UiEvent.OnRefreshClicked) },
+                        onCreateRuleClicked = { onEvent(UiEvent.OnCreateRuleClicked) },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -160,12 +156,17 @@ private fun NotificationDetailScreenContent(
 
 @Composable
 private fun NotificationDetailContent(
-    notification: Notification,
-    executions: List<ExecutionWithDetails>,
+    uiState: UiState,
+    onRefreshClicked: () -> Unit,
+    onCreateRuleClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val notification = uiState.notification ?: return
+    val executions = uiState.executions
+    val isRefreshing = uiState.isLoading
+
     LazyColumn(
-        modifier = modifier.padding(horizontal = 16.dp),
+        modifier = modifier.fillMaxSize().padding(horizontal = 16.dp),
     ) {
         item {
             NotificationDataCard(notification = notification)
@@ -180,26 +181,36 @@ private fun NotificationDetailContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "RULE EXECUTIONS",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Column {
+                    Text(
+                        text = "MATCHED RULES",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "${executions.size} matched",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
 
-                // Execution Count
-                Text(
-                    text = "${executions.size} matched",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                TextButton(onClick = onRefreshClicked, enabled = !isRefreshing) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Re-run rules")
+                }
             }
         }
 
         // Executions List
         if (executions.isEmpty()) {
             item {
-                EmptyExecutionsState()
+                EmptyExecutionsState(onCreateRuleClicked = onCreateRuleClicked)
             }
         } else {
             items(
@@ -261,7 +272,7 @@ private fun NotificationDataCard(notification: Notification) {
                             Image(
                                 bitmap = appIcon,
                                 contentDescription = null,
-                                modifier = Modifier.size(56.dp),
+                                modifier = Modifier.size(40.dp),
                             )
                         } else {
                             Text(
@@ -304,11 +315,31 @@ private fun NotificationDataCard(notification: Notification) {
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Raw: ${notification.rawContent.take(200)}...",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                )
+                RawContentSection(rawContent = notification.rawContent)
+            }
+        }
+    }
+}
+
+/**
+ * Raw notification payload, expandable since it can be much longer than the
+ * fixed 200-char preview used to show regardless of actual length.
+ */
+@Composable
+private fun RawContentSection(rawContent: String) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val previewLength = 200
+    val isTruncatable = rawContent.length > previewLength
+
+    Column {
+        Text(
+            text = if (isExpanded || !isTruncatable) "Raw: $rawContent" else "Raw: ${rawContent.take(previewLength)}…",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        )
+        if (isTruncatable) {
+            TextButton(onClick = { isExpanded = !isExpanded }) {
+                Text(if (isExpanded) "Show less" else "Show more")
             }
         }
     }
@@ -488,6 +519,12 @@ private fun ActionChip(action: TriggeredActionDisplay) {
         ActionOutcome.FAILED -> "✗"
         ActionOutcome.SKIPPED, null -> "—"
     }
+    val outcomeDescription = when (action.outcome) {
+        ActionOutcome.SUCCESS -> "succeeded"
+        ActionOutcome.FAILED -> "failed"
+        ActionOutcome.SKIPPED -> "skipped"
+        null -> "no outcome data"
+    }
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -508,13 +545,16 @@ private fun ActionChip(action: TriggeredActionDisplay) {
                 style = MaterialTheme.typography.labelMedium,
                 color = outcomeColor,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics {
+                    contentDescription = "${action.name} $outcomeDescription"
+                },
             )
         }
     }
 }
 
 @Composable
-private fun EmptyExecutionsState() {
+private fun EmptyExecutionsState(onCreateRuleClicked: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -535,10 +575,14 @@ private fun EmptyExecutionsState() {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "No rules were triggered for this notification",
+            text = "Create a rule to extract data from notifications like this",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        TextButton(onClick = onCreateRuleClicked) {
+            Text("Create Rule")
+        }
     }
 }
 
@@ -561,84 +605,99 @@ private fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier 
 }
 
 // Preview
+private fun previewPurchaseExecution(): ExecutionWithDetails = ExecutionWithDetails(
+    execution = RuleExecution(
+        id = "exec1",
+        ruleId = "rule1",
+        notificationId = "1",
+        extractedData = emptyMap(),
+        triggeredActions = listOf("action1", "action2"),
+        createdAt = System.currentTimeMillis(),
+    ),
+    ruleName = "Purchase notification",
+    extractedFields = listOf(
+        ExtractedFieldDisplay(
+            fieldName = "amount",
+            fieldType = RuleField.FieldType.CURRENCY,
+            value = "249.00 SEK",
+        ),
+        ExtractedFieldDisplay(
+            fieldName = "merchant",
+            fieldType = RuleField.FieldType.STRING,
+            value = "Hemköp Stockholm",
+        ),
+    ),
+    triggeredActions = listOf(
+        TriggeredActionDisplay(name = "Save to Database", outcome = ActionOutcome.SUCCESS),
+        TriggeredActionDisplay(name = "Show Toast", outcome = ActionOutcome.FAILED),
+    ),
+)
+
+private fun previewBudgetExecution(): ExecutionWithDetails = ExecutionWithDetails(
+    execution = RuleExecution(
+        id = "exec2",
+        ruleId = "rule2",
+        notificationId = "1",
+        extractedData = emptyMap(),
+        triggeredActions = listOf("action3"),
+        createdAt = System.currentTimeMillis() - 3600000,
+    ),
+    ruleName = "Budget tracker",
+    extractedFields = listOf(
+        ExtractedFieldDisplay(
+            fieldName = "category",
+            fieldType = RuleField.FieldType.STRING,
+            value = "Groceries",
+        ),
+        ExtractedFieldDisplay(
+            fieldName = "transaction_id",
+            fieldType = RuleField.FieldType.NUMBER,
+            value = "12345",
+        ),
+        ExtractedFieldDisplay(
+            fieldName = "is_debit",
+            fieldType = RuleField.FieldType.BOOLEAN,
+            value = "true",
+        ),
+    ),
+    triggeredActions = listOf(
+        TriggeredActionDisplay(name = "Log Transaction", outcome = null),
+    ),
+)
+
+/** Shared preview state with a notification and two rule executions. */
+private fun previewUiStateWithExecutions(): UiState = UiState(
+    notification = Notification(
+        id = "1",
+        packageName = "com.bank.app",
+        appName = "Bank App",
+        title = "Purchase: 249.00 SEK",
+        content = "Transaction at Hemköp Stockholm",
+        rawContent = "Purchase: 249.00 SEK at Hemköp Stockholm",
+        timestamp = System.currentTimeMillis(),
+        isProcessed = false,
+    ),
+    executions = listOf(previewPurchaseExecution(), previewBudgetExecution()),
+    isLoading = false,
+)
+
 @Preview(showBackground = true, device = "id:pixel_5")
 @Composable
 private fun NotificationDetailScreenPreview() {
     NotificappTheme {
         NotificationDetailScreenContent(
-            uiState = UiState(
-                notification = Notification(
-                    id = "1",
-                    packageName = "com.bank.app",
-                    appName = "Bank App",
-                    title = "Purchase: 249.00 SEK",
-                    content = "Transaction at Hemköp Stockholm",
-                    rawContent = "Purchase: 249.00 SEK at Hemköp Stockholm",
-                    timestamp = System.currentTimeMillis(),
-                    isProcessed = false,
-                ),
-                executions = listOf(
-                    ExecutionWithDetails(
-                        execution = RuleExecution(
-                            id = "exec1",
-                            ruleId = "rule1",
-                            notificationId = "1",
-                            extractedData = emptyMap(),
-                            triggeredActions = listOf("action1", "action2"),
-                            createdAt = System.currentTimeMillis(),
-                        ),
-                        ruleName = "Purchase notification",
-                        extractedFields = listOf(
-                            ExtractedFieldDisplay(
-                                fieldName = "amount",
-                                fieldType = RuleField.FieldType.CURRENCY,
-                                value = "249.00 SEK",
-                            ),
-                            ExtractedFieldDisplay(
-                                fieldName = "merchant",
-                                fieldType = RuleField.FieldType.STRING,
-                                value = "Hemköp Stockholm",
-                            ),
-                        ),
-                        triggeredActions = listOf(
-                            TriggeredActionDisplay(name = "Save to Database", outcome = ActionOutcome.SUCCESS),
-                            TriggeredActionDisplay(name = "Show Toast", outcome = ActionOutcome.FAILED),
-                        ),
-                    ),
-                    ExecutionWithDetails(
-                        execution = RuleExecution(
-                            id = "exec2",
-                            ruleId = "rule2",
-                            notificationId = "1",
-                            extractedData = emptyMap(),
-                            triggeredActions = listOf("action3"),
-                            createdAt = System.currentTimeMillis() - 3600000,
-                        ),
-                        ruleName = "Budget tracker",
-                        extractedFields = listOf(
-                            ExtractedFieldDisplay(
-                                fieldName = "category",
-                                fieldType = RuleField.FieldType.STRING,
-                                value = "Groceries",
-                            ),
-                            ExtractedFieldDisplay(
-                                fieldName = "transaction_id",
-                                fieldType = RuleField.FieldType.NUMBER,
-                                value = "12345",
-                            ),
-                            ExtractedFieldDisplay(
-                                fieldName = "is_debit",
-                                fieldType = RuleField.FieldType.BOOLEAN,
-                                value = "true",
-                            ),
-                        ),
-                        triggeredActions = listOf(
-                            TriggeredActionDisplay(name = "Log Transaction", outcome = null),
-                        ),
-                    ),
-                ),
-                isLoading = false,
-            ),
+            uiState = previewUiStateWithExecutions(),
+            onEvent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, device = "id:pixel_5", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun NotificationDetailScreenPreviewDark() {
+    NotificappTheme {
+        NotificationDetailScreenContent(
+            uiState = previewUiStateWithExecutions(),
             onEvent = {},
         )
     }

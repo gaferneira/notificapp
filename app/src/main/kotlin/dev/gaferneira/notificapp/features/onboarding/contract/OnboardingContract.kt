@@ -19,6 +19,8 @@ object OnboardingContract {
         val hasNotificationPermission: Boolean = false,
         /** Loading state when checking permission */
         val isLoading: Boolean = false,
+        /** Shown when the user returns from system settings without granting access */
+        val showPermissionDeniedHint: Boolean = false,
     )
 
     /**

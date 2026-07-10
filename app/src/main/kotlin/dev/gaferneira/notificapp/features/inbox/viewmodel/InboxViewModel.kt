@@ -1,11 +1,15 @@
 package dev.gaferneira.notificapp.features.inbox.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.insertSeparators
 import androidx.paging.map
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.gaferneira.notificapp.core.di.Dispatcher
+import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.preferences.InboxFilterSettings
@@ -17,7 +21,9 @@ import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract.Sta
 import dev.gaferneira.notificapp.features.inbox.contract.InboxListItem
 import dev.gaferneira.notificapp.features.inbox.contract.InboxUiState
 import dev.gaferneira.notificapp.features.inbox.contract.NotificationItem
+import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
 import dev.gaferneira.notificapp.util.timeAgo
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,8 +59,10 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class InboxViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val notificationRepository: NotificationRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
+    @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MviViewModel<InboxUiState, InboxEvent, InboxEffect>(InboxUiState()) {
 
     /**
@@ -125,6 +133,7 @@ class InboxViewModel @Inject constructor(
 
     init {
         loadSavedFilters()
+        checkNotificationListenerStatus()
     }
 
     /**
@@ -149,6 +158,18 @@ class InboxViewModel @Inject constructor(
             is InboxEvent.OnSearchQueryChange -> updateSearchQuery(event.query)
             is InboxEvent.OnAppFilterChange -> updateAppFilter(event.packageNames, event.statusFilter)
             is InboxEvent.OnNotificationClick -> onNotificationClick(event.notificationId)
+            is InboxEvent.OnResume -> checkNotificationListenerStatus()
+        }
+    }
+
+    private fun checkNotificationListenerStatus() {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val isListenerActive = isNotificationListenerEnabled(context)
+                setState { copy(isNotificationListenerActive = isListenerActive) }
+            } catch (e: SecurityException) {
+                Timber.e(e, "Failed to check notification listener status")
+            }
         }
     }
 

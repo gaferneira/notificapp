@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
@@ -143,9 +143,11 @@ private fun AppsCard(
                 }
             }
 
-            // Edit indicator
+            // Edit indicator - was Icons.Default.Add, which signals "add" next to
+            // condition cards whose trailing icon (x) means "remove"; ChevronRight
+            // matches the actual tap-to-edit affordance.
             Icon(
-                imageVector = Icons.Default.Add,
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Edit apps",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),

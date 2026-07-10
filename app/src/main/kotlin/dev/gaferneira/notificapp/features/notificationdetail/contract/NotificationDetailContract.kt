@@ -75,8 +75,11 @@ object NotificationDetailContract {
         /** User clicked to create a new rule */
         data object OnCreateRuleClicked : UiEvent()
 
-        /** User clicked to refresh/re-execute rules */
+        /** User clicked "Re-run rules" - deletes and re-evaluates executions for this notification */
         data object OnRefreshClicked : UiEvent()
+
+        /** User clicked Retry on the load-error state - reloads without re-running rules */
+        data object OnRetryClicked : UiEvent()
 
         /** User dismissed error */
         data object OnDismissError : UiEvent()

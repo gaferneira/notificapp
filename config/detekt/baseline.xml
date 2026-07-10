@@ -12,8 +12,6 @@
     <ID>CyclomaticComplexMethod:RuleEditorViewModel.kt$RuleEditorViewModel$override fun onEvent(event: UiEvent)</ID>
     <ID>CyclomaticComplexMethod:RuleMatcher.kt$RuleMatcher$private fun matchesCondition(notification: Notification, condition: RuleCondition): Boolean</ID>
     <ID>CyclomaticComplexMethod:RulesViewModel.kt$RulesViewModel$private fun applyFilters(rules: List&lt;Rule&gt;, query: String, currentFilter: RuleFilter): List&lt;Rule&gt;</ID>
-    <ID>ForbiddenComment:InboxScreen.kt$// TODO: Show permission dialog</ID>
-    <ID>ForbiddenComment:InboxScreen.kt$// TODO: Show snackbar or toast</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d", day, month)</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d/%d", day, month, year)</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d:%02d", hour, minute)</ID>
@@ -26,35 +24,29 @@
     <ID>LongMethod:AppSelectionPicker.kt$@Composable private fun AppListItem( app: AppDisplayInfo, isSelected: Boolean, onToggle: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AppSelectionPicker.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AppSelectionPicker( selectedApps: List&lt;AppInfo&gt;, enabledApps: List&lt;AppInfo&gt;, onConfirm: (List&lt;AppInfo&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
     <ID>LongMethod:AppSelectionScreen.kt$@Composable private fun AppListItem( app: AppInfo, isSelected: Boolean, onToggled: (Boolean) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:AppSelectionScreen.kt$@Composable private fun AppSelectionScreenContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AppSelectionViewModel.kt$AppSelectionViewModel$private fun loadAppsWithNotifications(packageManager: PackageManager): List&lt;AppInfo&gt;</ID>
     <ID>LongMethod:FieldExtractor.kt$FieldExtractor$private fun parseJsonArray(json: String, depth: Int = 0): List&lt;Any?&gt;</ID>
     <ID>LongMethod:FieldExtractor.kt$FieldExtractor$private fun parseJsonObject(json: String, depth: Int = 0): Map&lt;String, Any?&gt;</ID>
     <ID>LongMethod:InboxFilterBottomSheet.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun FilterBottomSheetContent( uiState: InboxFilterContract.UiState, onEvent: (InboxFilterContract.UiEvent) -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationCard( notification: NotificationItem, onClick: () -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationColumn( notifications: LazyPagingItems&lt;InboxListItem&gt;, onNotificationClick: (String) -&gt; Unit, )</ID>
-    <ID>LongMethod:InboxScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun InboxScreenContent( uiState: InboxUiState, notifications: LazyPagingItems&lt;InboxListItem&gt;, onEvent: (InboxEvent) -&gt; Unit, navigateTo: (Screen, NavOptions?) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Preview(showBackground = true, name = "Inbox Preview - Direct Items") @Composable fun PreviewInboxScreenDirect()</ID>
     <ID>LongMethod:MainActivity.kt$@Composable fun Notificapp( repository: SelectedAppRepository = hiltViewModel&lt;MainViewModel&gt;().repository, navigationHandler: NavigationHandler, )</ID>
     <ID>LongMethod:MatchingLogicBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MatchingLogicBottomSheet( modifier: Modifier = Modifier, viewModel: MatchingLogicViewModel = hiltViewModel(), initialCondition: RuleCondition? = null, onConditionSaved: (RuleCondition) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
     <ID>LongMethod:NotificationDetailScreen.kt$@Composable private fun NotificationDataCard(notification: Notification)</ID>
     <ID>LongMethod:NotificationDetailScreen.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun ExecutionCard(execution: ExecutionWithDetails)</ID>
-    <ID>LongMethod:NotificationDetailScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun NotificationDetailScreenContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:NotificationDetailScreen.kt$@Preview(showBackground = true, device = "id:pixel_5") @Composable private fun NotificationDetailScreenPreview()</ID>
-    <ID>LongMethod:OnboardingScreen.kt$@Composable private fun PermissionExplanationContent( onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:OnboardingScreen.kt$@Composable private fun PermissionToggleCard()</ID>
     <ID>LongMethod:OnboardingScreen.kt$@Composable private fun ValueStatementContent( onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:RuleEditorScreen.kt$@Composable private fun LogicStep( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, scrollState: androidx.compose.foundation.ScrollState, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:RuleEditorScreen.kt$@Composable private fun MetadataStep( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, scrollState: androidx.compose.foundation.ScrollState, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:RuleEditorScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun RuleEditorScreenContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:RulesFilterBottomSheet.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun FilterBottomSheetContent( uiState: RulesFilterContract.UiState, onEvent: (RulesFilterContract.UiEvent) -&gt; Unit, )</ID>
-    <ID>LongMethod:RulesScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun RulesScreenContent( uiState: RulesUiState, onEvent: (RulesEvent) -&gt; Unit, navigateTo: (Screen, NavOptions?) -&gt; Unit, onShowFilterSheet: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun AboutCard()</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun MonitoredAppsCard( appsCount: Int, onSelectApps: () -&gt; Unit, )</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun SettingsScreenContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, navigateTo: (Screen, NavOptions?) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:SnoozeConfig.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun SnoozeDurationSelector( selectedMinutes: Int, onDurationChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WhenSection.kt$@Composable private fun AppsCard( selectedApps: List&lt;AppInfo&gt;, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WhenSection.kt$@Composable private fun ConditionCard( condition: RuleCondition, onClick: () -&gt; Unit, onRemove: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongParameterList:ExtractDataBottomSheet.kt$( entryNotification: Notification?, effectiveNotification: Notification?, targetPackages: List&lt;String&gt;? = null, uiState: ExtractDataContract.UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongParameterList:ExtractDataBottomSheet.kt$( initialFields: List&lt;RuleField&gt;, isEditingAction: Boolean, targetPackages: List&lt;String&gt;?, notification: Notification?, onCommitted: (List&lt;RuleField&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
     <ID>LongParameterList:InboxFilterBottomSheet.kt$( currentSelectedApps: List&lt;String&gt;, onFilterApplied: (List&lt;String&gt;, InboxFilterContract.Status) -&gt; Unit, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, currentStatusFilter: InboxFilterContract.Status = InboxFilterContract.Status.ALL, viewModel: InboxFilterBottomSheetViewModel = hiltViewModel(), )</ID>
     <ID>LongParameterList:KeywordConfig.kt$( keyword: String, maxLength: Int?, onKeywordChange: (String) -&gt; Unit, onMaxLengthChange: (Int?) -&gt; Unit, error: String?, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:MatchingLogicBottomSheet.kt$( condition: MatchingCondition, operator: MatchingOperator, value: String, onConditionChange: (MatchingCondition) -&gt; Unit, onOperatorChange: (MatchingOperator) -&gt; Unit, onValueChange: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>

@@ -72,6 +72,9 @@ class NotificationDetailViewModel @Inject constructor(
             is UiEvent.OnRefreshClicked -> {
                 refreshExecutions()
             }
+            is UiEvent.OnRetryClicked -> {
+                loadNotificationAndExecutions()
+            }
             is UiEvent.OnDismissError -> {
                 setState { copy(error = null) }
             }

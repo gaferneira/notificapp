@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -33,12 +34,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -66,10 +74,12 @@ import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionTypePic
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AppSelectionPicker
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DoSection
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.StepIndicator
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.WhenSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.ExtractDataBottomSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.MatchingLogicBottomSheet
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.RuleEditorViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun RuleEditorScreen(
@@ -79,6 +89,8 @@ fun RuleEditorScreen(
     viewModel: RuleEditorViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     // Load initial data
     LaunchedEffect(ruleId, notificationId) {
@@ -90,8 +102,10 @@ fun RuleEditorScreen(
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
             is UiEffect.ShowSuccess -> {
+                coroutineScope.launch { snackbarHostState.showSnackbar(effect.message) }
             }
             is UiEffect.ShowError -> {
+                coroutineScope.launch { snackbarHostState.showSnackbar(effect.message) }
             }
         }
     }
@@ -99,6 +113,7 @@ fun RuleEditorScreen(
     RuleEditorScreenContent(
         uiState = uiState.value,
         onEvent = viewModel::onEvent,
+        snackbarHostState = snackbarHostState,
         modifier = modifier,
     )
 }
@@ -109,44 +124,24 @@ private fun RuleEditorScreenContent(
     uiState: UiState,
     onEvent: (UiEvent) -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val scrollState = rememberScrollState()
+    var showUnsavedChangesDialog by remember { mutableStateOf(false) }
+    val hasUnsavedChanges = uiState.rule.triggers.isNotEmpty() || uiState.rule.actions.isNotEmpty()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        when (uiState.currentStep) {
-                            1 -> if (uiState.rule.id == null) "New rule" else "Edit rule"
-                            else -> "Save"
-                        },
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        if (uiState.currentStep == 2) {
-                            onEvent(UiEvent.OnBackToLogicClicked)
-                        } else {
-                            onEvent(UiEvent.OnBackClicked)
-                        }
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
-                actions = {
-                    // Show delete icon only when editing an existing rule
-                    if (uiState.rule.id != null) {
-                        IconButton(onClick = { onEvent(UiEvent.OnDeleteClicked) }) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete rule",
-                            )
-                        }
+            RuleEditorTopBar(
+                uiState = uiState,
+                onEvent = onEvent,
+                onBackClicked = {
+                    when {
+                        uiState.currentStep == 2 -> onEvent(UiEvent.OnBackToLogicClicked)
+                        hasUnsavedChanges -> showUnsavedChangesDialog = true
+                        else -> onEvent(UiEvent.OnBackClicked)
                     }
                 },
             )
@@ -157,59 +152,165 @@ private fun RuleEditorScreenContent(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            // Main content with step-based animation
-            AnimatedContent(
-                targetState = uiState.currentStep,
-                transitionSpec = {
-                    if (targetState > initialState) {
-                        slideInHorizontally { width -> width } togetherWith
-                            slideOutHorizontally { width -> -width }
-                    } else {
-                        slideInHorizontally { width -> -width } togetherWith
-                            slideOutHorizontally { width -> width }
-                    }
+            RuleEditorSteps(
+                uiState = uiState,
+                onEvent = onEvent,
+                scrollState = scrollState,
+                onCancelClicked = {
+                    if (hasUnsavedChanges) showUnsavedChangesDialog = true else onEvent(UiEvent.OnBackClicked)
                 },
-                modifier = Modifier.fillMaxSize(),
-            ) { step ->
-                when (step) {
-                    1 -> LogicStep(
-                        uiState = uiState,
-                        onEvent = onEvent,
-                        scrollState = scrollState,
-                    )
-                    2 -> MetadataStep(
-                        uiState = uiState,
-                        onEvent = onEvent,
-                        scrollState = scrollState,
-                    )
-                }
-            }
+            )
 
             RuleEditorBottomSheets(uiState = uiState, onEvent = onEvent)
 
-            // Delete confirmation dialog
-            if (uiState.showDeleteConfirmation) {
-                AlertDialog(
-                    onDismissRequest = { onEvent(UiEvent.OnDeleteDismissed) },
-                    title = { Text("Delete Rule") },
-                    text = { Text("Are you sure you want to delete this rule? This action cannot be undone.") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = { onEvent(UiEvent.OnDeleteConfirmed) },
-                        ) {
-                            Text("Delete", color = MaterialTheme.colorScheme.error)
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(
-                            onClick = { onEvent(UiEvent.OnDeleteDismissed) },
-                        ) {
-                            Text("Cancel")
-                        }
-                    },
+            RuleEditorDialogs(
+                uiState = uiState,
+                onEvent = onEvent,
+                showUnsavedChangesDialog = showUnsavedChangesDialog,
+                onDismissUnsavedChangesDialog = { showUnsavedChangesDialog = false },
+            )
+        }
+    }
+}
+
+/** Step indicator + animated Logic/Metadata step switcher. */
+@Composable
+private fun RuleEditorSteps(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState,
+    onCancelClicked: () -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        StepIndicator(
+            currentStep = uiState.currentStep,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+        )
+
+        AnimatedContent(
+            targetState = uiState.currentStep,
+            transitionSpec = {
+                if (targetState > initialState) {
+                    slideInHorizontally { width -> width } togetherWith
+                        slideOutHorizontally { width -> -width }
+                } else {
+                    slideInHorizontally { width -> -width } togetherWith
+                        slideOutHorizontally { width -> width }
+                }
+            },
+            modifier = Modifier.weight(1f),
+        ) { step ->
+            when (step) {
+                1 -> LogicStep(
+                    uiState = uiState,
+                    onEvent = onEvent,
+                    scrollState = scrollState,
+                    onCancelClicked = onCancelClicked,
+                )
+                2 -> MetadataStep(
+                    uiState = uiState,
+                    onEvent = onEvent,
+                    scrollState = scrollState,
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RuleEditorTopBar(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+    onBackClicked: () -> Unit,
+) {
+    TopAppBar(
+        title = {
+            Text(
+                when (uiState.currentStep) {
+                    1 -> if (uiState.rule.id == null) "New rule" else "Edit rule"
+                    else -> "Name your rule"
+                },
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = onBackClicked) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                )
+            }
+        },
+        actions = {
+            // Show delete icon only when editing an existing rule
+            if (uiState.rule.id != null) {
+                IconButton(onClick = { onEvent(UiEvent.OnDeleteClicked) }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete rule",
+                    )
+                }
+            }
+            if (uiState.currentStep == 2) {
+                TextButton(
+                    onClick = { onEvent(UiEvent.OnSaveClicked) },
+                    enabled = uiState.rule.name.isNotBlank() && !uiState.isLoading,
+                ) {
+                    Text("Save")
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun RuleEditorDialogs(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+    showUnsavedChangesDialog: Boolean,
+    onDismissUnsavedChangesDialog: () -> Unit,
+) {
+    if (uiState.showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { onEvent(UiEvent.OnDeleteDismissed) },
+            title = { Text("Delete Rule") },
+            text = { Text("Are you sure you want to delete this rule? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = { onEvent(UiEvent.OnDeleteConfirmed) }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onEvent(UiEvent.OnDeleteDismissed) }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
+    if (showUnsavedChangesDialog) {
+        AlertDialog(
+            onDismissRequest = onDismissUnsavedChangesDialog,
+            title = { Text("Discard this rule?") },
+            text = { Text("You have unsaved conditions or actions. Leaving now will discard them.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDismissUnsavedChangesDialog()
+                        onEvent(UiEvent.OnBackClicked)
+                    },
+                ) {
+                    Text("Discard", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissUnsavedChangesDialog) {
+                    Text("Keep editing")
+                }
+            },
+        )
     }
 }
 
@@ -320,6 +421,7 @@ private fun LogicStep(
     uiState: UiState,
     onEvent: (UiEvent) -> Unit,
     scrollState: androidx.compose.foundation.ScrollState,
+    onCancelClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -375,47 +477,71 @@ private fun LogicStep(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Test against history
-        OutlinedButton(
-            onClick = { onEvent(UiEvent.OnTestAgainstHistoryClicked) },
-            enabled = !uiState.isBacktesting,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Default.History,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(if (uiState.isBacktesting) "Testing..." else "Test against history")
-        }
+        TestAgainstHistoryButton(uiState = uiState, onEvent = onEvent)
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Bottom actions
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            OutlinedButton(
-                onClick = { onEvent(UiEvent.OnBackClicked) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text("Cancel")
-            }
-
-            Button(
-                onClick = { onEvent(UiEvent.OnContinueClicked) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text("Continue")
-            }
-        }
+        LogicStepBottomActions(onCancelClicked = onCancelClicked, onEvent = onEvent)
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun TestAgainstHistoryButton(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+) {
+    // Gated so the first tap doesn't test an empty rule against the entire notification history.
+    val canTestAgainstHistory = uiState.rule.triggers.isNotEmpty() || uiState.rule.targetApps.isNotEmpty()
+
+    OutlinedButton(
+        onClick = { onEvent(UiEvent.OnTestAgainstHistoryClicked) },
+        enabled = !uiState.isBacktesting && canTestAgainstHistory,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Default.History,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(if (uiState.isBacktesting) "Testing..." else "Test against history")
+    }
+    if (!canTestAgainstHistory) {
+        Text(
+            text = "Add a condition or app to test against history",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun LogicStepBottomActions(
+    onCancelClicked: () -> Unit,
+    onEvent: (UiEvent) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        OutlinedButton(
+            onClick = onCancelClicked,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text("Cancel")
+        }
+
+        Button(
+            onClick = { onEvent(UiEvent.OnContinueClicked) },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text("Continue")
+        }
     }
 }
 
@@ -496,26 +622,13 @@ private fun MetadataStep(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Bottom actions
-        Row(
+        // Back is the only bottom action now - Save moved to the top bar (Material
+        // convention for editors) so it doesn't compete with the step title for attention.
+        TextButton(
+            onClick = { onEvent(UiEvent.OnBackToLogicClicked) },
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            TextButton(
-                onClick = { onEvent(UiEvent.OnBackToLogicClicked) },
-                modifier = Modifier.weight(1f),
-            ) {
-                Text("Cancel")
-            }
-
-            Button(
-                onClick = { onEvent(UiEvent.OnSaveClicked) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-                enabled = uiState.rule.name.isNotBlank() && !uiState.isLoading,
-            ) {
-                Text("Save")
-            }
+            Text("Back")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -606,6 +719,59 @@ private fun ActionChip(
 @Preview(showBackground = true, device = "id:pixel_5")
 @Composable
 private fun RuleEditorScreenStep1Preview() {
+    NotificappTheme {
+        RuleEditorScreenContent(
+            uiState = UiState(
+                currentStep = 1,
+                rule = RuleUiModel(
+                    name = "ICA Banken Purchase",
+                    targetApps = emptyList(),
+                    triggers = listOf(
+                        RuleCondition(
+                            id = "1",
+                            condition = MatchingCondition.TEXT_CONTENT,
+                            operator = MatchingOperator.CONTAINS,
+                            value = "purchase",
+                        ),
+                    ),
+                    fields = listOf(
+                        RuleField(
+                            id = "1",
+                            name = "Merchant",
+                            method = ExtractionMethod.LineExtraction(10),
+                        ),
+                        RuleField(
+                            id = "2",
+                            name = "Amount",
+                            method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
+                        ),
+                    ),
+                    actions = listOf(
+                        RuleAction(
+                            id = "1",
+                            type = ActionType.SAVE_DATA,
+                            isEnabled = true,
+                        ),
+                    ),
+                ),
+                sampleNotification = Notification(
+                    id = "test",
+                    packageName = "com.ica.banken",
+                    appName = "ICA Banken",
+                    title = "Purchase notification",
+                    content = "Your purchase of 153.50 kr at ICA Kvantum was successful",
+                    rawContent = "Your purchase of 153.50 kr at ICA Kvantum was successful",
+                    timestamp = System.currentTimeMillis(),
+                ),
+            ),
+            onEvent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, device = "id:pixel_5", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun RuleEditorScreenStep1PreviewDark() {
     NotificappTheme {
         RuleEditorScreenContent(
             uiState = UiState(

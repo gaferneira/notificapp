@@ -3,7 +3,6 @@ package dev.gaferneira.notificapp.features.rules.ui
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -27,7 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DoNotDisturb
-import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
@@ -39,18 +38,22 @@ import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -103,12 +106,13 @@ import java.io.InputStream
 @Composable
 fun RulesScreen(
     navigateTo: (Screen, NavOptions?) -> Unit,
-    modifier: Modifier = Modifier,
     viewModel: RulesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showFilterSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     // Handle effects
     LaunchedEffect(Unit) {
@@ -119,15 +123,11 @@ fun RulesScreen(
                 }
 
                 is RulesEffect.ShowError -> {
-                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
+                    coroutineScope.launch { snackbarHostState.showSnackbar(effect.message) }
                 }
 
                 is RulesEffect.ShowSuccess -> {
-                    Toast.makeText(context, effect.message, Toast.LENGTH_SHORT).show()
-                }
-
-                is RulesEffect.ShowDeleteConfirmation -> {
-                    // Could show a confirmation dialog here
+                    coroutineScope.launch { snackbarHostState.showSnackbar(effect.message) }
                 }
 
                 is RulesEffect.ShareRule -> {
@@ -155,7 +155,7 @@ fun RulesScreen(
         onEvent = viewModel::onEvent,
         navigateTo = navigateTo,
         onShowFilterSheet = { showFilterSheet = true },
-        modifier = modifier,
+        snackbarHostState = snackbarHostState,
     )
 }
 
@@ -204,17 +204,98 @@ private suspend fun shareRuleJson(context: Context, ruleName: String, json: Stri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun RulesTopBar(
+    filter: RuleFilter,
+    onShowFilterSheet: () -> Unit,
+    onImportFromFile: () -> Unit,
+    onImportFromClipboard: () -> Unit,
+) {
+    var showImportMenu by remember { mutableStateOf(false) }
+
+    TopAppBar(
+        title = {
+            Text(
+                text = "Rules Management",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        actions = {
+            BadgedBox(
+                badge = {
+                    if (filter.isActive()) {
+                        Badge {
+                            Text(
+                                filter.activeFilterCount().toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
+                },
+            ) {
+                IconButton(onClick = onShowFilterSheet) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Filter and Sort",
+                    )
+                }
+            }
+
+            Box {
+                IconButton(onClick = { showImportMenu = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More options",
+                    )
+                }
+                RulesImportMenu(
+                    expanded = showImportMenu,
+                    onDismiss = { showImportMenu = false },
+                    onImportFromFile = onImportFromFile,
+                    onImportFromClipboard = onImportFromClipboard,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun RulesImportMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    onImportFromFile: () -> Unit,
+    onImportFromClipboard: () -> Unit,
+) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        DropdownMenuItem(
+            text = { Text("Import from file") },
+            onClick = {
+                onDismiss()
+                onImportFromFile()
+            },
+        )
+        DropdownMenuItem(
+            text = { Text("Import from clipboard") },
+            onClick = {
+                onDismiss()
+                onImportFromClipboard()
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 internal fun RulesScreenContent(
     uiState: RulesUiState,
     onEvent: (RulesEvent) -> Unit,
     navigateTo: (Screen, NavOptions?) -> Unit,
     onShowFilterSheet: () -> Unit,
-    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
-    var showImportMenu by remember { mutableStateOf(false) }
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -235,67 +316,16 @@ internal fun RulesScreenContent(
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Rules Management",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                actions = {
-                    BadgedBox(
-                        badge = {
-                            if (uiState.filter.isActive()) {
-                                Badge {
-                                    Text(
-                                        uiState.filter.activeFilterCount().toString(),
-                                        style = MaterialTheme.typography.labelSmall,
-                                    )
-                                }
-                            }
-                        },
-                    ) {
-                        IconButton(
-                            onClick = onShowFilterSheet,
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Tune,
-                                contentDescription = "Filter and Sort",
-                            )
-                        }
-                    }
-
-                    Box {
-                        IconButton(onClick = { showImportMenu = true }) {
-                            Icon(
-                                imageVector = Icons.Default.FileDownload,
-                                contentDescription = "Import rule",
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showImportMenu,
-                            onDismissRequest = { showImportMenu = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Import from file") },
-                                onClick = {
-                                    showImportMenu = false
-                                    filePickerLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Import from clipboard") },
-                                onClick = {
-                                    showImportMenu = false
-                                    val text = clipboardManager.getText()?.text.orEmpty()
-                                    onEvent(RulesEvent.OnRuleTextReceived(text))
-                                },
-                            )
-                        }
-                    }
+            RulesTopBar(
+                filter = uiState.filter,
+                onShowFilterSheet = onShowFilterSheet,
+                onImportFromFile = { filePickerLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                onImportFromClipboard = {
+                    val text = clipboardManager.getText()?.text.orEmpty()
+                    onEvent(RulesEvent.OnRuleTextReceived(text))
                 },
             )
         },
@@ -306,53 +336,62 @@ internal fun RulesScreenContent(
             )
         },
         floatingActionButton = {
-            IconButton(
+            ExtendedFloatingActionButton(
                 onClick = { onEvent(RulesEvent.OnAddRuleClick) },
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(
-                        MaterialTheme.colorScheme.primary,
-                        CircleShape,
-                    ),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add Rule",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-            }
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                text = { Text("New rule") },
+            )
         },
     ) { innerPadding ->
-        Column(
+        RulesBody(
+            uiState = uiState,
+            onEvent = onEvent,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-        ) {
-            when (val rulesResource = uiState.rules) {
-                is Resource.Loading -> {
-                    LoadingState()
-                }
+        )
+    }
 
-                is Resource.Error -> {
-                    ErrorState(
-                        failure = rulesResource.failure,
-                        onRetry = { onEvent(RulesEvent.LoadRules) },
-                    )
-                }
+    RulesImportDialogs(uiState = uiState, onEvent = onEvent)
+}
 
-                is Resource.Success -> {
-                    SuccessState(
-                        rules = rulesResource.data ?: emptyList(),
-                        searchQuery = uiState.searchQuery,
-                        filter = uiState.filter,
-                        onEvent = onEvent,
-                    )
-                }
+@Composable
+private fun RulesBody(
+    uiState: RulesUiState,
+    onEvent: (RulesEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        when (val rulesResource = uiState.rules) {
+            is Resource.Loading -> {
+                LoadingState()
+            }
+
+            is Resource.Error -> {
+                ErrorState(
+                    failure = rulesResource.failure,
+                    onRetry = { onEvent(RulesEvent.LoadRules) },
+                )
+            }
+
+            is Resource.Success -> {
+                SuccessState(
+                    rules = rulesResource.data ?: emptyList(),
+                    searchQuery = uiState.searchQuery,
+                    filter = uiState.filter,
+                    onEvent = onEvent,
+                )
             }
         }
     }
+}
 
+@Composable
+private fun RulesImportDialogs(
+    uiState: RulesUiState,
+    onEvent: (RulesEvent) -> Unit,
+) {
     uiState.importPreview?.let { preview ->
         ImportPreviewDialog(
             rule = preview,
@@ -481,11 +520,8 @@ private fun ErrorState(
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(modifier = Modifier.height(16.dp))
-        IconButton(onClick = onRetry) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Retry",
-            )
+        Button(onClick = onRetry) {
+            Text("Retry")
         }
     }
 }
@@ -728,14 +764,14 @@ private fun RuleCard(
         }
     }
 
-    // Get app name
-    val appName: String? = remember(rule.targetApps) {
-        if (rule.targetApps.isNullOrEmpty()) {
-            return@remember "All apps"
-        } else if (rule.targetApps.size == 1) {
-            primaryApp?.name
-        } else {
-            "Apps: " + rule.targetApps.joinToString(", ") { it.name }
+    // Target apps label - "N apps" for multi-app rules instead of a raw joined list, which
+    // both avoids an unbounded line length and avoids double-prefixing with "App:"/"Apps:"
+    // (RuleCardInfo already renders "App: $appName").
+    val appName: String = remember(rule.targetApps) {
+        when {
+            rule.targetApps.isNullOrEmpty() -> "All apps"
+            rule.targetApps.size == 1 -> primaryApp?.name ?: "1 app"
+            else -> "${rule.targetApps.size} apps"
         }
     }
 
@@ -764,7 +800,7 @@ private fun RuleCard(
 private fun RuleCardInfo(
     rule: Rule,
     appIcon: ImageBitmap?,
-    appName: String?,
+    appName: String,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -812,7 +848,7 @@ private fun RuleCardInfo(
             }
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = if (appName != null) "App: $appName" else "App: All apps",
+                text = "App: $appName",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

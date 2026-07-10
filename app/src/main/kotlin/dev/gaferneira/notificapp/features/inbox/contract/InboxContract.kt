@@ -12,6 +12,8 @@ data class InboxUiState(
     val selectedApps: List<String> = emptyList(),
     val statusFilter: Status = Status.ALL,
     val searchQuery: String = "",
+    /** Whether notification listener access is currently granted */
+    val isNotificationListenerActive: Boolean = true,
 )
 
 /**
@@ -61,6 +63,9 @@ sealed interface InboxEvent {
         val statusFilter: Status = Status.ALL,
     ) : InboxEvent
     data class OnNotificationClick(val notificationId: String) : InboxEvent
+
+    /** Re-check notification listener status (called on resume) */
+    data object OnResume : InboxEvent
 }
 
 /**
@@ -69,5 +74,4 @@ sealed interface InboxEvent {
 sealed interface InboxEffect {
     data class NavigateToNotificationDetail(val notificationId: String) : InboxEffect
     data class ShowError(val message: String) : InboxEffect
-    data object ShowPermissionRequired : InboxEffect
 }

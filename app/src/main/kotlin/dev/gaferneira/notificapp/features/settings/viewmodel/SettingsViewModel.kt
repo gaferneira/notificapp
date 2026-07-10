@@ -1,7 +1,6 @@
 package dev.gaferneira.notificapp.features.settings.viewmodel
 
 import android.content.Context
-import android.provider.Settings
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -12,6 +11,7 @@ import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEffect
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEvent
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiState
+import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
@@ -54,6 +54,22 @@ class SettingsViewModel @Inject constructor(
             is UiEvent.OnDismissError -> {
                 setState { copy(error = null) }
             }
+            is UiEvent.OnResume -> checkListenerStatus()
+        }
+    }
+
+    /**
+     * Re-checks the notification listener status on the IO dispatcher,
+     * matching the pattern used in [observeSettings].
+     */
+    private fun checkListenerStatus() {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val isListenerActive = isNotificationListenerEnabled(context)
+                setState { copy(isNotificationListenerActive = isListenerActive) }
+            } catch (e: SecurityException) {
+                Timber.e(e, "Failed to check notification listener status")
+            }
         }
     }
 
@@ -64,7 +80,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // Check notification listener status (one-time check)
-                val isListenerActive = isNotificationServiceEnabled()
+                val isListenerActive = isNotificationListenerEnabled(context)
                 setState {
                     copy(
                         isNotificationListenerActive = isListenerActive,
@@ -98,17 +114,5 @@ class SettingsViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    /**
-     * Check if notification listener service is enabled.
-     */
-    private fun isNotificationServiceEnabled(): Boolean {
-        val packageName = context.packageName
-        val flat = Settings.Secure.getString(
-            context.contentResolver,
-            "enabled_notification_listeners",
-        )
-        return flat?.contains(packageName) == true
     }
 }

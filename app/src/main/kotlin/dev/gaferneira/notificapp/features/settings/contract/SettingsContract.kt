@@ -54,6 +54,9 @@ object SettingsContract {
 
         /** User dismissed error */
         data object OnDismissError : UiEvent()
+
+        /** Re-check notification listener status (called on resume) */
+        data object OnResume : UiEvent()
     }
 
     /**
@@ -62,9 +65,6 @@ object SettingsContract {
     sealed class UiEffect {
         /** Navigate to app selection screen */
         data object NavigateToAppSelection : UiEffect()
-
-        /** Navigate to notification settings */
-        data object NavigateToNotificationSettings : UiEffect()
 
         /** Show error message */
         data class ShowError(val message: String) : UiEffect()

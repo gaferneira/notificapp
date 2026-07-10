@@ -48,7 +48,6 @@ sealed interface RulesEvent {
 sealed interface RulesEffect {
     data class NavigateToRuleEditor(val ruleId: String? = null) : RulesEffect
     data class ShowError(val message: String) : RulesEffect
-    data class ShowDeleteConfirmation(val ruleId: String) : RulesEffect
     data class ShareRule(val ruleName: String, val json: String) : RulesEffect
     data class ShowSuccess(val message: String) : RulesEffect
 }

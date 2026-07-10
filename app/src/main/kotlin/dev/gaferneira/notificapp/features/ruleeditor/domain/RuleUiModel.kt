@@ -20,8 +20,12 @@ data class RuleUiModel(
     val description: String = "",
     /** Rule category */
     val category: String = "",
-    /** When true, matches are logged but no actions execute */
-    val isDryRun: Boolean = false,
+    /**
+     * When true, matches are logged but no actions execute. Defaults to true for new
+     * rules (id == null) so a rule can be trialed before it's trusted to act on real
+     * notifications - matches the default already used for imported rules.
+     */
+    val isDryRun: Boolean = true,
     /** Target app package names (empty = all apps) */
     val targetApps: List<AppInfo> = emptyList(),
     /** List of configured triggers */

@@ -11,6 +11,7 @@ import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEffect
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEvent
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiState
+import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -31,6 +32,8 @@ class OnboardingViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val navigationHandler: NavigationHandler,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
+
+    private var hasRequestedNotificationAccess = false
 
     init {
         checkPermissionStatus()
@@ -75,6 +78,7 @@ class OnboardingViewModel @Inject constructor(
      * Open system notification listener settings.
      */
     private fun openNotificationSettings() {
+        hasRequestedNotificationAccess = true
         sendEffect(UiEffect.OpenNotificationSettings)
     }
 
@@ -97,12 +101,13 @@ class OnboardingViewModel @Inject constructor(
             // Small delay to prevent UI flickering
             delay(100)
 
-            val hasPermission = isNotificationServiceEnabled()
+            val hasPermission = isNotificationListenerEnabled(context)
 
             setState {
                 copy(
                     hasNotificationPermission = hasPermission,
                     isLoading = false,
+                    showPermissionDeniedHint = hasRequestedNotificationAccess && !hasPermission,
                 )
             }
 
@@ -111,17 +116,5 @@ class OnboardingViewModel @Inject constructor(
                 navigateToMainApp()
             }
         }
-    }
-
-    /**
-     * Check if our notification listener service is enabled.
-     */
-    private fun isNotificationServiceEnabled(): Boolean {
-        val packageName = context.packageName
-        val flat = android.provider.Settings.Secure.getString(
-            context.contentResolver,
-            "enabled_notification_listeners",
-        )
-        return flat?.contains(packageName) == true
     }
 }
