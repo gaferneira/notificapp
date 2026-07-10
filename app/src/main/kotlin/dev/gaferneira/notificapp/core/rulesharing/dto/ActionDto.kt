@@ -8,6 +8,9 @@ import kotlinx.serialization.Serializable
  * the domain `ActionType` enum: an unrecognized action type (e.g. a rule exported from a newer
  * app version with an action this version doesn't have) must not fail the whole import -
  * `RuleWireMapper` drops just that action and reports it as skipped.
+ *
+ * [fields] nests the extraction fields owned by the `save_data` action (schemaVersion 2+); every
+ * other action type omits it (empty).
  */
 @Serializable
 data class ActionDto(
@@ -15,4 +18,5 @@ data class ActionDto(
     @SerialName("type") val type: String,
     @SerialName("isEnabled") val isEnabled: Boolean = true,
     @SerialName("config") val config: Map<String, String> = emptyMap(),
+    @SerialName("fields") val fields: List<FieldDto> = emptyList(),
 )

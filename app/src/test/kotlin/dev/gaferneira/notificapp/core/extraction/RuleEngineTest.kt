@@ -1,9 +1,11 @@
 package dev.gaferneira.notificapp.core.extraction
 
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleMatch
+import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestCondition
 import dev.gaferneira.notificapp.testutil.createTestField
 import dev.gaferneira.notificapp.testutil.createTestNotification
@@ -32,7 +34,8 @@ class RuleEngineTest {
             id = "amount",
             method = RuleField.ExtractionMethod.TextAfterKeyword(keyword = "Totalt: "),
         )
-        val rule = createTestRule(conditions = listOf(condition), fields = listOf(field))
+        val saveDataAction = createTestAction(type = ActionType.SAVE_DATA, fields = listOf(field))
+        val rule = createTestRule(conditions = listOf(condition), actions = listOf(saveDataAction))
 
         // When: evaluating the notification against the rule
         val result = ruleEngine.evaluate(notification, listOf(rule))
@@ -77,7 +80,8 @@ class RuleEngineTest {
             method = RuleField.ExtractionMethod.TextAfterKeyword(keyword = "Totalt: "),
             isRequired = true,
         )
-        val rule = createTestRule(conditions = listOf(condition), fields = listOf(requiredField))
+        val saveDataAction = createTestAction(type = ActionType.SAVE_DATA, fields = listOf(requiredField))
+        val rule = createTestRule(conditions = listOf(condition), actions = listOf(saveDataAction))
 
         // When: evaluating the notification against the rule
         val result = ruleEngine.evaluate(notification, listOf(rule))
@@ -98,12 +102,32 @@ class RuleEngineTest {
             operator = MatchingOperator.CONTAINS,
             value = "ICA",
         )
-        val rule = createTestRule(conditions = listOf(condition), fields = emptyList())
+        val rule = createTestRule(conditions = listOf(condition))
 
         // When: evaluating the notification against the rule
         val result = ruleEngine.evaluate(notification, listOf(rule))
 
         // Then: a single match is produced with no extracted data
+        result.size shouldBe 1
+        result[0].extractedData shouldBe emptyMap()
+    }
+
+    @Test
+    fun `rule with no SAVE_DATA action extracts nothing`() {
+        // Given: a rule whose conditions match but has no SAVE_DATA action at all
+        val notification = createTestNotification(title = "ICA Kvantum", content = "Totalt: 153,50 kr")
+        val condition = createTestCondition(
+            condition = MatchingCondition.TITLE,
+            operator = MatchingOperator.CONTAINS,
+            value = "ICA",
+        )
+        val dismiss = createTestAction(type = ActionType.DISMISS_NOTIFICATION)
+        val rule = createTestRule(conditions = listOf(condition), actions = listOf(dismiss))
+
+        // When: evaluating the notification against the rule
+        val result = ruleEngine.evaluate(notification, listOf(rule))
+
+        // Then: the rule matches but nothing is extracted - fields are sourced from saveDataFields()
         result.size shouldBe 1
         result[0].extractedData shouldBe emptyMap()
     }

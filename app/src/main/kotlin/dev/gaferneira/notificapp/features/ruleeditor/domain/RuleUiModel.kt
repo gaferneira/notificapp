@@ -1,10 +1,12 @@
 package dev.gaferneira.notificapp.features.ruleeditor.domain
 
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.saveDataFields
 import java.util.UUID
 
 /**
@@ -41,12 +43,24 @@ data class RuleUiModel(
         description = description.takeIf { it.isNotBlank() },
         category = category,
         conditions = triggers,
-        actions = actions,
+        actions = actionsWithFieldsAttached(),
         isActive = true,
         isDryRun = isDryRun,
         targetApps = targetApps,
-        fields = fields,
     )
+
+    /**
+     * Attach the draft [fields] to the `SAVE_DATA` action, creating one if the draft has fields
+     * but no such action yet. Every other action is passed through untouched.
+     */
+    private fun actionsWithFieldsAttached(): List<RuleAction> {
+        val hasSaveDataAction = actions.any { it.type == ActionType.SAVE_DATA }
+        return when {
+            hasSaveDataAction -> actions.map { if (it.type == ActionType.SAVE_DATA) it.copy(fields = fields) else it }
+            fields.isNotEmpty() -> actions + RuleAction.createSaveData(id = UUID.randomUUID().toString(), fields = fields)
+            else -> actions
+        }
+    }
 
     companion object {
         /**
@@ -61,7 +75,7 @@ data class RuleUiModel(
             targetApps = rule.targetApps ?: emptyList(),
             triggers = rule.conditions,
             actions = rule.actions,
-            fields = rule.fields,
+            fields = rule.saveDataFields(),
         )
     }
 }

@@ -8,6 +8,7 @@ import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
+import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestCondition
 import dev.gaferneira.notificapp.testutil.createTestField
@@ -20,6 +21,12 @@ import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 
 class RuleJsonCodecTest {
+
+    private val fields = listOf(
+        // A method with its own fields, not just a zero-argument "smart" one - regression
+        // coverage for the classDiscriminator/property-name collision this DTO layer fixes.
+        createTestField(id = "f1", name = "Amount", method = ExtractionMethod.TextAfterKeyword(keyword = "Total: ", maxLength = 20)),
+    )
 
     private val rule = createTestRule(
         id = "rule-1",
@@ -34,12 +41,7 @@ class RuleJsonCodecTest {
                 value = "Payment received",
             ),
         ),
-        fields = listOf(
-            // A method with its own fields, not just a zero-argument "smart" one - regression
-            // coverage for the classDiscriminator/property-name collision this DTO layer fixes.
-            createTestField(id = "f1", name = "Amount", method = ExtractionMethod.TextAfterKeyword(keyword = "Total: ", maxLength = 20)),
-        ),
-        actions = listOf(createTestAction(id = "a1", type = ActionType.SAVE_DATA)),
+        actions = listOf(createTestAction(id = "a1", type = ActionType.SAVE_DATA, fields = fields)),
     )
 
     @Test
@@ -55,7 +57,7 @@ class RuleJsonCodecTest {
         decodedRule.category shouldBe rule.category
         decodedRule.targetApps shouldBe rule.targetApps
         decodedRule.conditions shouldBe rule.conditions
-        decodedRule.fields shouldBe rule.fields
+        decodedRule.saveDataFields() shouldBe rule.saveDataFields()
         decodedRule.actions shouldBe rule.actions
     }
 
@@ -143,7 +145,7 @@ class RuleJsonCodecTest {
         // Then: the rule and every nested id changed, and it starts active + dry-run
         imported.id shouldNotBe decodedRule.id
         imported.conditions.single().id shouldNotBe decodedRule.conditions.single().id
-        imported.fields.single().id shouldNotBe decodedRule.fields.single().id
+        imported.saveDataFields().single().id shouldNotBe decodedRule.saveDataFields().single().id
         imported.actions.single().id shouldNotBe decodedRule.actions.single().id
         imported.isActive shouldBe true
         imported.isDryRun shouldBe true
@@ -161,7 +163,7 @@ class RuleJsonCodecTest {
         // Then: every id differs between the two imports
         firstImport.id shouldNotBe secondImport.id
         firstImport.conditions.single().id shouldNotBe secondImport.conditions.single().id
-        firstImport.fields.single().id shouldNotBe secondImport.fields.single().id
+        firstImport.saveDataFields().single().id shouldNotBe secondImport.saveDataFields().single().id
         firstImport.actions.single().id shouldNotBe secondImport.actions.single().id
     }
 }

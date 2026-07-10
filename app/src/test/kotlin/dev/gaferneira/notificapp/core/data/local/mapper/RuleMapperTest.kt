@@ -4,44 +4,34 @@ import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestField
-import io.kotest.matchers.collections.shouldHaveSize
+import dev.gaferneira.notificapp.testutil.createTestRule
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 
 class RuleMapperTest {
 
-    private val field = createTestField(method = RuleField.ExtractionMethod.RegexPattern("\\d+"))
-
     @Test
-    fun `synthesizes an enabled SAVE_DATA action when fields exist and none is present`() {
-        // Given: a legacy rule shape - fields but only a non-SAVE_DATA action
-        val dismiss = createTestAction(id = "dismiss-1", type = ActionType.DISMISS_NOTIFICATION)
+    fun `fields round-trip under the SAVE_DATA action`() {
+        // Given: a rule with an enabled SAVE_DATA action carrying two fields, plus another action
+        val fieldOne = createTestField(id = "f1", method = RuleField.ExtractionMethod.RegexPattern("\\d+"))
+        val fieldTwo = createTestField(id = "f2", method = RuleField.ExtractionMethod.SmartAmountDetection)
+        val saveDataAction = createTestAction(id = "save-1", type = ActionType.SAVE_DATA, fields = listOf(fieldOne, fieldTwo))
+        val dismissAction = createTestAction(id = "dismiss-1", type = ActionType.DISMISS_NOTIFICATION)
+        val rule = createTestRule(id = "rule-1", actions = listOf(saveDataAction, dismissAction))
 
-        // When: normalizing
-        val result = RuleMapper.normalizeActions(listOf(dismiss), listOf(field))
+        // When: mapping to entities and back (round-tripping through entity mapping)
+        val entity = RuleMapper.toEntity(rule)
+        val actionEntities = RuleMapper.actionsToEntityList(rule.actions, rule.id)
+        val fieldEntities = RuleMapper.fieldsToEntityList(rule.actions)
+        val domain = RuleMapper.toDomain(entity, fieldEntities, emptyList(), actionEntities)
 
-        // Then: an enabled SAVE_DATA action is added alongside the original
-        result shouldHaveSize 2
-        val saveData = result.single { it.type == ActionType.SAVE_DATA }
-        saveData.isEnabled shouldBe true
-    }
+        // Then: the loaded rule's SAVE_DATA action carries the same two fields
+        val loadedSaveData = domain.actions.single { it.type == ActionType.SAVE_DATA }
+        loadedSaveData.fields shouldBe listOf(fieldOne, fieldTwo)
 
-    @Test
-    fun `does not add SAVE_DATA action when there are no fields`() {
-        val dismiss = createTestAction(id = "dismiss-1", type = ActionType.DISMISS_NOTIFICATION)
-
-        val result = RuleMapper.normalizeActions(listOf(dismiss), emptyList())
-
-        result shouldBe listOf(dismiss)
-    }
-
-    @Test
-    fun `leaves a disabled SAVE_DATA action untouched even with fields`() {
-        // A disabled SAVE_DATA action is a deliberate post-change state, not legacy decoupling
-        val disabledSaveData = createTestAction(id = "save-1", type = ActionType.SAVE_DATA, isEnabled = false)
-
-        val result = RuleMapper.normalizeActions(listOf(disabledSaveData), listOf(field))
-
-        result shouldBe listOf(disabledSaveData)
+        // And: no other action type carries any fields
+        val loadedDismiss = domain.actions.single { it.type == ActionType.DISMISS_NOTIFICATION }
+        loadedDismiss.fields.shouldBeEmpty()
     }
 }

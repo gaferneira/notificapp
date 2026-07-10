@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "16624826e8675b827be272495fc0abe0",
+    "identityHash": "4d08f39b2c470ab4001f36457912ce72",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -153,7 +153,7 @@
       },
       {
         "tableName": "rules",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT, `category` TEXT, `is_active` INTEGER NOT NULL, `is_global` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT, `category` TEXT, `is_active` INTEGER NOT NULL, `is_dry_run` INTEGER NOT NULL DEFAULT 0, `is_global` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -182,6 +182,13 @@
             "columnName": "is_active",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "isDryRun",
+            "columnName": "is_dry_run",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
           },
           {
             "fieldPath": "isGlobal",
@@ -289,7 +296,7 @@
       },
       {
         "tableName": "rule_fields",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `rule_id` TEXT NOT NULL, `name` TEXT NOT NULL, `field_type` TEXT NOT NULL, `method_type` TEXT NOT NULL, `method_config` TEXT NOT NULL, `is_required` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`rule_id`) REFERENCES `rules`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `action_id` TEXT NOT NULL, `name` TEXT NOT NULL, `field_type` TEXT NOT NULL, `method_type` TEXT NOT NULL, `method_config` TEXT NOT NULL, `is_required` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`action_id`) REFERENCES `rule_actions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -298,8 +305,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "ruleId",
-            "columnName": "rule_id",
+            "fieldPath": "actionId",
+            "columnName": "action_id",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -342,22 +349,22 @@
         },
         "indices": [
           {
-            "name": "index_rule_fields_rule_id",
+            "name": "index_rule_fields_action_id",
             "unique": false,
             "columnNames": [
-              "rule_id"
+              "action_id"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_rule_fields_rule_id` ON `${TABLE_NAME}` (`rule_id`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_rule_fields_action_id` ON `${TABLE_NAME}` (`action_id`)"
           }
         ],
         "foreignKeys": [
           {
-            "table": "rules",
+            "table": "rule_actions",
             "onDelete": "CASCADE",
             "onUpdate": "NO ACTION",
             "columns": [
-              "rule_id"
+              "action_id"
             ],
             "referencedColumns": [
               "id"
@@ -497,7 +504,7 @@
       },
       {
         "tableName": "rule_executions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `notification_id` TEXT NOT NULL, `rule_id` TEXT NOT NULL, `extracted_data` TEXT NOT NULL, `triggered_actions` TEXT NOT NULL, `created_at` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`notification_id`) REFERENCES `notifications`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`rule_id`) REFERENCES `rules`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `notification_id` TEXT NOT NULL, `rule_id` TEXT NOT NULL, `extracted_data` TEXT NOT NULL, `triggered_actions` TEXT NOT NULL, `action_outcomes` TEXT, `was_dry_run` INTEGER NOT NULL DEFAULT 0, `created_at` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`notification_id`) REFERENCES `notifications`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`rule_id`) REFERENCES `rules`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -528,6 +535,18 @@
             "columnName": "triggered_actions",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "actionOutcomes",
+            "columnName": "action_outcomes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "wasDryRun",
+            "columnName": "was_dry_run",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
           },
           {
             "fieldPath": "createdAt",
@@ -706,7 +725,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '16624826e8675b827be272495fc0abe0')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4d08f39b2c470ab4001f36457912ce72')"
     ]
   }
 }

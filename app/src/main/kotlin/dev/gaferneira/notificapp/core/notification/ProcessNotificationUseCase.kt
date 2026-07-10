@@ -8,7 +8,7 @@ import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleMatch
-import dev.gaferneira.notificapp.domain.model.hasEnabledSaveDataAction
+import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
@@ -115,12 +115,8 @@ class ProcessNotificationUseCase @Inject constructor(
                 val execution = match.toExecution(notification.id, outcomes)
                 // Extraction persistence is gated by the Extract-data (SAVE_DATA) action: without an
                 // enabled one, field values are not saved, even though the execution record (and any
-                // other action outcomes) still are.
-                val fieldsToPersist = if (match.rule.actions.hasEnabledSaveDataAction()) {
-                    match.rule.fields
-                } else {
-                    emptyList()
-                }
+                // other action outcomes) still are. saveDataFields() is naturally empty in that case.
+                val fieldsToPersist = match.rule.saveDataFields()
                 ruleExecutionRepository.saveExecution(execution, fieldsToPersist)
                     .fold(
                         onSuccess = { execution },

@@ -3,6 +3,7 @@ package dev.gaferneira.notificapp.core.extraction
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleMatch
+import dev.gaferneira.notificapp.domain.model.saveDataFields
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -43,7 +44,7 @@ class RuleEngine @Inject constructor() {
 
         val extractedData = extractFields(notification, rule)
 
-        if (extractedData.isEmpty() && rule.fields.isNotEmpty()) {
+        if (extractedData.isEmpty() && rule.saveDataFields().isNotEmpty()) {
             Timber.w("Rule ${rule.id} matched but no fields could be extracted")
         }
 
@@ -60,7 +61,7 @@ class RuleEngine @Inject constructor() {
         val extractedData = mutableMapOf<String, String>()
         val sourceText = notification.rawContent
 
-        for (field in rule.fields) {
+        for (field in rule.saveDataFields()) {
             val result = FieldExtractor.extract(sourceText, field)
 
             if (result is ExtractionResult.Success) {

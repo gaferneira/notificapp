@@ -87,6 +87,12 @@ data class RuleAction(
     val type: ActionType,
     val isEnabled: Boolean = true,
     val config: Map<String, String> = emptyMap(),
+    /**
+     * Extraction fields owned by this action. Only populated for [ActionType.SAVE_DATA] - every
+     * other action type leaves this empty. `RuleField` is structured (a sealed `ExtractionMethod`),
+     * so it is a first-class property rather than a `config` map entry.
+     */
+    val fields: List<RuleField> = emptyList(),
 ) {
     /**
      * Get snooze duration in minutes, or default if not set.
@@ -126,6 +132,20 @@ data class RuleAction(
         .coerceIn(MIN_FLASH_DURATION_MS, MAX_FLASH_DURATION_MS)
 
     companion object {
+        /**
+         * Create a `SAVE_DATA` ("Extract data") action carrying the given fields.
+         */
+        fun createSaveData(
+            id: String,
+            fields: List<RuleField> = emptyList(),
+            isEnabled: Boolean = true,
+        ): RuleAction = RuleAction(
+            id = id,
+            type = ActionType.SAVE_DATA,
+            isEnabled = isEnabled,
+            fields = fields,
+        )
+
         /**
          * Create a snooze action with specified duration.
          */
@@ -179,13 +199,6 @@ data class RuleAction(
         )
     }
 }
-
-/**
- * Whether this list contains an enabled `SAVE_DATA` ("Extract data") action. When false, a matched
- * rule's extracted field values are not persisted - the Extract-data action is the gate for
- * extraction persistence (see `ProcessNotificationUseCase`).
- */
-fun List<RuleAction>.hasEnabledSaveDataAction(): Boolean = any { it.type == ActionType.SAVE_DATA && it.isEnabled }
 
 /**
  * Type of action to perform when rule matches.

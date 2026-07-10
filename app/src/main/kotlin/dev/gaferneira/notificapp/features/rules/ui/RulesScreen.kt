@@ -91,6 +91,7 @@ import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.domain.model.Rule
+import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
 import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
@@ -441,7 +442,7 @@ private fun ImportPreviewDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
                 Text(
-                    text = "${rule.conditions.size} condition(s), ${rule.fields.size} field(s), ${rule.actions.size} action(s)",
+                    text = "${rule.conditions.size} condition(s), ${rule.saveDataFields().size} field(s), ${rule.actions.size} action(s)",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
@@ -904,7 +905,6 @@ private fun RulesScreenPreview() {
                             category = "Finance",
                             isActive = true,
                             targetApps = emptyList(),
-                            fields = emptyList(),
                             actions = emptyList(),
                         ),
                         Rule(
@@ -914,7 +914,6 @@ private fun RulesScreenPreview() {
                             category = "Finance",
                             isActive = false,
                             targetApps = emptyList(),
-                            fields = emptyList(),
                             actions = emptyList(),
                         ),
                         Rule(
@@ -924,7 +923,6 @@ private fun RulesScreenPreview() {
                             category = "Deliveries",
                             isActive = true,
                             targetApps = emptyList(),
-                            fields = emptyList(),
                             actions = emptyList(),
                         ),
                     ),
@@ -954,7 +952,6 @@ private fun RulesScreenPreviewDark() {
                             category = "Finance",
                             isActive = true,
                             targetApps = emptyList(),
-                            fields = emptyList(),
                             actions = emptyList(),
                         ),
                         Rule(
@@ -964,7 +961,6 @@ private fun RulesScreenPreviewDark() {
                             category = "Finance",
                             isActive = false,
                             targetApps = emptyList(),
-                            fields = emptyList(),
                             actions = emptyList(),
                         ),
                         Rule(
@@ -974,7 +970,6 @@ private fun RulesScreenPreviewDark() {
                             category = "Deliveries",
                             isActive = true,
                             targetApps = emptyList(),
-                            fields = emptyList(),
                             actions = emptyList(),
                         ),
                     ),

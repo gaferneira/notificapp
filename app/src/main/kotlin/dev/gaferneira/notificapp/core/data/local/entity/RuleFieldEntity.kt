@@ -7,12 +7,13 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Room entity representing a single extraction field within a rule.
+ * Room entity representing a single extraction field owned by a `SAVE_DATA` ("Extract data")
+ * action.
  *
  * Each field defines one piece of data to extract from notifications.
  *
  * @property id Unique identifier for this field
- * @property ruleId Foreign key to the parent rule
+ * @property actionId Foreign key to the owning `SAVE_DATA` action
  * @property name Human-readable name for the field
  * @property fieldType The type of data this field represents (STRING, NUMBER, DATE, CURRENCY, BOOLEAN)
  * @property methodType The type of extraction method (discriminator)
@@ -23,14 +24,14 @@ import androidx.room.PrimaryKey
     tableName = "rule_fields",
     foreignKeys = [
         ForeignKey(
-            entity = RuleEntity::class,
+            entity = RuleActionEntity::class,
             parentColumns = ["id"],
-            childColumns = ["rule_id"],
+            childColumns = ["action_id"],
             onDelete = ForeignKey.CASCADE,
         ),
     ],
     indices = [
-        Index(value = ["rule_id"]), // For querying fields by rule
+        Index(value = ["action_id"]), // For querying fields by action
     ],
 )
 data class RuleFieldEntity(
@@ -38,8 +39,8 @@ data class RuleFieldEntity(
     @ColumnInfo(name = "id")
     val id: String,
 
-    @ColumnInfo(name = "rule_id")
-    val ruleId: String,
+    @ColumnInfo(name = "action_id")
+    val actionId: String,
 
     @ColumnInfo(name = "name")
     val name: String,

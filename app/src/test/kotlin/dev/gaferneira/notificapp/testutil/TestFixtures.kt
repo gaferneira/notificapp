@@ -72,11 +72,13 @@ fun createTestAction(
     type: ActionType = ActionType.SAVE_DATA,
     isEnabled: Boolean = true,
     config: Map<String, String> = emptyMap(),
+    fields: List<RuleField> = emptyList(),
 ): RuleAction = RuleAction(
     id = id,
     type = type,
     isEnabled = isEnabled,
     config = config,
+    fields = fields,
 )
 
 @Suppress("LongParameterList")
@@ -89,7 +91,6 @@ fun createTestRule(
     isDryRun: Boolean = false,
     targetApps: List<AppInfo>? = null,
     conditions: List<RuleCondition> = emptyList(),
-    fields: List<RuleField> = emptyList(),
     actions: List<RuleAction> = emptyList(),
     createdAt: Long = 0L,
     updatedAt: Long = 0L,
@@ -102,7 +103,6 @@ fun createTestRule(
     isDryRun = isDryRun,
     targetApps = targetApps,
     conditions = conditions,
-    fields = fields,
     actions = actions,
     createdAt = createdAt,
     updatedAt = updatedAt,

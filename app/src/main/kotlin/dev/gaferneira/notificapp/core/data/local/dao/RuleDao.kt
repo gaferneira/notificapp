@@ -190,16 +190,10 @@ interface RuleDao {
     // ========== Rule Field Operations ==========
 
     /**
-     * Get all fields for a specific rule.
+     * Get all fields owned by a specific action (the rule's `SAVE_DATA` action, in practice).
      */
-    @Query("SELECT * FROM rule_fields WHERE rule_id = :ruleId")
-    suspend fun getFieldsForRule(ruleId: String): List<RuleFieldEntity>
-
-    /**
-     * Get all fields for a specific rule as a Flow.
-     */
-    @Query("SELECT * FROM rule_fields WHERE rule_id = :ruleId")
-    fun observeFieldsForRule(ruleId: String): Flow<List<RuleFieldEntity>>
+    @Query("SELECT * FROM rule_fields WHERE action_id = :actionId")
+    suspend fun getFieldsForAction(actionId: String): List<RuleFieldEntity>
 
     /**
      * Insert or update fields.
@@ -208,10 +202,12 @@ interface RuleDao {
     suspend fun insertFields(fields: List<RuleFieldEntity>)
 
     /**
-     * Delete all fields for a rule.
+     * Delete all fields owned by a specific action. Not required for the combined save/delete
+     * operations below (their action deletes already cascade to `rule_fields`), but kept for
+     * callers that need to clear a single action's fields without touching the rest of the rule.
      */
-    @Query("DELETE FROM rule_fields WHERE rule_id = :ruleId")
-    suspend fun deleteFieldsForRule(ruleId: String)
+    @Query("DELETE FROM rule_fields WHERE action_id = :actionId")
+    suspend fun deleteFieldsForAction(actionId: String)
 
     // ========== Combined Operations ==========
 
@@ -224,18 +220,19 @@ interface RuleDao {
         apps: List<String>?,
     ) {
         insert(rule)
-        deleteFieldsForRule(rule.id)
+        // Deleting actions cascades to their owned rule_fields rows (FK ON DELETE CASCADE), so
+        // fields are re-inserted under the fresh action ids without a separate delete-by-rule step.
         deleteConditionsForRule(rule.id)
         deleteActionsForRule(rule.id)
         deleteTargetAppsForRule(rule.id)
-        if (fields.isNotEmpty()) {
-            insertFields(fields)
-        }
         if (conditions.isNotEmpty()) {
             insertConditions(conditions)
         }
         if (actions.isNotEmpty()) {
             insertActions(actions)
+        }
+        if (fields.isNotEmpty()) {
+            insertFields(fields)
         }
         if (!apps.isNullOrEmpty()) {
             insertTargetApps(
@@ -247,11 +244,11 @@ interface RuleDao {
     }
 
     /**
-     * Delete a rule and all its related data (cascades to fields, conditions, actions and target apps via FK constraints).
+     * Delete a rule and all its related data (cascades to actions -> fields, conditions, and
+     * target apps via FK constraints).
      */
     @Transaction
     suspend fun deleteRuleWithRelatedData(ruleId: String) {
-        deleteFieldsForRule(ruleId)
         deleteConditionsForRule(ruleId)
         deleteActionsForRule(ruleId)
         deleteTargetAppsForRule(ruleId)

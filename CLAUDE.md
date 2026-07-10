@@ -10,7 +10,7 @@
 - **Dependency Injection**: Hilt
 - **Navigation**: Navigation3 with custom Navigator (ADR 007)
 - **Build System**: Gradle with Kotlin DSL
-- **Testing**: JUnit 5, Kotest, MockK, Turbine — 229 passing unit tests in `app/src/test` (extraction engine, use case, action executors, notification normalization, rule import/export codec with a golden-file wire-format test, `RuleEditorViewModel`/`AddFieldViewModel`/`NotificationDetailViewModel`/`RulesViewModel`); most other ViewModels and UI tests still pending
+- **Testing**: JUnit 5, Kotest, MockK, Turbine — 286 passing unit tests in `app/src/test` (extraction engine, use case, action executors, notification normalization, rule import/export codec with a golden-file wire-format test, `RuleEditorViewModel`/`AddFieldViewModel`/`NotificationDetailViewModel`/`RulesViewModel`); most other ViewModels and UI tests still pending
 - **Structure**: Monolithic (single app module) with clean package separation, designed for future modularization
 
 ## Quick Reference
@@ -184,7 +184,7 @@ Before making any code changes:
 
 **Key Components:**
 - Repositories: `NotificationRepository`, `RuleRepository`, `SelectedAppRepository`, `UserPreferencesRepository`, `RuleExecutionRepository` (wraps `RuleExecutionDao`/`ExtractedFieldValueDao`/`NotificationDao` writes transactionally)
-- Room database (`AppDatabase`) with 9 entities: Notification, Rule, RuleCondition, RuleField, RuleAction, RuleTargetApp, RuleExecution, ExtractedFieldValue, SelectedApp
+- Room database (`AppDatabase`) with 9 entities: Notification, Rule, RuleCondition, RuleField, RuleAction, RuleTargetApp, RuleExecution, ExtractedFieldValue, SelectedApp.
 - DAOs per entity, mappers from entities to domain models
 - DataStore for preferences (selected apps, settings)
 
@@ -290,7 +290,7 @@ object InboxContract {
 
 ## Testing Standards
 
-> **Current status:** `app/src/test` has 229 passing tests covering `RuleMatcher` (all 6 operators), `FieldExtractor` (all 10 extraction methods), `RuleEngine`, `ProcessNotificationUseCase`, `ActionDispatcher`, the per-action executors, `NotificationDeduplicator`, `NotificationNormalizer` (pure Kotlin since TD-14), `RuleJsonCodec` (import/export, including a golden-file test locking the wire format), and four ViewModels (`RuleEditorViewModel`, `AddFieldViewModel`, `NotificationDetailViewModel`, `RulesViewModel`), with shared fixtures in `testutil/TestFixtures.kt`. Most other ViewModels and repositories still have no tests — follow the standards below when adding them.
+> **Current status:** `app/src/test` has 286 passing tests covering `RuleMatcher` (all 6 operators), `FieldExtractor` (all 10 extraction methods), `RuleEngine`, `ProcessNotificationUseCase`, `ActionDispatcher`, the per-action executors, `NotificationDeduplicator`, `NotificationNormalizer` (pure Kotlin since TD-14), `RuleJsonCodec` (import/export, including a golden-file test locking the wire format), and four ViewModels (`RuleEditorViewModel`, `AddFieldViewModel`, `NotificationDetailViewModel`, `RulesViewModel`), with shared fixtures in `testutil/TestFixtures.kt`. Most other ViewModels and repositories still have no tests — follow the standards below when adding them.
 
 ### Unit Tests
 - **Framework**: JUnit 5 with Kotest assertions
@@ -438,7 +438,7 @@ Always run before submitting PRs:
 
 ### Adding a New Action Type
 
-1. Add the type to `ActionType` (domain model); keep config in `RuleAction.config` (`Map<String, String>`) with typed accessor methods
+1. Add the type to `ActionType` (domain model); keep config in `RuleAction.config` (`Map<String, String>`) with typed accessor methods. Only `SAVE_DATA` ("Extract data") uses `RuleAction.fields: List<RuleField>` — extraction fields are structured (a sealed `ExtractionMethod`) and don't belong in the string `config` map, so they're a first-class property instead; every other action type leaves `fields` empty.
 2. Implement execution as an `ActionExecutor` (`domain/action/ActionExecutor.kt`) and register it in `core/di/ActionModule.kt` via `@Binds @IntoMap @ActionTypeKey(ActionType.X)` — the `ActionDispatcher` picks it up automatically; no service edits needed
 3. Add a config composable in `features/ruleeditor/ui/actionconfig/` and one `when` branch in `ActionBottomSheet.kt`'s `ActionsContent` (per TD-13 — don't grow the sheet itself, it only dispatches)
 4. Record execution outcome on the `RuleExecution`

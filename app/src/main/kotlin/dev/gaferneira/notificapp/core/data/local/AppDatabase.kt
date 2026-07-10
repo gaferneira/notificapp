@@ -21,10 +21,6 @@ import dev.gaferneira.notificapp.core.data.local.entity.SelectedAppEntity
 
 /**
  * Room database for Notificapp.
- *
- * Database version: 3
- * Entities: SelectedAppEntity, NotificationEntity, RuleEntity, RuleTargetAppEntity, RuleFieldEntity,
- *           RuleConditionEntity, RuleActionEntity, RuleExecutionEntity, ExtractedFieldValueEntity
  */
 @Database(
     entities = [
@@ -38,7 +34,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.SelectedAppEntity
         RuleExecutionEntity::class,
         ExtractedFieldValueEntity::class,
     ],
-    version = 3,
+    version = 1,
     exportSchema = true,
 )
 @TypeConverters(RuleTypeConverters::class)

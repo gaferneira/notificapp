@@ -2,9 +2,12 @@ package dev.gaferneira.notificapp.core.data.repository
 
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
+import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
+import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
 import dev.gaferneira.notificapp.core.data.local.mapper.RuleMapper
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
@@ -30,11 +33,11 @@ class RuleRepositoryImpl @Inject constructor(
 
     override fun observeAllRules(): Flow<List<Rule>> = ruleDao.observeAll().map { entities ->
         entities.map { entity ->
-            // Load target apps, fields, conditions, and actions for each rule
+            // Load target apps, actions (with their SAVE_DATA fields), and conditions for each rule
             val apps = if (entity.isGlobal) null else loadTargetApps(entity.id)
-            val fields = ruleDao.getFieldsForRule(entity.id)
-            val conditions = ruleDao.getConditionsForRule(entity.id)
             val actions = ruleDao.getActionsForRule(entity.id)
+            val fields = loadSaveDataFields(actions)
+            val conditions = ruleDao.getConditionsForRule(entity.id)
             RuleMapper.toDomain(entity, fields, conditions, actions, apps)
         }
     }
@@ -44,9 +47,9 @@ class RuleRepositoryImpl @Inject constructor(
             val entities = ruleDao.getAll()
             val rules = entities.map { entity ->
                 val apps = loadTargetApps(entity.id)
-                val fields = ruleDao.getFieldsForRule(entity.id)
-                val conditions = ruleDao.getConditionsForRule(entity.id)
                 val actions = ruleDao.getActionsForRule(entity.id)
+                val fields = loadSaveDataFields(actions)
+                val conditions = ruleDao.getConditionsForRule(entity.id)
                 RuleMapper.toDomain(entity, fields, conditions, actions, apps)
             }
             Result.success(rules)
@@ -61,9 +64,9 @@ class RuleRepositoryImpl @Inject constructor(
             val entity = ruleDao.getById(id)
             val rule = entity?.let {
                 val apps = loadTargetApps(it.id)
-                val fields = ruleDao.getFieldsForRule(it.id)
-                val conditions = ruleDao.getConditionsForRule(it.id)
                 val actions = ruleDao.getActionsForRule(it.id)
+                val fields = loadSaveDataFields(actions)
+                val conditions = ruleDao.getConditionsForRule(it.id)
                 RuleMapper.toDomain(it, fields, conditions, actions, apps)
             }
             Result.success(rule)
@@ -78,9 +81,9 @@ class RuleRepositoryImpl @Inject constructor(
             val entities = ruleDao.getRulesForApp(packageName)
             val rules = entities.map { entity ->
                 val apps = loadTargetApps(entity.id)
-                val fields = ruleDao.getFieldsForRule(entity.id)
-                val conditions = ruleDao.getConditionsForRule(entity.id)
                 val actions = ruleDao.getActionsForRule(entity.id)
+                val fields = loadSaveDataFields(actions)
+                val conditions = ruleDao.getConditionsForRule(entity.id)
                 RuleMapper.toDomain(entity, fields, conditions, actions, apps)
             }
             Result.success(rules)
@@ -93,9 +96,9 @@ class RuleRepositoryImpl @Inject constructor(
     override suspend fun saveRule(rule: Rule): Result<Unit> = withContext(ioDispatcher) {
         try {
             val entity = RuleMapper.toEntity(rule)
-            val fieldEntities = RuleMapper.fieldsToEntityList(rule.fields, rule.id)
-            val conditionEntities = RuleMapper.conditionsToEntityList(rule.conditions, rule.id)
             val actionEntities = RuleMapper.actionsToEntityList(rule.actions, rule.id)
+            val fieldEntities = RuleMapper.fieldsToEntityList(rule.actions)
+            val conditionEntities = RuleMapper.conditionsToEntityList(rule.conditions, rule.id)
             val apps = rule.targetApps?.map { it.packageName }
             ruleDao.saveRuleWithRelatedData(entity, fieldEntities, conditionEntities, actionEntities, apps)
             Timber.d("Saved rule: ${rule.id}")
@@ -109,9 +112,9 @@ class RuleRepositoryImpl @Inject constructor(
     override suspend fun updateRule(rule: Rule): Result<Unit> = withContext(ioDispatcher) {
         try {
             val entity = RuleMapper.toEntity(rule)
-            val fieldEntities = RuleMapper.fieldsToEntityList(rule.fields, rule.id)
-            val conditionEntities = RuleMapper.conditionsToEntityList(rule.conditions, rule.id)
             val actionEntities = RuleMapper.actionsToEntityList(rule.actions, rule.id)
+            val fieldEntities = RuleMapper.fieldsToEntityList(rule.actions)
+            val conditionEntities = RuleMapper.conditionsToEntityList(rule.conditions, rule.id)
             val apps = rule.targetApps?.map { it.packageName }
             ruleDao.saveRuleWithRelatedData(entity, fieldEntities, conditionEntities, actionEntities, apps)
             Timber.d("Updated rule: ${rule.id}")
@@ -120,6 +123,16 @@ class RuleRepositoryImpl @Inject constructor(
             Timber.e(e, "Failed to update rule: ${rule.id}")
             Result.failure(e)
         }
+    }
+
+    /**
+     * Load the fields owned by a rule's `SAVE_DATA` action, if it has one. Loading by the
+     * already-fetched action's id avoids a redundant rule-keyed field query - `rule_fields` is
+     * keyed on `action_id`, not `rule_id`.
+     */
+    private suspend fun loadSaveDataFields(actions: List<RuleActionEntity>): List<RuleFieldEntity> {
+        val saveDataActionId = actions.firstOrNull { it.type == ActionType.SAVE_DATA.name }?.id ?: return emptyList()
+        return ruleDao.getFieldsForAction(saveDataActionId)
     }
 
     override suspend fun deleteRule(id: String): Result<Unit> = withContext(ioDispatcher) {

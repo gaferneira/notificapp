@@ -7,6 +7,7 @@ import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
@@ -132,7 +133,7 @@ class ProcessNotificationUseCaseTest {
         execution.actionOutcomes shouldBe mapOf("action-1" to ActionOutcome.SUCCESS)
         execution.triggeredActions shouldBe listOf("action-1")
 
-        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(execution, rule.fields) }
+        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(execution, rule.saveDataFields()) }
     }
 
     @Test
@@ -216,8 +217,8 @@ class ProcessNotificationUseCaseTest {
             value = "ICA",
         )
         val fields = listOf(createTestField(method = RuleField.ExtractionMethod.RegexPattern("\\d+")))
-        val action = createTestAction(id = "action-1", type = ActionType.SAVE_DATA, isEnabled = true)
-        val rule = createTestRule(id = "rule-1", conditions = listOf(condition), actions = listOf(action), fields = fields)
+        val action = createTestAction(id = "action-1", type = ActionType.SAVE_DATA, isEnabled = true, fields = fields)
+        val rule = createTestRule(id = "rule-1", conditions = listOf(condition), actions = listOf(action))
 
         coEvery { deduplicator.isDuplicate(notification) } returns false
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
@@ -241,9 +242,8 @@ class ProcessNotificationUseCaseTest {
             operator = MatchingOperator.CONTAINS,
             value = "ICA",
         )
-        val fields = listOf(createTestField(method = RuleField.ExtractionMethod.RegexPattern("\\d+")))
         val dismiss = createTestAction(id = "dismiss-1", type = ActionType.DISMISS_NOTIFICATION, isEnabled = true)
-        val rule = createTestRule(id = "rule-1", conditions = listOf(condition), actions = listOf(dismiss), fields = fields)
+        val rule = createTestRule(id = "rule-1", conditions = listOf(condition), actions = listOf(dismiss))
 
         coEvery { deduplicator.isDuplicate(notification) } returns false
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
@@ -268,8 +268,8 @@ class ProcessNotificationUseCaseTest {
             value = "ICA",
         )
         val fields = listOf(createTestField(method = RuleField.ExtractionMethod.RegexPattern("\\d+")))
-        val disabledSaveData = createTestAction(id = "save-1", type = ActionType.SAVE_DATA, isEnabled = false)
-        val rule = createTestRule(id = "rule-1", conditions = listOf(condition), actions = listOf(disabledSaveData), fields = fields)
+        val disabledSaveData = createTestAction(id = "save-1", type = ActionType.SAVE_DATA, isEnabled = false, fields = fields)
+        val rule = createTestRule(id = "rule-1", conditions = listOf(condition), actions = listOf(disabledSaveData))
 
         coEvery { deduplicator.isDuplicate(notification) } returns false
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)

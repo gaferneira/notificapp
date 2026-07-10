@@ -21,10 +21,15 @@ data class Rule(
     val targetApps: List<AppInfo>? = null,
     /** Triggers that determine when rule applies */
     val conditions: List<RuleCondition> = emptyList(),
-    /** Fields to extract from the notification */
-    val fields: List<RuleField> = emptyList(),
     /** Actions to take when rule matches */
     val actions: List<RuleAction> = emptyList(),
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 )
+
+/**
+ * Fields to extract from a notification, sourced from this rule's enabled `SAVE_DATA`
+ * ("Extract data") action. Empty when there is no enabled `SAVE_DATA` action - the single place
+ * consumers should read extraction fields from (see `action-execution` spec).
+ */
+fun Rule.saveDataFields(): List<RuleField> = actions.firstOrNull { it.type == ActionType.SAVE_DATA && it.isEnabled }?.fields.orEmpty()

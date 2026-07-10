@@ -63,8 +63,12 @@ object RuleJsonCodec {
             isActive = true,
             isDryRun = true,
             conditions = conditions.map { it.copy(id = UUID.randomUUID().toString()) },
-            fields = fields.map { it.copy(id = UUID.randomUUID().toString()) },
-            actions = actions.map { it.copy(id = UUID.randomUUID().toString()) },
+            actions = actions.map { action ->
+                action.copy(
+                    id = UUID.randomUUID().toString(),
+                    fields = action.fields.map { it.copy(id = UUID.randomUUID().toString()) },
+                )
+            },
             createdAt = now,
             updatedAt = now,
         )

@@ -19,12 +19,12 @@ object RuleFieldMapper {
      * Convert a RuleField domain model to a RuleFieldEntity.
      *
      * @param domain The domain model
-     * @param ruleId The parent rule ID for the foreign key
+     * @param actionId The owning `SAVE_DATA` action ID for the foreign key
      * @return The database entity
      */
-    fun toEntity(domain: RuleField, ruleId: String): RuleFieldEntity = RuleFieldEntity(
+    fun toEntity(domain: RuleField, actionId: String): RuleFieldEntity = RuleFieldEntity(
         id = domain.id,
-        ruleId = ruleId,
+        actionId = actionId,
         name = domain.name,
         fieldType = domain.fieldType.name,
         methodType = domain.method.type,
@@ -50,10 +50,10 @@ object RuleFieldMapper {
      * Convert a list of RuleField domain models to entities.
      *
      * @param domains The domain models
-     * @param ruleId The parent rule ID for all fields
+     * @param actionId The owning `SAVE_DATA` action ID for all fields
      * @return The database entities
      */
-    fun toEntityList(domains: List<RuleField>, ruleId: String): List<RuleFieldEntity> = domains.map { toEntity(it, ruleId) }
+    fun toEntityList(domains: List<RuleField>, actionId: String): List<RuleFieldEntity> = domains.map { toEntity(it, actionId) }
 
     /**
      * Convert a list of RuleFieldEntity to domain models.

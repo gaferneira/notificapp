@@ -57,123 +57,124 @@
                 "value": "spam"
             }
         ],
-        "fields": [
-            {
-                "id": "field-fixed",
-                "name": "Fixed Position",
-                "fieldType": "string",
-                "isRequired": false,
-                "method": {
-                    "type": "fixed_position",
-                    "startIndex": 0,
-                    "endIndex": 10
-                }
-            },
-            {
-                "id": "field-anchors",
-                "name": "Between Anchors",
-                "fieldType": "string",
-                "isRequired": false,
-                "method": {
-                    "type": "text_between_anchors",
-                    "startAnchor": "Total: ",
-                    "endAnchor": " kr"
-                }
-            },
-            {
-                "id": "field-regex",
-                "name": "Regex",
-                "fieldType": "string",
-                "isRequired": false,
-                "method": {
-                    "type": "regex",
-                    "pattern": "(\\d+)",
-                    "captureGroup": 1
-                }
-            },
-            {
-                "id": "field-after",
-                "name": "After Keyword",
-                "fieldType": "currency",
-                "isRequired": false,
-                "method": {
-                    "type": "text_after_keyword",
-                    "keyword": "Total: ",
-                    "maxLength": 20
-                }
-            },
-            {
-                "id": "field-before",
-                "name": "Before Keyword",
-                "fieldType": "string",
-                "isRequired": false,
-                "method": {
-                    "type": "text_before_keyword",
-                    "keyword": " kr"
-                }
-            },
-            {
-                "id": "field-line",
-                "name": "Line",
-                "fieldType": "string",
-                "isRequired": false,
-                "method": {
-                    "type": "line_extraction",
-                    "lineNumber": 2
-                }
-            },
-            {
-                "id": "field-split",
-                "name": "Split",
-                "fieldType": "number",
-                "isRequired": false,
-                "method": {
-                    "type": "split_by_delimiter",
-                    "delimiter": ",",
-                    "takeIndex": 0
-                }
-            },
-            {
-                "id": "field-json",
-                "name": "Json Path",
-                "fieldType": "string",
-                "isRequired": false,
-                "method": {
-                    "type": "json_path",
-                    "path": "$.amount"
-                }
-            },
-            {
-                "id": "field-smart-amount",
-                "name": "Smart Amount",
-                "fieldType": "currency",
-                "isRequired": false,
-                "method": {
-                    "type": "smart_amount"
-                }
-            },
-            {
-                "id": "field-smart-date",
-                "name": "Smart Date",
-                "fieldType": "date",
-                "isRequired": false,
-                "method": {
-                    "type": "smart_date"
-                }
-            }
-        ],
         "actions": [
             {
                 "id": "action-save",
                 "type": "save_data",
                 "isEnabled": true,
-                "config": {}
+                "config": {},
+                "fields": [
+                    {
+                        "id": "field-fixed",
+                        "name": "Fixed Position",
+                        "fieldType": "string",
+                        "isRequired": false,
+                        "method": {
+                            "type": "fixed_position",
+                            "startIndex": 0,
+                            "endIndex": 10
+                        }
+                    },
+                    {
+                        "id": "field-anchors",
+                        "name": "Between Anchors",
+                        "fieldType": "string",
+                        "isRequired": false,
+                        "method": {
+                            "type": "text_between_anchors",
+                            "startAnchor": "Total: ",
+                            "endAnchor": " kr"
+                        }
+                    },
+                    {
+                        "id": "field-regex",
+                        "name": "Regex",
+                        "fieldType": "string",
+                        "isRequired": false,
+                        "method": {
+                            "type": "regex",
+                            "pattern": "(\\d+)",
+                            "captureGroup": 1
+                        }
+                    },
+                    {
+                        "id": "field-after",
+                        "name": "After Keyword",
+                        "fieldType": "currency",
+                        "isRequired": false,
+                        "method": {
+                            "type": "text_after_keyword",
+                            "keyword": "Total: ",
+                            "maxLength": 20
+                        }
+                    },
+                    {
+                        "id": "field-before",
+                        "name": "Before Keyword",
+                        "fieldType": "string",
+                        "isRequired": false,
+                        "method": {
+                            "type": "text_before_keyword",
+                            "keyword": " kr"
+                        }
+                    },
+                    {
+                        "id": "field-line",
+                        "name": "Line",
+                        "fieldType": "string",
+                        "isRequired": false,
+                        "method": {
+                            "type": "line_extraction",
+                            "lineNumber": 2
+                        }
+                    },
+                    {
+                        "id": "field-split",
+                        "name": "Split",
+                        "fieldType": "number",
+                        "isRequired": false,
+                        "method": {
+                            "type": "split_by_delimiter",
+                            "delimiter": ",",
+                            "takeIndex": 0
+                        }
+                    },
+                    {
+                        "id": "field-json",
+                        "name": "Json Path",
+                        "fieldType": "string",
+                        "isRequired": false,
+                        "method": {
+                            "type": "json_path",
+                            "path": "$.amount"
+                        }
+                    },
+                    {
+                        "id": "field-smart-amount",
+                        "name": "Smart Amount",
+                        "fieldType": "currency",
+                        "isRequired": false,
+                        "method": {
+                            "type": "smart_amount"
+                        }
+                    },
+                    {
+                        "id": "field-smart-date",
+                        "name": "Smart Date",
+                        "fieldType": "date",
+                        "isRequired": false,
+                        "method": {
+                            "type": "smart_date"
+                        }
+                    }
+                ]
             },
             {
                 "id": "action-dismiss",
                 "type": "dismiss_notification",
                 "isEnabled": true,
-                "config": {}
+                "config": {},
+                "fields": []
             },
             {
                 "id": "action-snooze",
@@ -181,7 +182,8 @@
                 "isEnabled": true,
                 "config": {
                     "snooze_duration_minutes": "30"
-                }
+                },
+                "fields": []
             },
             {
                 "id": "action-alarm",
@@ -190,7 +192,8 @@
                 "config": {
                     "alarm_sound_uri": "content://media/alarm/1",
                     "alarm_vibration_enabled": "true"
-                }
+                },
+                "fields": []
             },
             {
                 "id": "action-flash",
@@ -199,7 +202,8 @@
                 "config": {
                     "flash_count": "5",
                     "flash_duration_ms": "300"
-                }
+                },
+                "fields": []
             }
         ],
         "createdAt": 1751500000000,

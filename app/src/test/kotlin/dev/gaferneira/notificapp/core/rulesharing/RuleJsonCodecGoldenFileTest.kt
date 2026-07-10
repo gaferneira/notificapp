@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 
 /**
- * Locks the rule export wire format (schemaVersion 1) to a checked-in golden file. Any change to
+ * Locks the rule export wire format to a checked-in golden file. Any change to
  * [RuleJsonCodec.encode]'s output - a rename, a default change, a new required field - fails this
  * test instead of silently breaking every rule file already exported by users.
  *
@@ -23,7 +23,20 @@ import org.junit.jupiter.api.Test
  */
 class RuleJsonCodecGoldenFileTest {
 
-    private val goldenFileResource = "/rule-export-v1.json"
+    private val goldenFileResourceV1 = "/rule-export-v1.json"
+
+    private val fixtureFields = listOf(
+        createTestField(id = "field-fixed", name = "Fixed Position", fieldType = FieldType.STRING, method = ExtractionMethod.FixedPosition(startIndex = 0, endIndex = 10)),
+        createTestField(id = "field-anchors", name = "Between Anchors", fieldType = FieldType.STRING, method = ExtractionMethod.TextBetweenAnchors(startAnchor = "Total: ", endAnchor = " kr")),
+        createTestField(id = "field-regex", name = "Regex", fieldType = FieldType.STRING, method = ExtractionMethod.RegexPattern(pattern = "(\\d+)", captureGroup = 1)),
+        createTestField(id = "field-after", name = "After Keyword", fieldType = FieldType.CURRENCY, method = ExtractionMethod.TextAfterKeyword(keyword = "Total: ", maxLength = 20)),
+        createTestField(id = "field-before", name = "Before Keyword", fieldType = FieldType.STRING, method = ExtractionMethod.TextBeforeKeyword(keyword = " kr")),
+        createTestField(id = "field-line", name = "Line", fieldType = FieldType.STRING, method = ExtractionMethod.LineExtraction(lineNumber = 2)),
+        createTestField(id = "field-split", name = "Split", fieldType = FieldType.NUMBER, method = ExtractionMethod.SplitByDelimiter(delimiter = ",", takeIndex = 0)),
+        createTestField(id = "field-json", name = "Json Path", fieldType = FieldType.STRING, method = ExtractionMethod.JsonPath(path = "$.amount")),
+        createTestField(id = "field-smart-amount", name = "Smart Amount", fieldType = FieldType.CURRENCY, method = ExtractionMethod.SmartAmountDetection),
+        createTestField(id = "field-smart-date", name = "Smart Date", fieldType = FieldType.DATE, method = ExtractionMethod.SmartDateDetection),
+    )
 
     private val fixtureRule = createTestRule(
         id = "fixture-rule-id",
@@ -44,20 +57,8 @@ class RuleJsonCodecGoldenFileTest {
             createTestCondition(id = "cond-regex", condition = MatchingCondition.RAW_CONTENT, operator = MatchingOperator.REGEX_MATCH, value = "\\d+"),
             createTestCondition(id = "cond-not-contains", condition = MatchingCondition.TEXT_CONTENT, operator = MatchingOperator.NOT_CONTAINS, value = "spam"),
         ),
-        fields = listOf(
-            createTestField(id = "field-fixed", name = "Fixed Position", fieldType = FieldType.STRING, method = ExtractionMethod.FixedPosition(startIndex = 0, endIndex = 10)),
-            createTestField(id = "field-anchors", name = "Between Anchors", fieldType = FieldType.STRING, method = ExtractionMethod.TextBetweenAnchors(startAnchor = "Total: ", endAnchor = " kr")),
-            createTestField(id = "field-regex", name = "Regex", fieldType = FieldType.STRING, method = ExtractionMethod.RegexPattern(pattern = "(\\d+)", captureGroup = 1)),
-            createTestField(id = "field-after", name = "After Keyword", fieldType = FieldType.CURRENCY, method = ExtractionMethod.TextAfterKeyword(keyword = "Total: ", maxLength = 20)),
-            createTestField(id = "field-before", name = "Before Keyword", fieldType = FieldType.STRING, method = ExtractionMethod.TextBeforeKeyword(keyword = " kr")),
-            createTestField(id = "field-line", name = "Line", fieldType = FieldType.STRING, method = ExtractionMethod.LineExtraction(lineNumber = 2)),
-            createTestField(id = "field-split", name = "Split", fieldType = FieldType.NUMBER, method = ExtractionMethod.SplitByDelimiter(delimiter = ",", takeIndex = 0)),
-            createTestField(id = "field-json", name = "Json Path", fieldType = FieldType.STRING, method = ExtractionMethod.JsonPath(path = "$.amount")),
-            createTestField(id = "field-smart-amount", name = "Smart Amount", fieldType = FieldType.CURRENCY, method = ExtractionMethod.SmartAmountDetection),
-            createTestField(id = "field-smart-date", name = "Smart Date", fieldType = FieldType.DATE, method = ExtractionMethod.SmartDateDetection),
-        ),
         actions = listOf(
-            createTestAction(id = "action-save", type = ActionType.SAVE_DATA),
+            createTestAction(id = "action-save", type = ActionType.SAVE_DATA, fields = fixtureFields),
             createTestAction(id = "action-dismiss", type = ActionType.DISMISS_NOTIFICATION),
             createTestAction(id = "action-snooze", type = ActionType.SNOOZE_NOTIFICATION, config = mapOf("snooze_duration_minutes" to "30")),
             createTestAction(
@@ -75,8 +76,8 @@ class RuleJsonCodecGoldenFileTest {
         updatedAt = 1_751_500_000_000L,
     )
 
-    private fun readGoldenFile(): String = checkNotNull(javaClass.getResource(goldenFileResource)) {
-        "Golden file resource not found: $goldenFileResource"
+    private fun readResource(name: String): String = checkNotNull(javaClass.getResource(name)) {
+        "Golden file resource not found: $name"
     }.readText()
 
     @Test
@@ -85,13 +86,13 @@ class RuleJsonCodecGoldenFileTest {
         val encoded = RuleJsonCodec.encode(fixtureRule)
 
         // Then: it matches the golden file byte-for-byte
-        encoded shouldBe readGoldenFile()
+        encoded shouldBe readResource(goldenFileResourceV1)
     }
 
     @Test
     fun `decoding the golden file round-trips back to the fixture rule`() {
         // When: decoding the golden file
-        val decoded = RuleJsonCodec.decode(readGoldenFile())
+        val decoded = RuleJsonCodec.decode(readResource(goldenFileResourceV1))
 
         // Then: it reconstructs the fixture rule exactly, with no actions skipped
         decoded.isSuccess shouldBe true

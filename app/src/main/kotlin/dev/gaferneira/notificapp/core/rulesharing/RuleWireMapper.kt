@@ -54,7 +54,6 @@ fun Rule.toDto(): RuleExportDto = RuleExportDto(
         isDryRun = isDryRun,
         targetApps = targetApps?.map { it.toDto() },
         conditions = conditions.map { it.toDto() },
-        fields = fields.map { it.toDto() },
         actions = actions.map { it.toDto() },
         createdAt = createdAt,
         updatedAt = updatedAt,
@@ -80,7 +79,6 @@ fun RuleExportDto.toDomain(): RuleImportResult {
         isDryRun = rule.isDryRun,
         targetApps = rule.targetApps?.map { it.toDomain() },
         conditions = rule.conditions.map { it.toDomain() },
-        fields = rule.fields.map { it.toDomain() },
         actions = mappedActions.mapNotNull { (_, action) -> action },
         createdAt = rule.createdAt,
         updatedAt = rule.updatedAt,
@@ -153,9 +151,10 @@ private fun RuleAction.toDto(): ActionDto = ActionDto(
     type = type.toWireString(ActionType.serializer()),
     isEnabled = isEnabled,
     config = config,
+    fields = fields.map { it.toDto() },
 )
 
 private fun ActionDto.toDomainOrNull(): RuleAction? {
     val actionType = type.fromWireStringOrNull(ActionType.serializer()) ?: return null
-    return RuleAction(id = id, type = actionType, isEnabled = isEnabled, config = config)
+    return RuleAction(id = id, type = actionType, isEnabled = isEnabled, config = config, fields = fields.map { it.toDomain() })
 }
