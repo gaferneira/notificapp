@@ -70,6 +70,45 @@ class RuleActionTest {
     }
 
     @Test
+    fun `snooze mode defaults to DURATION when not configured`() {
+        // Given: a snooze action with no explicit mode - covers rules saved/exported before
+        // SCHEDULED mode existed
+        val action = RuleAction.createSnooze(id = "action-1", durationMinutes = 15)
+
+        action.getSnoozeMode() shouldBe SnoozeMode.DURATION
+        action.getSnoozeSchedule() shouldBe null
+    }
+
+    @Test
+    fun `createScheduledSnooze stores a single daily checkpoint with no interval`() {
+        val action = RuleAction.createScheduledSnooze(id = "action-1", startHour = 9, startMinute = 30)
+
+        action.type shouldBe ActionType.SNOOZE_NOTIFICATION
+        action.getSnoozeMode() shouldBe SnoozeMode.SCHEDULED
+        action.getSnoozeSchedule() shouldBe SnoozeSchedule(startHour = 9, startMinute = 30)
+    }
+
+    @Test
+    fun `createScheduledSnooze stores a recurring window`() {
+        val action = RuleAction.createScheduledSnooze(
+            id = "action-1",
+            startHour = 9,
+            startMinute = 0,
+            intervalMinutes = 60,
+            windowEndHour = 18,
+            windowEndMinute = 0,
+        )
+
+        action.getSnoozeSchedule() shouldBe SnoozeSchedule(
+            startHour = 9,
+            startMinute = 0,
+            intervalMinutes = 60,
+            windowEndHour = 18,
+            windowEndMinute = 0,
+        )
+    }
+
+    @Test
     fun `alarm sound-enabled defaults to true when not configured`() {
         val action = RuleAction(id = "action-1", type = ActionType.CREATE_ALARM)
 

@@ -1,8 +1,21 @@
-## Purpose
+## REMOVED Requirements
 
-Defines how snooze modes work and how the Android OS-native snoozing mechanism is configured for different use cases: fixed-duration snoops (the shipped behavior) and scheduled checkpoints (single daily or recurring digest windows).
+### Requirement: Snoozed notification database tracking
+Removed — never implemented. No `snoozed_notifications` table exists; snooze state is owned entirely by the Android OS via `NotificationListenerService.snoozeNotification()`.
 
-## Requirements
+### Requirement: AlarmManager snooze scheduling
+Removed — never implemented. Snoozing does not use `AlarmManager`; it calls the native `snoozeNotification()` API, which the OS itself is responsible for scheduling.
+
+### Requirement: Snooze alarm receiver re-posts notification
+Removed — never implemented. There is no `SnoozeAlarmReceiver`; the OS re-posts the snoozed notification itself once the native snooze duration elapses.
+
+### Requirement: Snooze cancellation support
+Removed — never implemented. There is no app-owned pending-snooze record to cancel.
+
+### Requirement: Notification channel for snoozed notifications
+Removed — never implemented. Snoozed notifications are re-posted by the OS as the original notification; the app does not create a dedicated channel or repost it itself.
+
+## ADDED Requirements
 
 ### Requirement: Duration-mode snoozing uses the native OS snooze
 The system SHALL snooze notifications using `NotificationListenerService.snoozeNotification(sbnKey, durationMs)`. In `DURATION` mode this is the only scheduling mechanism involved — the OS owns hiding and re-posting the notification after the given duration; the app does not track or reschedule it.

@@ -19,6 +19,10 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +55,8 @@ fun SnoozeDurationSelector(
     onDurationChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var isCustomSelected by remember { mutableStateOf(selectedMinutes !in SNOOZE_PRESETS) }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -100,10 +106,13 @@ fun SnoozeDurationSelector(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SNOOZE_PRESETS.forEach { preset ->
-                val isSelected = selectedMinutes == preset
+                val isSelected = !isCustomSelected && selectedMinutes == preset
                 FilterChip(
                     selected = isSelected,
-                    onClick = { onDurationChange(preset) },
+                    onClick = {
+                        isCustomSelected = false
+                        onDurationChange(preset)
+                    },
                     label = { Text("${preset}m") },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -111,45 +120,57 @@ fun SnoozeDurationSelector(
                     ),
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Slider for fine-grained control
-        Text(
-            text = "Or drag to set custom time",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "${MIN_SNOOZE_MINUTES}m",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Slider(
-                value = selectedMinutes.toFloat(),
-                onValueChange = { onDurationChange(it.toInt()) },
-                valueRange = MIN_SNOOZE_MINUTES.toFloat()..MAX_SNOOZE_MINUTES.toFloat(),
-                modifier = Modifier.weight(1f),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
+            FilterChip(
+                selected = isCustomSelected,
+                onClick = { isCustomSelected = true },
+                label = { Text("Custom") },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                 ),
             )
+        }
 
+        if (isCustomSelected) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Slider for fine-grained control
             Text(
-                text = "${MAX_SNOOZE_MINUTES}m",
+                text = "Drag to set custom time",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "${MIN_SNOOZE_MINUTES}m",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Slider(
+                    value = selectedMinutes.toFloat(),
+                    onValueChange = { onDurationChange(it.toInt()) },
+                    valueRange = MIN_SNOOZE_MINUTES.toFloat()..MAX_SNOOZE_MINUTES.toFloat(),
+                    modifier = Modifier.weight(1f),
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                    ),
+                )
+
+                Text(
+                    text = "${MAX_SNOOZE_MINUTES}m",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

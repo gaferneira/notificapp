@@ -7,10 +7,12 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
 import dev.gaferneira.notificapp.core.notification.action.AndroidTorchController
+import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
 import dev.gaferneira.notificapp.core.notification.action.DismissActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.FlashAlertActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SaveDataActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SnoozeActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.SystemCurrentTimeProvider
 import dev.gaferneira.notificapp.core.notification.action.TorchController
 import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmController
@@ -54,6 +56,12 @@ internal abstract class ActionModule {
     @IntoMap
     @ActionTypeKey(ActionType.SNOOZE_NOTIFICATION)
     abstract fun bindSnooze(impl: SnoozeActionExecutor): ActionExecutor
+
+    /**
+     * Binds the [CurrentTimeProvider] used by [SnoozeActionExecutor] for scheduled-mode snoozing.
+     */
+    @Binds
+    abstract fun bindCurrentTimeProvider(impl: SystemCurrentTimeProvider): CurrentTimeProvider
 
     /**
      * Binds the executor for [ActionType.SAVE_DATA].

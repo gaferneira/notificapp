@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.SnoozeMode
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.util.formatDurationMinutes
 
@@ -76,15 +77,33 @@ fun DoSection(
     }
 }
 
-/** Secondary line for an action card: snooze duration, extract-data field count, or none. */
+/** Secondary line for an action card: snooze duration/schedule, extract-data field count, or none. */
 private fun RuleAction.cardSubtitle(extractDataFieldCount: Int): String? = when (type) {
-    ActionType.SNOOZE_NOTIFICATION -> formatDurationMinutes(getSnoozeDurationMinutes())
+    ActionType.SNOOZE_NOTIFICATION -> snoozeSubtitle()
     ActionType.SAVE_DATA -> when (extractDataFieldCount) {
         0 -> "No fields yet"
         1 -> "1 field"
         else -> "$extractDataFieldCount fields"
     }
     else -> null
+}
+
+/** Snooze action subtitle: a fixed duration, or the configured schedule. */
+private fun RuleAction.snoozeSubtitle(): String = when (getSnoozeMode()) {
+    SnoozeMode.DURATION -> formatDurationMinutes(getSnoozeDurationMinutes())
+    SnoozeMode.SCHEDULED -> {
+        val schedule = getSnoozeSchedule()
+        val start = "%02d:%02d".format(schedule?.startHour ?: 0, schedule?.startMinute ?: 0)
+        val interval = schedule?.intervalMinutes
+        val windowEndHour = schedule?.windowEndHour
+        val windowEndMinute = schedule?.windowEndMinute
+        if (interval != null && windowEndHour != null && windowEndMinute != null) {
+            val end = "%02d:%02d".format(windowEndHour, windowEndMinute)
+            "Every ${formatDurationMinutes(interval)}, $start-$end"
+        } else {
+            "Until $start"
+        }
+    }
 }
 
 @Composable

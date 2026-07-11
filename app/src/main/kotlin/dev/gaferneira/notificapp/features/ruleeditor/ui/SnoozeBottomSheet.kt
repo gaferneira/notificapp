@@ -1,23 +1,43 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_DURATION_MINUTES
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.SnoozeMode
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.BatchAtTimeConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.BatchAtTimeSelector
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DigestScheduleConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DigestScheduleSelector
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.SnoozeDurationSelector
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.SnoozeOutcome
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.SnoozeOutcomeSelector
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.WORKDAYS
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.WeekdayMode
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.confirmLabelFor
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.defaultBatchAtTimeConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.defaultDigestScheduleConfig
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.isDigestScheduleConfigValid
 import java.util.UUID
 
 /**
- * Type-scoped sheet for the Snooze action. Owns its own duration state; on confirm it builds a
- * `SNOOZE_NOTIFICATION` [RuleAction] and hands it back. No shared action ViewModel is involved.
+ * Type-scoped sheet for the Snooze action. Owns its own duration/schedule state; on confirm it
+ * builds a `SNOOZE_NOTIFICATION` [RuleAction] and hands it back. No shared action ViewModel is
+ * involved.
  *
  * @param initial The action being edited, or null when adding a new one
  */
@@ -27,28 +47,141 @@ fun SnoozeBottomSheet(
     onSave: (RuleAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var outcome by remember { mutableStateOf(initial.toInitialOutcome()) }
     var minutes by remember {
         mutableIntStateOf(initial?.getSnoozeDurationMinutes() ?: DEFAULT_SNOOZE_DURATION_MINUTES)
     }
+    var batchAtTimeConfig by remember { mutableStateOf(initial.toInitialBatchAtTimeConfig()) }
+    var digestConfig by remember { mutableStateOf(initial.toInitialDigestConfig()) }
+
+    val canConfirm = outcome != SnoozeOutcome.BATCH_INTO_DIGEST || isDigestScheduleConfigValid(digestConfig)
 
     ActionConfigSheet(
+        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
         title = "Snooze notification",
         confirmLabel = confirmLabelFor(isEdit = initial != null),
-        onConfirm = {
-            onSave(
-                RuleAction.createSnooze(
-                    id = initial?.id ?: UUID.randomUUID().toString(),
-                    durationMinutes = minutes,
-                    isEnabled = initial?.isEnabled ?: true,
-                ),
-            )
+        onConfirm = if (canConfirm) {
+            {
+                onSave(
+                    buildSnoozeAction(
+                        initial = initial,
+                        outcome = outcome,
+                        minutes = minutes,
+                        batchAtTimeConfig = batchAtTimeConfig,
+                        digestConfig = digestConfig,
+                    ),
+                )
+            }
+        } else {
+            null
         },
         onDismiss = onDismiss,
     ) {
         ActionSheetDescription(ActionType.SNOOZE_NOTIFICATION.ui().description)
-        SnoozeDurationSelector(
-            selectedMinutes = minutes,
-            onDurationChange = { minutes = it },
+
+        SnoozeOutcomeSelector(
+            selected = outcome,
+            onOutcomeSelected = { outcome = it },
+        ) { selectedOutcome ->
+            when (selectedOutcome) {
+                SnoozeOutcome.DELAY_EACH_ONE -> SnoozeDurationSelector(
+                    selectedMinutes = minutes,
+                    onDurationChange = { minutes = it },
+                )
+                SnoozeOutcome.BATCH_AT_TIME -> BatchAtTimeSelector(
+                    config = batchAtTimeConfig,
+                    onConfigChange = { batchAtTimeConfig = it },
+                )
+                SnoozeOutcome.BATCH_INTO_DIGEST -> DigestScheduleSelector(
+                    config = digestConfig,
+                    onConfigChange = { digestConfig = it },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/** Determines which [SnoozeOutcome] card an existing action (or a fresh one) starts on. */
+private fun RuleAction?.toInitialOutcome(): SnoozeOutcome = when {
+    this == null || getSnoozeMode() == SnoozeMode.DURATION -> SnoozeOutcome.DELAY_EACH_ONE
+    getSnoozeSchedule()?.intervalMinutes != null -> SnoozeOutcome.BATCH_INTO_DIGEST
+    else -> SnoozeOutcome.BATCH_AT_TIME
+}
+
+/** Infers the [WeekdayMode] a persisted weekday set was configured with. */
+private fun Set<java.time.DayOfWeek>.toWeekdayMode(): WeekdayMode = when {
+    isEmpty() -> WeekdayMode.EVERYDAY
+    this == WORKDAYS -> WeekdayMode.WORKDAYS
+    else -> WeekdayMode.CUSTOM
+}
+
+/** The "Batch at time" config an existing non-repeating scheduled action starts on, or the default. */
+private fun RuleAction?.toInitialBatchAtTimeConfig(): BatchAtTimeConfig = this?.getSnoozeSchedule()
+    ?.takeIf { it.intervalMinutes == null }
+    ?.let { schedule ->
+        BatchAtTimeConfig(
+            times = if (schedule.times.isNotEmpty()) schedule.times else listOf(schedule.startHour to schedule.startMinute),
+            weekdays = schedule.weekdays,
+            weekdayMode = schedule.weekdays.toWeekdayMode(),
+        )
+    }
+    ?: defaultBatchAtTimeConfig()
+
+/** The "Batch into a digest" config an existing repeating scheduled action starts on, or the default. */
+private fun RuleAction?.toInitialDigestConfig(): DigestScheduleConfig {
+    val schedule = this?.getSnoozeSchedule()
+    val intervalMinutes = schedule?.intervalMinutes ?: return defaultDigestScheduleConfig()
+    val defaults = defaultDigestScheduleConfig()
+    val weekdays = schedule.weekdays
+    val weekdayMode = weekdays.toWeekdayMode()
+    return defaults.copy(
+        startHour = schedule.startHour,
+        startMinute = schedule.startMinute,
+        intervalMinutes = intervalMinutes,
+        windowEndHour = schedule.windowEndHour ?: defaults.windowEndHour,
+        windowEndMinute = schedule.windowEndMinute ?: defaults.windowEndMinute,
+        weekdays = weekdays,
+        weekdayMode = weekdayMode,
+    )
+}
+
+/** Builds the [RuleAction] for the currently selected outcome and its config. */
+private fun buildSnoozeAction(
+    initial: RuleAction?,
+    outcome: SnoozeOutcome,
+    minutes: Int,
+    batchAtTimeConfig: BatchAtTimeConfig,
+    digestConfig: DigestScheduleConfig,
+): RuleAction {
+    val id = initial?.id ?: UUID.randomUUID().toString()
+    val isEnabled = initial?.isEnabled ?: true
+    return when (outcome) {
+        SnoozeOutcome.DELAY_EACH_ONE -> RuleAction.createSnooze(
+            id = id,
+            durationMinutes = minutes,
+            isEnabled = isEnabled,
+        )
+        SnoozeOutcome.BATCH_AT_TIME -> RuleAction.createScheduledSnooze(
+            id = id,
+            startHour = batchAtTimeConfig.times.first().first,
+            startMinute = batchAtTimeConfig.times.first().second,
+            times = batchAtTimeConfig.times,
+            intervalMinutes = null,
+            windowEndHour = null,
+            windowEndMinute = null,
+            weekdays = batchAtTimeConfig.weekdays,
+            isEnabled = isEnabled,
+        )
+        SnoozeOutcome.BATCH_INTO_DIGEST -> RuleAction.createScheduledSnooze(
+            id = id,
+            startHour = digestConfig.startHour,
+            startMinute = digestConfig.startMinute,
+            intervalMinutes = digestConfig.intervalMinutes,
+            windowEndHour = digestConfig.windowEndHour,
+            windowEndMinute = digestConfig.windowEndMinute,
+            weekdays = digestConfig.weekdays,
+            isEnabled = isEnabled,
         )
     }
 }

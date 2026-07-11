@@ -14,6 +14,52 @@ const val SNOOZE_DURATION_MINUTES_KEY = "snooze_duration_minutes"
 const val DEFAULT_SNOOZE_DURATION_MINUTES = 15
 
 /**
+ * Configuration key for the snooze mode: `"duration"` (fixed relative duration, default) or
+ * `"scheduled"` (until a specific time, optionally recurring within a window).
+ */
+const val SNOOZE_MODE_KEY = "snooze_mode"
+
+/**
+ * Configuration key for the scheduled-mode start time: hour of day, 0-23.
+ */
+const val SNOOZE_SCHEDULE_START_HOUR_KEY = "snooze_schedule_start_hour"
+
+/**
+ * Configuration key for the scheduled-mode start time: minute of hour, 0-59.
+ */
+const val SNOOZE_SCHEDULE_START_MINUTE_KEY = "snooze_schedule_start_minute"
+
+/**
+ * Configuration key for the scheduled-mode repeat interval in minutes. Absent means a single
+ * daily checkpoint at the start time; present means a recurring checkpoint every N minutes.
+ */
+const val SNOOZE_SCHEDULE_INTERVAL_MINUTES_KEY = "snooze_schedule_interval_minutes"
+
+/**
+ * Configuration key for the scheduled-mode recurrence window end time: hour of day, 0-23.
+ * Required whenever an interval is set; matches at or after this time pass through unsnoozed.
+ */
+const val SNOOZE_SCHEDULE_WINDOW_END_HOUR_KEY = "snooze_schedule_window_end_hour"
+
+/**
+ * Configuration key for the scheduled-mode recurrence window end time: minute of hour, 0-59.
+ */
+const val SNOOZE_SCHEDULE_WINDOW_END_MINUTE_KEY = "snooze_schedule_window_end_minute"
+
+/**
+ * Configuration key for the scheduled-mode weekday filter: a comma-separated list of
+ * DayOfWeek names (e.g., "MONDAY,WEDNESDAY,FRIDAY"). Absent means every day (default).
+ */
+const val SNOOZE_SCHEDULE_WEEKDAYS_KEY = "snooze_schedule_weekdays"
+
+/**
+ * Configuration key for batch-at-time delivery times: comma-separated list of "HH:MM" strings.
+ * Only used for non-recurring scheduled snoozes (when intervalMinutes is null).
+ * Absent means only the start time is used.
+ */
+const val SNOOZE_SCHEDULE_TIMES_KEY = "snooze_schedule_times"
+
+/**
  * Configuration key for the alarm sound URI (as a string). Absent/null means "use the device's
  * default alarm sound".
  */
@@ -196,6 +242,56 @@ data class RuleAction(
         ?: DEFAULT_SNOOZE_DURATION_MINUTES
 
     /**
+     * Get the snooze mode, defaulting to [SnoozeMode.DURATION] if not set or unrecognized - this
+     * keeps rules saved/exported before [SnoozeMode.SCHEDULED] existed behaving exactly as before.
+     */
+    fun getSnoozeMode(): SnoozeMode = config[SNOOZE_MODE_KEY]
+        ?.let { raw -> SnoozeMode.entries.firstOrNull { it.name.equals(raw, ignoreCase = true) } }
+        ?: SnoozeMode.DURATION
+
+    /**
+     * Parse the [SnoozeMode.SCHEDULED] configuration, or null when this action isn't in that mode
+     * or its required start-time keys are missing/malformed.
+     */
+    fun getSnoozeSchedule(): SnoozeSchedule? {
+        if (getSnoozeMode() != SnoozeMode.SCHEDULED) return null
+        val startHour = config[SNOOZE_SCHEDULE_START_HOUR_KEY]?.toIntOrNull() ?: return null
+        val startMinute = config[SNOOZE_SCHEDULE_START_MINUTE_KEY]?.toIntOrNull() ?: return null
+        val weekdaysStr = config[SNOOZE_SCHEDULE_WEEKDAYS_KEY]
+        val weekdays = weekdaysStr?.split(",")?.mapNotNull { day ->
+            try {
+                java.time.DayOfWeek.valueOf(day.trim())
+            } catch (e: IllegalArgumentException) {
+                null
+            }
+        }?.toSet()
+            ?: emptySet()
+        val timesStr = config[SNOOZE_SCHEDULE_TIMES_KEY]
+        val times = timesStr?.split("|")?.mapNotNull { timeStr ->
+            val parts = timeStr.trim().split(":")
+            if (parts.size == 2) {
+                parts[0].toIntOrNull()?.let { hour ->
+                    parts[1].toIntOrNull()?.let { minute ->
+                        hour to minute
+                    }
+                }
+            } else {
+                null
+            }
+        }
+            ?: emptyList()
+        return SnoozeSchedule(
+            startHour = startHour,
+            startMinute = startMinute,
+            intervalMinutes = config[SNOOZE_SCHEDULE_INTERVAL_MINUTES_KEY]?.toIntOrNull(),
+            windowEndHour = config[SNOOZE_SCHEDULE_WINDOW_END_HOUR_KEY]?.toIntOrNull(),
+            windowEndMinute = config[SNOOZE_SCHEDULE_WINDOW_END_MINUTE_KEY]?.toIntOrNull(),
+            times = times,
+            weekdays = weekdays,
+        )
+    }
+
+    /**
      * Get the configured alarm sound URI, or null to use the device's default alarm sound.
      */
     fun getAlarmSoundUri(): String? = config[ALARM_SOUND_URI_KEY]
@@ -315,6 +411,45 @@ data class RuleAction(
         )
 
         /**
+         * Create a [SnoozeMode.SCHEDULED] snooze action: batch at specific times or with intervals.
+         * @param times list of (hour, minute) pairs for batch-at-time mode.
+         * If set, [intervalMinutes] must be null.
+         * @param intervalMinutes null means batch-at-time mode (use [times]);
+         * non-null means recurring mode (repeat every N minutes until [windowEndHour]:[windowEndMinute]).
+         * @param weekdays the days of the week this schedule applies to, for both batch-at-time
+         * and recurring mode. Empty means every day.
+         */
+        fun createScheduledSnooze(
+            id: String,
+            startHour: Int,
+            startMinute: Int,
+            intervalMinutes: Int? = null,
+            windowEndHour: Int? = null,
+            windowEndMinute: Int? = null,
+            times: List<Pair<Int, Int>> = emptyList(),
+            weekdays: Set<java.time.DayOfWeek> = emptySet(),
+            isEnabled: Boolean = true,
+        ): RuleAction = RuleAction(
+            id = id,
+            type = ActionType.SNOOZE_NOTIFICATION,
+            isEnabled = isEnabled,
+            config = buildMap {
+                put(SNOOZE_MODE_KEY, SnoozeMode.SCHEDULED.name.lowercase())
+                put(SNOOZE_SCHEDULE_START_HOUR_KEY, startHour.toString())
+                put(SNOOZE_SCHEDULE_START_MINUTE_KEY, startMinute.toString())
+                intervalMinutes?.let { put(SNOOZE_SCHEDULE_INTERVAL_MINUTES_KEY, it.toString()) }
+                windowEndHour?.let { put(SNOOZE_SCHEDULE_WINDOW_END_HOUR_KEY, it.toString()) }
+                windowEndMinute?.let { put(SNOOZE_SCHEDULE_WINDOW_END_MINUTE_KEY, it.toString()) }
+                if (times.isNotEmpty()) {
+                    put(SNOOZE_SCHEDULE_TIMES_KEY, times.joinToString("|") { (h, m) -> "%02d:%02d".format(h, m) })
+                }
+                if (weekdays.isNotEmpty()) {
+                    put(SNOOZE_SCHEDULE_WEEKDAYS_KEY, weekdays.joinToString(",") { it.name })
+                }
+            },
+        )
+
+        /**
          * Create an alarm action with an optional custom sound and vibration setting, plus the
          * extended alarm options ([AlarmOptionsConfig]: sound-enabled, vibration pattern,
          * full-screen, snooze, and background). The extended options - including the legacy
@@ -388,6 +523,38 @@ enum class ActionType {
     @SerialName("flash_alert")
     FLASH_ALERT,
 }
+
+/**
+ * How a [SNOOZE_NOTIFICATION] [RuleAction] computes its snooze duration.
+ */
+enum class SnoozeMode {
+    /** Fixed relative duration, read from [SNOOZE_DURATION_MINUTES_KEY]. */
+    DURATION,
+
+    /** Until a specific time, optionally recurring within a window - see [SnoozeSchedule]. */
+    SCHEDULED,
+}
+
+/**
+ * Parsed [SnoozeMode.SCHEDULED] configuration for a [SNOOZE_NOTIFICATION] [RuleAction].
+ *
+ * @property intervalMinutes null means batch-at-time mode (deliver at specific times);
+ * non-null means recurring checkpoints every [intervalMinutes] minutes, bounded by
+ * [windowEndHour]:[windowEndMinute] (both required together whenever [intervalMinutes] is set).
+ * @property times only meaningful when [intervalMinutes] is null: list of (hour, minute) pairs
+ * for delivery times. Null/empty means only [startHour]:[startMinute].
+ * @property weekdays the days of the week this schedule applies to (e.g. Mon-Fri). Empty or null
+ * means every day. DayOfWeek values are Java's standard: MONDAY=1, ..., SUNDAY=7.
+ */
+data class SnoozeSchedule(
+    val startHour: Int,
+    val startMinute: Int,
+    val intervalMinutes: Int? = null,
+    val windowEndHour: Int? = null,
+    val windowEndMinute: Int? = null,
+    val times: List<Pair<Int, Int>> = emptyList(),
+    val weekdays: Set<java.time.DayOfWeek> = emptySet(),
+)
 
 /**
  * Grouping value object for the extended `CREATE_ALARM` options ([RuleAction.createAlarm]),
