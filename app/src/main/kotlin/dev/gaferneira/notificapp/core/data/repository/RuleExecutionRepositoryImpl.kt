@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.data.repository
 
 import androidx.room.withTransaction
+import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.local.AppDatabase
 import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
@@ -67,7 +68,7 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Timber.e(e, "Failed to save rule execution ${execution.id}")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -89,7 +90,7 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Timber.e(e, "Failed to look up last throttle delivery for action $actionId, package $packageName")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -103,7 +104,7 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Timber.e(e, "Failed to delete executions for notification: $notificationId")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 }

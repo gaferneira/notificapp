@@ -4,6 +4,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.entity.NotificationEntity
 import dev.gaferneira.notificapp.core.di.Dispatcher
@@ -109,7 +110,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(entities.map { it.toModel() })
         } catch (e: Exception) {
             Timber.e(e, "Failed to get notifications for backtest")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -119,7 +120,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(entity?.toModel())
         } catch (e: Exception) {
             Timber.e(e, "Failed to get notification: $id")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -129,7 +130,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(entities.map { it.toModel() })
         } catch (e: Exception) {
             Timber.e(e, "Failed to get unprocessed notifications")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -139,7 +140,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(entities.map { it.toModel() })
         } catch (e: Exception) {
             Timber.e(e, "Failed to search notifications: $query")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -149,7 +150,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to save notification: ${notification.id}")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -159,7 +160,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to mark notification as processed: $id")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -169,7 +170,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to delete notification: $id")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -179,7 +180,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to delete old notifications")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -189,7 +190,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to delete notifications for app: $packageName")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -199,7 +200,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(count)
         } catch (e: Exception) {
             Timber.e(e, "Failed to get notification count")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -209,7 +210,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(count)
         } catch (e: Exception) {
             Timber.e(e, "Failed to get unprocessed count")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -220,7 +221,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             Result.success(entities.map { it.toModel() })
         } catch (e: Exception) {
             Timber.e(e, "Failed to get recent notifications for: $packageName")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 

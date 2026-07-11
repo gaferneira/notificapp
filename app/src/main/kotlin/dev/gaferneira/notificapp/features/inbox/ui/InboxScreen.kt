@@ -77,13 +77,13 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.OnResumeEffect
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEffect
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEvent
-import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract.Status
 import dev.gaferneira.notificapp.features.inbox.contract.InboxListItem
 import dev.gaferneira.notificapp.features.inbox.contract.InboxUiState
 import dev.gaferneira.notificapp.features.inbox.contract.NotificationItem
 import dev.gaferneira.notificapp.features.inbox.viewmodel.InboxViewModel
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
 import kotlinx.coroutines.flow.flowOf
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
  * Inbox Screen displaying paginated notifications with 2-hour time headers.

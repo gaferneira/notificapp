@@ -1,6 +1,6 @@
 package dev.gaferneira.notificapp.features.inbox.contract
 
-import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract.Status
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
  * Data class representing the state of the Inbox screen.

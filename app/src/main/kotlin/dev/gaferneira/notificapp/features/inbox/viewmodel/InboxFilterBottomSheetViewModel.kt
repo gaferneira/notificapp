@@ -8,6 +8,7 @@ import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
  * ViewModel for the InboxFilterBottomSheet.
@@ -53,20 +54,20 @@ class InboxFilterBottomSheetViewModel @Inject constructor(
      */
     fun initialize(
         currentSelectedApps: List<String>,
-        currentStatusFilter: InboxFilterContract.Status = InboxFilterContract.Status.ALL,
+        currentStatusFilter: Status = Status.ALL,
     ) {
         onEvent(InboxFilterContract.UiEvent.Init(currentSelectedApps, currentStatusFilter))
     }
 
     private fun initWithFilter(
         selectedApps: List<String>,
-        statusFilter: InboxFilterContract.Status,
+        statusFilter: Status,
     ) {
         setState {
             copy(
                 selectedApps = selectedApps.toSet(),
                 statusFilter = statusFilter,
-                hasActiveFilters = selectedApps.isNotEmpty() || statusFilter != InboxFilterContract.Status.ALL,
+                hasActiveFilters = selectedApps.isNotEmpty() || statusFilter != Status.ALL,
             )
         }
     }
@@ -80,16 +81,16 @@ class InboxFilterBottomSheetViewModel @Inject constructor(
             }
             copy(
                 selectedApps = newSelection,
-                hasActiveFilters = newSelection.isNotEmpty() || statusFilter != InboxFilterContract.Status.ALL,
+                hasActiveFilters = newSelection.isNotEmpty() || statusFilter != Status.ALL,
             )
         }
     }
 
-    private fun changeStatus(status: InboxFilterContract.Status) {
+    private fun changeStatus(status: Status) {
         setState {
             copy(
                 statusFilter = status,
-                hasActiveFilters = status != InboxFilterContract.Status.ALL || selectedApps.isNotEmpty(),
+                hasActiveFilters = status != Status.ALL || selectedApps.isNotEmpty(),
             )
         }
     }
@@ -98,7 +99,7 @@ class InboxFilterBottomSheetViewModel @Inject constructor(
         setState {
             copy(
                 selectedApps = emptySet(),
-                statusFilter = InboxFilterContract.Status.ALL,
+                statusFilter = Status.ALL,
                 hasActiveFilters = false,
             )
         }

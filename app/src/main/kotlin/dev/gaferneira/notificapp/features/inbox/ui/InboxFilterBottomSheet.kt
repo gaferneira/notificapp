@@ -39,6 +39,7 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract
 import dev.gaferneira.notificapp.features.inbox.viewmodel.InboxFilterBottomSheetViewModel
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
  * Bottom sheet for filtering inbox notifications.
@@ -55,10 +56,10 @@ import dev.gaferneira.notificapp.features.inbox.viewmodel.InboxFilterBottomSheet
 @Composable
 fun InboxFilterBottomSheet(
     currentSelectedApps: List<String>,
-    onFilterApplied: (List<String>, InboxFilterContract.Status) -> Unit,
+    onFilterApplied: (List<String>, Status) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    currentStatusFilter: InboxFilterContract.Status = InboxFilterContract.Status.ALL,
+    currentStatusFilter: Status = Status.ALL,
     viewModel: InboxFilterBottomSheetViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -130,9 +131,9 @@ private fun FilterBottomSheetContent(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             FilterChip(
-                selected = uiState.statusFilter == InboxFilterContract.Status.ALL,
+                selected = uiState.statusFilter == Status.ALL,
                 onClick = {
-                    onEvent(InboxFilterContract.UiEvent.OnStatusChange(InboxFilterContract.Status.ALL))
+                    onEvent(InboxFilterContract.UiEvent.OnStatusChange(Status.ALL))
                 },
                 label = { Text(stringResource(R.string.status_all)) },
                 colors = FilterChipDefaults.filterChipColors(
@@ -141,9 +142,9 @@ private fun FilterBottomSheetContent(
                 ),
             )
             FilterChip(
-                selected = uiState.statusFilter == InboxFilterContract.Status.PROCESSED,
+                selected = uiState.statusFilter == Status.PROCESSED,
                 onClick = {
-                    onEvent(InboxFilterContract.UiEvent.OnStatusChange(InboxFilterContract.Status.PROCESSED))
+                    onEvent(InboxFilterContract.UiEvent.OnStatusChange(Status.PROCESSED))
                 },
                 label = { Text(stringResource(R.string.status_processed)) },
                 colors = FilterChipDefaults.filterChipColors(
@@ -152,9 +153,9 @@ private fun FilterBottomSheetContent(
                 ),
             )
             FilterChip(
-                selected = uiState.statusFilter == InboxFilterContract.Status.UNPROCESSED,
+                selected = uiState.statusFilter == Status.UNPROCESSED,
                 onClick = {
-                    onEvent(InboxFilterContract.UiEvent.OnStatusChange(InboxFilterContract.Status.UNPROCESSED))
+                    onEvent(InboxFilterContract.UiEvent.OnStatusChange(Status.UNPROCESSED))
                 },
                 label = { Text(stringResource(R.string.status_unprocessed)) },
                 colors = FilterChipDefaults.filterChipColors(

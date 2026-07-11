@@ -1,6 +1,5 @@
 package dev.gaferneira.notificapp.domain.model.preferences
 
-import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract.Status
 import kotlinx.serialization.Serializable
 
 /**
@@ -12,5 +11,15 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class InboxFilterSettings(
     val selectedApps: List<String> = emptyList(),
-    val statusFilter: Status = Status.ALL,
+    val statusFilter: NotificationStatusFilter = NotificationStatusFilter.ALL,
 )
+
+/**
+ * Processed/unprocessed status filter for the inbox.
+ */
+@Serializable
+enum class NotificationStatusFilter {
+    ALL,
+    PROCESSED,
+    UNPROCESSED,
+}

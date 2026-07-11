@@ -3,6 +3,7 @@ package dev.gaferneira.notificapp.core.data.preferences
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.preferences.datastore.PreferenceKeys
 import dev.gaferneira.notificapp.domain.model.preferences.UserPreferences
 import kotlinx.coroutines.flow.Flow
@@ -63,7 +64,7 @@ class UserPreferencesLocalDataSource @Inject constructor(
         }.map { Result.success(it) }
         preferences.first()
     } catch (e: Exception) {
-        Result.failure(e)
+        e.toFailureResult()
     }
 
     /**
@@ -78,6 +79,6 @@ class UserPreferencesLocalDataSource @Inject constructor(
         }
         Result.success(Unit)
     } catch (e: Exception) {
-        Result.failure(e)
+        e.toFailureResult()
     }
 }

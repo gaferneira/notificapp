@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.data.repository
 
+import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
 import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
@@ -56,7 +57,7 @@ internal class RuleRepositoryImpl @Inject constructor(
             Result.success(rules)
         } catch (e: Exception) {
             Timber.e(e, "Failed to get all rules")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -73,7 +74,7 @@ internal class RuleRepositoryImpl @Inject constructor(
             Result.success(rule)
         } catch (e: Exception) {
             Timber.e(e, "Failed to get rule: $id")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -90,7 +91,7 @@ internal class RuleRepositoryImpl @Inject constructor(
             Result.success(rules)
         } catch (e: Exception) {
             Timber.e(e, "Failed to get rules for app: $packageName")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -106,7 +107,7 @@ internal class RuleRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to save rule: ${rule.id}")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -122,7 +123,7 @@ internal class RuleRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to update rule: ${rule.id}")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -143,7 +144,7 @@ internal class RuleRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to delete rule: $id")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -154,7 +155,7 @@ internal class RuleRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to toggle rule: $id")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -163,7 +164,7 @@ internal class RuleRepositoryImpl @Inject constructor(
             Result.success(ruleDao.getCount())
         } catch (e: Exception) {
             Timber.e(e, "Failed to get rule count")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -172,7 +173,7 @@ internal class RuleRepositoryImpl @Inject constructor(
             Result.success(ruleDao.getActiveCount())
         } catch (e: Exception) {
             Timber.e(e, "Failed to get active rule count")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 

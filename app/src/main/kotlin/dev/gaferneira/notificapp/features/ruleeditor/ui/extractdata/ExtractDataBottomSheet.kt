@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.R
-import dev.gaferneira.notificapp.core.extraction.ExtractionResult
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
@@ -54,6 +53,7 @@ import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract
+import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.PreviewResult
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
@@ -280,15 +280,15 @@ private fun PreviewOrHistorySlot(
 private fun SampleNotificationPreview(
     notification: Notification,
     fields: List<RuleField>,
-    previewResults: Map<String, ExtractionResult>,
+    previewResults: Map<String, PreviewResult>,
     onClear: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val noMatchLabel = stringResource(R.string.extract_preview_no_match)
     val extractedFields = fields.mapNotNull { field ->
         when (val result = previewResults[field.id]) {
-            is ExtractionResult.Success -> field.name to result.value
-            is ExtractionResult.Failure -> field.name to noMatchLabel
+            is PreviewResult.Success -> field.name to result.value
+            is PreviewResult.Failure -> field.name to noMatchLabel
             null -> null
         }
     }
@@ -516,8 +516,8 @@ private fun DataExtractionSectionPreview() {
                     RuleField(id = "2", name = "Amount", method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?")),
                 ),
                 previewResults = mapOf(
-                    "1" to ExtractionResult.Success(value = "ICA Kvantum"),
-                    "2" to ExtractionResult.Failure("Pattern did not match"),
+                    "1" to PreviewResult.Success(value = "ICA Kvantum"),
+                    "2" to PreviewResult.Failure("Pattern did not match"),
                 ),
             ),
             onEvent = {},

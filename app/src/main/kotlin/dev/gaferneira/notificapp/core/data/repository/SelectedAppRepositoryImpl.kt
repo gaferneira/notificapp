@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.data.repository
 
+import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
 import dev.gaferneira.notificapp.core.data.local.entity.SelectedAppEntity
 import dev.gaferneira.notificapp.core.di.Dispatcher
@@ -41,7 +42,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(entities.map { it.toModel() })
         } catch (e: Exception) {
             Timber.e(e, "Failed to get all apps")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -51,7 +52,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(entities.map { it.toModel() })
         } catch (e: Exception) {
             Timber.e(e, "Failed to get enabled apps")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -61,7 +62,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(entity?.toModel())
         } catch (e: Exception) {
             Timber.e(e, "Failed to get app: $packageName")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -71,7 +72,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(isSelected)
         } catch (e: Exception) {
             Timber.e(e, "Failed to check if app is selected: $packageName")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -81,7 +82,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(isEnabled)
         } catch (e: Exception) {
             Timber.e(e, "Failed to check if app is enabled: $packageName")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -91,7 +92,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to add app: ${app.packageName}")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -101,7 +102,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to add ${apps.size} apps")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -111,7 +112,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to remove app: $packageName")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -121,7 +122,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to set app enabled state: $packageName")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -131,7 +132,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to remove all apps")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -141,7 +142,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(count)
         } catch (e: Exception) {
             Timber.e(e, "Failed to get selected count")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -151,7 +152,7 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
             Result.success(count)
         } catch (e: Exception) {
             Timber.e(e, "Failed to get enabled count")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 }

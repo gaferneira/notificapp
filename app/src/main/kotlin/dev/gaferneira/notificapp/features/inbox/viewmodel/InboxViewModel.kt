@@ -17,7 +17,6 @@ import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEffect
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEvent
-import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract.Status
 import dev.gaferneira.notificapp.features.inbox.contract.InboxListItem
 import dev.gaferneira.notificapp.features.inbox.contract.InboxUiState
 import dev.gaferneira.notificapp.features.inbox.contract.NotificationItem
@@ -37,6 +36,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
  * ViewModel for the Inbox Screen with Pagination.

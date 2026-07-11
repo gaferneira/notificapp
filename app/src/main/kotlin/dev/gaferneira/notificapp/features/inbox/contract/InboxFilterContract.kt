@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.inbox.contract
 
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
  * MVI Contract for the InboxFilterBottomSheet.
@@ -8,15 +9,6 @@ import dev.gaferneira.notificapp.domain.model.AppInfo
  * Manages the state for filtering notifications by app and processed status.
  */
 object InboxFilterContract {
-
-    /**
-     * Status filter options for notifications.
-     */
-    enum class Status {
-        ALL,
-        PROCESSED,
-        UNPROCESSED,
-    }
 
     /**
      * UI State for the inbox filter bottom sheet.

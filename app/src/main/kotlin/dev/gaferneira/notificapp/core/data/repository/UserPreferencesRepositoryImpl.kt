@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.data.repository
 
+import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.preferences.UserPreferencesLocalDataSource
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
@@ -52,7 +53,7 @@ internal class UserPreferencesRepositoryImpl @Inject constructor(
             localDataSource.updateUserPreferences(updated)
         } catch (e: Exception) {
             Timber.e(e, "Failed to set inbox filters")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -70,7 +71,7 @@ internal class UserPreferencesRepositoryImpl @Inject constructor(
             localDataSource.updateUserPreferences(updated)
         } catch (e: Exception) {
             Timber.e(e, "Failed to set rules filters")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -88,7 +89,7 @@ internal class UserPreferencesRepositoryImpl @Inject constructor(
             localDataSource.updateUserPreferences(updated)
         } catch (e: Exception) {
             Timber.e(e, "Failed to set theme preference")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 
@@ -97,7 +98,7 @@ internal class UserPreferencesRepositoryImpl @Inject constructor(
             localDataSource.updateUserPreferences(UserPreferences())
         } catch (e: Exception) {
             Timber.e(e, "Failed to reset preferences to defaults")
-            Result.failure(e)
+            e.toFailureResult()
         }
     }
 }

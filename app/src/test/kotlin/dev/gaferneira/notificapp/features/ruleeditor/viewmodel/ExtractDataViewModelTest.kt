@@ -1,9 +1,9 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import app.cash.turbine.test
-import dev.gaferneira.notificapp.core.extraction.ExtractionResult
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
+import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.PreviewResult
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
 import dev.gaferneira.notificapp.testutil.createTestField
@@ -333,11 +333,7 @@ class ExtractDataViewModelTest {
             )
 
             // Then: the preview entry is a Success with the extracted value
-            viewModel.uiState.value.previewResults["f1"] shouldBe ExtractionResult.Success(
-                value = "153",
-                startIndex = 7,
-                endIndex = 10,
-            )
+            viewModel.uiState.value.previewResults["f1"] shouldBe PreviewResult.Success(value = "153")
         }
 
         @Test
@@ -351,7 +347,7 @@ class ExtractDataViewModelTest {
             )
 
             // Then: the preview entry is a Failure, not a missing key or an exception
-            viewModel.uiState.value.previewResults["f1"] shouldBe ExtractionResult.Failure("Pattern did not match")
+            viewModel.uiState.value.previewResults["f1"] shouldBe PreviewResult.Failure("Pattern did not match")
         }
 
         @Test
@@ -382,11 +378,7 @@ class ExtractDataViewModelTest {
             viewModel.onEvent(UiEvent.OnFieldSaved(updated))
 
             // Then: the preview for "f1" updates to a Success
-            viewModel.uiState.value.previewResults["f1"] shouldBe ExtractionResult.Success(
-                value = "153",
-                startIndex = 7,
-                endIndex = 10,
-            )
+            viewModel.uiState.value.previewResults["f1"] shouldBe PreviewResult.Success(value = "153")
         }
 
         @Test
@@ -420,7 +412,7 @@ class ExtractDataViewModelTest {
             val state = viewModel.uiState.value
             val generatedId = state.fields.single().id
             state.previewResults.keys shouldBe setOf(generatedId)
-            (state.previewResults.getValue(generatedId) as ExtractionResult.Success).value shouldBe "Total: 153 kr"
+            (state.previewResults.getValue(generatedId) as PreviewResult.Success).value shouldBe "Total: 153 kr"
         }
 
         @Test
@@ -496,11 +488,7 @@ class ExtractDataViewModelTest {
             viewModel.onEvent(UiEvent.OnHistoryNotificationSelected(notification))
 
             // Then: previews reflect the override's text, not stale/empty results
-            viewModel.uiState.value.previewResults["f1"] shouldBe ExtractionResult.Success(
-                value = "153",
-                startIndex = 7,
-                endIndex = 10,
-            )
+            viewModel.uiState.value.previewResults["f1"] shouldBe PreviewResult.Success(value = "153")
         }
 
         @Test

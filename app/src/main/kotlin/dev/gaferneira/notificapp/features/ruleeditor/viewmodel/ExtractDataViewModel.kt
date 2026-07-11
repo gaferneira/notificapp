@@ -4,12 +4,14 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.core.extraction.ExtractionResult
 import dev.gaferneira.notificapp.core.extraction.FieldExtractor
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
+import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.PreviewResult
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiState
@@ -82,9 +84,14 @@ class ExtractDataViewModel @Inject constructor(
         val previews = if (text.isNullOrBlank()) {
             emptyMap()
         } else {
-            uiState.value.fields.associate { field -> field.id to FieldExtractor.extract(text, field) }
+            uiState.value.fields.associate { field -> field.id to FieldExtractor.extract(text, field).toPreviewResult() }
         }
         setState { copy(previewResults = previews) }
+    }
+
+    private fun ExtractionResult.toPreviewResult(): PreviewResult = when (this) {
+        is ExtractionResult.Success -> PreviewResult.Success(value)
+        is ExtractionResult.Failure -> PreviewResult.Failure(reason)
     }
 
     private fun onBrowseHistoryOpened(targetPackages: List<String>?) {

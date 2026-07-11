@@ -1,6 +1,5 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
-import dev.gaferneira.notificapp.core.extraction.ExtractionResult
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
 
@@ -12,6 +11,15 @@ import dev.gaferneira.notificapp.domain.model.RuleField
  * the [MatchingLogicContract] sub-sheet pattern.
  */
 object ExtractDataContract {
+
+    /**
+     * Live extraction preview for one draft field, mapped from [dev.gaferneira.notificapp.core.extraction.ExtractionResult]
+     * at the ViewModel boundary so the contract doesn't leak the extraction engine's internal type.
+     */
+    sealed class PreviewResult {
+        data class Success(val value: String) : PreviewResult()
+        data class Failure(val reason: String) : PreviewResult()
+    }
 
     /**
      * UI State for the Extract-data sheet. [fields] is the working draft, not the rule's fields.
@@ -30,7 +38,7 @@ object ExtractDataContract {
          * every draft mutation (init, field saved, removed, auto-generate); empty when the sample
          * text is blank or null.
          */
-        val previewResults: Map<String, ExtractionResult> = emptyMap(),
+        val previewResults: Map<String, PreviewResult> = emptyMap(),
         /**
          * Preview-only notification chosen from history when no entry-flow sample was supplied.
          * Never persisted, never threaded to RuleEditorViewModel, never used for matching.
