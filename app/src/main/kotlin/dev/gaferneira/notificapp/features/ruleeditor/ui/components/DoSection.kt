@@ -104,6 +104,7 @@ private fun RuleAction.snoozeSubtitle(): String = when (getSnoozeMode()) {
             "Until $start"
         }
     }
+    SnoozeMode.THROTTLE -> "1 per ${formatDurationMinutes(getThrottleWindowMinutes())}"
 }
 
 @Composable

@@ -60,6 +60,37 @@ const val SNOOZE_SCHEDULE_WEEKDAYS_KEY = "snooze_schedule_weekdays"
 const val SNOOZE_SCHEDULE_TIMES_KEY = "snooze_schedule_times"
 
 /**
+ * Configuration key for the throttle-mode rate-limit window, in minutes: the first match opens
+ * the window and delivers; further matches inside the window are dropped until it elapses.
+ */
+const val SNOOZE_THROTTLE_WINDOW_MINUTES_KEY = "snooze_throttle_window_minutes"
+
+/**
+ * Default throttle window, in minutes.
+ */
+const val DEFAULT_SNOOZE_THROTTLE_WINDOW_MINUTES = 10
+
+/**
+ * Throttle window is clamped to this range, mirroring the [FLASH_COUNT_KEY] defense-in-depth
+ * coercion pattern, so a malformed import can't produce a zero/negative window.
+ */
+const val MIN_SNOOZE_THROTTLE_WINDOW_MINUTES = 1
+const val MAX_SNOOZE_THROTTLE_WINDOW_MINUTES = 1440
+
+/**
+ * Configuration key for the throttle-mode reset watermark: an epoch-millis timestamp. Any
+ * delivery recorded before this watermark no longer counts, so editing the window duration or
+ * disabling/re-enabling the action makes the next match deliver a fresh window.
+ */
+const val SNOOZE_THROTTLE_RESET_AT_KEY = "snooze_throttle_reset_at"
+
+/**
+ * Default throttle reset watermark - epoch millis zero, so any prior delivery counts until an
+ * edit stamps a real watermark.
+ */
+const val DEFAULT_SNOOZE_THROTTLE_RESET_AT = 0L
+
+/**
  * Configuration key for the alarm sound URI (as a string). Absent/null means "use the device's
  * default alarm sound".
  */
@@ -254,42 +285,35 @@ data class RuleAction(
      * or its required start-time keys are missing/malformed.
      */
     fun getSnoozeSchedule(): SnoozeSchedule? {
-        if (getSnoozeMode() != SnoozeMode.SCHEDULED) return null
-        val startHour = config[SNOOZE_SCHEDULE_START_HOUR_KEY]?.toIntOrNull() ?: return null
-        val startMinute = config[SNOOZE_SCHEDULE_START_MINUTE_KEY]?.toIntOrNull() ?: return null
-        val weekdaysStr = config[SNOOZE_SCHEDULE_WEEKDAYS_KEY]
-        val weekdays = weekdaysStr?.split(",")?.mapNotNull { day ->
-            try {
-                java.time.DayOfWeek.valueOf(day.trim())
-            } catch (e: IllegalArgumentException) {
-                null
-            }
-        }?.toSet()
-            ?: emptySet()
-        val timesStr = config[SNOOZE_SCHEDULE_TIMES_KEY]
-        val times = timesStr?.split("|")?.mapNotNull { timeStr ->
-            val parts = timeStr.trim().split(":")
-            if (parts.size == 2) {
-                parts[0].toIntOrNull()?.let { hour ->
-                    parts[1].toIntOrNull()?.let { minute ->
-                        hour to minute
-                    }
-                }
-            } else {
-                null
-            }
-        }
-            ?: emptyList()
+        val startHour = config[SNOOZE_SCHEDULE_START_HOUR_KEY]?.toIntOrNull()
+        val startMinute = config[SNOOZE_SCHEDULE_START_MINUTE_KEY]?.toIntOrNull()
+        if (getSnoozeMode() != SnoozeMode.SCHEDULED || startHour == null || startMinute == null) return null
+
         return SnoozeSchedule(
             startHour = startHour,
             startMinute = startMinute,
             intervalMinutes = config[SNOOZE_SCHEDULE_INTERVAL_MINUTES_KEY]?.toIntOrNull(),
             windowEndHour = config[SNOOZE_SCHEDULE_WINDOW_END_HOUR_KEY]?.toIntOrNull(),
             windowEndMinute = config[SNOOZE_SCHEDULE_WINDOW_END_MINUTE_KEY]?.toIntOrNull(),
-            times = times,
-            weekdays = weekdays,
+            times = parseSnoozeScheduleTimes(config[SNOOZE_SCHEDULE_TIMES_KEY]),
+            weekdays = parseSnoozeScheduleWeekdays(config[SNOOZE_SCHEDULE_WEEKDAYS_KEY]),
         )
     }
+
+    /**
+     * Get the throttle window in minutes, clamped to a sane range regardless of what's stored in
+     * config (defense in depth against a malformed or imported rule).
+     */
+    fun getThrottleWindowMinutes(): Int = (
+        config[SNOOZE_THROTTLE_WINDOW_MINUTES_KEY]?.toIntOrNull() ?: DEFAULT_SNOOZE_THROTTLE_WINDOW_MINUTES
+        ).coerceIn(MIN_SNOOZE_THROTTLE_WINDOW_MINUTES, MAX_SNOOZE_THROTTLE_WINDOW_MINUTES)
+
+    /**
+     * Get the throttle reset watermark (epoch millis), or [DEFAULT_SNOOZE_THROTTLE_RESET_AT] if
+     * not set or malformed.
+     */
+    fun getThrottleResetAt(): Long = config[SNOOZE_THROTTLE_RESET_AT_KEY]?.toLongOrNull()
+        ?: DEFAULT_SNOOZE_THROTTLE_RESET_AT
 
     /**
      * Get the configured alarm sound URI, or null to use the device's default alarm sound.
@@ -421,13 +445,7 @@ data class RuleAction(
          */
         fun createScheduledSnooze(
             id: String,
-            startHour: Int,
-            startMinute: Int,
-            intervalMinutes: Int? = null,
-            windowEndHour: Int? = null,
-            windowEndMinute: Int? = null,
-            times: List<Pair<Int, Int>> = emptyList(),
-            weekdays: Set<java.time.DayOfWeek> = emptySet(),
+            schedule: SnoozeSchedule,
             isEnabled: Boolean = true,
         ): RuleAction = RuleAction(
             id = id,
@@ -435,18 +453,41 @@ data class RuleAction(
             isEnabled = isEnabled,
             config = buildMap {
                 put(SNOOZE_MODE_KEY, SnoozeMode.SCHEDULED.name.lowercase())
-                put(SNOOZE_SCHEDULE_START_HOUR_KEY, startHour.toString())
-                put(SNOOZE_SCHEDULE_START_MINUTE_KEY, startMinute.toString())
-                intervalMinutes?.let { put(SNOOZE_SCHEDULE_INTERVAL_MINUTES_KEY, it.toString()) }
-                windowEndHour?.let { put(SNOOZE_SCHEDULE_WINDOW_END_HOUR_KEY, it.toString()) }
-                windowEndMinute?.let { put(SNOOZE_SCHEDULE_WINDOW_END_MINUTE_KEY, it.toString()) }
-                if (times.isNotEmpty()) {
-                    put(SNOOZE_SCHEDULE_TIMES_KEY, times.joinToString("|") { (h, m) -> "%02d:%02d".format(h, m) })
+                put(SNOOZE_SCHEDULE_START_HOUR_KEY, schedule.startHour.toString())
+                put(SNOOZE_SCHEDULE_START_MINUTE_KEY, schedule.startMinute.toString())
+                schedule.intervalMinutes?.let { put(SNOOZE_SCHEDULE_INTERVAL_MINUTES_KEY, it.toString()) }
+                schedule.windowEndHour?.let { put(SNOOZE_SCHEDULE_WINDOW_END_HOUR_KEY, it.toString()) }
+                schedule.windowEndMinute?.let { put(SNOOZE_SCHEDULE_WINDOW_END_MINUTE_KEY, it.toString()) }
+                if (schedule.times.isNotEmpty()) {
+                    put(SNOOZE_SCHEDULE_TIMES_KEY, schedule.times.joinToString("|") { (h, m) -> "%02d:%02d".format(h, m) })
                 }
-                if (weekdays.isNotEmpty()) {
-                    put(SNOOZE_SCHEDULE_WEEKDAYS_KEY, weekdays.joinToString(",") { it.name })
+                if (schedule.weekdays.isNotEmpty()) {
+                    put(SNOOZE_SCHEDULE_WEEKDAYS_KEY, schedule.weekdays.joinToString(",") { it.name })
                 }
             },
+        )
+
+        /**
+         * Create a [SnoozeMode.THROTTLE] snooze action: let the first match through, drop the
+         * rest until [windowMinutes] elapses. [resetAt] stamps the watermark that invalidates any
+         * delivery recorded before it (see [SNOOZE_THROTTLE_RESET_AT_KEY]) - callers pass the
+         * current time to force a fresh window on window-duration edit or disable->re-enable, or
+         * preserve the prior value otherwise.
+         */
+        fun createThrottleSnooze(
+            id: String,
+            windowMinutes: Int = DEFAULT_SNOOZE_THROTTLE_WINDOW_MINUTES,
+            resetAt: Long = DEFAULT_SNOOZE_THROTTLE_RESET_AT,
+            isEnabled: Boolean = true,
+        ): RuleAction = RuleAction(
+            id = id,
+            type = ActionType.SNOOZE_NOTIFICATION,
+            isEnabled = isEnabled,
+            config = mapOf(
+                SNOOZE_MODE_KEY to SnoozeMode.THROTTLE.name.lowercase(),
+                SNOOZE_THROTTLE_WINDOW_MINUTES_KEY to windowMinutes.toString(),
+                SNOOZE_THROTTLE_RESET_AT_KEY to resetAt.toString(),
+            ),
         )
 
         /**
@@ -533,6 +574,12 @@ enum class SnoozeMode {
 
     /** Until a specific time, optionally recurring within a window - see [SnoozeSchedule]. */
     SCHEDULED,
+
+    /**
+     * Rate-limit: the first match in a rolling window delivers, further matches inside that
+     * window are dropped (never re-delivered). See [SNOOZE_THROTTLE_WINDOW_MINUTES_KEY].
+     */
+    THROTTLE,
 }
 
 /**
@@ -555,6 +602,33 @@ data class SnoozeSchedule(
     val times: List<Pair<Int, Int>> = emptyList(),
     val weekdays: Set<java.time.DayOfWeek> = emptySet(),
 )
+
+/** Parses [RuleAction.getSnoozeSchedule]'s comma-separated weekday list; malformed entries are skipped. */
+private fun parseSnoozeScheduleWeekdays(raw: String?): Set<java.time.DayOfWeek> = raw
+    ?.split(",")
+    ?.mapNotNull { day ->
+        @Suppress("SwallowedException") // a malformed weekday entry is skipped, not fatal - same defensive-parsing intent as the config getters' coerceIn() clamps
+        try {
+            java.time.DayOfWeek.valueOf(day.trim())
+        } catch (e: IllegalArgumentException) {
+            null
+        }
+    }
+    ?.toSet()
+    ?: emptySet()
+
+/** Parses [RuleAction.getSnoozeSchedule]'s `"HH:mm|HH:mm"` times list; malformed entries are skipped. */
+private fun parseSnoozeScheduleTimes(raw: String?): List<Pair<Int, Int>> = raw
+    ?.split("|")
+    ?.mapNotNull { timeStr ->
+        val parts = timeStr.trim().split(":")
+        if (parts.size == 2) {
+            parts[0].toIntOrNull()?.let { hour -> parts[1].toIntOrNull()?.let { minute -> hour to minute } }
+        } else {
+            null
+        }
+    }
+    ?: emptyList()
 
 /**
  * Grouping value object for the extended `CREATE_ALARM` options ([RuleAction.createAlarm]),

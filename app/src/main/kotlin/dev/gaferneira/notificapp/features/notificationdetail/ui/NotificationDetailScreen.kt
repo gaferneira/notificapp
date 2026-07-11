@@ -512,17 +512,19 @@ private fun ActionChip(action: TriggeredActionDisplay) {
     val outcomeColor = when (action.outcome) {
         ActionOutcome.SUCCESS -> MaterialTheme.colorScheme.tertiary
         ActionOutcome.FAILED -> MaterialTheme.colorScheme.error
-        ActionOutcome.SKIPPED, null -> MaterialTheme.colorScheme.onSurfaceVariant
+        ActionOutcome.SKIPPED, ActionOutcome.SUPPRESSED, null -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     val outcomeGlyph = when (action.outcome) {
         ActionOutcome.SUCCESS -> "✓"
         ActionOutcome.FAILED -> "✗"
+        ActionOutcome.SUPPRESSED -> "⊘"
         ActionOutcome.SKIPPED, null -> "—"
     }
     val outcomeDescription = when (action.outcome) {
         ActionOutcome.SUCCESS -> "succeeded"
         ActionOutcome.FAILED -> "failed"
         ActionOutcome.SKIPPED -> "skipped"
+        ActionOutcome.SUPPRESSED -> "throttled"
         null -> "no outcome data"
     }
 

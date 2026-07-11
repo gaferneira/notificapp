@@ -12,6 +12,8 @@ import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.SNOOZE_THROTTLE_RESET_AT_KEY
+import dev.gaferneira.notificapp.domain.model.SnoozeMode
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
@@ -307,9 +309,25 @@ class RuleEditorViewModel @Inject constructor(
         setState {
             copy(
                 rule = rule.copy(
-                    actions = rule.actions.map { if (it.id == actionId) it.copy(isEnabled = enabled) else it },
+                    actions = rule.actions.map { action -> action.toggled(actionId, enabled) },
                 ),
             )
+        }
+    }
+
+    /**
+     * Toggle [action]'s enabled flag if its id matches [actionId]. A disable->re-enable
+     * transition on a [SnoozeMode.THROTTLE] action stamps a fresh reset watermark (D5), so the
+     * next match always delivers instead of resuming a stale in-flight window.
+     */
+    private fun RuleAction.toggled(actionId: String, enabled: Boolean): RuleAction {
+        if (id != actionId) return this
+        val toggled = copy(isEnabled = enabled)
+        val isReEnablingThrottle = enabled && !isEnabled && getSnoozeMode() == SnoozeMode.THROTTLE
+        return if (isReEnablingThrottle) {
+            toggled.copy(config = toggled.config + (SNOOZE_THROTTLE_RESET_AT_KEY to System.currentTimeMillis().toString()))
+        } else {
+            toggled
         }
     }
 

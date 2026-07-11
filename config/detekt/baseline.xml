@@ -12,6 +12,7 @@
     <ID>CyclomaticComplexMethod:RuleEditorViewModel.kt$RuleEditorViewModel$override fun onEvent(event: UiEvent)</ID>
     <ID>CyclomaticComplexMethod:RuleMatcher.kt$RuleMatcher$private fun matchesCondition(notification: Notification, condition: RuleCondition): Boolean</ID>
     <ID>CyclomaticComplexMethod:RulesViewModel.kt$RulesViewModel$private fun applyFilters(rules: List&lt;Rule&gt;, query: String, currentFilter: RuleFilter): List&lt;Rule&gt;</ID>
+    <ID>CyclomaticComplexMethod:SnoozeScheduleCalculator.kt$SnoozeScheduleCalculator$fun nextCheckpoint(now: LocalDateTime, schedule: SnoozeSchedule): LocalDateTime?</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d", day, month)</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d/%d", day, month, year)</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d:%02d", hour, minute)</ID>
@@ -42,6 +43,8 @@
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun AboutCard()</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun MonitoredAppsCard( appsCount: Int, onSelectApps: () -&gt; Unit, )</ID>
     <ID>LongMethod:SnoozeConfig.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun SnoozeDurationSelector( selectedMinutes: Int, onDurationChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:SnoozeScheduleSelectors.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun BatchAtTimeSelector( config: BatchAtTimeConfig, onConfigChange: (BatchAtTimeConfig) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:SnoozeScheduleSelectors.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun DigestScheduleSelector( config: DigestScheduleConfig, onConfigChange: (DigestScheduleConfig) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WhenSection.kt$@Composable private fun AppsCard( selectedApps: List&lt;AppInfo&gt;, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WhenSection.kt$@Composable private fun ConditionCard( condition: RuleCondition, onClick: () -&gt; Unit, onRemove: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:ProcessNotificationUseCase.kt$ProcessNotificationUseCase$( private val deduplicator: NotificationDeduplicator, private val notificationRepository: NotificationRepository, private val ruleRepository: RuleRepository, private val ruleEngine: RuleEngine, private val ruleExecutionRepository: RuleExecutionRepository, private val actionDispatcher: ActionDispatcher, @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher, )</ID>
@@ -57,6 +60,7 @@
     <ID>ReturnCount:NotificappListenerService.kt$NotificappListenerService$private fun shouldSkipNotification(sbn: StatusBarNotification): Boolean</ID>
     <ID>ReturnCount:RuleMatcher.kt$RuleMatcher$private fun matchesCondition(notification: Notification, condition: RuleCondition): Boolean</ID>
     <ID>ReturnCount:SnoozeActionExecutor.kt$SnoozeActionExecutor$override suspend fun execute(notification: Notification, action: RuleAction): ActionOutcome</ID>
+    <ID>ReturnCount:SnoozeScheduleCalculator.kt$SnoozeScheduleCalculator$fun nextCheckpoint(now: LocalDateTime, schedule: SnoozeSchedule): LocalDateTime?</ID>
     <ID>SpreadOperator:DatabaseModule.kt$DatabaseModule$(*APP_DATABASE_MIGRATIONS)</ID>
     <ID>SpreadOperator:UiText.kt$UiText$(id = id, *args)</ID>
     <ID>SpreadOperator:UiText.kt$UiText$(id, *args)</ID>

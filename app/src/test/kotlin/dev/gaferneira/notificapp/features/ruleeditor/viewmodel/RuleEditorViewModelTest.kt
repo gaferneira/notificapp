@@ -5,6 +5,7 @@ import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
@@ -19,6 +20,7 @@ import dev.gaferneira.notificapp.testutil.createTestField
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import dev.gaferneira.notificapp.testutil.createTestRule
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -616,6 +618,41 @@ class RuleEditorViewModelTest {
 
             // Then: the action is disabled
             viewModel.uiState.value.rule.actions.single().isEnabled shouldBe false
+        }
+
+        @Test
+        fun `re-enabling a throttled snooze action stamps a fresh reset watermark`() {
+            // Given: a disabled throttle snooze action with a stale reset watermark
+            val staleAction = RuleAction.createThrottleSnooze(
+                id = "snooze-1",
+                windowMinutes = 10,
+                resetAt = 1_000L,
+                isEnabled = false,
+            )
+            viewModel.onEvent(UiEvent.OnActionSaved(staleAction))
+
+            // When: re-enabling it
+            viewModel.onEvent(UiEvent.OnToggleActionClicked("snooze-1", enabled = true))
+
+            // Then: it is enabled again and the watermark moved forward (no longer the stale value)
+            val toggled = viewModel.uiState.value.rule.actions.single()
+            toggled.isEnabled shouldBe true
+            toggled.getThrottleResetAt() shouldNotBe 1_000L
+        }
+
+        @Test
+        fun `disabling a throttled snooze action does not touch the reset watermark`() {
+            // Given: an enabled throttle snooze action
+            val action = RuleAction.createThrottleSnooze(id = "snooze-1", windowMinutes = 10, resetAt = 1_000L)
+            viewModel.onEvent(UiEvent.OnActionSaved(action))
+
+            // When: disabling it
+            viewModel.onEvent(UiEvent.OnToggleActionClicked("snooze-1", enabled = false))
+
+            // Then: the watermark is unchanged - only a re-enable stamps a fresh one
+            val toggled = viewModel.uiState.value.rule.actions.single()
+            toggled.isEnabled shouldBe false
+            toggled.getThrottleResetAt() shouldBe 1_000L
         }
 
         @Test

@@ -18,4 +18,7 @@ enum class ActionOutcome {
 
     /** No executor was registered for the action type, or a precondition was not met. */
     SKIPPED,
+
+    /** The action matched but was intentionally dropped (e.g. throttle window still open). */
+    SUPPRESSED,
 }

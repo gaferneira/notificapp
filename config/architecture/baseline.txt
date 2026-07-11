@@ -24,8 +24,12 @@
 #                       raw exception back through Result.failure(...); map it
 #                       to the Failure hierarchy first (ADR 006, DATA-07).
 #                       Every current call site predates that mapping helper,
-#                       so this rule freezes the count at 41 until it exists —
-#                       fixing it means adding the helper AND updating all 41.
+#                       so this rule freezes the count until it exists —
+#                       fixing it means adding the helper AND updating every
+#                       entry. Frozen at 42 as of the throttle-mode change,
+#                       which added one intentionally accepted new call site
+#                       (RuleExecutionRepositoryImpl.lastThrottleDeliveryAt)
+#                       rather than building the helper for a single method.
 #   contract-purity  — a feature's contract/ (its public UiState/Event/Effect
 #                       surface) must not import core.extraction internals
 #                       (ARCH-008)
@@ -53,8 +57,9 @@ raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRe
 raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|202
 raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|212
 raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|223
-raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleExecutionRepositoryImpl.kt|69
-raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleExecutionRepositoryImpl.kt|87
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleExecutionRepositoryImpl.kt|70
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleExecutionRepositoryImpl.kt|92
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleExecutionRepositoryImpl.kt|106
 raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|109
 raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|125
 raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|146

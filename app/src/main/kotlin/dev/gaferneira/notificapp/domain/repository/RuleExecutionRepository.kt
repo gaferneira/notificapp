@@ -32,4 +32,12 @@ interface RuleExecutionRepository {
      * counter, so it can be re-evaluated from scratch.
      */
     suspend fun deleteExecutionsForNotification(notificationId: String): Result<Unit>
+
+    /**
+     * Look up the most recent time [actionId] was successfully delivered (outcome `SUCCESS`) for
+     * a notification from [packageName], no earlier than [sinceMs] (epoch millis). Returns
+     * `null` when there is no such delivery in range. Used by the throttle tracker's DB-lookback
+     * fallback - callers should treat [Result.failure] as fail-open (no known prior delivery).
+     */
+    suspend fun lastThrottleDeliveryAt(actionId: String, packageName: String, sinceMs: Long): Result<Long?>
 }

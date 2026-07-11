@@ -9,6 +9,7 @@ import dev.gaferneira.notificapp.core.data.local.mapper.ExtractedFieldValueMappe
 import dev.gaferneira.notificapp.core.data.local.mapper.RuleExecutionMapper
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
@@ -73,6 +74,24 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
     override fun observeExecutionsForNotification(notificationId: String): Flow<List<RuleExecution>> = ruleExecutionDao.observeExecutionsForNotification(notificationId)
         .map { entities -> RuleExecutionMapper.toDomainList(entities) }
         .flowOn(ioDispatcher)
+
+    override suspend fun lastThrottleDeliveryAt(
+        actionId: String,
+        packageName: String,
+        sinceMs: Long,
+    ): Result<Long?> = withContext(ioDispatcher) {
+        try {
+            val entities = ruleExecutionDao.getRecentExecutionsForPackageSince(packageName, sinceMs)
+            val lastDelivery = RuleExecutionMapper.toDomainList(entities)
+                .filter { it.actionOutcomes[actionId] == ActionOutcome.SUCCESS }
+                .maxOfOrNull { it.createdAt }
+            Result.success(lastDelivery)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Timber.e(e, "Failed to look up last throttle delivery for action $actionId, package $packageName")
+            Result.failure(e)
+        }
+    }
 
     override suspend fun deleteExecutionsForNotification(notificationId: String): Result<Unit> = withContext(ioDispatcher) {
         try {

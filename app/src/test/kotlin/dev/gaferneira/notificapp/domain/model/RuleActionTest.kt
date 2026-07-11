@@ -81,31 +81,20 @@ class RuleActionTest {
 
     @Test
     fun `createScheduledSnooze stores a single daily checkpoint with no interval`() {
-        val action = RuleAction.createScheduledSnooze(id = "action-1", startHour = 9, startMinute = 30)
+        val schedule = SnoozeSchedule(startHour = 9, startMinute = 30)
+        val action = RuleAction.createScheduledSnooze(id = "action-1", schedule = schedule)
 
         action.type shouldBe ActionType.SNOOZE_NOTIFICATION
         action.getSnoozeMode() shouldBe SnoozeMode.SCHEDULED
-        action.getSnoozeSchedule() shouldBe SnoozeSchedule(startHour = 9, startMinute = 30)
+        action.getSnoozeSchedule() shouldBe schedule
     }
 
     @Test
     fun `createScheduledSnooze stores a recurring window`() {
-        val action = RuleAction.createScheduledSnooze(
-            id = "action-1",
-            startHour = 9,
-            startMinute = 0,
-            intervalMinutes = 60,
-            windowEndHour = 18,
-            windowEndMinute = 0,
-        )
+        val schedule = SnoozeSchedule(startHour = 9, startMinute = 0, intervalMinutes = 60, windowEndHour = 18, windowEndMinute = 0)
+        val action = RuleAction.createScheduledSnooze(id = "action-1", schedule = schedule)
 
-        action.getSnoozeSchedule() shouldBe SnoozeSchedule(
-            startHour = 9,
-            startMinute = 0,
-            intervalMinutes = 60,
-            windowEndHour = 18,
-            windowEndMinute = 0,
-        )
+        action.getSnoozeSchedule() shouldBe schedule
     }
 
     @Test

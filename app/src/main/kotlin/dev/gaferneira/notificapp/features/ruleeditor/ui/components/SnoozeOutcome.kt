@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DoNotDisturb
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Timer
@@ -33,6 +34,7 @@ enum class SnoozeOutcome {
     DELAY_EACH_ONE,
     BATCH_AT_TIME,
     BATCH_INTO_DIGEST,
+    THROTTLE,
 }
 
 private data class SnoozeOutcomeInfo(
@@ -60,6 +62,12 @@ private fun SnoozeOutcome.info(): SnoozeOutcomeInfo = when (this) {
         title = "Batch into a digest",
         subtitle = "Recurring checkpoints in a window.",
         example = "\"Release every hour from 9 AM to 6 PM\"",
+    )
+    SnoozeOutcome.THROTTLE -> SnoozeOutcomeInfo(
+        icon = Icons.Default.DoNotDisturb,
+        title = "Let the first through, mute the rest",
+        subtitle = "Deliver the first match, drop the rest until the window elapses.",
+        example = "\"WhatsApp → 1 alert per 10 min\"",
     )
 }
 

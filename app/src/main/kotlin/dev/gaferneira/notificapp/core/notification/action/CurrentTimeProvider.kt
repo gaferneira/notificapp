@@ -10,6 +10,12 @@ import javax.inject.Inject
  */
 interface CurrentTimeProvider {
     fun now(): LocalDateTime
+
+    /**
+     * Current wall-clock time as epoch millis, for logic that needs precise duration math (e.g.
+     * [NotificationThrottleTracker]) rather than a calendar-aware [LocalDateTime].
+     */
+    fun nowEpochMillis(): Long
 }
 
 /**
@@ -18,4 +24,6 @@ interface CurrentTimeProvider {
  */
 class SystemCurrentTimeProvider @Inject constructor() : CurrentTimeProvider {
     override fun now(): LocalDateTime = LocalDateTime.now()
+
+    override fun nowEpochMillis(): Long = System.currentTimeMillis()
 }

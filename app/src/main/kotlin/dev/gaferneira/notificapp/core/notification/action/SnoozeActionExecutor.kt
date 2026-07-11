@@ -5,6 +5,7 @@ import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.SnoozeMode
+import dev.gaferneira.notificapp.domain.model.SnoozeSchedule
 import timber.log.Timber
 import java.time.Duration
 import javax.inject.Inject
@@ -15,13 +16,15 @@ import javax.inject.Inject
  *
  * [SnoozeMode.DURATION] snoozes for a fixed relative duration. [SnoozeMode.SCHEDULED] snoozes
  * until the next checkpoint computed by [SnoozeScheduleCalculator], or passes the notification
- * through unsnoozed when outside a configured recurrence window. See
- * `openspec/specs/snooze-scheduling/spec.md`.
+ * through unsnoozed when outside a configured recurrence window. [SnoozeMode.THROTTLE] lets the
+ * first match in a rolling window through and drops (cancels, never re-delivers) every further
+ * match inside that window. See `openspec/specs/snooze-scheduling/spec.md`.
  */
 class SnoozeActionExecutor @Inject constructor(
     private val controllerHolder: SystemNotificationControllerHolder,
     private val timeProvider: CurrentTimeProvider,
     private val releaseTracker: SnoozeReleaseTracker,
+    private val throttleTracker: NotificationThrottleTracker,
 ) : ActionExecutor {
 
     override suspend fun execute(notification: Notification, action: RuleAction): ActionOutcome {
@@ -40,6 +43,7 @@ class SnoozeActionExecutor @Inject constructor(
         return when (action.getSnoozeMode()) {
             SnoozeMode.DURATION -> executeDuration(controller, sbnKey, notification, action)
             SnoozeMode.SCHEDULED -> executeScheduled(controller, sbnKey, notification, action)
+            SnoozeMode.THROTTLE -> executeThrottle(controller, sbnKey, notification, action)
         }
     }
 
@@ -68,22 +72,54 @@ class SnoozeActionExecutor @Inject constructor(
         }
 
         val schedule = action.getSnoozeSchedule()
-        if (schedule == null) {
+        return if (schedule == null) {
             Timber.w("Cannot schedule-snooze notification ${notification.id}: invalid schedule config")
-            return ActionOutcome.SKIPPED
+            ActionOutcome.SKIPPED
+        } else {
+            deliverScheduledSnooze(controller, sbnKey, notification, schedule)
         }
+    }
 
+    private suspend fun deliverScheduledSnooze(
+        controller: SystemNotificationController,
+        sbnKey: String,
+        notification: Notification,
+        schedule: SnoozeSchedule,
+    ): ActionOutcome {
         val now = timeProvider.now()
         val checkpoint = SnoozeScheduleCalculator.nextCheckpoint(now, schedule)
-        if (checkpoint == null) {
+        return if (checkpoint == null) {
             Timber.d("Notification ${notification.id} is outside the snooze window, passing through")
-            return ActionOutcome.SUCCESS
+            ActionOutcome.SUCCESS
+        } else {
+            val durationMs = Duration.between(now, checkpoint).toMillis()
+            controller.snooze(sbnKey, durationMs)
+            releaseTracker.markPending(sbnKey)
+            Timber.d("Snoozed notification ${notification.id} until $checkpoint")
+            ActionOutcome.SUCCESS
         }
+    }
 
-        val durationMs = Duration.between(now, checkpoint).toMillis()
-        controller.snooze(sbnKey, durationMs)
-        releaseTracker.markPending(sbnKey)
-        Timber.d("Snoozed notification ${notification.id} until $checkpoint")
-        return ActionOutcome.SUCCESS
+    private suspend fun executeThrottle(
+        controller: SystemNotificationController,
+        sbnKey: String,
+        notification: Notification,
+        action: RuleAction,
+    ): ActionOutcome {
+        val windowMs = action.getThrottleWindowMinutes() * 60_000L
+        val deliver = throttleTracker.shouldDeliver(
+            actionId = action.id,
+            packageName = notification.packageName,
+            windowMs = windowMs,
+            resetAt = action.getThrottleResetAt(),
+        )
+        return if (deliver) {
+            Timber.d("Throttle window opened for notification ${notification.id}, leaving it visible")
+            ActionOutcome.SUCCESS
+        } else {
+            controller.cancel(sbnKey)
+            Timber.d("Throttle window still open for notification ${notification.id}, suppressing")
+            ActionOutcome.SUPPRESSED
+        }
     }
 }

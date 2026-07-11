@@ -52,6 +52,22 @@ internal interface RuleExecutionDao {
     fun observeExecutionsForRule(ruleId: String): Flow<List<RuleExecutionEntity>>
 
     /**
+     * Get executions for notifications from a specific source app, created at or after [since]
+     * (epoch millis). Used by the throttle tracker's DB lookback fallback - bounded to at most
+     * one window's worth of rows via the `created_at` index, then filtered by action id in
+     * Kotlin since a single action id is unique to one rule.
+     */
+    @Query(
+        """
+        SELECT re.* FROM rule_executions re
+        INNER JOIN notifications n ON re.notification_id = n.id
+        WHERE n.package_name = :packageName AND re.created_at >= :since
+        ORDER BY re.created_at DESC
+        """,
+    )
+    suspend fun getRecentExecutionsForPackageSince(packageName: String, since: Long): List<RuleExecutionEntity>
+
+    /**
      * Insert a rule execution.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
