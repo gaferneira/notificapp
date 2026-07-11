@@ -70,14 +70,14 @@
         <!-- Foreground service that owns a ringing CREATE_ALARM alarm: looping audio + repeating
              vibration + the ongoing Dismiss/Snooze notification, until the user acts on it. -->
         <service
-            android:name=".core.notification.action.AlarmService"
+            android:name=".core.notification.action.alarm.AlarmService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
         <!-- Full-screen, call-style alarm UI raised over the lock screen by AlarmService's
              full-screen intent. singleInstance + noHistory so it never stacks or lingers. -->
         <activity
-            android:name=".core.notification.action.AlarmActivity"
+            android:name=".features.alarm.ui.AlarmActivity"
             android:exported="false"
             android:launchMode="singleInstance"
             android:excludeFromRecents="true"

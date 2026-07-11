@@ -1,7 +1,8 @@
-package dev.gaferneira.notificapp.core.notification.action
+package dev.gaferneira.notificapp.core.notification.action.alarm
 
 import dev.gaferneira.notificapp.domain.action.ActionExecutor
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
+import dev.gaferneira.notificapp.domain.model.AlarmBackgroundConfig
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import javax.inject.Inject
@@ -24,11 +25,26 @@ class AlarmActionExecutor @Inject constructor(
         val started = alarmController.start(
             AlarmRequest(
                 soundUri = action.getAlarmSoundUri(),
-                vibrationEnabled = action.isAlarmVibrationEnabled(),
-                fullScreenEnabled = action.isAlarmFullScreenEnabled(),
                 title = notification.title ?: notification.appName,
                 text = notification.content.orEmpty(),
                 appName = notification.appName,
+                options = AlarmRingOptions(
+                    vibrationEnabled = action.isAlarmVibrationEnabled(),
+                    fullScreenEnabled = action.isAlarmFullScreenEnabled(),
+                    soundEnabled = action.isAlarmSoundEnabled(),
+                    vibrationPattern = action.getAlarmVibrationPattern(),
+                    snooze = AlarmSnoozeSettings(
+                        enabled = action.isAlarmSnoozeEnabled(),
+                        durationMinutes = action.getAlarmSnoozeDurationMinutes(),
+                        maxCount = action.getAlarmSnoozeMaxCount(),
+                    ),
+                    background = AlarmBackgroundConfig(
+                        type = action.getAlarmBackgroundType(),
+                        presetId = action.getAlarmBackgroundPresetId(),
+                        imageUri = action.getAlarmBackgroundImageUri(),
+                        imageIsDark = action.isAlarmBackgroundImageDark(),
+                    ),
+                ),
             ),
         )
         return if (started) ActionOutcome.SUCCESS else ActionOutcome.SKIPPED

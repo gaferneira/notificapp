@@ -57,4 +57,14 @@ interface RuleRepository {
      * Get count of active rules.
      */
     suspend fun getActiveRuleCount(): Result<Int>
+
+    /**
+     * Check whether background image [uri] is referenced by any `CREATE_ALARM` action's
+     * background-image config other than the one identified by [excludingActionId].
+     *
+     * Used to decide whether it's safe to release a persistable URI permission when an alarm
+     * action's background image changes or is removed - the same image may still be in use by
+     * another alarm action.
+     */
+    suspend fun isImageUriReferencedByOtherAlarmAction(uri: String, excludingActionId: String): Boolean
 }

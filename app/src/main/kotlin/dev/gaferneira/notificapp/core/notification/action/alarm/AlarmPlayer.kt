@@ -1,4 +1,6 @@
-package dev.gaferneira.notificapp.core.notification.action
+package dev.gaferneira.notificapp.core.notification.action.alarm
+
+import dev.gaferneira.notificapp.domain.model.VibrationPattern
 
 /**
  * Narrow interface over the Android audio/vibration APIs that [AlarmActionExecutor] needs,
@@ -13,10 +15,10 @@ interface AlarmPlayer {
     fun play(soundUri: String?)
 
     /**
-     * Start vibrating the device with a repeating alarm pattern. The vibration repeats until [stop]
-     * is called.
+     * Start vibrating the device with a repeating alarm [pattern]. The vibration repeats until
+     * [stop] is called.
      */
-    fun vibrate()
+    fun vibrate(pattern: VibrationPattern)
 
     /**
      * Stop any looping sound and repeating vibration started by [play]/[vibrate] and release the

@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig
+package dev.gaferneira.notificapp.features.ruleeditor.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column

@@ -9,9 +9,9 @@ import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_DURATION_MINUTES
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
-import dev.gaferneira.notificapp.features.ruleeditor.ui.actionconfig.SnoozeDurationSelector
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.SnoozeDurationSelector
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.confirmLabelFor
 import java.util.UUID
 

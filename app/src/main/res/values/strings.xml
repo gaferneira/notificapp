@@ -135,10 +135,35 @@
     <string name="alarm_notification_text">A rule triggered an alarm</string>
     <string name="alarm_action_dismiss">Dismiss</string>
     <string name="alarm_action_snooze">Snooze</string>
+    <string name="alarm_action_snooze_with_duration">Snooze (%1$d min)</string>
     <string name="alarm_permission_warning">Allow notifications for Notificapp so the alarm can show its Dismiss and Snooze controls. Without this permission the alarm will not ring.</string>
     <string name="alarm_permission_grant">Allow notifications</string>
     <string name="alarm_fullscreen_permission_warning">Allow full-screen alarms so the call-style screen can appear over the lock screen. Without it, this alarm shows only as a notification.</string>
     <string name="alarm_fullscreen_permission_grant">Allow full-screen alarms</string>
+    <string name="alarm_simulate_button">Simulate alarm</string>
+    <string name="alarm_simulate_title">Test alarm</string>
+    <string name="alarm_simulate_text">This is what your alarm will look and sound like</string>
+    <string name="alarm_background_image_dark_label">Dark image (use light text)</string>
+    <string name="alarm_options_title">Alarm options</string>
+    <string name="alarm_off_label">Off</string>
+    <string name="alarm_sound_label">Sound</string>
+    <string name="alarm_sound_default">Default alarm sound</string>
+    <string name="alarm_vibration_label">Vibration</string>
+    <string name="alarm_vibration_pattern_basic_call">Basic call</string>
+    <string name="alarm_vibration_pattern_pulse">Pulse</string>
+    <string name="alarm_vibration_pattern_long">Long</string>
+    <string name="alarm_vibration_pattern_dialog_title">Vibration pattern</string>
+    <string name="alarm_dialog_close">Close</string>
+    <string name="alarm_snooze_label">Snooze</string>
+    <string name="alarm_snooze_subtitle">%1$d min, up to %2$d times</string>
+    <string name="alarm_snooze_delay_label">Delay</string>
+    <string name="alarm_snooze_delay_value">%1$d min</string>
+    <string name="alarm_snooze_max_count_label">Max snoozes</string>
+    <string name="alarm_stepper_decrease_cd">Decrease %1$s</string>
+    <string name="alarm_stepper_increase_cd">Increase %1$s</string>
+    <string name="alarm_background_label">Background</string>
+    <string name="alarm_background_image_cd">Custom background image</string>
+    <string name="alarm_background_choose_image_cd">Choose image</string>
 
     <!-- Extract-data sheet field preview -->
     <string name="extract_preview_no_match">No match in sample notification</string>

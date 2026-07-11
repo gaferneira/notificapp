@@ -1,8 +1,17 @@
 package dev.gaferneira.notificapp.core.notification.action
 
+import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmController
+import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmRequest
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.AlarmBackgroundConfig
+import dev.gaferneira.notificapp.domain.model.AlarmBackgroundPreset
+import dev.gaferneira.notificapp.domain.model.AlarmBackgroundType
+import dev.gaferneira.notificapp.domain.model.AlarmOptionsConfig
+import dev.gaferneira.notificapp.domain.model.AlarmSnoozeConfig
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.VibrationPattern
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -31,8 +40,6 @@ class AlarmActionExecutorTest {
             alarmController.start(
                 AlarmRequest(
                     soundUri = null,
-                    vibrationEnabled = true,
-                    fullScreenEnabled = true,
                     title = "Payment received",
                     text = "You got \$50",
                     appName = "Bank",
@@ -103,7 +110,7 @@ class AlarmActionExecutorTest {
         every { alarmController.start(any()) } returns true
         val executor = AlarmActionExecutor(alarmController)
         val notification = createTestNotification()
-        val action = RuleAction.createAlarm(id = "action-1", fullScreenEnabled = false)
+        val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(fullScreenEnabled = false))
 
         // When: executing the action
         executor.execute(notification, action)
@@ -137,5 +144,120 @@ class AlarmActionExecutorTest {
 
         // Then: its type is CREATE_ALARM
         action.type shouldBe ActionType.CREATE_ALARM
+    }
+
+    @Test
+    fun `alarm action with sound disabled starts the alarm with sound off`() = runTest {
+        // Given: an alarm action with sound explicitly turned off
+        val alarmController = mockk<AlarmController>()
+        every { alarmController.start(any()) } returns true
+        val executor = AlarmActionExecutor(alarmController)
+        val notification = createTestNotification()
+        val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(soundEnabled = false))
+
+        // When: executing the action
+        executor.execute(notification, action)
+
+        // Then: the request carries soundEnabled = false
+        verify(exactly = 1) {
+            alarmController.start(match { !it.soundEnabled })
+        }
+    }
+
+    @Test
+    fun `alarm action maps the selected vibration pattern into the request`() = runTest {
+        // Given: an alarm action configured with a non-default vibration pattern
+        val alarmController = mockk<AlarmController>()
+        every { alarmController.start(any()) } returns true
+        val executor = AlarmActionExecutor(alarmController)
+        val notification = createTestNotification()
+        val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(vibrationPattern = VibrationPattern.PULSE))
+
+        // When: executing the action
+        executor.execute(notification, action)
+
+        // Then: the request carries the selected pattern
+        verify(exactly = 1) {
+            alarmController.start(match { it.vibrationPattern == VibrationPattern.PULSE })
+        }
+    }
+
+    @Test
+    fun `alarm action maps snooze enabled, duration, and max count into the request`() = runTest {
+        // Given: an alarm action with non-default snooze settings
+        val alarmController = mockk<AlarmController>()
+        every { alarmController.start(any()) } returns true
+        val executor = AlarmActionExecutor(alarmController)
+        val notification = createTestNotification()
+        val action = RuleAction.createAlarm(
+            id = "action-1",
+            options = AlarmOptionsConfig(snooze = AlarmSnoozeConfig(enabled = false, durationMinutes = 10, maxCount = 5)),
+        )
+
+        // When: executing the action
+        executor.execute(notification, action)
+
+        // Then: the request carries every snooze field
+        verify(exactly = 1) {
+            alarmController.start(
+                match {
+                    !it.snoozeEnabled && it.snoozeDurationMinutes == 10 && it.snoozeMaxCount == 5
+                },
+            )
+        }
+    }
+
+    @Test
+    fun `alarm action maps the background preset selection into the request`() = runTest {
+        // Given: an alarm action configured with a preset background
+        val alarmController = mockk<AlarmController>()
+        every { alarmController.start(any()) } returns true
+        val executor = AlarmActionExecutor(alarmController)
+        val notification = createTestNotification()
+        val action = RuleAction.createAlarm(
+            id = "action-1",
+            options = AlarmOptionsConfig(
+                background = AlarmBackgroundConfig(type = AlarmBackgroundType.PRESET, presetId = AlarmBackgroundPreset.OCEAN.id),
+            ),
+        )
+
+        // When: executing the action
+        executor.execute(notification, action)
+
+        // Then: the request carries the background type and preset id
+        verify(exactly = 1) {
+            alarmController.start(
+                match {
+                    it.backgroundType == AlarmBackgroundType.PRESET && it.backgroundPresetId == AlarmBackgroundPreset.OCEAN.id
+                },
+            )
+        }
+    }
+
+    @Test
+    fun `alarm action maps the background image uri into the request`() = runTest {
+        // Given: an alarm action configured with a custom background image
+        val alarmController = mockk<AlarmController>()
+        every { alarmController.start(any()) } returns true
+        val executor = AlarmActionExecutor(alarmController)
+        val notification = createTestNotification()
+        val action = RuleAction.createAlarm(
+            id = "action-1",
+            options = AlarmOptionsConfig(
+                background = AlarmBackgroundConfig(type = AlarmBackgroundType.IMAGE, imageUri = "content://media/bg.jpg"),
+            ),
+        )
+
+        // When: executing the action
+        executor.execute(notification, action)
+
+        // Then: the request carries the background type and image uri
+        verify(exactly = 1) {
+            alarmController.start(
+                match {
+                    it.backgroundType == AlarmBackgroundType.IMAGE && it.backgroundImageUri == "content://media/bg.jpg"
+                },
+            )
+        }
     }
 }

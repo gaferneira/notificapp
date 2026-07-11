@@ -56,8 +56,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.core.ui.utils.LocalIoDispatcher
 import dev.gaferneira.notificapp.domain.model.AppInfo
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
 /**
@@ -77,6 +78,7 @@ fun AppSelectionPicker(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
+    val ioDispatcher = LocalIoDispatcher.current
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
     )
@@ -89,7 +91,7 @@ fun AppSelectionPicker(
     // Load installed apps filtered by enabled apps
     LaunchedEffect(enabledApps) {
         isLoading = true
-        val allInstalledApps = loadInstalledApps(context)
+        val allInstalledApps = loadInstalledApps(context, ioDispatcher)
         // Filter to only show enabled apps
         availableApps = allInstalledApps.filter { installedApp ->
             enabledApps.any { it.packageName == installedApp.packageName }
@@ -326,7 +328,10 @@ private fun AppListItem(
 
 private data class AppDisplayInfo(val packageName: String, val name: String, val icon: ImageBitmap? = null)
 
-private suspend fun loadInstalledApps(context: Context): List<AppDisplayInfo> = withContext(Dispatchers.IO) {
+private suspend fun loadInstalledApps(
+    context: Context,
+    ioDispatcher: CoroutineDispatcher,
+): List<AppDisplayInfo> = withContext(ioDispatcher) {
     val packageManager = context.packageManager
     val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
 

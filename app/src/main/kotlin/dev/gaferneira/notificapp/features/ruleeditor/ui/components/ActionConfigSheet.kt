@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionConfigSheet(
+    modifier: Modifier = Modifier,
     title: String,
     confirmLabel: String,
     onConfirm: (() -> Unit)?,
@@ -45,7 +46,7 @@ fun ActionConfigSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
-        modifier = Modifier.statusBarsPadding(),
+        modifier = modifier.statusBarsPadding(),
         onDismissRequest = onDismiss,
         sheetState = sheetState,
     ) {

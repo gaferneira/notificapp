@@ -6,19 +6,21 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
-import dev.gaferneira.notificapp.core.notification.action.AlarmActionExecutor
-import dev.gaferneira.notificapp.core.notification.action.AlarmController
-import dev.gaferneira.notificapp.core.notification.action.AlarmPlayer
-import dev.gaferneira.notificapp.core.notification.action.AndroidAlarmController
-import dev.gaferneira.notificapp.core.notification.action.AndroidAlarmPlayer
 import dev.gaferneira.notificapp.core.notification.action.AndroidTorchController
 import dev.gaferneira.notificapp.core.notification.action.DismissActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.FlashAlertActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SaveDataActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SnoozeActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.TorchController
+import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmController
+import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmPlayer
+import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmUiIntentFactory
+import dev.gaferneira.notificapp.core.notification.action.alarm.AndroidAlarmController
+import dev.gaferneira.notificapp.core.notification.action.alarm.AndroidAlarmPlayer
 import dev.gaferneira.notificapp.domain.action.ActionExecutor
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.features.alarm.AlarmUiIntentFactoryImpl
 import javax.inject.Singleton
 
 /**
@@ -83,6 +85,13 @@ internal abstract class ActionModule {
     @Binds
     @Singleton
     abstract fun bindAlarmPlayer(impl: AndroidAlarmPlayer): AlarmPlayer
+
+    /**
+     * Binds the [AlarmUiIntentFactory] used by `AlarmService` to raise the full-screen alarm UI,
+     * without `core/notification` depending on `core/ui`/Compose directly.
+     */
+    @Binds
+    abstract fun bindAlarmUiIntentFactory(impl: AlarmUiIntentFactoryImpl): AlarmUiIntentFactory
 
     /**
      * Binds the executor for [ActionType.FLASH_ALERT].

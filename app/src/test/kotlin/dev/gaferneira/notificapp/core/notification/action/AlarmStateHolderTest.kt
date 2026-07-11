@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.notification.action
 
+import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmStateHolder
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 

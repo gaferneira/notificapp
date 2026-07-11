@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.core.notification.action
+package dev.gaferneira.notificapp.core.notification.action.alarm
 
 import android.content.Context
 import androidx.core.app.NotificationManagerCompat
@@ -9,7 +9,7 @@ import javax.inject.Inject
 
 /**
  * Starts the [AlarmService] foreground service to ring an alarm. Uses
- * [ContextCompat.startForegroundService] so the service is allowed to promote itself to the
+ * [androidx.core.content.ContextCompat.startForegroundService] so the service is allowed to promote itself to the
  * foreground within the required window on all supported OS versions.
  *
  * Refuses to start when app notifications are disabled: the alarm's Dismiss/Snooze controls live

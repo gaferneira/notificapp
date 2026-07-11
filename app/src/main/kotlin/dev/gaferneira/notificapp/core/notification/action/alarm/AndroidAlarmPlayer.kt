@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.core.notification.action
+package dev.gaferneira.notificapp.core.notification.action.alarm
 
 import android.content.Context
 import android.media.AudioAttributes
@@ -12,6 +12,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.gaferneira.notificapp.domain.model.VibrationPattern
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -69,12 +70,12 @@ class AndroidAlarmPlayer @Inject constructor(
     }
 
     @Synchronized
-    override fun vibrate() {
+    override fun vibrate(pattern: VibrationPattern) {
         val vibrator = resolveVibrator()
         if (!vibrator.hasVibrator()) return
 
-        // Repeating waveform: wait, buzz, pause, then loop back to index 0 until cancelled.
-        vibrator.vibrate(VibrationEffect.createWaveform(ALARM_VIBRATION_PATTERN, REPEAT_FROM_START))
+        // Repeating waveform: wait, buzz, pause, then loop back to repeatIndex until cancelled.
+        vibrator.vibrate(VibrationEffect.createWaveform(pattern.timings, pattern.repeatIndex))
     }
 
     @Synchronized
@@ -113,11 +114,5 @@ class AndroidAlarmPlayer @Inject constructor(
     } else {
         @Suppress("DEPRECATION")
         context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-    }
-
-    private companion object {
-        // wait 0ms, vibrate 800ms, pause 1000ms - repeated from index 0 while the alarm rings.
-        val ALARM_VIBRATION_PATTERN = longArrayOf(0L, 800L, 1000L)
-        const val REPEAT_FROM_START = 0
     }
 }

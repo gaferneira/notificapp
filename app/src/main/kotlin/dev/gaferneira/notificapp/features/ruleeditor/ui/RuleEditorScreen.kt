@@ -161,7 +161,10 @@ private fun RuleEditorScreenContent(
                 },
             )
 
-            RuleEditorBottomSheets(uiState = uiState, onEvent = onEvent)
+            RuleEditorBottomSheets(
+                uiState = uiState,
+                onEvent = onEvent,
+            )
 
             RuleEditorDialogs(
                 uiState = uiState,
@@ -337,7 +340,11 @@ private fun RuleEditorBottomSheets(
             ActionType.SNOOZE_NOTIFICATION ->
                 SnoozeBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
             ActionType.CREATE_ALARM ->
-                AlarmBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
+                AlarmBottomSheet(
+                    initial = editing,
+                    onSave = onSave,
+                    onDismiss = onSheetDismiss,
+                )
             ActionType.FLASH_ALERT ->
                 FlashBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
             ActionType.SAVE_DATA ->
