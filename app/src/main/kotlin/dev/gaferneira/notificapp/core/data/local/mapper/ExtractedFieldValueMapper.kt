@@ -8,7 +8,7 @@ import java.util.UUID
 /**
  * Mapper functions for converting between ExtractedFieldValue domain models and database entities.
  */
-object ExtractedFieldValueMapper {
+internal object ExtractedFieldValueMapper {
 
     /**
      * Convert an ExtractedFieldValue domain model to an entity.

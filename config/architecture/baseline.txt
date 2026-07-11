@@ -1,0 +1,82 @@
+# Architecture check baseline — grandfathered violations of rules the
+# `architectureCheck` Gradle task enforces (see app/build.gradle.kts).
+#
+#
+# Policy (same as config/detekt/baseline.xml): this file must SHRINK over
+# time. When you touch a file listed below, fix its violation and remove
+# the line in the same PR — do not add new entries except for intentionally
+# accepted debt called out explicitly in the PR description.
+#
+# Format: rule|relative/path/File.kt|line
+#
+# Rules:
+#   visibility       — core/data/repository *Impl, core/data/local/{dao,entity,mapper}
+#                       must be `internal` (ADR 005, ARCH-005/006, DATA-06)
+#   dispatcher       — no hardcoded Dispatchers.IO/Default/Main outside
+#                       core/di/DispatchersModule.kt (ADR 008)
+#   effect-collect   — one-off effects must go through CollectOneOffEffects,
+#                       never a raw `viewModel.effect.collect` (UI-004, STATE-001)
+#   platform-static  — no PackageManager / Settings.Secure inside
+#                       features/*/viewmodel or domain (TEST-001, TEST-002)
+#   domain-purity    — domain/ must never import features/ — the dependency
+#                       graph only flows features -> domain (ARCH-001)
+#   raw-exception-leak — repository/data-source catch blocks must not hand a
+#                       raw exception back through Result.failure(...); map it
+#                       to the Failure hierarchy first (ADR 006, DATA-07).
+#                       Every current call site predates that mapping helper,
+#                       so this rule freezes the count at 41 until it exists —
+#                       fixing it means adding the helper AND updating all 41.
+#   contract-purity  — a feature's contract/ (its public UiState/Event/Effect
+#                       surface) must not import core.extraction internals
+#                       (ARCH-008)
+#
+# All violations from rules 1-4 (visibility, dispatcher, effect-collect,
+# platform-static) were fixed as of the revision that added them. Rules 5-7
+# (domain-purity, raw-exception-leak, contract-purity) start with their
+# pre-existing violations grandfathered below — fixing them is future work,
+# not done yet. Add new entries only for intentionally accepted new debt,
+# called out explicitly in the PR.
+
+contract-purity|dev/gaferneira/notificapp/features/ruleeditor/contract/ExtractDataContract.kt|3
+domain-purity|dev/gaferneira/notificapp/domain/model/preferences/InboxFilterSettings.kt|3
+raw-exception-leak|dev/gaferneira/notificapp/core/data/preferences/UserPreferencesLocalDataSource.kt|66
+raw-exception-leak|dev/gaferneira/notificapp/core/data/preferences/UserPreferencesLocalDataSource.kt|81
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|112
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|122
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|132
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|142
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|152
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|162
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|172
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|182
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|192
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|202
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|212
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/NotificationRepositoryImpl.kt|223
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleExecutionRepositoryImpl.kt|69
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleExecutionRepositoryImpl.kt|87
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|109
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|125
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|146
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|157
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|166
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|175
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|59
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|76
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/RuleRepositoryImpl.kt|93
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|104
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|114
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|124
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|134
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|144
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|154
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|44
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|54
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|64
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|74
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|84
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/SelectedAppRepositoryImpl.kt|94
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/UserPreferencesRepositoryImpl.kt|100
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/UserPreferencesRepositoryImpl.kt|55
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/UserPreferencesRepositoryImpl.kt|73
+raw-exception-leak|dev/gaferneira/notificapp/core/data/repository/UserPreferencesRepositoryImpl.kt|91

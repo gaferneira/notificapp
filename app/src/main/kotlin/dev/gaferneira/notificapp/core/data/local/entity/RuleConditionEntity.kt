@@ -31,7 +31,7 @@ import androidx.room.PrimaryKey
         Index(value = ["rule_id"]), // For querying conditions by rule
     ],
 )
-data class RuleConditionEntity(
+internal data class RuleConditionEntity(
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: String,

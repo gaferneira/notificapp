@@ -61,7 +61,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -86,10 +85,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.common.Failure
 import dev.gaferneira.notificapp.core.ui.Resource
 import dev.gaferneira.notificapp.core.ui.components.DryRunBadge
+import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
 import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
+import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
+import dev.gaferneira.notificapp.core.ui.utils.LocalIoDispatcher
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
@@ -97,7 +99,7 @@ import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
 import dev.gaferneira.notificapp.features.rules.contract.RulesUiState
 import dev.gaferneira.notificapp.features.rules.viewmodel.RulesViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -113,28 +115,19 @@ fun RulesScreen(
     var showFilterSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
+    val ioDispatcher = LocalIoDispatcher.current
 
     // Handle effects
-    LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is RulesEffect.NavigateToRuleEditor -> {
-                    navigateTo(Screen.RuleEditor(ruleId = effect.ruleId), null)
-                }
+    CollectOneOffEffects(viewModel.effect) { effect ->
+        when (effect) {
+            is RulesEffect.NavigateToRuleEditor ->
+                navigateTo(Routes.ruleEditor(ruleId = effect.ruleId), null)
 
-                is RulesEffect.ShowError -> {
-                    coroutineScope.launch { snackbarHostState.showSnackbar(effect.message) }
-                }
+            is RulesEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
 
-                is RulesEffect.ShowSuccess -> {
-                    coroutineScope.launch { snackbarHostState.showSnackbar(effect.message) }
-                }
+            is RulesEffect.ShowSuccess -> snackbarHostState.showSnackbar(effect.message)
 
-                is RulesEffect.ShareRule -> {
-                    shareRuleJson(context, effect.ruleName, effect.json)
-                }
-            }
+            is RulesEffect.ShareRule -> shareRuleJson(context, ioDispatcher, effect.ruleName, effect.json)
         }
     }
 
@@ -187,8 +180,13 @@ private fun InputStream.readUpTo(maxBytes: Int): ByteArray? {
  * so the rule can be sent to any app that accepts a text/JSON attachment (Messages, email,
  * a cloud-storage "save to" target, etc.) without granting broader file access.
  */
-private suspend fun shareRuleJson(context: Context, ruleName: String, json: String) {
-    val file = withContext(Dispatchers.IO) {
+private suspend fun shareRuleJson(
+    context: Context,
+    ioDispatcher: CoroutineDispatcher,
+    ruleName: String,
+    json: String,
+) {
+    val file = withContext(ioDispatcher) {
         val exportsDir = File(context.cacheDir, "rule-exports").apply { mkdirs() }
         val fileName = ruleName.ifBlank { "rule" }.replace(Regex("[^A-Za-z0-9_-]"), "_")
         File(exportsDir, "$fileName.json").apply { writeText(json) }
@@ -297,6 +295,7 @@ internal fun RulesScreenContent(
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
+    val ioDispatcher = LocalIoDispatcher.current
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -305,7 +304,7 @@ internal fun RulesScreenContent(
         if (uri == null) return@rememberLauncherForActivityResult
 
         coroutineScope.launch {
-            val text = withContext(Dispatchers.IO) {
+            val text = withContext(ioDispatcher) {
                 runCatching {
                     context.contentResolver.openInputStream(uri)?.use { stream ->
                         stream.readUpTo(MAX_IMPORT_FILE_SIZE_BYTES)?.decodeToString()

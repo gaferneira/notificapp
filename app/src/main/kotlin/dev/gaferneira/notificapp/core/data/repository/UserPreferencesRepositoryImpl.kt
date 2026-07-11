@@ -28,7 +28,7 @@ import javax.inject.Inject
  * This implementation stores preferences locally per-device. Future enhancement:
  * Add a remote data source for API sync across devices.
  */
-class UserPreferencesRepositoryImpl @Inject constructor(
+internal class UserPreferencesRepositoryImpl @Inject constructor(
     private val localDataSource: UserPreferencesLocalDataSource,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : UserPreferencesRepository {

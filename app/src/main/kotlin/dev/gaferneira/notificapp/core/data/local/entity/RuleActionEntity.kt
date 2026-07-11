@@ -30,7 +30,7 @@ import androidx.room.PrimaryKey
         Index(value = ["rule_id"]), // For querying actions by rule
     ],
 )
-data class RuleActionEntity(
+internal data class RuleActionEntity(
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: String,

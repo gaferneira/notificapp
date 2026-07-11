@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
  * Data Access Object for managing selected apps in the database.
  */
 @Dao
-interface SelectedAppDao {
+internal interface SelectedAppDao {
 
     /**
      * Get all selected apps as a Flow for reactive observation.

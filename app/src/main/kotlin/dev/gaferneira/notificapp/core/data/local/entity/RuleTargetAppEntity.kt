@@ -28,7 +28,7 @@ import androidx.room.Index
         Index(value = ["package_name"]), // For querying rules by app
     ],
 )
-data class RuleTargetAppEntity(
+internal data class RuleTargetAppEntity(
     @ColumnInfo(name = "rule_id")
     val ruleId: String,
 

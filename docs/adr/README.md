@@ -19,6 +19,7 @@ This folder contains the Architecture Decision Records (ADRs) for Notificapp. An
 | [011](011-rule-definition-storage.md) | Rule Definition Storage: Normalized Tables, JSON as Wire Format Only | Accepted |
 | [012](012-local-first-network-policy.md) | Local-First Network Policy and Distribution | Accepted |
 | [013](013-alarm-foreground-service-lifecycle.md) | Foreground Service Owns Alarm Lifecycle; Executor Delegates | Accepted |
+| [014](014-lightweight-viewmodel.md) | Lightweight ViewModel Pattern for Flat Screens and Components | Accepted |
 
 ## Statuses
 

@@ -4,6 +4,7 @@ import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
 import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
+import dev.gaferneira.notificapp.core.data.local.mapper.RuleActionMapper
 import dev.gaferneira.notificapp.core.data.local.mapper.RuleMapper
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
@@ -25,7 +26,7 @@ import javax.inject.Singleton
  * Uses Room for persistence with JSON serialization for complex nested objects.
  */
 @Singleton
-class RuleRepositoryImpl @Inject constructor(
+internal class RuleRepositoryImpl @Inject constructor(
     private val ruleDao: RuleDao,
     private val selectedAppDao: SelectedAppDao,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
@@ -172,6 +173,16 @@ class RuleRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Timber.e(e, "Failed to get active rule count")
             Result.failure(e)
+        }
+    }
+
+    override suspend fun isImageUriReferencedByOtherAlarmAction(
+        uri: String,
+        excludingActionId: String,
+    ): Boolean = withContext(ioDispatcher) {
+        val alarmActionEntities = ruleDao.getActionsByType(ActionType.CREATE_ALARM.name)
+        alarmActionEntities.any { entity ->
+            entity.id != excludingActionId && RuleActionMapper.toDomain(entity).getAlarmBackgroundImageUri() == uri
         }
     }
 

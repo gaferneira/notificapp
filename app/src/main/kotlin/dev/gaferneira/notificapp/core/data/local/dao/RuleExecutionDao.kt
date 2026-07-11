@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
  * Provides CRUD operations and queries for tracking when rules match notifications.
  */
 @Dao
-interface RuleExecutionDao {
+internal interface RuleExecutionDao {
 
     /**
      * Observe all rule executions as a Flow, ordered by most recent first.

@@ -27,7 +27,7 @@ import javax.inject.Inject
  * - Result<T> return type for explicit error handling (ADR 006)
  * - Injected coroutine dispatchers for testability (ADR 008)
  */
-class NotificationRepositoryImpl @Inject constructor(
+internal class NotificationRepositoryImpl @Inject constructor(
     private val dao: NotificationDao,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : NotificationRepository {

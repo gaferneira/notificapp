@@ -34,7 +34,7 @@ import androidx.room.PrimaryKey
         Index(value = ["action_id"]), // For querying fields by action
     ],
 )
-data class RuleFieldEntity(
+internal data class RuleFieldEntity(
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: String,

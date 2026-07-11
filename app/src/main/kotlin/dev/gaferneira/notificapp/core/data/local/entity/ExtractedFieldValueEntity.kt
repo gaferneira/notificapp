@@ -42,7 +42,7 @@ import androidx.room.PrimaryKey
         Index(value = ["value_date"]), // For date range queries
     ],
 )
-data class ExtractedFieldValueEntity(
+internal data class ExtractedFieldValueEntity(
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: String,

@@ -12,7 +12,7 @@ import dev.gaferneira.notificapp.domain.model.RuleCondition
 /**
  * Mapper functions for converting between Rule domain models and RuleEntity database models.
  */
-object RuleMapper {
+internal object RuleMapper {
 
     /**
      * Convert a RuleEntity to an Rule domain model.

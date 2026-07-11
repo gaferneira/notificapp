@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.room)
     alias(libs.plugins.spotless)
     alias(libs.plugins.detekt)
+    id("architecture-check")
 }
 
 android {

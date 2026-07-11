@@ -6,9 +6,9 @@
     <ID>CyclomaticComplexMethod:AddFieldViewModel.kt$AddFieldViewModel$override fun onEvent(event: UiEvent)</ID>
     <ID>CyclomaticComplexMethod:AddFieldViewModel.kt$AddFieldViewModel$private fun initialize(field: RuleField?, notification: Notification?)</ID>
     <ID>CyclomaticComplexMethod:AddFieldViewModel.kt$AddFieldViewModel$private fun saveField()</ID>
-    <ID>CyclomaticComplexMethod:AppSelectionViewModel.kt$AppSelectionViewModel$private fun loadAppsWithNotifications(packageManager: PackageManager): List&lt;AppInfo&gt;</ID>
     <ID>CyclomaticComplexMethod:FieldExtractor.kt$FieldExtractor$private fun parseJsonArray(json: String, depth: Int = 0): List&lt;Any?&gt;</ID>
     <ID>CyclomaticComplexMethod:FieldExtractor.kt$FieldExtractor$private fun parseJsonObject(json: String, depth: Int = 0): Map&lt;String, Any?&gt;</ID>
+    <ID>CyclomaticComplexMethod:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$override suspend fun getMonitorableApps(): List&lt;AppInfo&gt;</ID>
     <ID>CyclomaticComplexMethod:RuleEditorViewModel.kt$RuleEditorViewModel$override fun onEvent(event: UiEvent)</ID>
     <ID>CyclomaticComplexMethod:RuleMatcher.kt$RuleMatcher$private fun matchesCondition(notification: Notification, condition: RuleCondition): Boolean</ID>
     <ID>CyclomaticComplexMethod:RulesViewModel.kt$RulesViewModel$private fun applyFilters(rules: List&lt;Rule&gt;, query: String, currentFilter: RuleFilter): List&lt;Rule&gt;</ID>
@@ -24,7 +24,6 @@
     <ID>LongMethod:AppSelectionPicker.kt$@Composable private fun AppListItem( app: AppDisplayInfo, isSelected: Boolean, onToggle: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AppSelectionPicker.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AppSelectionPicker( selectedApps: List&lt;AppInfo&gt;, enabledApps: List&lt;AppInfo&gt;, onConfirm: (List&lt;AppInfo&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
     <ID>LongMethod:AppSelectionScreen.kt$@Composable private fun AppListItem( app: AppInfo, isSelected: Boolean, onToggled: (Boolean) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:AppSelectionViewModel.kt$AppSelectionViewModel$private fun loadAppsWithNotifications(packageManager: PackageManager): List&lt;AppInfo&gt;</ID>
     <ID>LongMethod:FieldExtractor.kt$FieldExtractor$private fun parseJsonArray(json: String, depth: Int = 0): List&lt;Any?&gt;</ID>
     <ID>LongMethod:FieldExtractor.kt$FieldExtractor$private fun parseJsonObject(json: String, depth: Int = 0): Map&lt;String, Any?&gt;</ID>
     <ID>LongMethod:InboxFilterBottomSheet.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun FilterBottomSheetContent( uiState: InboxFilterContract.UiState, onEvent: (InboxFilterContract.UiEvent) -&gt; Unit, )</ID>
@@ -37,28 +36,17 @@
     <ID>LongMethod:NotificationDetailScreen.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun ExecutionCard(execution: ExecutionWithDetails)</ID>
     <ID>LongMethod:OnboardingScreen.kt$@Composable private fun PermissionToggleCard()</ID>
     <ID>LongMethod:OnboardingScreen.kt$@Composable private fun ValueStatementContent( onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$override suspend fun getMonitorableApps(): List&lt;AppInfo&gt;</ID>
     <ID>LongMethod:RuleEditorScreen.kt$@Composable private fun MetadataStep( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, scrollState: androidx.compose.foundation.ScrollState, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:RulesFilterBottomSheet.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun FilterBottomSheetContent( uiState: RulesFilterContract.UiState, onEvent: (RulesFilterContract.UiEvent) -&gt; Unit, )</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun AboutCard()</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun MonitoredAppsCard( appsCount: Int, onSelectApps: () -&gt; Unit, )</ID>
-    <ID>LongMethod:SettingsScreen.kt$@Composable private fun SettingsScreenContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, navigateTo: (Screen, NavOptions?) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:SnoozeConfig.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun SnoozeDurationSelector( selectedMinutes: Int, onDurationChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WhenSection.kt$@Composable private fun AppsCard( selectedApps: List&lt;AppInfo&gt;, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WhenSection.kt$@Composable private fun ConditionCard( condition: RuleCondition, onClick: () -&gt; Unit, onRemove: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongParameterList:ExtractDataBottomSheet.kt$( entryNotification: Notification?, effectiveNotification: Notification?, targetPackages: List&lt;String&gt;? = null, uiState: ExtractDataContract.UiState, onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongParameterList:ExtractDataBottomSheet.kt$( initialFields: List&lt;RuleField&gt;, isEditingAction: Boolean, targetPackages: List&lt;String&gt;?, notification: Notification?, onCommitted: (List&lt;RuleField&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
-    <ID>LongParameterList:InboxFilterBottomSheet.kt$( currentSelectedApps: List&lt;String&gt;, onFilterApplied: (List&lt;String&gt;, InboxFilterContract.Status) -&gt; Unit, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, currentStatusFilter: InboxFilterContract.Status = InboxFilterContract.Status.ALL, viewModel: InboxFilterBottomSheetViewModel = hiltViewModel(), )</ID>
-    <ID>LongParameterList:KeywordConfig.kt$( keyword: String, maxLength: Int?, onKeywordChange: (String) -&gt; Unit, onMaxLengthChange: (Int?) -&gt; Unit, error: String?, modifier: Modifier = Modifier, )</ID>
-    <ID>LongParameterList:MatchingLogicBottomSheet.kt$( condition: MatchingCondition, operator: MatchingOperator, value: String, onConditionChange: (MatchingCondition) -&gt; Unit, onOperatorChange: (MatchingOperator) -&gt; Unit, onValueChange: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongParameterList:MatchingLogicBottomSheet.kt$( label: String, selected: T, options: List&lt;T&gt;, onSelect: (T) -&gt; Unit, displayName: (T) -&gt; String, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:ProcessNotificationUseCase.kt$ProcessNotificationUseCase$( private val deduplicator: NotificationDeduplicator, private val notificationRepository: NotificationRepository, private val ruleRepository: RuleRepository, private val ruleEngine: RuleEngine, private val ruleExecutionRepository: RuleExecutionRepository, private val actionDispatcher: ActionDispatcher, @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher, )</ID>
-    <ID>LongParameterList:RegexConfig.kt$( pattern: String, captureGroup: Int, onPatternChange: (String) -&gt; Unit, onCaptureGroupChange: (Int) -&gt; Unit, error: String?, modifier: Modifier = Modifier, )</ID>
-    <ID>LongParameterList:RulesFilterBottomSheet.kt$( allRules: List&lt;Rule&gt;, currentFilter: RuleFilter, onFilterApplied: (RuleFilter) -&gt; Unit, onDismiss: () -&gt; Unit, modifier: Modifier = Modifier, viewModel: FilterBottomSheetViewModel = hiltViewModel(), )</ID>
-    <ID>LongParameterList:SettingsScreen.kt$( icon: ImageVector, iconTint: Color, title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -&gt; Unit, )</ID>
     <ID>LongParameterList:TestFixtures.kt$( id: String = "test-id", packageName: String = "com.test.app", appName: String = "Test App", title: String? = "Test Title", content: String? = "Test Content", rawContent: String = "Test Title\nTest Content", timestamp: Long = 0L, isProcessed: Boolean = false, appliedRulesCount: Int = 0, sbnKey: String? = null, )</ID>
-    <ID>LongParameterList:TextBetweenAnchorsConfig.kt$( startAnchor: String, endAnchor: String, onStartAnchorChange: (String) -&gt; Unit, onEndAnchorChange: (String) -&gt; Unit, errors: Map&lt;String, String&gt;, modifier: Modifier = Modifier, )</ID>
-    <ID>LongParameterList:WhenSection.kt$( targetApps: List&lt;AppInfo&gt;, conditions: List&lt;RuleCondition&gt;, onAppsClick: () -&gt; Unit, onRemoveCondition: (String) -&gt; Unit, onConditionClick: (String) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LoopWithTooManyJumpStatements:AppSelectionViewModel.kt$AppSelectionViewModel$for</ID>
+    <ID>LoopWithTooManyJumpStatements:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$for</ID>
     <ID>MatchingDeclarationName:MainBottomNav.kt$AppDestinations</ID>
     <ID>NestedBlockDepth:FieldExtractor.kt$FieldExtractor$private fun extractJsonPath(text: String, method: ExtractionMethod.JsonPath): ExtractionResult</ID>
     <ID>NestedBlockDepth:FieldExtractor.kt$FieldExtractor$private fun parseJsonArray(json: String, depth: Int = 0): List&lt;Any?&gt;</ID>
@@ -72,10 +60,10 @@
     <ID>SpreadOperator:DatabaseModule.kt$DatabaseModule$(*APP_DATABASE_MIGRATIONS)</ID>
     <ID>SpreadOperator:UiText.kt$UiText$(id = id, *args)</ID>
     <ID>SpreadOperator:UiText.kt$UiText$(id, *args)</ID>
-    <ID>SwallowedException:AppSelectionViewModel.kt$AppSelectionViewModel$e: Exception</ID>
     <ID>SwallowedException:InboxScreen.kt$e: Exception</ID>
     <ID>SwallowedException:MainActivity.kt$e: Exception</ID>
     <ID>SwallowedException:NotificationDetailScreen.kt$e: Exception</ID>
+    <ID>SwallowedException:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$e: Exception</ID>
     <ID>SwallowedException:RuleMatcher.kt$RuleMatcher$e: Exception</ID>
     <ID>SwallowedException:RulesScreen.kt$e: Exception</ID>
     <ID>SwallowedException:UserPreferencesLocalDataSource.kt$UserPreferencesLocalDataSource$e: Exception</ID>
@@ -89,6 +77,7 @@
     <ID>TooGenericExceptionCaught:NotificationDetailScreen.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificationDetailViewModel.kt$NotificationDetailViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificationRepositoryImpl.kt$NotificationRepositoryImpl$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ProcessNotificationUseCase.kt$ProcessNotificationUseCase$e: Exception</ID>
     <ID>TooGenericExceptionCaught:Resource.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RuleExecutionRepositoryImpl.kt$RuleExecutionRepositoryImpl$e: Exception</ID>

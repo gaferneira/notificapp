@@ -33,7 +33,7 @@ import javax.inject.Inject
  * inserts, notification counter update) are wrapped in a single Room transaction so
  * they succeed or fail atomically.
  */
-class RuleExecutionRepositoryImpl @Inject constructor(
+internal class RuleExecutionRepositoryImpl @Inject constructor(
     private val database: AppDatabase,
     private val ruleExecutionDao: RuleExecutionDao,
     private val extractedFieldValueDao: ExtractedFieldValueDao,

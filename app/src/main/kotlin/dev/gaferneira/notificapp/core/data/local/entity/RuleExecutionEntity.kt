@@ -41,7 +41,7 @@ import androidx.room.PrimaryKey
         Index(value = ["created_at"]), // For time-based queries
     ],
 )
-data class RuleExecutionEntity(
+internal data class RuleExecutionEntity(
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: String,

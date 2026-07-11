@@ -43,7 +43,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +59,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEffect
@@ -85,13 +85,11 @@ fun OnboardingScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Handle effects
-    LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is UiEffect.OpenNotificationSettings -> onOpenNotificationSettings()
-                is UiEffect.NavigateToMainApp -> {
-                    // Navigation handled by ViewModel via NavigationHandler
-                }
+    CollectOneOffEffects(viewModel.effect) { effect ->
+        when (effect) {
+            is UiEffect.OpenNotificationSettings -> onOpenNotificationSettings()
+            is UiEffect.NavigateToMainApp -> {
+                // Navigation handled by ViewModel via NavigationHandler
             }
         }
     }

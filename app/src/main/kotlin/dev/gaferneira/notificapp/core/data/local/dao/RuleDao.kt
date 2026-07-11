@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.Flow
  * Provides CRUD operations and queries for rule management.
  */
 @Dao
-interface RuleDao {
+internal interface RuleDao {
 
     /**
      * Observe all rules as a Flow, ordered by most recently updated first.
@@ -174,6 +174,15 @@ interface RuleDao {
      */
     @Query("SELECT * FROM rule_actions WHERE rule_id = :ruleId")
     fun observeActionsForRule(ruleId: String): Flow<List<RuleActionEntity>>
+
+    /**
+     * Get all actions of a given [type] (e.g. `CREATE_ALARM`) across every rule. Used for
+     * config-level scans (e.g. checking whether a background image URI is still referenced by
+     * another alarm action) where `rule_actions.config` is an opaque JSON-string column with no
+     * indexed field to query against directly.
+     */
+    @Query("SELECT * FROM rule_actions WHERE type = :type")
+    suspend fun getActionsByType(type: String): List<RuleActionEntity>
 
     /**
      * Insert or update actions.

@@ -22,7 +22,7 @@ import javax.inject.Inject
  * - Result<T> return type for explicit error handling (ADR 006)
  * - Injected coroutine dispatchers for testability (ADR 008)
  */
-class SelectedAppRepositoryImpl @Inject constructor(
+internal class SelectedAppRepositoryImpl @Inject constructor(
     private val dao: SelectedAppDao,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : SelectedAppRepository {

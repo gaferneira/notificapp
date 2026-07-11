@@ -9,7 +9,7 @@ import timber.log.Timber
 /**
  * Mapper functions for converting between RuleExecution domain models and RuleExecutionEntity database models.
  */
-object RuleExecutionMapper {
+internal object RuleExecutionMapper {
 
     private val json = Json {
         ignoreUnknownKeys = true

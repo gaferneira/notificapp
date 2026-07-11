@@ -19,7 +19,7 @@ import androidx.room.PrimaryKey
         Index(value = ["is_enabled"]), // For querying enabled apps quickly
     ],
 )
-data class SelectedAppEntity(
+internal data class SelectedAppEntity(
     @PrimaryKey
     @ColumnInfo(name = "package_name")
     val packageName: String,

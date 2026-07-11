@@ -38,7 +38,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.SelectedAppEntity
     exportSchema = true,
 )
 @TypeConverters(RuleTypeConverters::class)
-abstract class AppDatabase : RoomDatabase() {
+internal abstract class AppDatabase : RoomDatabase() {
     abstract fun selectedAppDao(): SelectedAppDao
     abstract fun notificationDao(): NotificationDao
     abstract fun ruleDao(): RuleDao

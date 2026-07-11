@@ -7,7 +7,7 @@ import kotlinx.serialization.json.Json
 /**
  * Mapper functions for converting between RuleField domain models and RuleFieldEntity database models.
  */
-object RuleFieldMapper {
+internal object RuleFieldMapper {
 
     private val json = Json {
         ignoreUnknownKeys = true

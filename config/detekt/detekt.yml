@@ -4,6 +4,7 @@ complexity:
   LongParameterList:
     functionThreshold: 6
     constructorThreshold: 7
+    ignoreAnnotated: ['Composable']
   CyclomaticComplexMethod:
     threshold: 15
   TooManyFunctions:

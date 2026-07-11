@@ -29,7 +29,7 @@ import androidx.room.PrimaryKey
         Index(value = ["is_global"]),
     ],
 )
-data class RuleEntity(
+internal data class RuleEntity(
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: String,

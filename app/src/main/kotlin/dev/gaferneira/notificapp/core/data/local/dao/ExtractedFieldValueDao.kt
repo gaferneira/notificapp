@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
  * Provides CRUD operations and type-specific filtering queries.
  */
 @Dao
-interface ExtractedFieldValueDao {
+internal interface ExtractedFieldValueDao {
 
     /**
      * Get all values for a specific rule execution.

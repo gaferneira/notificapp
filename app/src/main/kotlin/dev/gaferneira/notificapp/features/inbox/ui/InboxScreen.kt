@@ -41,11 +41,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,9 +67,11 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
+import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
 import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
+import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.OnResumeEffect
@@ -84,7 +84,6 @@ import dev.gaferneira.notificapp.features.inbox.contract.NotificationItem
 import dev.gaferneira.notificapp.features.inbox.viewmodel.InboxViewModel
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 
 /**
  * Inbox Screen displaying paginated notifications with 2-hour time headers.
@@ -103,22 +102,14 @@ fun InboxScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val notifications = viewModel.notifications.collectAsLazyPagingItems()
     val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
 
     // Handle effects
-    LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is InboxEffect.NavigateToNotificationDetail -> {
-                    navigateTo(Screen.NotificationDetails(effect.notificationId), null)
-                }
+    CollectOneOffEffects(viewModel.effect) { effect ->
+        when (effect) {
+            is InboxEffect.NavigateToNotificationDetail ->
+                navigateTo(Routes.notificationDetails(effect.notificationId), null)
 
-                is InboxEffect.ShowError -> {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar(effect.message)
-                    }
-                }
-            }
+            is InboxEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
         }
     }
 

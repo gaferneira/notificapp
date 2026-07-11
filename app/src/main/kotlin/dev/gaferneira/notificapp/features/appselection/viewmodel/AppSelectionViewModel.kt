@@ -1,11 +1,7 @@
 package dev.gaferneira.notificapp.features.appselection.viewmodel
 
-import android.content.Context
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
@@ -17,10 +13,9 @@ import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEffect
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEvent
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiState
+import dev.gaferneira.notificapp.features.appselection.data.InstalledAppsProvider
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -30,14 +25,14 @@ import javax.inject.Inject
  * Loads installed apps that can send notifications and allows user to select
  * which ones to monitor. Persists selections to the repository.
  *
- * @param context Application context for loading apps
+ * @param installedAppsProvider Resolves installed apps without an Android-static app-catalog lookup
  * @param selectedAppRepository Repository for selected apps
  * @param navigationHandler Handler for navigation commands
  * @param ioDispatcher Dispatcher for IO operations
  */
 @HiltViewModel
 class AppSelectionViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val installedAppsProvider: InstalledAppsProvider,
     private val selectedAppRepository: SelectedAppRepository,
     private val navigationHandler: NavigationHandler,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
@@ -98,8 +93,7 @@ class AppSelectionViewModel @Inject constructor(
             setState { copy(isLoading = true, error = null) }
 
             try {
-                val packageManager = context.packageManager
-                val installedApps = loadAppsWithNotifications(packageManager)
+                val installedApps = installedAppsProvider.getMonitorableApps()
 
                 // Check which apps are already selected
                 val existingApps = selectedAppRepository.getAllApps().getOrNull() ?: emptyList()
@@ -118,15 +112,13 @@ class AppSelectionViewModel @Inject constructor(
                         .thenBy { it.name.lowercase() },
                 )
 
-                withContext(Dispatchers.Default) {
-                    setState {
-                        copy(
-                            availableApps = sortedApps,
-                            selectedPackageNames = selectedPackages,
-                            isLoading = false,
-                            isInitialSetup = isInitialSetup,
-                        )
-                    }
+                setState {
+                    copy(
+                        availableApps = sortedApps,
+                        selectedPackageNames = selectedPackages,
+                        isLoading = false,
+                        isInitialSetup = isInitialSetup,
+                    )
                 }
 
                 Timber.d(
@@ -142,106 +134,6 @@ class AppSelectionViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    /**
-     * Load apps that have notification capability.
-     * Uses queryIntentActivities to work correctly on Android 11+ with package visibility restrictions.
-     */
-    private fun loadAppsWithNotifications(packageManager: PackageManager): List<AppInfo> {
-        val apps = mutableListOf<AppInfo>()
-        val seenPackages = mutableSetOf<String>()
-
-        // Query all apps that can handle MAIN/LAUNCHER intent
-        // This works on Android 11+ with the <queries> declaration in manifest
-        val mainIntent = android.content.Intent(android.content.Intent.ACTION_MAIN).apply {
-            addCategory(android.content.Intent.CATEGORY_LAUNCHER)
-        }
-
-        val resolveInfoList = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            packageManager.queryIntentActivities(
-                mainIntent,
-                PackageManager.ResolveInfoFlags.of(PackageManager.GET_META_DATA.toLong()),
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            packageManager.queryIntentActivities(mainIntent, PackageManager.GET_META_DATA)
-        }
-
-        for (resolveInfo in resolveInfoList) {
-            val packageName = resolveInfo.activityInfo?.packageName ?: continue
-
-            // Skip duplicates
-            if (packageName in seenPackages) continue
-            seenPackages.add(packageName)
-
-            // Skip our own app
-            if (packageName == context.packageName) continue
-
-            // Load app info
-            val applicationInfo = try {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    packageManager.getApplicationInfo(
-                        packageName,
-                        PackageManager.ApplicationInfoFlags.of(0),
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    packageManager.getApplicationInfo(packageName, 0)
-                }
-            } catch (e: Exception) {
-                continue
-            }
-
-            // Skip pure system apps that can't send notifications meaningfully
-            val isSystemApp = (applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            val isUpdatedSystemApp = (applicationInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
-
-            // Include user apps and updated system apps
-            if (!isSystemApp || isUpdatedSystemApp) {
-                val appName = applicationInfo.loadLabel(packageManager).toString()
-                    .ifBlank { packageName }
-
-                // Try to determine category
-                val category = when {
-                    packageName.contains("mail", ignoreCase = true) ||
-                        packageName.contains("gmail", ignoreCase = true) ||
-                        packageName.contains("outlook", ignoreCase = true) ||
-                        packageName.contains("yahoo", ignoreCase = true) -> "Email"
-                    packageName.contains("whatsapp", ignoreCase = true) ||
-                        packageName.contains("telegram", ignoreCase = true) ||
-                        packageName.contains("messenger", ignoreCase = true) ||
-                        packageName.contains("slack", ignoreCase = true) ||
-                        packageName.contains("discord", ignoreCase = true) -> "Messaging"
-                    packageName.contains("bank", ignoreCase = true) ||
-                        packageName.contains("finance", ignoreCase = true) ||
-                        packageName.contains("revolut", ignoreCase = true) ||
-                        packageName.contains("paypal", ignoreCase = true) ||
-                        packageName.contains("crypto", ignoreCase = true) -> "Financial"
-                    packageName.contains("shop", ignoreCase = true) ||
-                        packageName.contains("amazon", ignoreCase = true) ||
-                        packageName.contains("ebay", ignoreCase = true) ||
-                        packageName.contains("aliexpress", ignoreCase = true) ||
-                        packageName.contains("food", ignoreCase = true) ||
-                        packageName.contains("deliver", ignoreCase = true) -> "Shopping"
-                    packageName.contains("uber", ignoreCase = true) ||
-                        packageName.contains("lyft", ignoreCase = true) ||
-                        packageName.contains("transport", ignoreCase = true) ||
-                        packageName.contains("travel", ignoreCase = true) -> "Transport"
-                    else -> null
-                }
-
-                apps.add(
-                    AppInfo(
-                        packageName = packageName,
-                        name = appName,
-                        category = category,
-                    ),
-                )
-            }
-        }
-
-        return apps
     }
 
     /**

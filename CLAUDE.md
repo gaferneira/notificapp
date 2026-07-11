@@ -373,13 +373,31 @@ class RuleMatcherTest {
 
 **Boy-scout baseline policy (TD-16):** the baseline is meant to shrink over time, not just accumulate. When a PR meaningfully touches a file that already has baseline entries, fix those entries in the same PR and regenerate the baseline (`./gradlew detektBaseline`) — the diff must show the baseline count going *down*. Never regenerate to *add* entries except via the existing explicit rule above (intentionally accepted new debt, called out in the PR description).
 
+### Architecture Check (`./gradlew architectureCheck`)
+Implemented in `config/architecture/architectureCheck.gradle.kts` (applied from `app/build.gradle.kts`), grandfathered violations tracked in `config/architecture/baseline.txt`. Runs as part of `check` alongside Detekt. Enforces seven rules that Detekt's built-in rule set can't express (visibility-with-exceptions, forbidden-except-here) and that repeated as findings across `audit/reports/*.md` despite already being documented in prose in this file / the ADRs:
+
+1. **Visibility** — `core/data/repository/*Impl`, and every DAO/entity/mapper under `core/data/local`, must be `internal`.
+2. **Dispatcher injection** (ADR 008) — no hardcoded `Dispatchers.IO`/`Default`/`Main` outside `core/di/DispatchersModule.kt`.
+3. **Effect collection** — one-off effects must go through `CollectOneOffEffects`, never a raw `viewModel.effect.collect { }`.
+4. **Platform statics** — no `PackageManager` / `Settings.Secure` inside `features/*/viewmodel` or `domain/**`.
+5. **Domain purity** — `domain/**` must never import `features/**` (the dependency graph only flows `features → domain`).
+6. **No raw exception leaks** — a repository/data-source catch block must not hand a raw exception back through `Result.failure(...)`; it has to be mapped to the `Failure` hierarchy (ADR 006) first. This one starts with 41 grandfathered call sites because the `Failure`-mapping helper the fix needs doesn't exist yet — see DATA-07 in `audit/reports/step_5_data.md`.
+7. **Contract purity** — a feature's `contract/` (its public `UiState`/`UiEvent`/`UiEffect` surface) must not import `core.extraction` internals; map to a feature-owned model at the ViewModel boundary instead.
+
+Rules 1-4 start clean (their violations were fixed). Rules 5-7 start with their pre-existing violations grandfathered in `config/architecture/baseline.txt`, using the same shrink-only boy-scout policy as the Detekt baseline: if you touch a listed file, fix its entry and remove the line in the same PR. The task fails the build on any **new** violation not already in the baseline — this stops new code from adding to any of the seven categories, even the ones with pre-existing debt.
+
+Not every audit finding is (or should be) a mechanical rule here — regex/pattern recompilation on hot paths (PERF-001/002) and N+1 DAO fan-out (PERF-008, DATA-01/03/05) are real repeated defects but need real data-flow analysis to detect reliably; a naive text-matching rule for either would be too fragile (false positives erode trust in the whole check faster than it prevents mistakes). Those stay as manual review checklist items in `.claude/commands/review-pr.md` instead.
+
 ### Manual Verification
 Always run before submitting PRs:
 ```bash
 ./gradlew spotlessApply
 ./gradlew detekt
+./gradlew architectureCheck
 ./gradlew test
 ```
+
+Note: the "Pre-Commit via Git Hooks" section above describes the intended gate, but no `.git/hooks/pre-commit` is currently installed in this repo (only the sample hook exists) — until that's wired up, these checks are enforced by CI / `./gradlew check`, not locally on every commit.
 
 ## Error Handling
 
@@ -619,3 +637,4 @@ LaunchedEffect(Unit) {
 | Hilt Modules | `app/src/main/kotlin/.../core/di/` |
 | Feature Strings | `app/src/main/res/values/strings.xml` |
 | Theme | `app/src/main/kotlin/.../core/ui/theme/` |
+| Architecture Check rules / baseline | `config/architecture/architectureCheck.gradle.kts`, `config/architecture/baseline.txt` |

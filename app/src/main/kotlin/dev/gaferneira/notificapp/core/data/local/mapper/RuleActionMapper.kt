@@ -11,7 +11,7 @@ import timber.log.Timber
 /**
  * Mapper functions for converting between RuleAction domain models and RuleActionEntity database models.
  */
-object RuleActionMapper {
+internal object RuleActionMapper {
 
     /**
      * Convert a RuleAction domain model to a RuleActionEntity.

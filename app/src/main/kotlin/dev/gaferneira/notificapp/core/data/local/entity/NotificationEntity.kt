@@ -26,7 +26,7 @@ import androidx.room.PrimaryKey
         Index(value = ["timestamp"]), // For time-based queries
     ],
 )
-data class NotificationEntity(
+internal data class NotificationEntity(
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: String,

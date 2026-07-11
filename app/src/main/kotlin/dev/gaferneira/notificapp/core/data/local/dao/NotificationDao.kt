@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
  * Data Access Object for managing notifications in the database.
  */
 @Dao
-interface NotificationDao {
+internal interface NotificationDao {
 
     /**
      * Get all notifications as a Flow, ordered by timestamp descending (newest first).
