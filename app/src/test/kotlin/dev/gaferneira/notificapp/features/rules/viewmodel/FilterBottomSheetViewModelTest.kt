@@ -8,6 +8,7 @@ import dev.gaferneira.notificapp.features.rules.contract.RulesFilterContract.UiE
 import dev.gaferneira.notificapp.testutil.createTestRule
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -39,7 +40,7 @@ class FilterBottomSheetViewModelTest {
     fun `init derives sorted distinct categories and apps from the given rules`() = runTest(testDispatcher) {
         viewModel.onEvent(
             UiEvent.Init(
-                allRules = listOf(
+                allRules = persistentListOf(
                     createTestRule(category = "Finance", targetApps = listOf(AppInfo("com.b", "Bank"))),
                     createTestRule(category = "Finance", targetApps = listOf(AppInfo("com.a", "Alpha"))),
                     createTestRule(category = "Deliveries", targetApps = null),
@@ -63,7 +64,7 @@ class FilterBottomSheetViewModelTest {
             sortBy = RuleFilter.SortBy.STATUS,
         )
 
-        viewModel.onEvent(UiEvent.Init(allRules = emptyList(), currentFilter = filter))
+        viewModel.onEvent(UiEvent.Init(allRules = persistentListOf(), currentFilter = filter))
         testDispatcher.scheduler.advanceUntilIdle()
 
         val state = viewModel.uiState.value

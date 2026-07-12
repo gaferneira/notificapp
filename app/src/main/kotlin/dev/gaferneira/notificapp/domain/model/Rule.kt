@@ -1,6 +1,8 @@
 package dev.gaferneira.notificapp.domain.model
 
 import androidx.compose.runtime.Immutable
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * Domain model representing an extraction rule.
@@ -26,11 +28,11 @@ data class Rule(
     /** When true, matches are logged but no actions execute - a safe way to trial a rule */
     val isDryRun: Boolean = false,
     /** App scope: null means all apps, or list of specific package names */
-    val targetApps: List<AppInfo>? = null,
+    val targetApps: ImmutableList<AppInfo>? = null,
     /** Triggers that determine when rule applies */
-    val conditions: List<RuleCondition> = emptyList(),
+    val conditions: ImmutableList<RuleCondition> = persistentListOf(),
     /** Actions to take when rule matches */
-    val actions: List<RuleAction> = emptyList(),
+    val actions: ImmutableList<RuleAction> = persistentListOf(),
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 )
@@ -40,4 +42,4 @@ data class Rule(
  * ("Extract data") action. Empty when there is no enabled `SAVE_DATA` action - the single place
  * consumers should read extraction fields from (see `action-execution` spec).
  */
-fun Rule.saveDataFields(): List<RuleField> = actions.firstOrNull { it.type == ActionType.SAVE_DATA && it.isEnabled }?.fields.orEmpty()
+fun Rule.saveDataFields(): ImmutableList<RuleField> = actions.firstOrNull { it.type == ActionType.SAVE_DATA && it.isEnabled }?.fields ?: persistentListOf()

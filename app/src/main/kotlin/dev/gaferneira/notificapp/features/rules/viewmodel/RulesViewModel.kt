@@ -12,6 +12,9 @@ import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
 import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
 import dev.gaferneira.notificapp.features.rules.contract.RulesUiState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -33,7 +36,7 @@ class RulesViewModel @Inject constructor(
     private val ruleRepository: RuleRepository,
 ) : MviViewModel<RulesUiState, RulesEvent, RulesEffect>(RulesUiState()) {
 
-    private val allRules = MutableStateFlow<List<Rule>>(emptyList())
+    private val allRules = MutableStateFlow<ImmutableList<Rule>>(persistentListOf())
     private val searchQuery = MutableStateFlow("")
     private val filter = MutableStateFlow(RuleFilter())
     private var observeRulesJob: Job? = null
@@ -88,7 +91,7 @@ class RulesViewModel @Inject constructor(
             try {
                 ruleRepository.observeAllRules()
                     .collectLatest { rules ->
-                        allRules.value = rules
+                        allRules.value = rules.toImmutableList()
                     }
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load rules")
@@ -106,7 +109,7 @@ class RulesViewModel @Inject constructor(
         viewModelScope.launch {
             ruleRepository.getAllRules()
                 .onSuccess { rules ->
-                    allRules.value = rules
+                    allRules.value = rules.toImmutableList()
                 }
                 .onFailure { e ->
                     Timber.e(e, "Failed to refresh rules")
@@ -115,7 +118,7 @@ class RulesViewModel @Inject constructor(
         }
     }
 
-    private fun applyFilters(rules: List<Rule>, query: String, currentFilter: RuleFilter): List<Rule> {
+    private fun applyFilters(rules: ImmutableList<Rule>, query: String, currentFilter: RuleFilter): ImmutableList<Rule> {
         // First apply all filters
         val filteredRules = rules.filter { rule ->
             // Apply search filter
@@ -154,7 +157,7 @@ class RulesViewModel @Inject constructor(
         }
 
         // Then apply sorting
-        return when (currentFilter.sortBy) {
+        val sortedRules = when (currentFilter.sortBy) {
             RuleFilter.SortBy.CATEGORY_ASC -> {
                 // Sort by category first, then by name within each category
                 filteredRules.sortedWith(
@@ -185,6 +188,7 @@ class RulesViewModel @Inject constructor(
                 )
             }
         }
+        return sortedRules.toImmutableList()
     }
 
     private fun onSearchQueryChange(query: String) {

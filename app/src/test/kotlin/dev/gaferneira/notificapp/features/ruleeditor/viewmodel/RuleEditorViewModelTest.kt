@@ -28,6 +28,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -434,7 +435,7 @@ class RuleEditorViewModelTest {
         fun `apps selected updates the target apps and hides the sheet`() {
             // Given: the app sheet is open
             viewModel.onEvent(UiEvent.OnAppsClicked)
-            val apps = listOf(AppInfo("com.a", "App A"))
+            val apps = persistentListOf(AppInfo("com.a", "App A"))
 
             // When: selecting apps
             viewModel.onEvent(UiEvent.OnAppsSelected(apps))
@@ -538,7 +539,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `editing an Extract data action opens the extract sheet in edit mode`() {
             // Given: an existing SAVE_DATA action
-            viewModel.onEvent(UiEvent.OnExtractDataCommitted(listOf(createTestField(method = ExtractionMethod.SmartAmountDetection))))
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(persistentListOf(createTestField(method = ExtractionMethod.SmartAmountDetection))))
             val saveId = viewModel.uiState.value.rule.actions.single { it.type == ActionType.SAVE_DATA }.id
 
             // When: editing it
@@ -660,7 +661,7 @@ class RuleEditorViewModelTest {
         fun `removing Extract data with fields asks for confirmation before clearing`() {
             // Given: an Extract-data action committed with a field
             val field = createTestField(method = ExtractionMethod.RegexPattern("\\d+"))
-            viewModel.onEvent(UiEvent.OnExtractDataCommitted(listOf(field)))
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(persistentListOf(field)))
             val saveId = viewModel.uiState.value.rule.actions.single { it.type == ActionType.SAVE_DATA }.id
 
             // When: removing the Extract-data action
@@ -703,7 +704,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `committing extract data adds a SAVE_DATA action and sets the fields`() {
             // Given: a rule with no actions
-            val fields = listOf(
+            val fields = persistentListOf(
                 createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection),
                 createTestField(id = "f2", method = ExtractionMethod.SmartDateDetection),
             )
@@ -723,11 +724,11 @@ class RuleEditorViewModelTest {
         @Test
         fun `committing extract data again replaces the fields without duplicating the action`() {
             // Given: an already-committed extract-data action
-            viewModel.onEvent(UiEvent.OnExtractDataCommitted(listOf(createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection))))
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(persistentListOf(createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection))))
             val saveId = viewModel.uiState.value.rule.actions.single().id
 
             // When: committing a different set of fields (edit flow)
-            val updated = listOf(createTestField(id = "f2", method = ExtractionMethod.SmartDateDetection))
+            val updated = persistentListOf(createTestField(id = "f2", method = ExtractionMethod.SmartDateDetection))
             viewModel.onEvent(UiEvent.OnExtractDataCommitted(updated))
 
             // Then: the same single SAVE_DATA action remains and the fields are replaced
@@ -762,7 +763,7 @@ class RuleEditorViewModelTest {
             val condition = createTestCondition(value = "Total")
             viewModel.onEvent(UiEvent.OnConditionSaved(condition))
             val field = createTestField(method = ExtractionMethod.TextAfterKeyword(keyword = "Total: "))
-            viewModel.onEvent(UiEvent.OnExtractDataCommitted(listOf(field)))
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(persistentListOf(field)))
 
             val matching = createTestNotification(id = "n1", content = "Total: 100", rawContent = "Total: 100")
             val nonMatching = createTestNotification(id = "n2", content = "no match here", rawContent = "no match here")
@@ -783,7 +784,7 @@ class RuleEditorViewModelTest {
         fun `test against history filters candidates to the rule's target apps`() = runTest(testDispatcher) {
             // Given: a draft rule that always matches, scoped to a single target app
             viewModel.onEvent(UiEvent.OnConditionSaved(createTestCondition()))
-            viewModel.onEvent(UiEvent.OnAppsSelected(listOf(AppInfo("com.a", "App A"))))
+            viewModel.onEvent(UiEvent.OnAppsSelected(persistentListOf(AppInfo("com.a", "App A"))))
 
             val fromTargetApp = createTestNotification(id = "n1", packageName = "com.a")
             coEvery {

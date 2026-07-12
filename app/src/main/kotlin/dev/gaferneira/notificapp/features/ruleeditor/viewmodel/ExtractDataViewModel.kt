@@ -15,6 +15,7 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContrac
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiState
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -157,21 +158,21 @@ class ExtractDataViewModel @Inject constructor(
                 method = ExtractionMethod.LineExtraction(10),
             )
         }
-        setState { copy(fields = newFields) }
+        setState { copy(fields = newFields.toImmutableList()) }
         recomputePreviews()
     }
 
     private fun removeField(fieldId: String) {
-        setState { copy(fields = fields.filter { it.id != fieldId }) }
+        setState { copy(fields = fields.filter { it.id != fieldId }.toImmutableList()) }
         recomputePreviews()
     }
 
     private fun onFieldSaved(field: RuleField) {
         setState {
             val updatedFields = if (editingFieldId != null) {
-                fields.map { if (it.id == editingFieldId) field else it }
+                fields.map { if (it.id == editingFieldId) field else it }.toImmutableList()
             } else {
-                fields + field
+                (fields + field).toImmutableList()
             }
             copy(
                 fields = updatedFields,

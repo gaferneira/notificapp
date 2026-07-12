@@ -8,6 +8,8 @@ import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * MVI Contract for the Rule Editor screen.
@@ -34,7 +36,7 @@ object RuleEditorContract {
         /** Validation errors by field */
         val validationErrors: Map<String, String> = emptyMap(),
         /** List of enabled apps for filtering available apps in the picker */
-        val enabledApps: List<AppInfo> = emptyList(),
+        val enabledApps: ImmutableList<AppInfo> = persistentListOf(),
         /** Whether matching logic bottom sheet is visible */
         val isMatchingLogicSheetVisible: Boolean = false,
         /** Whether app selection bottom sheet is visible */
@@ -126,7 +128,7 @@ object RuleEditorContract {
         data object OnAppsClicked : UiEvent()
 
         /** Apps selected from AppBottomSheet */
-        data class OnAppsSelected(val apps: List<AppInfo>) : UiEvent()
+        data class OnAppsSelected(val apps: ImmutableList<AppInfo>) : UiEvent()
 
         /** Show the action type-picker dialog */
         data object OnAddActionClicked : UiEvent()
@@ -153,7 +155,7 @@ object RuleEditorContract {
         data object OnDismissExtractDataRemoval : UiEvent()
 
         /** Extract-data draft confirmed: commit these fields and ensure the SAVE_DATA action exists */
-        data class OnExtractDataCommitted(val fields: List<RuleField>) : UiEvent()
+        data class OnExtractDataCommitted(val fields: ImmutableList<RuleField>) : UiEvent()
         data object OnDismissSheet : UiEvent()
 
         /** Condition saved from MatchingLogicBottomSheet (add or update) */

@@ -75,6 +75,8 @@ import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionCont
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEvent
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiState
 import dev.gaferneira.notificapp.features.appselection.viewmodel.AppSelectionViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * App Selection screen for choosing which apps to monitor.
@@ -436,7 +438,7 @@ private fun SearchField(
  */
 @Composable
 private fun AppList(
-    apps: List<AppInfo>,
+    apps: ImmutableList<AppInfo>,
     selectedPackages: Set<String>,
     onAppToggled: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -724,7 +726,7 @@ private fun AppSelectionScreenInitialSetupPreview() {
     NotificappTheme {
         AppSelectionScreenContent(
             uiState = UiState(
-                availableApps = listOf(
+                availableApps = persistentListOf(
                     AppInfo("com.google.android.gm", "Gmail", "Email"),
                     AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
                     AppInfo("com.revolut.revolut", "Revolut", "Financial"),
@@ -747,7 +749,7 @@ private fun AppSelectionScreenInitialSetupPreviewDark() {
     NotificappTheme {
         AppSelectionScreenContent(
             uiState = UiState(
-                availableApps = listOf(
+                availableApps = persistentListOf(
                     AppInfo("com.google.android.gm", "Gmail", "Email"),
                     AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
                     AppInfo("com.revolut.revolut", "Revolut", "Financial"),
@@ -770,7 +772,7 @@ private fun AppSelectionScreenFromSettingsPreview() {
     NotificappTheme {
         AppSelectionScreenContent(
             uiState = UiState(
-                availableApps = listOf(
+                availableApps = persistentListOf(
                     AppInfo("com.google.android.gm", "Gmail", "Email"),
                     AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
                     AppInfo("com.revolut.revolut", "Revolut", "Financial"),

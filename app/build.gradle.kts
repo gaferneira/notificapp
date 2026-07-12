@@ -113,6 +113,7 @@ dependencies {
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.collections.immutable)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)

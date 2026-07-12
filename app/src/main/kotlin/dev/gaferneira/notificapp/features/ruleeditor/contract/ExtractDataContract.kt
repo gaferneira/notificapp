@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.features.ruleeditor.contract
 
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * MVI Contract for the ExtractDataBottomSheet ("Extract data" action).
@@ -26,7 +28,7 @@ object ExtractDataContract {
      */
     data class UiState(
         /** Draft extraction fields, seeded on init and edited in place until confirmed */
-        val fields: List<RuleField> = emptyList(),
+        val fields: ImmutableList<RuleField> = persistentListOf(),
         /** True when editing an existing Extract-data action (drives the Add vs Update label) */
         val isEditingAction: Boolean = false,
         /** Whether the nested add/edit-field sheet is visible */
@@ -66,7 +68,7 @@ object ExtractDataContract {
     sealed class UiEvent {
         /** Seed the draft when the sheet opens (empty for new, current fields for edit) */
         data class Init(
-            val initialFields: List<RuleField>,
+            val initialFields: ImmutableList<RuleField>,
             val isEditingAction: Boolean,
             val sampleText: String?,
         ) : UiEvent()
@@ -110,7 +112,7 @@ object ExtractDataContract {
      */
     sealed class UiEffect {
         /** The draft was confirmed; the parent should commit these fields + the SAVE_DATA action */
-        data class Committed(val fields: List<RuleField>) : UiEffect()
+        data class Committed(val fields: ImmutableList<RuleField>) : UiEffect()
 
         /** Dismiss the sheet */
         data object Dismiss : UiEffect()

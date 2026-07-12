@@ -79,6 +79,8 @@ import dev.gaferneira.notificapp.features.ruleeditor.ui.components.WhenSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.ExtractDataBottomSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.MatchingLogicBottomSheet
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.RuleEditorViewModel
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
 @Composable
@@ -395,7 +397,7 @@ private fun ConditionAndAppSheets(
             selectedApps = uiState.rule.targetApps,
             enabledApps = uiState.enabledApps,
             onConfirm = { apps ->
-                onEvent(UiEvent.OnAppsSelected(apps))
+                onEvent(UiEvent.OnAppsSelected(apps.toImmutableList()))
             },
             onDismiss = { onEvent(UiEvent.OnDismissSheet) },
         )
@@ -732,8 +734,8 @@ private fun RuleEditorScreenStep1Preview() {
                 currentStep = 1,
                 rule = RuleUiModel(
                     name = "ICA Banken Purchase",
-                    targetApps = emptyList(),
-                    triggers = listOf(
+                    targetApps = persistentListOf(),
+                    triggers = persistentListOf(
                         RuleCondition(
                             id = "1",
                             condition = MatchingCondition.TEXT_CONTENT,
@@ -741,7 +743,7 @@ private fun RuleEditorScreenStep1Preview() {
                             value = "purchase",
                         ),
                     ),
-                    fields = listOf(
+                    fields = persistentListOf(
                         RuleField(
                             id = "1",
                             name = "Merchant",
@@ -753,7 +755,7 @@ private fun RuleEditorScreenStep1Preview() {
                             method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
                         ),
                     ),
-                    actions = listOf(
+                    actions = persistentListOf(
                         RuleAction(
                             id = "1",
                             type = ActionType.SAVE_DATA,
@@ -785,8 +787,8 @@ private fun RuleEditorScreenStep1PreviewDark() {
                 currentStep = 1,
                 rule = RuleUiModel(
                     name = "ICA Banken Purchase",
-                    targetApps = emptyList(),
-                    triggers = listOf(
+                    targetApps = persistentListOf(),
+                    triggers = persistentListOf(
                         RuleCondition(
                             id = "1",
                             condition = MatchingCondition.TEXT_CONTENT,
@@ -794,7 +796,7 @@ private fun RuleEditorScreenStep1PreviewDark() {
                             value = "purchase",
                         ),
                     ),
-                    fields = listOf(
+                    fields = persistentListOf(
                         RuleField(
                             id = "1",
                             name = "Merchant",
@@ -806,7 +808,7 @@ private fun RuleEditorScreenStep1PreviewDark() {
                             method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
                         ),
                     ),
-                    actions = listOf(
+                    actions = persistentListOf(
                         RuleAction(
                             id = "1",
                             type = ActionType.SAVE_DATA,
@@ -839,8 +841,8 @@ private fun RuleEditorScreenStep2Preview() {
                 rule = RuleUiModel(
                     name = "ICA Banken Purchase",
                     description = "Extracts purchase information from ICA Banken notifications",
-                    targetApps = emptyList(),
-                    fields = listOf(
+                    targetApps = persistentListOf(),
+                    fields = persistentListOf(
                         RuleField(
                             id = "1",
                             name = "Merchant",
@@ -852,7 +854,7 @@ private fun RuleEditorScreenStep2Preview() {
                             method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
                         ),
                     ),
-                    actions = listOf(
+                    actions = persistentListOf(
                         RuleAction(
                             id = "1",
                             type = ActionType.SAVE_DATA,

@@ -1,6 +1,9 @@
 package dev.gaferneira.notificapp.features.appselection.contract
 
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 /**
  * Contract for the App Selection screen.
@@ -15,7 +18,7 @@ object AppSelectionContract {
      */
     data class UiState(
         /** List of all installed apps that can send notifications */
-        val availableApps: List<AppInfo> = emptyList(),
+        val availableApps: ImmutableList<AppInfo> = persistentListOf(),
         /** Set of package names that are currently selected */
         val selectedPackageNames: Set<String> = emptySet(),
         /** Current search query */
@@ -32,27 +35,27 @@ object AppSelectionContract {
          * Selected apps are shown at the top only on initial load.
          * After that, apps stay in their positions to avoid jarring UI.
          */
-        val displayApps: List<AppInfo>
+        val displayApps: ImmutableList<AppInfo>
             get() = availableApps
 
         /** Filtered apps based on search query (maintains display order) */
-        val filteredApps: List<AppInfo>
+        val filteredApps: ImmutableList<AppInfo>
             get() = if (searchQuery.isBlank()) {
                 displayApps
             } else {
                 displayApps.filter { app ->
                     app.name.contains(searchQuery, ignoreCase = true) ||
                         app.packageName.contains(searchQuery, ignoreCase = true)
-                }
+                }.toImmutableList()
             }
 
         /** Selected apps for display in the "Selected" section at top */
-        val selectedApps: List<AppInfo>
-            get() = displayApps.filter { selectedPackageNames.contains(it.packageName) }
+        val selectedApps: ImmutableList<AppInfo>
+            get() = displayApps.filter { selectedPackageNames.contains(it.packageName) }.toImmutableList()
 
         /** Unselected apps for display after selected ones */
-        val unselectedApps: List<AppInfo>
-            get() = displayApps.filterNot { selectedPackageNames.contains(it.packageName) }
+        val unselectedApps: ImmutableList<AppInfo>
+            get() = displayApps.filterNot { selectedPackageNames.contains(it.packageName) }.toImmutableList()
 
         /** Whether at least one app is selected */
         val hasSelection: Boolean

@@ -1,5 +1,8 @@
 package dev.gaferneira.notificapp.domain.model
 
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+
 /**
  * Domain model representing a rule execution.
  *
@@ -20,7 +23,7 @@ data class RuleExecution(
     val ruleId: String,
     val extractedData: Map<String, String>,
     val triggeredActions: List<String>,
-    val triggeredRuleActions: List<RuleAction> = emptyList(),
+    val triggeredRuleActions: ImmutableList<RuleAction> = persistentListOf(),
     val actionOutcomes: Map<String, ActionOutcome> = emptyMap(),
     /** Snapshot of the rule's dry-run flag at match time - actions never ran when true */
     val wasDryRun: Boolean = false,

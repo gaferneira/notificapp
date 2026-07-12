@@ -10,6 +10,7 @@ import dev.gaferneira.notificapp.testutil.createTestNotification
 import dev.gaferneira.notificapp.testutil.fakes.FakeNotificationRepository
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -49,7 +50,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `init seeds the draft fields and the editing flag`() {
             // Given: two existing fields for an edit flow
-            val fields = listOf(
+            val fields = persistentListOf(
                 createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection),
                 createTestField(id = "f2", method = ExtractionMethod.SmartDateDetection),
             )
@@ -66,7 +67,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `init with no fields starts an empty draft that cannot be confirmed`() {
             // When: initializing for a new action with no fields
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = "text"))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = "text"))
 
             // Then: the draft is empty and confirm is disabled
             val state = viewModel.uiState.value
@@ -124,7 +125,7 @@ class ExtractDataViewModelTest {
         fun `field saved while editing replaces the existing draft field`() {
             // Given: an existing draft field being edited
             val original = createTestField(id = "f1", name = "Old", method = ExtractionMethod.SmartAmountDetection)
-            viewModel.onEvent(UiEvent.Init(initialFields = listOf(original), isEditingAction = true, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(original), isEditingAction = true, sampleText = null))
             viewModel.onEvent(UiEvent.OnEditFieldClicked("f1"))
 
             val updated = createTestField(id = "f1", name = "New", method = ExtractionMethod.SmartAmountDetection)
@@ -142,7 +143,7 @@ class ExtractDataViewModelTest {
         fun `remove field clicked removes it from the draft`() {
             // Given: a draft with one field
             val field = createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection)
-            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(field), isEditingAction = false, sampleText = null))
 
             // When: removing it
             viewModel.onEvent(UiEvent.OnRemoveFieldClicked("f1"))
@@ -158,7 +159,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `auto generate with no sample text sends a ShowError effect`() = runTest(testDispatcher) {
             // Given: init without sample text
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = null))
 
             viewModel.effect.test {
                 // When: auto-generating
@@ -175,7 +176,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `auto generate with no numbers in the text sends a ShowError effect`() = runTest(testDispatcher) {
             // Given: sample text with no digits
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = "no numbers here"))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = "no numbers here"))
 
             viewModel.effect.test {
                 // When: auto-generating
@@ -191,7 +192,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `auto generate with a single number populates one Amount field`() {
             // Given: sample text with a single number
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = "Total: 153,50 kr"))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = "Total: 153,50 kr"))
 
             // When: auto-generating
             viewModel.onEvent(UiEvent.OnAutoGenerate)
@@ -203,7 +204,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `auto generate with multiple numbers populates indexed Amount fields`() {
             // Given: sample text with two numbers
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = "153,50 kr and 20,00 kr"))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = "153,50 kr and 20,00 kr"))
 
             // When: auto-generating
             viewModel.onEvent(UiEvent.OnAutoGenerate)
@@ -216,7 +217,7 @@ class ExtractDataViewModelTest {
         fun `auto generate replaces any existing draft fields`() {
             // Given: a draft that already has a field and sample text with one number
             val existing = createTestField(id = "f1", name = "Old", method = ExtractionMethod.SmartAmountDetection)
-            viewModel.onEvent(UiEvent.Init(initialFields = listOf(existing), isEditingAction = true, sampleText = "Total: 10"))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(existing), isEditingAction = true, sampleText = "Total: 10"))
 
             // When: auto-generating
             viewModel.onEvent(UiEvent.OnAutoGenerate)
@@ -232,7 +233,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `canConfirm is false when the draft is empty and true once a field exists`() {
             // Given: an empty draft
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = null))
             viewModel.uiState.value.canConfirm shouldBe false
 
             // When: a field is added
@@ -246,7 +247,7 @@ class ExtractDataViewModelTest {
         fun `confirm emits Committed with the draft fields then Dismiss`() = runTest(testDispatcher) {
             // Given: a draft with a field
             val field = createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection)
-            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(field), isEditingAction = false, sampleText = null))
 
             viewModel.effect.test {
                 // When: confirming
@@ -254,7 +255,7 @@ class ExtractDataViewModelTest {
                 testDispatcher.scheduler.advanceUntilIdle()
 
                 // Then: Committed(fields) is emitted, followed by Dismiss
-                awaitItem() shouldBe UiEffect.Committed(listOf(field))
+                awaitItem() shouldBe UiEffect.Committed(persistentListOf(field))
                 awaitItem() shouldBe UiEffect.Dismiss
                 cancelAndIgnoreRemainingEvents()
             }
@@ -263,7 +264,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `confirm with an empty draft emits nothing`() = runTest(testDispatcher) {
             // Given: an empty draft
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = null))
 
             viewModel.effect.test {
                 // When: confirming
@@ -279,7 +280,7 @@ class ExtractDataViewModelTest {
         fun `dismiss discards the draft and emits Dismiss without Committed`() = runTest(testDispatcher) {
             // Given: a draft with a field
             val field = createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection)
-            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = true, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(field), isEditingAction = true, sampleText = null))
 
             viewModel.effect.test {
                 // When: dismissing
@@ -308,7 +309,7 @@ class ExtractDataViewModelTest {
             // When: initializing with a non-blank sample text
             viewModel.onEvent(
                 UiEvent.Init(
-                    initialFields = listOf(matching, nonMatching),
+                    initialFields = persistentListOf(matching, nonMatching),
                     isEditingAction = false,
                     sampleText = "Total: 153 kr",
                 ),
@@ -327,7 +328,7 @@ class ExtractDataViewModelTest {
 
             // When: initializing with matching sample text
             viewModel.onEvent(
-                UiEvent.Init(initialFields = listOf(matching), isEditingAction = false, sampleText = "Total: 153 kr"),
+                UiEvent.Init(initialFields = persistentListOf(matching), isEditingAction = false, sampleText = "Total: 153 kr"),
             )
             testDispatcher.scheduler.advanceUntilIdle()
 
@@ -342,7 +343,7 @@ class ExtractDataViewModelTest {
 
             // When: initializing with non-matching sample text
             viewModel.onEvent(
-                UiEvent.Init(initialFields = listOf(nonMatching), isEditingAction = false, sampleText = "Total: 153 kr"),
+                UiEvent.Init(initialFields = persistentListOf(nonMatching), isEditingAction = false, sampleText = "Total: 153 kr"),
             )
             testDispatcher.scheduler.advanceUntilIdle()
 
@@ -353,7 +354,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `field saved as a new field recomputes previews to include the new key`() = runTest(testDispatcher) {
             // Given: init with a sample text and no fields
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = "Total: 153 kr"))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = "Total: 153 kr"))
             viewModel.onEvent(UiEvent.OnAddFieldClicked)
             val newField = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
 
@@ -370,7 +371,7 @@ class ExtractDataViewModelTest {
             // Given: an existing field with a non-matching pattern
             val original = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("NOPE"))
             viewModel.onEvent(
-                UiEvent.Init(initialFields = listOf(original), isEditingAction = true, sampleText = "Total: 153 kr"),
+                UiEvent.Init(initialFields = persistentListOf(original), isEditingAction = true, sampleText = "Total: 153 kr"),
             )
             viewModel.onEvent(UiEvent.OnEditFieldClicked("f1"))
 
@@ -389,7 +390,7 @@ class ExtractDataViewModelTest {
             val field1 = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
             val field2 = createTestField(id = "f2", method = ExtractionMethod.RegexPattern("""\d+"""))
             viewModel.onEvent(
-                UiEvent.Init(initialFields = listOf(field1, field2), isEditingAction = false, sampleText = "Total: 153 kr"),
+                UiEvent.Init(initialFields = persistentListOf(field1, field2), isEditingAction = false, sampleText = "Total: 153 kr"),
             )
 
             // When: removing one field
@@ -405,7 +406,7 @@ class ExtractDataViewModelTest {
             // Given: init with a two-line sample text (auto-generate targets line 10 for its single field,
             // which exists on line 2 of a multi-line sample containing one number)
             val multiLineSample = (1..9).joinToString("\n") { "filler" } + "\nTotal: 153 kr"
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = multiLineSample))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = multiLineSample))
 
             // When: auto-generating
             viewModel.onEvent(UiEvent.OnAutoGenerate)
@@ -423,7 +424,7 @@ class ExtractDataViewModelTest {
         fun `init with null sample text produces empty previewResults without throwing`() {
             // Given/When: initializing with a field but null sample text
             val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
-            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(field), isEditingAction = false, sampleText = null))
 
             // Then: previewResults is empty, no exception is thrown
             viewModel.uiState.value.previewResults shouldBe emptyMap()
@@ -433,7 +434,7 @@ class ExtractDataViewModelTest {
         fun `init with blank sample text produces empty previewResults without throwing`() {
             // Given/When: initializing with a field but blank sample text
             val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
-            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = "   "))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(field), isEditingAction = false, sampleText = "   "))
 
             // Then: previewResults is empty, no exception is thrown
             viewModel.uiState.value.previewResults shouldBe emptyMap()
@@ -444,7 +445,7 @@ class ExtractDataViewModelTest {
             // Given: a draft with a computed preview
             val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
             viewModel.onEvent(
-                UiEvent.Init(initialFields = listOf(field), isEditingAction = true, sampleText = "Total: 153 kr"),
+                UiEvent.Init(initialFields = persistentListOf(field), isEditingAction = true, sampleText = "Total: 153 kr"),
             )
             testDispatcher.scheduler.advanceUntilIdle()
             viewModel.uiState.value.previewResults.keys shouldBe setOf("f1")
@@ -468,7 +469,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `selecting a history notification sets the override and collapses the list`() {
             // Given: the sheet is browsing history
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = null))
             val notification = createTestNotification(id = "n1", content = "Total: 42 kr")
 
             // When: selecting it
@@ -484,7 +485,7 @@ class ExtractDataViewModelTest {
         fun `selecting an override recomputes previews against its text with no stale results`() = runTest(testDispatcher) {
             // Given: a draft field whose pattern matches the override's text but not the prior (null) sample
             val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
-            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(field), isEditingAction = false, sampleText = null))
             viewModel.uiState.value.previewResults shouldBe emptyMap()
 
             val notification = createTestNotification(id = "n1", content = "Total: 153 kr")
@@ -501,7 +502,7 @@ class ExtractDataViewModelTest {
         fun `clearing the override resets it to null and previews reset to empty`() {
             // Given: an override is selected in the edit flow (no entry sample)
             val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
-            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = true, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(field), isEditingAction = true, sampleText = null))
             viewModel.onEvent(
                 UiEvent.OnHistoryNotificationSelected(createTestNotification(id = "n1", content = "Total: 153 kr")),
             )
@@ -521,7 +522,7 @@ class ExtractDataViewModelTest {
             // Given: an entry-flow sample was provided on Init
             val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
             viewModel.onEvent(
-                UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = "Entry: 10 kr"),
+                UiEvent.Init(initialFields = persistentListOf(field), isEditingAction = false, sampleText = "Entry: 10 kr"),
             )
             testDispatcher.scheduler.advanceUntilIdle()
             val entryPreview = viewModel.uiState.value.previewResults["f1"]
@@ -540,7 +541,7 @@ class ExtractDataViewModelTest {
         fun `confirm after selecting an override emits Committed with only the draft fields`() = runTest(testDispatcher) {
             // Given: a draft field and a selected override
             val field = createTestField(id = "f1", method = ExtractionMethod.SmartAmountDetection)
-            viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(field), isEditingAction = false, sampleText = null))
             viewModel.onEvent(
                 UiEvent.OnHistoryNotificationSelected(createTestNotification(id = "n1", content = "Total: 153 kr")),
             )
@@ -551,7 +552,7 @@ class ExtractDataViewModelTest {
                 testDispatcher.scheduler.advanceUntilIdle()
 
                 // Then: Committed carries only the draft fields, no override/notification data
-                awaitItem() shouldBe UiEffect.Committed(listOf(field))
+                awaitItem() shouldBe UiEffect.Committed(persistentListOf(field))
                 awaitItem() shouldBe UiEffect.Dismiss
                 cancelAndIgnoreRemainingEvents()
             }
@@ -560,7 +561,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `dismiss clears the override back to null`() = runTest(testDispatcher) {
             // Given: an override was selected
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = null))
             viewModel.onEvent(
                 UiEvent.OnHistoryNotificationSelected(createTestNotification(id = "n1", content = "Total: 153 kr")),
             )
@@ -586,7 +587,7 @@ class ExtractDataViewModelTest {
             // Given: a bounded history fetch
             val history = listOf(createTestNotification(id = "n1"), createTestNotification(id = "n2"))
             notificationRepository.setNotifications(history)
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = null))
 
             // When: opening the history list
             viewModel.onEvent(UiEvent.OnBrowseHistoryOpened(null))
@@ -609,7 +610,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `empty history results in an empty list with loading false`() = runTest(testDispatcher) {
             // Given: the repository returns zero notifications (fake starts empty)
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = null))
 
             // When: opening the history list and letting the fetch complete
             viewModel.onEvent(UiEvent.OnBrowseHistoryOpened(null))
@@ -625,7 +626,7 @@ class ExtractDataViewModelTest {
         fun `a failed fetch clears loading and results without propagating the exception`() = runTest(testDispatcher) {
             // Given: the repository fetch fails
             notificationRepository.backtestError = IllegalStateException("boom")
-            viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
+            viewModel.onEvent(UiEvent.Init(initialFields = persistentListOf(), isEditingAction = false, sampleText = null))
 
             // When: opening the history list and letting the fetch complete
             viewModel.onEvent(UiEvent.OnBrowseHistoryOpened(null))

@@ -8,6 +8,7 @@ import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
+import kotlinx.collections.immutable.toImmutableList
 
 /**
  * Mapper functions for converting between Rule domain models and RuleEntity database models.
@@ -37,9 +38,9 @@ internal object RuleMapper {
         category = entity.category?.takeIf { it.isNotBlank() },
         isActive = entity.isActive,
         isDryRun = entity.isDryRun,
-        targetApps = if (entity.isGlobal) null else targetApps,
-        conditions = RuleConditionMapper.toDomainList(conditionEntities),
-        actions = RuleActionMapper.toDomainList(actionEntities, fieldEntities),
+        targetApps = if (entity.isGlobal) null else targetApps?.toImmutableList(),
+        conditions = RuleConditionMapper.toDomainList(conditionEntities).toImmutableList(),
+        actions = RuleActionMapper.toDomainList(actionEntities, fieldEntities).toImmutableList(),
         createdAt = entity.createdAt,
         updatedAt = entity.updatedAt,
     )

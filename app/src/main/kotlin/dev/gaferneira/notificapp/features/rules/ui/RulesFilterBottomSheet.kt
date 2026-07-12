@@ -49,6 +49,8 @@ import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
 import dev.gaferneira.notificapp.features.rules.contract.RulesFilterContract
 import dev.gaferneira.notificapp.features.rules.viewmodel.FilterBottomSheetViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * Bottom sheet for advanced rule filtering.
@@ -64,7 +66,7 @@ import dev.gaferneira.notificapp.features.rules.viewmodel.FilterBottomSheetViewM
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RulesFilterBottomSheet(
-    allRules: List<Rule>,
+    allRules: ImmutableList<Rule>,
     currentFilter: RuleFilter,
     onFilterApplied: (RuleFilter) -> Unit,
     onDismiss: () -> Unit,
@@ -374,7 +376,7 @@ private fun FilterBottomSheetPreview() {
         FilterBottomSheetContent(
             uiState = RulesFilterContract.UiState(
                 availableCategories = listOf("Finance", "Deliveries", "Shopping", "Health"),
-                availableApps = listOf(
+                availableApps = persistentListOf(
                     AppInfo("com.ica", "ICA", null),
                     AppInfo("com.klarna.app", "Klarna", null),
                     AppInfo("se.postnord.mobile", "PostNord", null),
@@ -395,7 +397,7 @@ private fun FilterBottomSheetEmptyPreview() {
         FilterBottomSheetContent(
             uiState = RulesFilterContract.UiState(
                 availableCategories = emptyList(),
-                availableApps = emptyList(),
+                availableApps = persistentListOf(),
             ),
             onEvent = {},
         )

@@ -37,6 +37,8 @@ import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.features.ruleeditor.contract.displayText
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * The "When" section showing target apps and configured conditions.
@@ -49,8 +51,8 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.displayText
  */
 @Composable
 fun WhenSection(
-    targetApps: List<AppInfo>,
-    conditions: List<RuleCondition>,
+    targetApps: ImmutableList<AppInfo>,
+    conditions: ImmutableList<RuleCondition>,
     onAppsClick: () -> Unit,
     onRemoveCondition: (String) -> Unit,
     onConditionClick: (String) -> Unit,
@@ -79,7 +81,7 @@ fun WhenSection(
 
 @Composable
 private fun AppsCard(
-    selectedApps: List<AppInfo>,
+    selectedApps: ImmutableList<AppInfo>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -240,11 +242,11 @@ private fun ConditionCard(
 private fun WhenSectionPreview() {
     NotificappTheme(dynamicColor = false) {
         WhenSection(
-            targetApps = listOf(
+            targetApps = persistentListOf(
                 AppInfo("com.swish", "Swish"),
                 AppInfo("com.bank", "Bank App"),
             ),
-            conditions = listOf(
+            conditions = persistentListOf(
                 RuleCondition(
                     id = "1",
                     condition = MatchingCondition.TEXT_CONTENT,
@@ -271,8 +273,8 @@ private fun WhenSectionPreview() {
 private fun WhenSectionEmptyPreview() {
     NotificappTheme {
         WhenSection(
-            targetApps = emptyList(),
-            conditions = emptyList(),
+            targetApps = persistentListOf(),
+            conditions = persistentListOf(),
             onAppsClick = {},
             onRemoveCondition = {},
             onConditionClick = {},
@@ -286,8 +288,8 @@ private fun WhenSectionEmptyPreview() {
 private fun WhenSectionAllAppsPreview() {
     NotificappTheme {
         WhenSection(
-            targetApps = emptyList(),
-            conditions = listOf(
+            targetApps = persistentListOf(),
+            conditions = persistentListOf(
                 RuleCondition(
                     id = "1",
                     condition = MatchingCondition.TEXT_CONTENT,

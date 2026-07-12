@@ -11,7 +11,7 @@
     <ID>CyclomaticComplexMethod:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$override suspend fun getMonitorableApps(): List&lt;AppInfo&gt;</ID>
     <ID>CyclomaticComplexMethod:RuleEditorViewModel.kt$RuleEditorViewModel$override fun onEvent(event: UiEvent)</ID>
     <ID>CyclomaticComplexMethod:RuleMatcher.kt$RuleMatcher$private fun matchesCondition(notification: Notification, condition: RuleCondition): Boolean</ID>
-    <ID>CyclomaticComplexMethod:RulesViewModel.kt$RulesViewModel$private fun applyFilters(rules: List&lt;Rule&gt;, query: String, currentFilter: RuleFilter): List&lt;Rule&gt;</ID>
+    <ID>CyclomaticComplexMethod:RulesViewModel.kt$RulesViewModel$private fun applyFilters(rules: ImmutableList&lt;Rule&gt;, query: String, currentFilter: RuleFilter): ImmutableList&lt;Rule&gt;</ID>
     <ID>CyclomaticComplexMethod:SnoozeScheduleCalculator.kt$SnoozeScheduleCalculator$fun nextCheckpoint(now: LocalDateTime, schedule: SnoozeSchedule): LocalDateTime?</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d", day, month)</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d/%d", day, month, year)</ID>
@@ -23,7 +23,7 @@
     <ID>LongMethod:AddFieldBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable private fun AddFieldBottomSheetContent( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, onClose: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AddFieldViewModel.kt$AddFieldViewModel$private fun initialize(field: RuleField?, notification: Notification?)</ID>
     <ID>LongMethod:AppSelectionPicker.kt$@Composable private fun AppListItem( app: AppDisplayInfo, isSelected: Boolean, onToggle: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:AppSelectionPicker.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AppSelectionPicker( selectedApps: List&lt;AppInfo&gt;, enabledApps: List&lt;AppInfo&gt;, onConfirm: (List&lt;AppInfo&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
+    <ID>LongMethod:AppSelectionPicker.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AppSelectionPicker( selectedApps: ImmutableList&lt;AppInfo&gt;, enabledApps: ImmutableList&lt;AppInfo&gt;, onConfirm: (List&lt;AppInfo&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
     <ID>LongMethod:AppSelectionScreen.kt$@Composable private fun AppListItem( app: AppInfo, isSelected: Boolean, onToggled: (Boolean) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:FieldExtractor.kt$FieldExtractor$private fun parseJsonArray(json: String, depth: Int = 0): List&lt;Any?&gt;</ID>
     <ID>LongMethod:FieldExtractor.kt$FieldExtractor$private fun parseJsonObject(json: String, depth: Int = 0): Map&lt;String, Any?&gt;</ID>
@@ -44,7 +44,7 @@
     <ID>LongMethod:SnoozeConfig.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun SnoozeDurationSelector( selectedMinutes: Int, onDurationChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:SnoozeScheduleSelectors.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun BatchAtTimeSelector( config: BatchAtTimeConfig, onConfigChange: (BatchAtTimeConfig) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:SnoozeScheduleSelectors.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun DigestScheduleSelector( config: DigestScheduleConfig, onConfigChange: (DigestScheduleConfig) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:WhenSection.kt$@Composable private fun AppsCard( selectedApps: List&lt;AppInfo&gt;, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
+    <ID>LongMethod:WhenSection.kt$@Composable private fun AppsCard( selectedApps: ImmutableList&lt;AppInfo&gt;, onClick: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:WhenSection.kt$@Composable private fun ConditionCard( condition: RuleCondition, onClick: () -&gt; Unit, onRemove: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:ProcessNotificationUseCase.kt$ProcessNotificationUseCase$( private val deduplicator: NotificationDeduplicator, private val notificationRepository: NotificationRepository, private val ruleRepository: RuleRepository, private val ruleEngine: RuleEngine, private val ruleExecutionRepository: RuleExecutionRepository, private val actionDispatcher: ActionDispatcher, @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher, )</ID>
     <ID>LongParameterList:TestFixtures.kt$( id: String = "test-id", packageName: String = "com.test.app", appName: String = "Test App", title: String? = "Test Title", content: String? = "Test Content", rawContent: String = "Test Title\nTest Content", timestamp: Long = 0L, isProcessed: Boolean = false, appliedRulesCount: Int = 0, sbnKey: String? = null, )</ID>

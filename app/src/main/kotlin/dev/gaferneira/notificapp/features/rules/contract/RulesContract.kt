@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.features.rules.contract
 
 import dev.gaferneira.notificapp.core.ui.Resource
 import dev.gaferneira.notificapp.domain.model.Rule
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * Data class representing the state of rules with filtered results.
@@ -12,8 +14,8 @@ import dev.gaferneira.notificapp.domain.model.Rule
  * @property filter Current filter selection (All/Enabled/Disabled)
  */
 data class RulesUiState(
-    val rules: Resource<List<Rule>> = Resource.Loading(),
-    val allRules: List<Rule> = emptyList(),
+    val rules: Resource<ImmutableList<Rule>> = Resource.Loading(),
+    val allRules: ImmutableList<Rule> = persistentListOf(),
     val searchQuery: String = "",
     val filter: RuleFilter = RuleFilter(),
     /** A successfully decoded, not-yet-saved imported rule awaiting user confirmation */

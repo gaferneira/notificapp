@@ -39,6 +39,7 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract
 import dev.gaferneira.notificapp.features.inbox.viewmodel.InboxFilterBottomSheetViewModel
+import kotlinx.collections.immutable.persistentListOf
 import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
@@ -252,7 +253,7 @@ private fun InboxFilterBottomSheetPreview() {
     NotificappTheme {
         FilterBottomSheetContent(
             uiState = InboxFilterContract.UiState(
-                availableApps = listOf(
+                availableApps = persistentListOf(
                     AppInfo("com.ica", "ICA", null),
                     AppInfo("com.klarna.app", "Klarna", null),
                     AppInfo("se.postnord.mobile", "PostNord", null),
@@ -272,7 +273,7 @@ private fun InboxFilterBottomSheetEmptyPreview() {
     NotificappTheme {
         FilterBottomSheetContent(
             uiState = InboxFilterContract.UiState(
-                availableApps = emptyList(),
+                availableApps = persistentListOf(),
             ),
             onEvent = {},
         )

@@ -7,6 +7,9 @@ import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.saveDataFields
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import java.util.UUID
 
 /**
@@ -29,13 +32,13 @@ data class RuleUiModel(
      */
     val isDryRun: Boolean = true,
     /** Target app package names (empty = all apps) */
-    val targetApps: List<AppInfo> = emptyList(),
+    val targetApps: PersistentList<AppInfo> = persistentListOf(),
     /** List of configured triggers */
-    val triggers: List<RuleCondition> = emptyList(),
+    val triggers: PersistentList<RuleCondition> = persistentListOf(),
     /** List of configured actions */
-    val actions: List<RuleAction> = emptyList(),
+    val actions: PersistentList<RuleAction> = persistentListOf(),
     /** Fields to extract (only for SAVE_DATA action) */
-    val fields: List<RuleField> = emptyList(),
+    val fields: PersistentList<RuleField> = persistentListOf(),
 ) {
     fun toEntity() = Rule(
         id = id ?: UUID.randomUUID().toString(),
@@ -53,11 +56,11 @@ data class RuleUiModel(
      * Attach the draft [fields] to the `SAVE_DATA` action, creating one if the draft has fields
      * but no such action yet. Every other action is passed through untouched.
      */
-    private fun actionsWithFieldsAttached(): List<RuleAction> {
+    private fun actionsWithFieldsAttached(): PersistentList<RuleAction> {
         val hasSaveDataAction = actions.any { it.type == ActionType.SAVE_DATA }
         return when {
-            hasSaveDataAction -> actions.map { if (it.type == ActionType.SAVE_DATA) it.copy(fields = fields) else it }
-            fields.isNotEmpty() -> actions + RuleAction.createSaveData(id = UUID.randomUUID().toString(), fields = fields)
+            hasSaveDataAction -> actions.map { if (it.type == ActionType.SAVE_DATA) it.copy(fields = fields) else it }.toPersistentList()
+            fields.isNotEmpty() -> (actions + RuleAction.createSaveData(id = UUID.randomUUID().toString(), fields = fields)).toPersistentList()
             else -> actions
         }
     }
@@ -72,10 +75,10 @@ data class RuleUiModel(
             description = rule.description ?: "",
             category = rule.category.orEmpty(),
             isDryRun = rule.isDryRun,
-            targetApps = rule.targetApps ?: emptyList(),
-            triggers = rule.conditions,
-            actions = rule.actions,
-            fields = rule.saveDataFields(),
+            targetApps = rule.targetApps?.toPersistentList() ?: persistentListOf(),
+            triggers = rule.conditions.toPersistentList(),
+            actions = rule.actions.toPersistentList(),
+            fields = rule.saveDataFields().toPersistentList(),
         )
     }
 }

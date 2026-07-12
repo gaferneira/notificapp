@@ -5,6 +5,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterContract
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,7 +30,7 @@ class InboxFilterBottomSheetViewModel @Inject constructor(
             notificationRepository.observeAppsWithNotifications()
                 .collectLatest { apps ->
                     setState {
-                        copy(availableApps = apps)
+                        copy(availableApps = apps.toImmutableList())
                     }
                 }
         }

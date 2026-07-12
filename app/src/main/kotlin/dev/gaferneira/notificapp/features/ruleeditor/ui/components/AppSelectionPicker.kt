@@ -58,6 +58,8 @@ import androidx.core.graphics.drawable.toBitmap
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.LocalIoDispatcher
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
@@ -72,8 +74,8 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppSelectionPicker(
-    selectedApps: List<AppInfo>,
-    enabledApps: List<AppInfo>,
+    selectedApps: ImmutableList<AppInfo>,
+    enabledApps: ImmutableList<AppInfo>,
     onConfirm: (List<AppInfo>) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -367,11 +369,11 @@ private suspend fun loadInstalledApps(
 private fun AppSelectionPickerPreview() {
     NotificappTheme {
         AppSelectionPicker(
-            selectedApps = listOf(
+            selectedApps = persistentListOf(
                 AppInfo("com.whatsapp", "WhatsApp"),
                 AppInfo("com.telegram", "Telegram"),
             ),
-            enabledApps = listOf(
+            enabledApps = persistentListOf(
                 AppInfo("com.whatsapp", "WhatsApp"),
                 AppInfo("com.telegram", "Telegram"),
                 AppInfo("com.slack", "Slack"),

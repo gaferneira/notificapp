@@ -39,6 +39,8 @@ import dev.gaferneira.notificapp.domain.model.getSnoozeSchedule
 import dev.gaferneira.notificapp.domain.model.getThrottleWindowMinutes
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.util.formatDurationMinutes
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * The "Do" section showing configured actions.
@@ -46,7 +48,7 @@ import dev.gaferneira.notificapp.util.formatDurationMinutes
  */
 @Composable
 fun DoSection(
-    actions: List<RuleAction>,
+    actions: ImmutableList<RuleAction>,
     extractDataFieldCount: Int,
     callbacks: ActionCardCallbacks,
     modifier: Modifier = Modifier,
@@ -226,7 +228,7 @@ private fun ActionCardControls(
 private fun DoSectionPreview() {
     NotificappTheme(dynamicColor = false) {
         DoSection(
-            actions = listOf(
+            actions = persistentListOf(
                 RuleAction(
                     id = "1",
                     type = ActionType.SAVE_DATA,
@@ -254,7 +256,7 @@ private fun DoSectionPreview() {
 private fun DoSectionEmptyPreview() {
     NotificappTheme {
         DoSection(
-            actions = emptyList(),
+            actions = persistentListOf(),
             extractDataFieldCount = 2,
             callbacks = ActionCardCallbacks(
                 onToggle = { _, _ -> },
@@ -271,7 +273,7 @@ private fun DoSectionEmptyPreview() {
 private fun DoSectionWithSnoozePreview() {
     NotificappTheme {
         DoSection(
-            actions = listOf(
+            actions = persistentListOf(
                 RuleAction(
                     id = "1",
                     type = ActionType.SAVE_DATA,

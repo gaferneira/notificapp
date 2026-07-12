@@ -23,6 +23,9 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -57,7 +60,7 @@ class RuleEditorViewModel @Inject constructor(
                 .collect { apps ->
                     setState {
                         copy(
-                            enabledApps = apps.map { AppInfo(it.packageName, it.appName) },
+                            enabledApps = apps.map { AppInfo(it.packageName, it.appName) }.toPersistentList(),
                         )
                     }
                 }
@@ -160,9 +163,9 @@ class RuleEditorViewModel @Inject constructor(
                             copy(
                                 sampleNotification = notification,
                                 rule = currentRule.copy(
-                                    targetApps = if (currentRule.id == null) listOf(notification.app) else currentRule.targetApps,
+                                    targetApps = if (currentRule.id == null) persistentListOf(notification.app) else currentRule.targetApps,
                                     triggers = if (currentRule.id == null) {
-                                        emptyList()
+                                        persistentListOf()
                                     } else {
                                         currentRule.triggers
                                     },
@@ -221,7 +224,7 @@ class RuleEditorViewModel @Inject constructor(
 
     private fun removeCondition(conditionId: String) {
         setState {
-            copy(rule = rule.copy(triggers = rule.triggers.filter { it.id != conditionId }))
+            copy(rule = rule.copy(triggers = rule.triggers.filter { it.id != conditionId }.toPersistentList()))
         }
     }
 
@@ -231,7 +234,7 @@ class RuleEditorViewModel @Inject constructor(
             // Update existing condition
             setState {
                 copy(
-                    rule = rule.copy(triggers = rule.triggers.map { if (it.id == editingId) condition else it }),
+                    rule = rule.copy(triggers = rule.triggers.map { if (it.id == editingId) condition else it }.toPersistentList()),
                     isMatchingLogicSheetVisible = false,
                     editingConditionId = null,
                 )
@@ -240,7 +243,7 @@ class RuleEditorViewModel @Inject constructor(
             // Add new condition
             setState {
                 copy(
-                    rule = rule.copy(triggers = rule.triggers + condition),
+                    rule = rule.copy(triggers = (rule.triggers + condition).toPersistentList()),
                     isMatchingLogicSheetVisible = false,
                 )
             }
@@ -261,10 +264,10 @@ class RuleEditorViewModel @Inject constructor(
         setState { copy(isAppSheetVisible = true) }
     }
 
-    private fun onAppsSelected(apps: List<AppInfo>) {
+    private fun onAppsSelected(apps: ImmutableList<AppInfo>) {
         setState {
             copy(
-                rule = rule.copy(targetApps = apps),
+                rule = rule.copy(targetApps = apps.toPersistentList()),
                 isAppSheetVisible = false,
             )
         }
@@ -279,7 +282,7 @@ class RuleEditorViewModel @Inject constructor(
         when (type) {
             // Dismiss has no configuration, so there is no sheet - it is added directly.
             ActionType.DISMISS_NOTIFICATION -> setState {
-                copy(rule = rule.copy(actions = rule.actions + RuleAction(id = UUID.randomUUID().toString(), type = type)))
+                copy(rule = rule.copy(actions = (rule.actions + RuleAction(id = UUID.randomUUID().toString(), type = type)).toPersistentList()))
             }
             // Snooze / alarm / flash each open their own type-scoped configuration sheet.
             else -> setState {
@@ -310,7 +313,7 @@ class RuleEditorViewModel @Inject constructor(
         setState {
             copy(
                 rule = rule.copy(
-                    actions = rule.actions.map { action -> action.toggled(actionId, enabled) },
+                    actions = rule.actions.map { action -> action.toggled(actionId, enabled) }.toPersistentList(),
                 ),
             )
         }
@@ -351,8 +354,8 @@ class RuleEditorViewModel @Inject constructor(
         setState {
             copy(
                 rule = rule.copy(
-                    actions = rule.actions.filter { it.id != actionId },
-                    fields = if (clearFields) emptyList() else rule.fields,
+                    actions = rule.actions.filter { it.id != actionId }.toPersistentList(),
+                    fields = if (clearFields) persistentListOf() else rule.fields,
                 ),
                 pendingExtractDataRemovalId = null,
             )
@@ -365,7 +368,7 @@ class RuleEditorViewModel @Inject constructor(
             // Update existing action
             setState {
                 copy(
-                    rule = rule.copy(actions = rule.actions.map { if (it.id == editingId) action else it }),
+                    rule = rule.copy(actions = rule.actions.map { if (it.id == editingId) action else it }.toPersistentList()),
                     isActionSheetVisible = false,
                     editingActionId = null,
                     pendingActionType = null,
@@ -375,7 +378,7 @@ class RuleEditorViewModel @Inject constructor(
             // Add new action
             setState {
                 copy(
-                    rule = rule.copy(actions = rule.actions + action),
+                    rule = rule.copy(actions = (rule.actions + action).toPersistentList()),
                     isActionSheetVisible = false,
                     pendingActionType = null,
                 )
@@ -388,15 +391,15 @@ class RuleEditorViewModel @Inject constructor(
      * fields reach the rule only here (commit-on-confirm): the action is added if absent
      * (one-action-per-type), and the rule's fields are replaced with the confirmed draft.
      */
-    private fun onExtractDataCommitted(fields: List<RuleField>) {
+    private fun onExtractDataCommitted(fields: ImmutableList<RuleField>) {
         setState {
             val actions = if (rule.actions.any { it.type == ActionType.SAVE_DATA }) {
                 rule.actions
             } else {
-                rule.actions + RuleAction(id = UUID.randomUUID().toString(), type = ActionType.SAVE_DATA)
+                (rule.actions + RuleAction(id = UUID.randomUUID().toString(), type = ActionType.SAVE_DATA)).toPersistentList()
             }
             copy(
-                rule = rule.copy(fields = fields, actions = actions),
+                rule = rule.copy(fields = fields.toPersistentList(), actions = actions),
                 isActionSheetVisible = false,
                 editingActionId = null,
                 pendingActionType = null,

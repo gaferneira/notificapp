@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.features.rules.contract
 
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Rule
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * MVI Contract for the FilterBottomSheet.
@@ -17,7 +19,7 @@ object RulesFilterContract {
         /** All available categories from the rules list */
         val availableCategories: List<String> = emptyList(),
         /** All available target apps from the rules list */
-        val availableApps: List<AppInfo> = emptyList(),
+        val availableApps: ImmutableList<AppInfo> = persistentListOf(),
         /** Currently selected categories */
         val selectedCategories: Set<String> = emptySet(),
         /** Currently selected app package names */
@@ -35,7 +37,7 @@ object RulesFilterContract {
      */
     sealed class UiEvent {
         /** Initialize with current filter state and the full rules list (to derive filter options) */
-        data class Init(val allRules: List<Rule>, val currentFilter: RuleFilter) : UiEvent()
+        data class Init(val allRules: ImmutableList<Rule>, val currentFilter: RuleFilter) : UiEvent()
 
         /** Toggle a category selection */
         data class OnCategoryToggle(val category: String) : UiEvent()

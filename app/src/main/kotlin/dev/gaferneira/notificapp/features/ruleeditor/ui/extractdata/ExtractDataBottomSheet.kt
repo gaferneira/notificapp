@@ -64,6 +64,8 @@ import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ExtractedFiel
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.NotificationPreviewCard
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.confirmLabelFor
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ExtractDataViewModel
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * The "Extract data" action sheet. Unlike the other action types, `SAVE_DATA` has no scalar config
@@ -83,11 +85,11 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ExtractDataViewMo
  */
 @Composable
 fun ExtractDataBottomSheet(
-    initialFields: List<RuleField>,
+    initialFields: ImmutableList<RuleField>,
     isEditingAction: Boolean,
     targetPackages: List<String>?,
     notification: Notification?,
-    onCommitted: (List<RuleField>) -> Unit,
+    onCommitted: (ImmutableList<RuleField>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val viewModel: ExtractDataViewModel = hiltViewModel()
@@ -281,7 +283,7 @@ private fun PreviewOrHistorySlot(
 @Composable
 private fun SampleNotificationPreview(
     notification: Notification,
-    fields: List<RuleField>,
+    fields: ImmutableList<RuleField>,
     previewResults: Map<String, PreviewResult>,
     onClear: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -515,7 +517,7 @@ private fun DataExtractionSectionPreview() {
             entryNotification = previewNotification,
             effectiveNotification = previewNotification,
             uiState = ExtractDataContract.UiState(
-                fields = listOf(
+                fields = persistentListOf(
                     RuleField(id = "1", name = "Merchant", method = ExtractionMethod.LineExtraction(10)),
                     RuleField(id = "2", name = "Amount", method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?")),
                 ),

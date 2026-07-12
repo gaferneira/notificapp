@@ -100,6 +100,7 @@ import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
 import dev.gaferneira.notificapp.features.rules.contract.RulesUiState
 import dev.gaferneira.notificapp.features.rules.viewmodel.RulesViewModel
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -899,15 +900,15 @@ private fun RulesScreenPreview() {
         RulesScreenContent(
             uiState = RulesUiState(
                 rules = Resource.Success(
-                    listOf(
+                    persistentListOf(
                         Rule(
                             id = "1",
                             name = "ICA Purchase",
                             description = "Extract purchase info from ICA",
                             category = "Finance",
                             isActive = true,
-                            targetApps = emptyList(),
-                            actions = emptyList(),
+                            targetApps = persistentListOf(),
+                            actions = persistentListOf(),
                         ),
                         Rule(
                             id = "2",
@@ -915,8 +916,8 @@ private fun RulesScreenPreview() {
                             description = "Track Klarna payments",
                             category = "Finance",
                             isActive = false,
-                            targetApps = emptyList(),
-                            actions = emptyList(),
+                            targetApps = persistentListOf(),
+                            actions = persistentListOf(),
                         ),
                         Rule(
                             id = "3",
@@ -924,12 +925,12 @@ private fun RulesScreenPreview() {
                             description = "Track deliveries",
                             category = "Deliveries",
                             isActive = true,
-                            targetApps = emptyList(),
-                            actions = emptyList(),
+                            targetApps = persistentListOf(),
+                            actions = persistentListOf(),
                         ),
                     ),
                 ),
-                allRules = emptyList(),
+                allRules = persistentListOf(),
                 searchQuery = "",
             ),
             onEvent = {},
@@ -946,15 +947,15 @@ private fun RulesScreenPreviewDark() {
         RulesScreenContent(
             uiState = RulesUiState(
                 rules = Resource.Success(
-                    listOf(
+                    persistentListOf(
                         Rule(
                             id = "1",
                             name = "ICA Purchase",
                             description = "Extract purchase info from ICA",
                             category = "Finance",
                             isActive = true,
-                            targetApps = emptyList(),
-                            actions = emptyList(),
+                            targetApps = persistentListOf(),
+                            actions = persistentListOf(),
                         ),
                         Rule(
                             id = "2",
@@ -962,8 +963,8 @@ private fun RulesScreenPreviewDark() {
                             description = "Track Klarna payments",
                             category = "Finance",
                             isActive = false,
-                            targetApps = emptyList(),
-                            actions = emptyList(),
+                            targetApps = persistentListOf(),
+                            actions = persistentListOf(),
                         ),
                         Rule(
                             id = "3",
@@ -971,12 +972,12 @@ private fun RulesScreenPreviewDark() {
                             description = "Track deliveries",
                             category = "Deliveries",
                             isActive = true,
-                            targetApps = emptyList(),
-                            actions = emptyList(),
+                            targetApps = persistentListOf(),
+                            actions = persistentListOf(),
                         ),
                     ),
                 ),
-                allRules = emptyList(),
+                allRules = persistentListOf(),
                 searchQuery = "",
             ),
             onEvent = {},

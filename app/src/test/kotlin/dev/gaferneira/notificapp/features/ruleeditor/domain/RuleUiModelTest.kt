@@ -8,6 +8,7 @@ import dev.gaferneira.notificapp.testutil.createTestField
 import dev.gaferneira.notificapp.testutil.createTestRule
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import kotlinx.collections.immutable.persistentListOf
 import org.junit.jupiter.api.Test
 
 class RuleUiModelTest {
@@ -19,8 +20,8 @@ class RuleUiModelTest {
         // Given: a draft with fields but no SAVE_DATA action yet
         val uiModel = RuleUiModel(
             name = "Test Rule",
-            actions = emptyList(),
-            fields = listOf(field),
+            actions = persistentListOf(),
+            fields = persistentListOf(field),
         )
 
         // When: mapping to the domain entity
@@ -38,8 +39,8 @@ class RuleUiModelTest {
         val existingSaveData = createTestAction(id = "save-1", type = ActionType.SAVE_DATA)
         val uiModel = RuleUiModel(
             name = "Test Rule",
-            actions = listOf(existingSaveData),
-            fields = listOf(field),
+            actions = persistentListOf(existingSaveData),
+            fields = persistentListOf(field),
         )
 
         // When: mapping to the domain entity
@@ -54,7 +55,7 @@ class RuleUiModelTest {
     @Test
     fun `toEntity does not create a SAVE_DATA action when there are no fields`() {
         // Given: a draft with no fields and no actions
-        val uiModel = RuleUiModel(name = "Test Rule", actions = emptyList(), fields = emptyList())
+        val uiModel = RuleUiModel(name = "Test Rule", actions = persistentListOf(), fields = persistentListOf())
 
         // When: mapping to the domain entity
         val rule = uiModel.toEntity()

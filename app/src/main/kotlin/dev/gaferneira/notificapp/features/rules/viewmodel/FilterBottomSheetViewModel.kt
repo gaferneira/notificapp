@@ -6,6 +6,9 @@ import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
 import dev.gaferneira.notificapp.features.rules.contract.RulesFilterContract
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -23,7 +26,7 @@ class FilterBottomSheetViewModel @Inject constructor() :
         RulesFilterContract.UiState(),
     ) {
 
-    private val allRules = MutableStateFlow<List<Rule>>(emptyList())
+    private val allRules = MutableStateFlow<ImmutableList<Rule>>(persistentListOf())
 
     init {
         // Observe allRules and update available categories and apps
@@ -38,7 +41,7 @@ class FilterBottomSheetViewModel @Inject constructor() :
                 setState {
                     copy(
                         availableCategories = categories,
-                        availableApps = apps,
+                        availableApps = apps.toImmutableList(),
                     )
                 }
             }
@@ -61,7 +64,7 @@ class FilterBottomSheetViewModel @Inject constructor() :
     /**
      * Initialize the ViewModel with the current filter and all rules.
      */
-    private fun initialize(allRules: List<Rule>, currentFilter: RuleFilter) {
+    private fun initialize(allRules: ImmutableList<Rule>, currentFilter: RuleFilter) {
         this.allRules.value = allRules
         setState {
             copy(

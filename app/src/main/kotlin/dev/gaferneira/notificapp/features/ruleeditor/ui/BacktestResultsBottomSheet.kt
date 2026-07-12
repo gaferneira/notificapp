@@ -25,6 +25,8 @@ import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ExtractedField
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.NotificationPreviewCard
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * Bottom sheet showing the results of testing a draft rule against captured notification
@@ -41,7 +43,7 @@ import dev.gaferneira.notificapp.features.ruleeditor.ui.components.NotificationP
 fun BacktestResultsBottomSheet(
     results: List<BacktestMatch>,
     testedCount: Int,
-    fields: List<RuleField>,
+    fields: ImmutableList<RuleField>,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -62,7 +64,7 @@ fun BacktestResultsBottomSheet(
 private fun BacktestResultsContent(
     results: List<BacktestMatch>,
     testedCount: Int,
-    fields: List<RuleField>,
+    fields: ImmutableList<RuleField>,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
@@ -106,7 +108,7 @@ private fun BacktestSummary(resultCount: Int, testedCount: Int, modifier: Modifi
 @Composable
 private fun BacktestResultCard(
     result: BacktestMatch,
-    fields: List<RuleField>,
+    fields: ImmutableList<RuleField>,
     modifier: Modifier = Modifier,
 ) {
     val extractedFields = remember(fields, result.extractedData) {
@@ -130,7 +132,7 @@ private fun BacktestResultsContentPreview() {
         BacktestResultsContent(
             results = emptyList(),
             testedCount = 12,
-            fields = emptyList(),
+            fields = persistentListOf(),
             modifier = Modifier.verticalScroll(rememberScrollState()),
         )
     }

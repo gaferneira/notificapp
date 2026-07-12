@@ -13,6 +13,7 @@ import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -144,7 +145,7 @@ class ProcessNotificationUseCase @Inject constructor(
      * outcomes already recorded for them by [ActionDispatcher.executeAll].
      */
     private fun RuleMatch.toExecution(notificationId: String, actionOutcomes: Map<String, ActionOutcome>): RuleExecution {
-        val enabledActions = rule.actions.filter { it.isEnabled }
+        val enabledActions = rule.actions.filter { it.isEnabled }.toImmutableList()
         return RuleExecution(
             id = UUID.randomUUID().toString(),
             notificationId = notificationId,

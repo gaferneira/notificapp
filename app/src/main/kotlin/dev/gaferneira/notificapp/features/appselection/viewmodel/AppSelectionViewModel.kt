@@ -14,6 +14,7 @@ import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionCont
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEvent
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiState
 import dev.gaferneira.notificapp.features.appselection.data.InstalledAppsProvider
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -114,7 +115,7 @@ class AppSelectionViewModel @Inject constructor(
 
                 setState {
                     copy(
-                        availableApps = sortedApps,
+                        availableApps = sortedApps.toImmutableList(),
                         selectedPackageNames = selectedPackages,
                         isLoading = false,
                         isInitialSetup = isInitialSetup,

@@ -31,6 +31,7 @@ protobuf = "4.34.0"
 
 # Serialization
 kotlinxSerializationJson = "1.10.0"
+kotlinxCollectionsImmutable = "0.4.0"
 
 # Logging
 timber = "5.0.1"
@@ -114,6 +115,7 @@ protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-
 
 # Serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 
 # Coroutines
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutinesTest" }

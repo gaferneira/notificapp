@@ -17,6 +17,7 @@ import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -77,9 +78,9 @@ fun RuleExportDto.toDomain(): RuleImportResult {
         category = rule.category,
         isActive = rule.isActive,
         isDryRun = rule.isDryRun,
-        targetApps = rule.targetApps?.map { it.toDomain() },
-        conditions = rule.conditions.map { it.toDomain() },
-        actions = mappedActions.mapNotNull { (_, action) -> action },
+        targetApps = rule.targetApps?.map { it.toDomain() }?.toImmutableList(),
+        conditions = rule.conditions.map { it.toDomain() }.toImmutableList(),
+        actions = mappedActions.mapNotNull { (_, action) -> action }.toImmutableList(),
         createdAt = rule.createdAt,
         updatedAt = rule.updatedAt,
     )
@@ -156,5 +157,5 @@ private fun RuleAction.toDto(): ActionDto = ActionDto(
 
 private fun ActionDto.toDomainOrNull(): RuleAction? {
     val actionType = type.fromWireStringOrNull(ActionType.serializer()) ?: return null
-    return RuleAction(id = id, type = actionType, isEnabled = isEnabled, config = config, fields = fields.map { it.toDomain() })
+    return RuleAction(id = id, type = actionType, isEnabled = isEnabled, config = config, fields = fields.map { it.toDomain() }.toImmutableList())
 }

@@ -4,6 +4,8 @@ import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import timber.log.Timber
@@ -47,7 +49,7 @@ internal object RuleActionMapper {
             Timber.d(e, "Failed to deserialize action config for ${entity.id}, using empty map")
             emptyMap()
         },
-        fields = if (entity.type == ActionType.SAVE_DATA.name) RuleFieldMapper.toDomainList(fields) else emptyList(),
+        fields = if (entity.type == ActionType.SAVE_DATA.name) RuleFieldMapper.toDomainList(fields).toImmutableList() else persistentListOf(),
     )
 
     /**

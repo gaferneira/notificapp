@@ -1,6 +1,8 @@
 package dev.gaferneira.notificapp.features.inbox.contract
 
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
@@ -15,7 +17,7 @@ object InboxFilterContract {
      */
     data class UiState(
         /** All available apps that have notifications */
-        val availableApps: List<AppInfo> = emptyList(),
+        val availableApps: ImmutableList<AppInfo> = persistentListOf(),
         /** Currently selected app package names */
         val selectedApps: Set<String> = emptySet(),
         /** Current processed status filter */

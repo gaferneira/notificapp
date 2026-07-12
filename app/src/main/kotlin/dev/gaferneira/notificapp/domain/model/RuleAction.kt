@@ -1,8 +1,11 @@
 package dev.gaferneira.notificapp.domain.model
 
 import androidx.compose.runtime.Immutable
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * Domain model representing a rule action.
@@ -23,8 +26,14 @@ data class RuleAction(
      * Extraction fields owned by this action. Only populated for [ActionType.SAVE_DATA] - every
      * other action type leaves this empty. `RuleField` is structured (a sealed `ExtractionMethod`),
      * so it is a first-class property rather than a `config` map entry.
+     *
+     * `@Transient` (kotlinx.serialization): [RuleAction] is never encoded/decoded as a whole via
+     * kotlinx.serialization directly - only through the `core/rulesharing/dto` DTO layer, which has
+     * its own `List<FieldDto>` property. Marking this `@Transient` avoids requiring a `KSerializer`
+     * for `ImmutableList<RuleField>` that would otherwise never be used.
      */
-    val fields: List<RuleField> = emptyList(),
+    @Transient
+    val fields: ImmutableList<RuleField> = persistentListOf(),
 ) {
     companion object {
         /**
@@ -32,7 +41,7 @@ data class RuleAction(
          */
         fun createSaveData(
             id: String,
-            fields: List<RuleField> = emptyList(),
+            fields: ImmutableList<RuleField> = persistentListOf(),
             isEnabled: Boolean = true,
         ): RuleAction = RuleAction(
             id = id,

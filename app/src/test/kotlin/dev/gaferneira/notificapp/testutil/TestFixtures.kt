@@ -9,6 +9,7 @@ import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
+import kotlinx.collections.immutable.toImmutableList
 
 /**
  * Test fixture builders for domain models used across pure-Kotlin unit tests.
@@ -78,7 +79,7 @@ fun createTestAction(
     type = type,
     isEnabled = isEnabled,
     config = config,
-    fields = fields,
+    fields = fields.toImmutableList(),
 )
 
 @Suppress("LongParameterList")
@@ -101,9 +102,9 @@ fun createTestRule(
     category = category,
     isActive = isActive,
     isDryRun = isDryRun,
-    targetApps = targetApps,
-    conditions = conditions,
-    actions = actions,
+    targetApps = targetApps?.toImmutableList(),
+    conditions = conditions.toImmutableList(),
+    actions = actions.toImmutableList(),
     createdAt = createdAt,
     updatedAt = updatedAt,
 )
