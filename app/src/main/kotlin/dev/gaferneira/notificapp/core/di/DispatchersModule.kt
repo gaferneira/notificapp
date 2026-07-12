@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 /**
  * Dagger module for providing coroutine dispatchers.
  *
- * Provides IO and Default dispatchers with the @Dispatcher qualifier
+ * Provides IO, Default, and Main dispatchers with the @Dispatcher qualifier
  * for dependency injection per ADR 008.
  */
 @Module
@@ -30,4 +30,11 @@ object DispatchersModule {
     @Provides
     @Dispatcher(DispatcherType.Default)
     fun providesDefaultDispatcher(): CoroutineDispatcher = Dispatchers.Default
+
+    /**
+     * Provides the Main dispatcher for UI-thread work.
+     */
+    @Provides
+    @Dispatcher(DispatcherType.Main)
+    fun providesMainDispatcher(): CoroutineDispatcher = Dispatchers.Main.immediate
 }

@@ -47,7 +47,7 @@ class FilterBottomSheetViewModel @Inject constructor() :
 
     override fun onEvent(event: RulesFilterContract.UiEvent) {
         when (event) {
-            is RulesFilterContract.UiEvent.Init -> initWithFilter(event.currentFilter)
+            is RulesFilterContract.UiEvent.Init -> initialize(event.allRules, event.currentFilter)
             is RulesFilterContract.UiEvent.OnCategoryToggle -> toggleCategory(event.category)
             is RulesFilterContract.UiEvent.OnAppToggle -> toggleApp(event.appPackageName)
             is RulesFilterContract.UiEvent.OnStatusChange -> changeStatus(event.status)
@@ -61,19 +61,15 @@ class FilterBottomSheetViewModel @Inject constructor() :
     /**
      * Initialize the ViewModel with the current filter and all rules.
      */
-    fun initialize(allRules: List<Rule>, currentFilter: RuleFilter) {
+    private fun initialize(allRules: List<Rule>, currentFilter: RuleFilter) {
         this.allRules.value = allRules
-        onEvent(RulesFilterContract.UiEvent.Init(currentFilter))
-    }
-
-    private fun initWithFilter(filter: RuleFilter) {
         setState {
             copy(
-                selectedCategories = filter.selectedCategories,
-                selectedApps = filter.selectedApps,
-                statusFilter = filter.status,
-                sortBy = filter.sortBy,
-                hasActiveFilters = filter.isActive(),
+                selectedCategories = currentFilter.selectedCategories,
+                selectedApps = currentFilter.selectedApps,
+                statusFilter = currentFilter.status,
+                sortBy = currentFilter.sortBy,
+                hasActiveFilters = currentFilter.isActive(),
             )
         }
     }

@@ -70,21 +70,22 @@ internal interface NotificationDao {
     ): PagingSource<Int, NotificationEntity>
 
     /**
-     * Search paginated notifications with optional app and status filters.
+     * Search paginated notifications with optional app and status filters, backed by the
+     * `notifications_fts` FTS4 index (DATA-04) instead of a non-sargable `LIKE '%term%'` scan.
+     * [ftsQuery] must already be a valid FTS4 MATCH expression (see [FtsQuerySanitizer]).
      */
     @Query(
         """
-        SELECT * FROM notifications 
-        WHERE (package_name IN (:packageNames) OR :hasPackageFilter = 0)
-        AND (is_processed = :isProcessed OR :hasStatusFilter = 0)
-        AND (title LIKE '%' || :query || '%' 
-             OR content LIKE '%' || :query || '%'
-             OR raw_content LIKE '%' || :query || '%')
-        ORDER BY timestamp DESC
+        SELECT n.* FROM notifications n
+        JOIN notifications_fts fts ON n.rowid = fts.rowid
+        WHERE (n.package_name IN (:packageNames) OR :hasPackageFilter = 0)
+        AND (n.is_processed = :isProcessed OR :hasStatusFilter = 0)
+        AND notifications_fts MATCH :ftsQuery
+        ORDER BY n.timestamp DESC
     """,
     )
     fun searchFilteredPaged(
-        query: String,
+        ftsQuery: String,
         packageNames: List<String>,
         hasPackageFilter: Boolean,
         isProcessed: Boolean,
@@ -118,18 +119,18 @@ internal interface NotificationDao {
     suspend fun getRecentByPackageName(packageName: String, since: Long): List<NotificationEntity>
 
     /**
-     * Search notifications by content.
+     * Search notifications by content, backed by the `notifications_fts` FTS4 index (DATA-04).
+     * [ftsQuery] must already be a valid FTS4 MATCH expression (see [FtsQuerySanitizer]).
      */
     @Query(
         """
-        SELECT * FROM notifications 
-        WHERE title LIKE '%' || :query || '%' 
-        OR content LIKE '%' || :query || '%'
-        OR raw_content LIKE '%' || :query || '%'
-        ORDER BY timestamp DESC
+        SELECT n.* FROM notifications n
+        JOIN notifications_fts fts ON n.rowid = fts.rowid
+        WHERE notifications_fts MATCH :ftsQuery
+        ORDER BY n.timestamp DESC
     """,
     )
-    suspend fun search(query: String): List<NotificationEntity>
+    suspend fun search(ftsQuery: String): List<NotificationEntity>
 
     /**
      * Insert a new notification.
@@ -205,16 +206,21 @@ internal interface NotificationDao {
     suspend fun getUnprocessedCount(): Int
 
     /**
-     * Get all unique package names that have notifications.
+     * Get every distinct package with notifications, paired with its most recent app name, in a
+     * single query.
      */
-    @Query("SELECT DISTINCT package_name FROM notifications ORDER BY package_name")
-    fun getUniquePackageNames(): Flow<List<String>>
-
-    /**
-     * Get the most recent app name for a package (for display purposes).
-     */
-    @Query("SELECT app_name FROM notifications WHERE package_name = :packageName ORDER BY timestamp DESC LIMIT 1")
-    suspend fun getAppNameForPackage(packageName: String): String?
+    @Query(
+        """
+        SELECT n.package_name AS packageName, n.app_name AS appName
+        FROM notifications n
+        WHERE n.timestamp = (
+            SELECT MAX(n2.timestamp) FROM notifications n2 WHERE n2.package_name = n.package_name
+        )
+        GROUP BY n.package_name
+        ORDER BY n.app_name ASC
+        """,
+    )
+    fun observeAppsWithLatestName(): Flow<List<AppWithLatestName>>
 
     /**
      * Increment the applied rules count for a notification.
@@ -228,3 +234,6 @@ internal interface NotificationDao {
     @Query("UPDATE notifications SET applied_rules_count = 0, is_processed = 0 WHERE id = :id")
     suspend fun resetAppliedRulesCount(id: String)
 }
+
+/** Projection for [NotificationDao.observeAppsWithLatestName]. */
+internal data class AppWithLatestName(val packageName: String, val appName: String)

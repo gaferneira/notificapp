@@ -6,6 +6,11 @@ import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.SnoozeMode
 import dev.gaferneira.notificapp.domain.model.SnoozeSchedule
+import dev.gaferneira.notificapp.domain.model.getSnoozeDurationMinutes
+import dev.gaferneira.notificapp.domain.model.getSnoozeMode
+import dev.gaferneira.notificapp.domain.model.getSnoozeSchedule
+import dev.gaferneira.notificapp.domain.model.getThrottleResetAt
+import dev.gaferneira.notificapp.domain.model.getThrottleWindowMinutes
 import timber.log.Timber
 import java.time.Duration
 import javax.inject.Inject

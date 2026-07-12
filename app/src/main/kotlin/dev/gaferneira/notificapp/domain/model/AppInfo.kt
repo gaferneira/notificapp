@@ -1,8 +1,11 @@
 package dev.gaferneira.notificapp.domain.model
 
+import androidx.compose.runtime.Immutable
+
 /**
  * Information about an installed app. Not `@Serializable`: see [Rule].
  */
+@Immutable
 data class AppInfo(
     /** Package name (unique identifier) */
     val packageName: String,

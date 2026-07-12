@@ -12,6 +12,7 @@ import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
 import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
 import dev.gaferneira.notificapp.features.rules.contract.RulesUiState
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -35,6 +36,7 @@ class RulesViewModel @Inject constructor(
     private val allRules = MutableStateFlow<List<Rule>>(emptyList())
     private val searchQuery = MutableStateFlow("")
     private val filter = MutableStateFlow(RuleFilter())
+    private var observeRulesJob: Job? = null
 
     init {
         loadRules()
@@ -81,7 +83,8 @@ class RulesViewModel @Inject constructor(
             )
         }
 
-        viewModelScope.launch {
+        observeRulesJob?.cancel()
+        observeRulesJob = viewModelScope.launch {
             try {
                 ruleRepository.observeAllRules()
                     .collectLatest { rules ->

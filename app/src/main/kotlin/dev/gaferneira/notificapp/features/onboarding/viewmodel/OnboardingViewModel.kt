@@ -1,17 +1,15 @@
 package dev.gaferneira.notificapp.features.onboarding.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
+import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEffect
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEvent
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiState
-import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -24,12 +22,12 @@ import javax.inject.Inject
  * 1. Value Statement - introduces the app
  * 2. Permission Explanation - requests notification access
  *
- * @param context Application context for checking permission status
+ * @param listenerStatus Seam for checking notification-listener permission status
  * @param navigationHandler Handler for navigation commands
  */
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val listenerStatus: NotificationListenerStatusProvider,
     private val navigationHandler: NavigationHandler,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
@@ -101,7 +99,7 @@ class OnboardingViewModel @Inject constructor(
             // Small delay to prevent UI flickering
             delay(100)
 
-            val hasPermission = isNotificationListenerEnabled(context)
+            val hasPermission = listenerStatus.isEnabled()
 
             setState {
                 copy(

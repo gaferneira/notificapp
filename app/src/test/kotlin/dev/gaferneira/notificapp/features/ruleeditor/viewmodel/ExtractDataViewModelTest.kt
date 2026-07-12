@@ -2,17 +2,14 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
-import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.PreviewResult
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
 import dev.gaferneira.notificapp.testutil.createTestField
 import dev.gaferneira.notificapp.testutil.createTestNotification
+import dev.gaferneira.notificapp.testutil.fakes.FakeNotificationRepository
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -28,7 +25,7 @@ import org.junit.jupiter.api.Test
 class ExtractDataViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val notificationRepository = mockk<NotificationRepository>()
+    private val notificationRepository = FakeNotificationRepository()
 
     private lateinit var viewModel: ExtractDataViewModel
 
@@ -303,7 +300,7 @@ class ExtractDataViewModelTest {
     inner class PreviewResultsTests {
 
         @Test
-        fun `init with sample text populates a preview entry per field keyed by field id`() {
+        fun `init with sample text populates a preview entry per field keyed by field id`() = runTest(testDispatcher) {
             // Given: two fields, one whose regex matches the sample text and one that doesn't
             val matching = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
             val nonMatching = createTestField(id = "f2", method = ExtractionMethod.RegexPattern("NOPE"))
@@ -316,6 +313,7 @@ class ExtractDataViewModelTest {
                     sampleText = "Total: 153 kr",
                 ),
             )
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: previewResults has one entry per field, keyed by field id
             val previews = viewModel.uiState.value.previewResults
@@ -323,7 +321,7 @@ class ExtractDataViewModelTest {
         }
 
         @Test
-        fun `a field whose method matches the sample text yields a Success preview`() {
+        fun `a field whose method matches the sample text yields a Success preview`() = runTest(testDispatcher) {
             // Given: a field whose regex matches the sample text
             val matching = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
 
@@ -331,13 +329,14 @@ class ExtractDataViewModelTest {
             viewModel.onEvent(
                 UiEvent.Init(initialFields = listOf(matching), isEditingAction = false, sampleText = "Total: 153 kr"),
             )
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: the preview entry is a Success with the extracted value
             viewModel.uiState.value.previewResults["f1"] shouldBe PreviewResult.Success(value = "153")
         }
 
         @Test
-        fun `a field whose method does not match the sample text yields a Failure preview`() {
+        fun `a field whose method does not match the sample text yields a Failure preview`() = runTest(testDispatcher) {
             // Given: a field whose regex does not match the sample text
             val nonMatching = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("NOPE"))
 
@@ -345,13 +344,14 @@ class ExtractDataViewModelTest {
             viewModel.onEvent(
                 UiEvent.Init(initialFields = listOf(nonMatching), isEditingAction = false, sampleText = "Total: 153 kr"),
             )
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: the preview entry is a Failure, not a missing key or an exception
             viewModel.uiState.value.previewResults["f1"] shouldBe PreviewResult.Failure("Pattern did not match")
         }
 
         @Test
-        fun `field saved as a new field recomputes previews to include the new key`() {
+        fun `field saved as a new field recomputes previews to include the new key`() = runTest(testDispatcher) {
             // Given: init with a sample text and no fields
             viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = "Total: 153 kr"))
             viewModel.onEvent(UiEvent.OnAddFieldClicked)
@@ -359,13 +359,14 @@ class ExtractDataViewModelTest {
 
             // When: saving the new field
             viewModel.onEvent(UiEvent.OnFieldSaved(newField))
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: previewResults keyset matches the post-mutation fields keyset
             viewModel.uiState.value.previewResults.keys shouldBe setOf("f1")
         }
 
         @Test
-        fun `field saved while editing recomputes the edited key's preview value`() {
+        fun `field saved while editing recomputes the edited key's preview value`() = runTest(testDispatcher) {
             // Given: an existing field with a non-matching pattern
             val original = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("NOPE"))
             viewModel.onEvent(
@@ -376,13 +377,14 @@ class ExtractDataViewModelTest {
             // When: replacing it with a field that matches
             val updated = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
             viewModel.onEvent(UiEvent.OnFieldSaved(updated))
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: the preview for "f1" updates to a Success
             viewModel.uiState.value.previewResults["f1"] shouldBe PreviewResult.Success(value = "153")
         }
 
         @Test
-        fun `remove field clicked drops the removed field's preview key`() {
+        fun `remove field clicked drops the removed field's preview key`() = runTest(testDispatcher) {
             // Given: two fields with previews computed
             val field1 = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
             val field2 = createTestField(id = "f2", method = ExtractionMethod.RegexPattern("""\d+"""))
@@ -392,13 +394,14 @@ class ExtractDataViewModelTest {
 
             // When: removing one field
             viewModel.onEvent(UiEvent.OnRemoveFieldClicked("f1"))
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: only the remaining field's key is present
             viewModel.uiState.value.previewResults.keys shouldBe setOf("f2")
         }
 
         @Test
-        fun `auto generate recomputes previews for the newly generated fields`() {
+        fun `auto generate recomputes previews for the newly generated fields`() = runTest(testDispatcher) {
             // Given: init with a two-line sample text (auto-generate targets line 10 for its single field,
             // which exists on line 2 of a multi-line sample containing one number)
             val multiLineSample = (1..9).joinToString("\n") { "filler" } + "\nTotal: 153 kr"
@@ -406,6 +409,7 @@ class ExtractDataViewModelTest {
 
             // When: auto-generating
             viewModel.onEvent(UiEvent.OnAutoGenerate)
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: previewResults has an entry keyed by the generated field's id, with a Success result
             // extracting the target line's content
@@ -442,6 +446,7 @@ class ExtractDataViewModelTest {
             viewModel.onEvent(
                 UiEvent.Init(initialFields = listOf(field), isEditingAction = true, sampleText = "Total: 153 kr"),
             )
+            testDispatcher.scheduler.advanceUntilIdle()
             viewModel.uiState.value.previewResults.keys shouldBe setOf("f1")
 
             viewModel.effect.test {
@@ -476,7 +481,7 @@ class ExtractDataViewModelTest {
         }
 
         @Test
-        fun `selecting an override recomputes previews against its text with no stale results`() {
+        fun `selecting an override recomputes previews against its text with no stale results`() = runTest(testDispatcher) {
             // Given: a draft field whose pattern matches the override's text but not the prior (null) sample
             val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
             viewModel.onEvent(UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = null))
@@ -486,6 +491,7 @@ class ExtractDataViewModelTest {
 
             // When: selecting the override
             viewModel.onEvent(UiEvent.OnHistoryNotificationSelected(notification))
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: previews reflect the override's text, not stale/empty results
             viewModel.uiState.value.previewResults["f1"] shouldBe PreviewResult.Success(value = "153")
@@ -511,18 +517,20 @@ class ExtractDataViewModelTest {
         }
 
         @Test
-        fun `entry-flow sample takes precedence over any override`() {
+        fun `entry-flow sample takes precedence over any override`() = runTest(testDispatcher) {
             // Given: an entry-flow sample was provided on Init
             val field = createTestField(id = "f1", method = ExtractionMethod.RegexPattern("""\d+"""))
             viewModel.onEvent(
                 UiEvent.Init(initialFields = listOf(field), isEditingAction = false, sampleText = "Entry: 10 kr"),
             )
+            testDispatcher.scheduler.advanceUntilIdle()
             val entryPreview = viewModel.uiState.value.previewResults["f1"]
 
             // When: selecting a history override with different matching text
             viewModel.onEvent(
                 UiEvent.OnHistoryNotificationSelected(createTestNotification(id = "n1", content = "Override: 999 kr")),
             )
+            testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: previews still reflect the entry sample, unaffected by the override
             viewModel.uiState.value.previewResults["f1"] shouldBe entryPreview
@@ -575,9 +583,9 @@ class ExtractDataViewModelTest {
 
         @Test
         fun `opening history sets loading state synchronously then loads results once`() = runTest(testDispatcher) {
-            // Given: a stubbed bounded history fetch
+            // Given: a bounded history fetch
             val history = listOf(createTestNotification(id = "n1"), createTestNotification(id = "n2"))
-            coEvery { notificationRepository.getNotificationsForBacktest(null, 25) } returns Result.success(history)
+            notificationRepository.setNotifications(history)
             viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
 
             // When: opening the history list
@@ -592,7 +600,7 @@ class ExtractDataViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: the repository was called exactly once and results land in state
-            coVerify(exactly = 1) { notificationRepository.getNotificationsForBacktest(null, 25) }
+            notificationRepository.backtestCallCount shouldBe 1
             val loadedState = viewModel.uiState.value
             loadedState.isLoadingHistory shouldBe false
             loadedState.historyResults shouldBe history
@@ -600,8 +608,7 @@ class ExtractDataViewModelTest {
 
         @Test
         fun `empty history results in an empty list with loading false`() = runTest(testDispatcher) {
-            // Given: the repository returns zero notifications
-            coEvery { notificationRepository.getNotificationsForBacktest(null, 25) } returns Result.success(emptyList())
+            // Given: the repository returns zero notifications (fake starts empty)
             viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
 
             // When: opening the history list and letting the fetch complete
@@ -617,9 +624,7 @@ class ExtractDataViewModelTest {
         @Test
         fun `a failed fetch clears loading and results without propagating the exception`() = runTest(testDispatcher) {
             // Given: the repository fetch fails
-            coEvery {
-                notificationRepository.getNotificationsForBacktest(null, 25)
-            } returns Result.failure(IllegalStateException("boom"))
+            notificationRepository.backtestError = IllegalStateException("boom")
             viewModel.onEvent(UiEvent.Init(initialFields = emptyList(), isEditingAction = false, sampleText = null))
 
             // When: opening the history list and letting the fetch complete

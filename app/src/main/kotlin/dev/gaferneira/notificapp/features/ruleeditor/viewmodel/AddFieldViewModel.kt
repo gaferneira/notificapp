@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.core.di.Dispatcher
+import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.FieldExtractor
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Notification
@@ -11,7 +13,9 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiState
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -22,7 +26,9 @@ import javax.inject.Inject
  * and real-time preview of extraction results.
  */
 @HiltViewModel
-class AddFieldViewModel @Inject constructor() : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
+class AddFieldViewModel @Inject constructor(
+    @Dispatcher(DispatcherType.Default) private val defaultDispatcher: CoroutineDispatcher,
+) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
     override fun onEvent(event: UiEvent) {
         when (event) {
@@ -261,7 +267,7 @@ class AddFieldViewModel @Inject constructor() : MviViewModel<UiState, UiEvent, U
 
             try {
                 val field = currentState.extractionField
-                val result = FieldExtractor.extract(currentState.sampleText, field)
+                val result = withContext(defaultDispatcher) { FieldExtractor.extract(currentState.sampleText, field) }
 
                 val previewResult = when (result) {
                     is dev.gaferneira.notificapp.core.extraction.ExtractionResult.Success ->
@@ -340,18 +346,19 @@ class AddFieldViewModel @Inject constructor() : MviViewModel<UiState, UiEvent, U
             return
         }
 
-        // Check if extraction actually works
-        val field = currentState.extractionField
-        val testResult = FieldExtractor.extract(currentState.sampleText, field)
-
-        // Allow saving even if extraction fails - user might be testing with different data
-        // But show a warning
-        if (testResult is dev.gaferneira.notificapp.core.extraction.ExtractionResult.Failure) {
-            Timber.w("Field extraction test failed: ${testResult.reason}")
-        }
-
         // Send effect to return with the created field
+        val field = currentState.extractionField
         sendEffect(UiEffect.ReturnWithField(field))
+
+        // Check if extraction actually works - allow saving even if it fails (the user might be
+        // testing with different sample data), just log a warning. Off the Main thread and after
+        // the effect above, since the check is diagnostic only and must not block returning.
+        viewModelScope.launch {
+            val testResult = withContext(defaultDispatcher) { FieldExtractor.extract(currentState.sampleText, field) }
+            if (testResult is dev.gaferneira.notificapp.core.extraction.ExtractionResult.Failure) {
+                Timber.w("Field extraction test failed: ${testResult.reason}")
+            }
+        }
     }
 
     private fun dismissError() {

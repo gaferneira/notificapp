@@ -15,13 +15,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -29,9 +25,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.currentStateAsState
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -44,7 +41,6 @@ import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.navigation.rememberNavigationState
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.appselection.ui.AppSelectionScreen
 import dev.gaferneira.notificapp.features.inbox.ui.InboxScreen
 import dev.gaferneira.notificapp.features.notificationdetail.ui.NotificationDetailScreen
@@ -54,8 +50,6 @@ import dev.gaferneira.notificapp.features.rules.ui.RulesScreen
 import dev.gaferneira.notificapp.features.settings.ui.SettingsScreen
 import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -95,59 +89,31 @@ enum class AppFlowState {
 
 @Composable
 fun Notificapp(
-    repository: SelectedAppRepository = hiltViewModel<MainViewModel>().repository,
     navigationHandler: NavigationHandler,
+    viewModel: MainViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val appFlowState by viewModel.appFlowState.collectAsStateWithLifecycle()
 
-    // Track current flow state
-    var appFlowState by rememberSaveable { mutableStateOf(AppFlowState.ONBOARDING) }
-
-    // Track if we're checking the state (to prevent flickering)
-    var isCheckingState by remember { mutableStateOf(true) }
-
-    // Check state on resume
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                // Don't reset isCheckingState here to avoid UI flicker
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+    // Re-check on every resume - but only before reaching the main app. Once in MAIN_APP,
+    // re-deriving the flow state on every resume would tear down and recreate the NavDisplay
+    // below (rememberNavigationState resets its back stack whenever it's freshly composed),
+    // wiping the user's navigation stack and any in-progress screen state every time the
+    // activity resumes - including after returning from an external activity launched via an
+    // ActivityResultContract (e.g. a system picker).
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    LaunchedEffect(lifecycleState) {
+        if (lifecycleState == Lifecycle.State.RESUMED && appFlowState != AppFlowState.MAIN_APP) {
+            viewModel.recheckFlowState(isNotificationListenerEnabled(context))
         }
     }
 
-    // Initial state check - properly checks for selected apps
-    LaunchedEffect(Unit) {
-        isCheckingState = true
-        appFlowState = determineAppFlowState(context, repository)
-        isCheckingState = false
-    }
-
-    // Re-check when resumed (permission might have changed) - but only before reaching the main
-    // app. Once in MAIN_APP, re-deriving the flow state on every resume would tear down and
-    // recreate the NavDisplay below (rememberNavigationState resets its back stack whenever it's
-    // freshly composed), wiping the user's navigation stack and any in-progress screen state
-    // every time the activity resumes - including after returning from an external activity
-    // launched via an ActivityResultContract (e.g. a system picker).
-    LaunchedEffect(lifecycleOwner.lifecycle.currentStateAsState().value) {
-        if (lifecycleOwner.lifecycle.currentState == Lifecycle.State.RESUMED && appFlowState != AppFlowState.MAIN_APP) {
-            isCheckingState = true
-            appFlowState = determineAppFlowState(context, repository)
-            isCheckingState = false
-        }
-    }
-
-    // Show loading while checking state
-    if (isCheckingState) {
-        return
-    }
+    // null = still checking; keep the splash/blank frame until the first check resolves
+    val currentFlowState = appFlowState ?: return
 
     // Navigation setup
-    val startRoute: Screen = when (appFlowState) {
+    val startRoute: Screen = when (currentFlowState) {
         AppFlowState.ONBOARDING -> Routes.onboarding()
         AppFlowState.APP_SELECTION -> Routes.appSelection(isInitialSetup = true)
         AppFlowState.MAIN_APP -> Routes.inbox()
@@ -156,15 +122,19 @@ fun Notificapp(
     val navigationState = rememberNavigationState(startRoute = startRoute)
     val navigator = remember(navigationState) { Navigator(navigationState) }
 
-    // Handle navigation commands from ViewModels
-    LaunchedEffect(navigationHandler, navigator) {
-        navigationHandler.navigationFlow.onEach { command ->
-            when (command) {
-                is NavigationCommand.Navigate -> navigator.navigate(command.screen)
-                is NavigationCommand.GoBack -> navigator.goBack()
-                is NavigationCommand.ClearAndNavigate -> navigator.clearAndNavigate(command.screen)
+    // Handle navigation commands from ViewModels. Lifecycle-gated so the back stack is never
+    // mutated while the Activity is stopped; commands emitted during a stop/gap queue in the
+    // NavigationHandler's Channel and deliver once collection resumes, instead of being dropped.
+    LaunchedEffect(navigationHandler, navigator, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            navigationHandler.navigationFlow.collect { command ->
+                when (command) {
+                    is NavigationCommand.Navigate -> navigator.navigate(command.screen)
+                    is NavigationCommand.GoBack -> navigator.goBack()
+                    is NavigationCommand.ClearAndNavigate -> navigator.clearAndNavigate(command.screen)
+                }
             }
-        }.launchIn(this)
+        }
     }
 
     // Handle back button
@@ -172,6 +142,11 @@ fun Notificapp(
         navigator.goBack()
     }
 
+    NotificappNavHost(navigator = navigator, context = context)
+}
+
+@Composable
+private fun NotificappNavHost(navigator: Navigator, context: Context) {
     Box(modifier = Modifier.fillMaxSize()) {
         NavDisplay(
             backStack = navigator.state.backStack,
@@ -227,32 +202,6 @@ fun Notificapp(
 
         // Debug overlay (only in debug builds)
         DebugNavOverlay(navigator = navigator)
-    }
-}
-
-/**
- * Determine which flow state the app should be in.
- * Checks notification permission and if any apps are selected.
- */
-suspend fun determineAppFlowState(context: Context, repository: SelectedAppRepository): AppFlowState {
-    // First check notification permission
-    if (!isNotificationListenerEnabled(context)) {
-        return AppFlowState.ONBOARDING
-    }
-
-    // Permission granted - check if we have selected apps
-    return try {
-        val selectedApps = repository.getAllApps()
-        val hasApps = selectedApps.isSuccess && selectedApps.getOrNull()?.isNotEmpty() == true
-
-        if (hasApps) {
-            AppFlowState.MAIN_APP
-        } else {
-            AppFlowState.APP_SELECTION
-        }
-    } catch (e: Exception) {
-        // If we can't check, default to app selection
-        AppFlowState.APP_SELECTION
     }
 }
 

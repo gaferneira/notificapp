@@ -4,6 +4,7 @@ import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.notification.action.ActionDispatcher
+import dev.gaferneira.notificapp.domain.action.RuleReEvaluator
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleExecution
@@ -43,7 +44,9 @@ class ProcessNotificationUseCase @Inject constructor(
     private val ruleExecutionRepository: RuleExecutionRepository,
     private val actionDispatcher: ActionDispatcher,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
-) {
+) : RuleReEvaluator {
+
+    override suspend fun reEvaluate(notification: Notification): Result<List<RuleExecution>> = evaluateAndPersist(notification, executeActions = false)
 
     /**
      * Full pipeline: dedup, save, evaluate, persist.

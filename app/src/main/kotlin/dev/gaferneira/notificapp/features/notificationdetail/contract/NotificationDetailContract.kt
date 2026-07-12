@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.notificationdetail.contract
 
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleExecution
@@ -23,7 +24,7 @@ object NotificationDetailContract {
         /** Whether data is loading */
         val isLoading: Boolean = true,
         /** Error message if loading failed */
-        val error: String? = null,
+        val error: UiText? = null,
     ) {
         /** Count of rule executions */
         val executionCount: Int

@@ -1,9 +1,9 @@
 package dev.gaferneira.notificapp.core.data.repository
 
-import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
 import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
+import dev.gaferneira.notificapp.core.data.local.entity.RuleEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
 import dev.gaferneira.notificapp.core.data.local.mapper.RuleActionMapper
 import dev.gaferneira.notificapp.core.data.local.mapper.RuleMapper
@@ -12,9 +12,11 @@ import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Rule
+import dev.gaferneira.notificapp.domain.model.getAlarmBackgroundImageUri
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -33,70 +35,32 @@ internal class RuleRepositoryImpl @Inject constructor(
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : RuleRepository {
 
-    override fun observeAllRules(): Flow<List<Rule>> = ruleDao.observeAll().map { entities ->
-        entities.map { entity ->
-            // Load target apps, actions (with their SAVE_DATA fields), and conditions for each rule
-            val apps = if (entity.isGlobal) null else loadTargetApps(entity.id)
-            val actions = ruleDao.getActionsForRule(entity.id)
-            val fields = loadSaveDataFields(actions)
-            val conditions = ruleDao.getConditionsForRule(entity.id)
-            RuleMapper.toDomain(entity, fields, conditions, actions, apps)
-        }
-    }
+    override fun observeAllRules(): Flow<List<Rule>> = ruleDao.observeAll()
+        .map { entities -> assembleRules(entities) }
+        .flowOn(ioDispatcher)
 
     override suspend fun getAllRules(): Result<List<Rule>> = withContext(ioDispatcher) {
-        try {
-            val entities = ruleDao.getAll()
-            val rules = entities.map { entity ->
-                val apps = loadTargetApps(entity.id)
-                val actions = ruleDao.getActionsForRule(entity.id)
-                val fields = loadSaveDataFields(actions)
-                val conditions = ruleDao.getConditionsForRule(entity.id)
-                RuleMapper.toDomain(entity, fields, conditions, actions, apps)
-            }
-            Result.success(rules)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to get all rules")
-            e.toFailureResult()
-        }
+        dbCatching("Failed to get all rules") { assembleRules(ruleDao.getAll()) }
     }
 
     override suspend fun getRule(id: String): Result<Rule?> = withContext(ioDispatcher) {
-        try {
-            val entity = ruleDao.getById(id)
-            val rule = entity?.let {
+        dbCatching("Failed to get rule: $id") {
+            ruleDao.getById(id)?.let {
                 val apps = loadTargetApps(it.id)
                 val actions = ruleDao.getActionsForRule(it.id)
                 val fields = loadSaveDataFields(actions)
                 val conditions = ruleDao.getConditionsForRule(it.id)
                 RuleMapper.toDomain(it, fields, conditions, actions, apps)
             }
-            Result.success(rule)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to get rule: $id")
-            e.toFailureResult()
         }
     }
 
     override suspend fun getRulesForApp(packageName: String): Result<List<Rule>> = withContext(ioDispatcher) {
-        try {
-            val entities = ruleDao.getRulesForApp(packageName)
-            val rules = entities.map { entity ->
-                val apps = loadTargetApps(entity.id)
-                val actions = ruleDao.getActionsForRule(entity.id)
-                val fields = loadSaveDataFields(actions)
-                val conditions = ruleDao.getConditionsForRule(entity.id)
-                RuleMapper.toDomain(entity, fields, conditions, actions, apps)
-            }
-            Result.success(rules)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to get rules for app: $packageName")
-            e.toFailureResult()
-        }
+        dbCatching("Failed to get rules for app: $packageName") { assembleRules(ruleDao.getRulesForApp(packageName)) }
     }
 
     override suspend fun saveRule(rule: Rule): Result<Unit> = withContext(ioDispatcher) {
-        try {
+        dbCatching("Failed to save rule: ${rule.id}") {
             val entity = RuleMapper.toEntity(rule)
             val actionEntities = RuleMapper.actionsToEntityList(rule.actions, rule.id)
             val fieldEntities = RuleMapper.fieldsToEntityList(rule.actions)
@@ -104,15 +68,11 @@ internal class RuleRepositoryImpl @Inject constructor(
             val apps = rule.targetApps?.map { it.packageName }
             ruleDao.saveRuleWithRelatedData(entity, fieldEntities, conditionEntities, actionEntities, apps)
             Timber.d("Saved rule: ${rule.id}")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to save rule: ${rule.id}")
-            e.toFailureResult()
         }
     }
 
     override suspend fun updateRule(rule: Rule): Result<Unit> = withContext(ioDispatcher) {
-        try {
+        dbCatching("Failed to update rule: ${rule.id}") {
             val entity = RuleMapper.toEntity(rule)
             val actionEntities = RuleMapper.actionsToEntityList(rule.actions, rule.id)
             val fieldEntities = RuleMapper.fieldsToEntityList(rule.actions)
@@ -120,10 +80,6 @@ internal class RuleRepositoryImpl @Inject constructor(
             val apps = rule.targetApps?.map { it.packageName }
             ruleDao.saveRuleWithRelatedData(entity, fieldEntities, conditionEntities, actionEntities, apps)
             Timber.d("Updated rule: ${rule.id}")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to update rule: ${rule.id}")
-            e.toFailureResult()
         }
     }
 
@@ -137,53 +93,71 @@ internal class RuleRepositoryImpl @Inject constructor(
         return ruleDao.getFieldsForAction(saveDataActionId)
     }
 
+    /**
+     * Assemble full [Rule] domain models for a batch of rule entities using a fixed handful of
+     * `IN (:ruleIds)` queries instead of ~4 per-rule round-trips (conditions, actions, fields,
+     * target apps) - the N+1 shape this replaces multiplied with the rule count on every
+     * [observeAllRules] emission and on every [getAllRules]/[getRulesForApp] call.
+     */
+    private suspend fun assembleRules(entities: List<RuleEntity>): List<Rule> {
+        if (entities.isEmpty()) return emptyList()
+        val ruleIds = entities.map { it.id }
+
+        val conditionsByRule = ruleDao.getConditionsForRules(ruleIds).groupBy { it.ruleId }
+        val actionsByRule = ruleDao.getActionsForRules(ruleIds).groupBy { it.ruleId }
+        val saveDataActionIds = actionsByRule.values.flatten()
+            .filter { it.type == ActionType.SAVE_DATA.name }
+            .map { it.id }
+        val fieldsByAction = ruleDao.getFieldsForActions(saveDataActionIds).groupBy { it.actionId }
+
+        val targetPackagesByRule = ruleDao.getTargetAppsForRules(ruleIds).groupBy({ it.ruleId }, { it.packageName })
+        val allTargetPackages = targetPackagesByRule.values.flatten().distinct()
+        val appInfoByPackage = if (allTargetPackages.isEmpty()) {
+            emptyMap()
+        } else {
+            selectedAppDao.getByPackageNames(allTargetPackages).associate { it.packageName to AppInfo(it.packageName, it.appName) }
+        }
+
+        return entities.map { entity ->
+            val actions = actionsByRule[entity.id].orEmpty()
+            val fields = actions.filter { it.type == ActionType.SAVE_DATA.name }
+                .flatMap { fieldsByAction[it.id].orEmpty() }
+            val apps = targetPackagesByRule[entity.id]
+                ?.mapNotNull { appInfoByPackage[it] }
+                ?.takeIf { it.isNotEmpty() }
+            RuleMapper.toDomain(entity, fields, conditionsByRule[entity.id].orEmpty(), actions, apps)
+        }
+    }
+
     override suspend fun deleteRule(id: String): Result<Unit> = withContext(ioDispatcher) {
-        try {
+        dbCatching("Failed to delete rule: $id") {
             ruleDao.deleteRuleWithRelatedData(id)
             Timber.d("Deleted rule: $id")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to delete rule: $id")
-            e.toFailureResult()
         }
     }
 
     override suspend fun toggleRuleActive(id: String): Result<Unit> = withContext(ioDispatcher) {
-        try {
+        dbCatching("Failed to toggle rule: $id") {
             ruleDao.toggleActive(id)
             Timber.d("Toggled rule: $id")
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to toggle rule: $id")
-            e.toFailureResult()
         }
     }
 
     override suspend fun getRuleCount(): Result<Int> = withContext(ioDispatcher) {
-        try {
-            Result.success(ruleDao.getCount())
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to get rule count")
-            e.toFailureResult()
-        }
+        dbCatching("Failed to get rule count") { ruleDao.getCount() }
     }
 
     override suspend fun getActiveRuleCount(): Result<Int> = withContext(ioDispatcher) {
-        try {
-            Result.success(ruleDao.getActiveCount())
-        } catch (e: Exception) {
-            Timber.e(e, "Failed to get active rule count")
-            e.toFailureResult()
-        }
+        dbCatching("Failed to get active rule count") { ruleDao.getActiveCount() }
     }
 
     override suspend fun isImageUriReferencedByOtherAlarmAction(
         uri: String,
         excludingActionId: String,
-    ): Boolean = withContext(ioDispatcher) {
-        val alarmActionEntities = ruleDao.getActionsByType(ActionType.CREATE_ALARM.name)
-        alarmActionEntities.any { entity ->
-            entity.id != excludingActionId && RuleActionMapper.toDomain(entity).getAlarmBackgroundImageUri() == uri
+    ): Result<Boolean> = withContext(ioDispatcher) {
+        dbCatching("Failed to check if image URI is referenced by another alarm action") {
+            val candidates = ruleDao.getActionsByTypeReferencingUri(ActionType.CREATE_ALARM.name, uri, excludingActionId)
+            candidates.any { entity -> RuleActionMapper.toDomain(entity).getAlarmBackgroundImageUri() == uri }
         }
     }
 

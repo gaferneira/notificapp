@@ -9,6 +9,17 @@ import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
  */
 object FieldExtractor {
 
+    private val SMART_AMOUNT_REGEX: Regex =
+        """(?:\$|€|£|¥|USD|EUR|GBP|JPY|SEK|NOK|DKK|kr|USD\s*)?\s*[\d,.]+(?:\s*(?:USD|EUR|GBP|JPY|SEK|NOK|DKK|kr))?""".toRegex()
+
+    private val SMART_DATE_REGEXES: List<Regex> = listOf(
+        """\d{1,2}/\d{1,2}/\d{2,4}""".toRegex(), // MM/DD/YYYY or DD/MM/YYYY
+        """\d{1,2}-\d{1,2}-\d{2,4}""".toRegex(), // MM-DD-YYYY
+        """\d{4}-\d{2}-\d{2}""".toRegex(), // YYYY-MM-DD
+        """\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}""".toRegex(RegexOption.IGNORE_CASE), // 12 Jan 2024
+        """(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}""".toRegex(RegexOption.IGNORE_CASE), // Jan 12, 2024
+    )
+
     /**
      * Extract a field value from the given text using the field's extraction method.
      *
@@ -72,7 +83,7 @@ object FieldExtractor {
     }
 
     private fun extractWithRegex(text: String, method: ExtractionMethod.RegexPattern): ExtractionResult {
-        val regex = method.pattern.toRegex()
+        val regex = RegexCache.compiled(method.pattern)
         val match = regex.find(text)
 
         return if (match != null) {
@@ -197,9 +208,7 @@ object FieldExtractor {
     }
 
     private fun extractSmartAmount(text: String): ExtractionResult {
-        // Regex to match currency amounts
-        val amountRegex = """(?:\$|€|£|¥|USD|EUR|GBP|JPY|SEK|NOK|DKK|kr|USD\s*)?\s*[\d,.]+(?:\s*(?:USD|EUR|GBP|JPY|SEK|NOK|DKK|kr))?""".toRegex()
-        val match = amountRegex.find(text)
+        val match = SMART_AMOUNT_REGEX.find(text)
 
         return if (match != null) {
             ExtractionResult.Success(
@@ -213,16 +222,7 @@ object FieldExtractor {
     }
 
     private fun extractSmartDate(text: String): ExtractionResult {
-        // Common date patterns
-        val datePatterns = listOf(
-            """\d{1,2}/\d{1,2}/\d{2,4}""".toRegex(), // MM/DD/YYYY or DD/MM/YYYY
-            """\d{1,2}-\d{1,2}-\d{2,4}""".toRegex(), // MM-DD-YYYY
-            """\d{4}-\d{2}-\d{2}""".toRegex(), // YYYY-MM-DD
-            """\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}""".toRegex(RegexOption.IGNORE_CASE), // 12 Jan 2024
-            """(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}""".toRegex(RegexOption.IGNORE_CASE), // Jan 12, 2024
-        )
-
-        for (pattern in datePatterns) {
+        for (pattern in SMART_DATE_REGEXES) {
             val match = pattern.find(text)
             if (match != null) {
                 return ExtractionResult.Success(
@@ -250,7 +250,6 @@ object FieldExtractor {
             trimmed == "true" -> true
             trimmed == "false" -> false
             trimmed == "null" -> null
-            trimmed.toDoubleOrNull() != null -> trimmed.toDoubleOrNull()
             else -> trimmed
         }
     }
@@ -267,7 +266,7 @@ object FieldExtractor {
         var inString = false
         var escapeNext = false
         var currentKey = ""
-        var currentValue = StringBuilder()
+        val currentValue = StringBuilder()
         var isKey = true
 
         for (char in content) {
@@ -305,7 +304,7 @@ object FieldExtractor {
                         ':' -> {
                             if (braceCount == 0 && bracketCount == 0 && isKey) {
                                 currentKey = currentValue.toString().trim().removeSurrounding("\"")
-                                currentValue = StringBuilder()
+                                currentValue.setLength(0)
                                 isKey = false
                             } else {
                                 currentValue.append(char)
@@ -314,7 +313,7 @@ object FieldExtractor {
                         ',' -> {
                             if (braceCount == 0 && bracketCount == 0) {
                                 result[currentKey] = parseJsonValue(currentValue.toString().trim(), depth + 1)
-                                currentValue = StringBuilder()
+                                currentValue.setLength(0)
                                 isKey = true
                             } else {
                                 currentValue.append(char)
@@ -345,7 +344,7 @@ object FieldExtractor {
         var bracketCount = 0
         var inString = false
         var escapeNext = false
-        var currentValue = StringBuilder()
+        val currentValue = StringBuilder()
 
         for (char in content) {
             when {
@@ -382,7 +381,7 @@ object FieldExtractor {
                         ',' -> {
                             if (braceCount == 0 && bracketCount == 0) {
                                 result.add(parseJsonValue(currentValue.toString().trim(), depth + 1))
-                                currentValue = StringBuilder()
+                                currentValue.setLength(0)
                             } else {
                                 currentValue.append(char)
                             }
@@ -410,8 +409,9 @@ object FieldExtractor {
             trimmed == "true" -> true
             trimmed == "false" -> false
             trimmed == "null" -> null
-            trimmed.toIntOrNull() != null -> trimmed.toInt()
-            trimmed.toDoubleOrNull() != null -> trimmed.toDouble()
+            // Numbers are kept as their raw trimmed text rather than boxed into Int/Double:
+            // extractJsonPath only ever calls toString() on the result, and boxing a value like
+            // "150.50" into a Double would silently drop the trailing zero.
             else -> trimmed
         }
     }

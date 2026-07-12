@@ -32,7 +32,7 @@ class NotificationThrottleTracker @Inject constructor(
     /**
      * Atomically decide whether this match opens/continues a delivery window.
      *
-     * @param resetAt watermark (epoch millis, see [dev.gaferneira.notificapp.domain.model.RuleAction.getThrottleResetAt]);
+     * @param resetAt watermark (epoch millis, see [dev.gaferneira.notificapp.domain.model.getThrottleResetAt]);
      * any delivery recorded before this no longer counts, so an edit that bumps it forces the
      * next match to deliver a fresh window.
      * @return `true` to let the notification through (window opens/stays open at [resetAt] or

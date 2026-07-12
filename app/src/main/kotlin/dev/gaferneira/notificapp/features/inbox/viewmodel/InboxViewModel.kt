@@ -1,16 +1,15 @@
 package dev.gaferneira.notificapp.features.inbox.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.insertSeparators
 import androidx.paging.map
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.preferences.InboxFilterSettings
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
@@ -20,13 +19,11 @@ import dev.gaferneira.notificapp.features.inbox.contract.InboxEvent
 import dev.gaferneira.notificapp.features.inbox.contract.InboxListItem
 import dev.gaferneira.notificapp.features.inbox.contract.InboxUiState
 import dev.gaferneira.notificapp.features.inbox.contract.NotificationItem
-import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
 import dev.gaferneira.notificapp.util.timeAgo
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -59,32 +56,23 @@ import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilt
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class InboxViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val listenerStatus: NotificationListenerStatusProvider,
     private val notificationRepository: NotificationRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MviViewModel<InboxUiState, InboxEvent, InboxEffect>(InboxUiState()) {
 
     /**
-     * Separate mutable state for search query to trigger paging updates.
-     * Not stored in main UiState because we need flatMapLatest to react to changes.
-     */
-    private val searchQueryFlow = MutableStateFlow("")
-
-    /**
      * The paginated notification stream with 2-hour time headers.
      * Recreated whenever filters change via flatMapLatest.
      */
     val notifications: Flow<PagingData<InboxListItem>> =
-        combine(
-            uiState,
-            searchQueryFlow,
-        ) { state, searchQuery ->
-            state to searchQuery
-        }
-            .flatMapLatest { (state, searchQuery) ->
+        uiState
+            .map { Triple(it.searchQuery, it.selectedApps, it.statusFilter) }
+            .distinctUntilChanged()
+            .flatMapLatest { (searchQuery, selectedApps, statusFilter) ->
                 // Convert Status to Boolean? for repository
-                val isProcessed = when (state.statusFilter) {
+                val isProcessed = when (statusFilter) {
                     Status.PROCESSED -> true
                     Status.UNPROCESSED -> false
                     Status.ALL -> null
@@ -93,13 +81,13 @@ class InboxViewModel @Inject constructor(
                 // Use search query if provided, otherwise use filtered paged
                 val pagingFlow = if (searchQuery.isBlank()) {
                     notificationRepository.observeNotificationsPaged(
-                        packageNames = state.selectedApps,
+                        packageNames = selectedApps,
                         isProcessed = isProcessed,
                     )
                 } else {
                     notificationRepository.searchNotificationsPaged(
                         query = searchQuery,
-                        packageNames = state.selectedApps,
+                        packageNames = selectedApps,
                         isProcessed = isProcessed,
                     )
                 }
@@ -165,7 +153,7 @@ class InboxViewModel @Inject constructor(
     private fun checkNotificationListenerStatus() {
         viewModelScope.launch(ioDispatcher) {
             try {
-                val isListenerActive = isNotificationListenerEnabled(context)
+                val isListenerActive = listenerStatus.isEnabled()
                 setState { copy(isNotificationListenerActive = isListenerActive) }
             } catch (e: SecurityException) {
                 Timber.e(e, "Failed to check notification listener status")
@@ -174,7 +162,6 @@ class InboxViewModel @Inject constructor(
     }
 
     private fun updateSearchQuery(query: String) {
-        searchQueryFlow.value = query
         setState {
             copy(searchQuery = query)
         }
@@ -236,11 +223,12 @@ private fun roundUpTo2HourWindow(timestamp: Long): Long {
  */
 private fun areInSame2HourWindow(timestamp1: Long, timestamp2: Long): Boolean = roundUpTo2HourWindow(timestamp1) == roundUpTo2HourWindow(timestamp2)
 
+private val timeHeaderFormatter = SimpleDateFormat("d MMMM HH:mm", Locale.getDefault())
+
 /**
  * Format a timestamp as a time header for its next 2-hour window (e.g., "10 March 20:00").
  */
 private fun formatTimeHeader(timestamp: Long): String {
     val windowStart = roundUpTo2HourWindow(timestamp)
-    val formatter = SimpleDateFormat("d MMMM HH:mm", Locale.getDefault())
-    return formatter.format(Date(windowStart))
+    return synchronized(timeHeaderFormatter) { timeHeaderFormatter.format(Date(windowStart)) }
 }

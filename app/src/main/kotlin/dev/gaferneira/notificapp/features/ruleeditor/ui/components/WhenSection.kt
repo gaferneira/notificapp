@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -233,10 +234,11 @@ private fun ConditionCard(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "WhenSection Light")
+@Preview(showBackground = true, name = "WhenSection Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun WhenSectionPreview() {
-    NotificappTheme {
+    NotificappTheme(dynamicColor = false) {
         WhenSection(
             targetApps = listOf(
                 AppInfo("com.swish", "Swish"),

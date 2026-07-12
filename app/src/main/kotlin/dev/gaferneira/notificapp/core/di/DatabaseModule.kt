@@ -16,7 +16,12 @@ import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
 import dev.gaferneira.notificapp.core.data.local.migration.APP_DATABASE_MIGRATIONS
+import dev.gaferneira.notificapp.core.data.local.security.DatabasePassphraseProvider
+import dev.gaferneira.notificapp.core.data.local.security.DatabaseRekeyer
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import javax.inject.Singleton
+
+private const val DATABASE_NAME = "notificapp_database"
 
 /**
  * Dagger module for providing database dependencies.
@@ -26,21 +31,32 @@ import javax.inject.Singleton
 internal object DatabaseModule {
 
     /**
-     * Provides the Room database instance.
+     * Provides the Room database instance, encrypted at rest with SQLCipher (DATA-02). The
+     * passphrase is KeyStore-backed (see [DatabasePassphraseProvider]); pre-DATA-02 plaintext
+     * installs are rekeyed in place on first open rather than destroyed.
      *
      * @param context Application context
      * @return AppDatabase instance
      */
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java,
-        "notificapp_database",
-    )
-        .addMigrations(*APP_DATABASE_MIGRATIONS)
-        .applyDebugOnlyFallback()
-        .build()
+    fun provideDatabase(
+        @ApplicationContext context: Context,
+        passphraseProvider: DatabasePassphraseProvider,
+    ): AppDatabase {
+        System.loadLibrary("sqlcipher")
+        val passphrase = passphraseProvider.getOrCreatePassphrase()
+        DatabaseRekeyer.rekeyIfNeeded(context, DATABASE_NAME, passphrase)
+        return Room.databaseBuilder(
+            context,
+            AppDatabase::class.java,
+            DATABASE_NAME,
+        )
+            .openHelperFactory(SupportOpenHelperFactory(passphrase))
+            .addMigrations(*APP_DATABASE_MIGRATIONS)
+            .applyDebugOnlyFallback()
+            .build()
+    }
 
     /**
      * Debug builds may skip migrations during development; release builds must crash loudly on a

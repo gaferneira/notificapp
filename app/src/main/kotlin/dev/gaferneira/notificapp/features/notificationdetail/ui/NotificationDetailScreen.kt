@@ -136,7 +136,7 @@ private fun NotificationDetailScreenContent(
                 }
                 uiState.error != null -> {
                     ErrorState(
-                        message = uiState.error,
+                        message = uiState.error.asString(),
                         onRetry = { onEvent(UiEvent.OnRetryClicked) },
                         modifier = Modifier.align(Alignment.Center),
                     )

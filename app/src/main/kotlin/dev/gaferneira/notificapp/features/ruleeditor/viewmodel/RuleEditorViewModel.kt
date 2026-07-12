@@ -14,6 +14,7 @@ import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.SNOOZE_THROTTLE_RESET_AT_KEY
 import dev.gaferneira.notificapp.domain.model.SnoozeMode
+import dev.gaferneira.notificapp.domain.model.getSnoozeMode
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository

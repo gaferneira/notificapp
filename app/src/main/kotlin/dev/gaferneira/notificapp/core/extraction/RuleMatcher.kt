@@ -62,7 +62,7 @@ object RuleMatcher {
      * Check if a value matches a regex pattern.
      */
     private fun matchesRegex(value: String, pattern: String): Boolean = try {
-        pattern.toRegex().containsMatchIn(value)
+        RegexCache.compiled(pattern).containsMatchIn(value)
     } catch (e: Exception) {
         false
     }

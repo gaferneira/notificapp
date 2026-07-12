@@ -472,6 +472,8 @@ data class ExtractedFieldValue(
 - Use descriptive test names
 - Framework: JUnit 5, assertions via Kotest, Flow testing via Turbine
 
+**Avoiding `runTest` hangs with infinite collectors:** some ViewModels launch a never-completing `collect {}` coroutine in `init`/at construction on `viewModelScope` (e.g. observing a settings or filter `Flow` for the lifetime of the VM). A naive `runTest { }` around one of these will report *"the test coroutine is not completing, there were active child jobs"* or hang outright, because `advanceUntilIdle()` never drains a hot `collect`. Standardize on: construct the VM inside the test body, drive it with `advanceUntilIdle()`, then read `uiState.value` synchronously — the collector updates state eagerly on the injected `StandardTestDispatcher`, so there's no need to keep a Turbine `viewModel.uiState.test { }` block open across it. If you do use Turbine for effects on such a VM, close the block with `cancelAndIgnoreRemainingEvents()` rather than letting it complete naturally. Backing flows should come from a Fake repository that emits a fixed number of items and then idles, not a real Flow that never completes on its own.
+
 **Current Status:**
 
 - 229 passing tests in `app/src/test`: `RuleMatcherTest` (all 6 operators), `FieldExtractorTest` (all 10 extraction methods), `RuleEngineTest`, `ProcessNotificationUseCaseTest`, `ActionDispatcherTest`, per-executor tests, `NotificationNormalizerTest`, `RuleJsonCodecTest`/`RuleJsonCodecGoldenFileTest`, and four ViewModel test suites, with shared fixtures in `testutil/TestFixtures.kt`

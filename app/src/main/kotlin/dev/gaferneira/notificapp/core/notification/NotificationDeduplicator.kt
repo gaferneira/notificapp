@@ -78,9 +78,16 @@ class NotificationDeduplicator @Inject constructor(private val notificationRepos
     /**
      * Generate MD5 hash of a string.
      */
-    private fun hashString(input: String): String = MessageDigest.getInstance("MD5")
-        .digest(input.toByteArray())
-        .joinToString("") { "%02x".format(it) }
+    private fun hashString(input: String): String {
+        val bytes = MessageDigest.getInstance("MD5").digest(input.toByteArray(Charsets.UTF_8))
+        val out = CharArray(bytes.size * 2)
+        for (i in bytes.indices) {
+            val v = bytes[i].toInt() and 0xFF
+            out[i * 2] = HEX_CHARS[v ushr 4]
+            out[i * 2 + 1] = HEX_CHARS[v and 0x0F]
+        }
+        return String(out)
+    }
 
     /**
      * Remove old entries from the in-memory cache.
@@ -101,5 +108,7 @@ class NotificationDeduplicator @Inject constructor(private val notificationRepos
 
         // Look back 5 minutes in the database for duplicates
         private const val DB_LOOKBACK_MS = 5 * 60 * 1000L
+
+        private val HEX_CHARS = "0123456789abcdef".toCharArray()
     }
 }

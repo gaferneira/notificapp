@@ -16,7 +16,9 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContrac
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiState
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.UUID
 import javax.inject.Inject
@@ -44,6 +46,8 @@ class ExtractDataViewModel @Inject constructor(
 
     /** Effective text driving preview + auto-generate: entry sample always wins over the override. */
     private fun effectiveSampleText(): String? = entrySampleText ?: uiState.value.overrideNotification?.let { it.content ?: it.title ?: it.rawContent }
+
+    private var previewJob: Job? = null
 
     override fun onEvent(event: UiEvent) {
         when (event) {
@@ -81,12 +85,20 @@ class ExtractDataViewModel @Inject constructor(
      */
     private fun recomputePreviews() {
         val text = effectiveSampleText()
-        val previews = if (text.isNullOrBlank()) {
-            emptyMap()
-        } else {
-            uiState.value.fields.associate { field -> field.id to FieldExtractor.extract(text, field).toPreviewResult() }
+        if (text.isNullOrBlank()) {
+            previewJob?.cancel()
+            setState { copy(previewResults = emptyMap()) }
+            return
         }
-        setState { copy(previewResults = previews) }
+
+        val fields = uiState.value.fields
+        previewJob?.cancel()
+        previewJob = viewModelScope.launch {
+            val previews = withContext(defaultDispatcher) {
+                fields.associate { field -> field.id to FieldExtractor.extract(text, field).toPreviewResult() }
+            }
+            setState { copy(previewResults = previews) }
+        }
     }
 
     private fun ExtractionResult.toPreviewResult(): PreviewResult = when (this) {

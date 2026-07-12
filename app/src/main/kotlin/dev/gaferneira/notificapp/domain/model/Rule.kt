@@ -1,12 +1,20 @@
 package dev.gaferneira.notificapp.domain.model
 
+import androidx.compose.runtime.Immutable
+
 /**
  * Domain model representing an extraction rule.
  *
  * Rules define patterns to extract structured data from notifications. Not `@Serializable`: the
  * wire format for import/export is defined by the DTOs in `core/rulesharing/dto/`, independent of
  * this model's property names.
+ *
+ * `@Immutable` is a promise to the Compose compiler that this type is stable across
+ * recompositions (all properties are read-only and never mutate in place) so composables reading
+ * a [Rule] can be skipped when it's unchanged, even though its `List` properties are themselves
+ * unstable interfaces the compiler can't otherwise prove immutable (see ADR/audit UI-001).
  */
+@Immutable
 data class Rule(
     val id: String,
     val name: String,

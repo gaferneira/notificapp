@@ -5,6 +5,18 @@ import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.AlarmBackgroundConfig
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.getAlarmBackgroundImageUri
+import dev.gaferneira.notificapp.domain.model.getAlarmBackgroundPresetId
+import dev.gaferneira.notificapp.domain.model.getAlarmBackgroundType
+import dev.gaferneira.notificapp.domain.model.getAlarmSnoozeDurationMinutes
+import dev.gaferneira.notificapp.domain.model.getAlarmSnoozeMaxCount
+import dev.gaferneira.notificapp.domain.model.getAlarmSoundUri
+import dev.gaferneira.notificapp.domain.model.getAlarmVibrationPattern
+import dev.gaferneira.notificapp.domain.model.isAlarmBackgroundImageDark
+import dev.gaferneira.notificapp.domain.model.isAlarmFullScreenEnabled
+import dev.gaferneira.notificapp.domain.model.isAlarmSnoozeEnabled
+import dev.gaferneira.notificapp.domain.model.isAlarmSoundEnabled
+import dev.gaferneira.notificapp.domain.model.isAlarmVibrationEnabled
 import javax.inject.Inject
 
 /**

@@ -10,6 +10,8 @@ import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COUNT
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_DURATION_MS
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.getFlashCount
+import dev.gaferneira.notificapp.domain.model.getFlashDurationMs
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription

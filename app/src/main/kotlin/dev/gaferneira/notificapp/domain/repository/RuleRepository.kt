@@ -66,5 +66,5 @@ interface RuleRepository {
      * action's background image changes or is removed - the same image may still be in use by
      * another alarm action.
      */
-    suspend fun isImageUriReferencedByOtherAlarmAction(uri: String, excludingActionId: String): Boolean
+    suspend fun isImageUriReferencedByOtherAlarmAction(uri: String, excludingActionId: String): Result<Boolean>
 }

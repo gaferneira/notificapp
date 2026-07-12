@@ -91,6 +91,7 @@ import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
+import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.LocalIoDispatcher
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.saveDataFields
@@ -595,10 +596,12 @@ private fun RulesList(
     onEvent: (RulesEvent) -> Unit,
 ) {
     // Determine grouping based on sort option
-    val groupedRules = when (filter.sortBy) {
-        RuleFilter.SortBy.CATEGORY_ASC -> rules.groupBy { it.category ?: "Uncategorized" }
-        RuleFilter.SortBy.STATUS -> rules.groupBy { if (it.isActive) "Enabled" else "Disabled" }
-        else -> mapOf("" to rules) // Flat list - no grouping
+    val groupedRules = remember(rules, filter.sortBy) {
+        when (filter.sortBy) {
+            RuleFilter.SortBy.CATEGORY_ASC -> rules.groupBy { it.category ?: "Uncategorized" }
+            RuleFilter.SortBy.STATUS -> rules.groupBy { if (it.isActive) "Enabled" else "Disabled" }
+            else -> mapOf("" to rules) // Flat list - no grouping
+        }
     }
 
     LazyColumn(
@@ -892,7 +895,7 @@ private fun RuleCardActions(
 @Preview(showBackground = true)
 @Composable
 private fun RulesScreenPreview() {
-    MaterialTheme {
+    NotificappTheme(darkTheme = false, dynamicColor = false) {
         RulesScreenContent(
             uiState = RulesUiState(
                 rules = Resource.Success(
@@ -939,7 +942,7 @@ private fun RulesScreenPreview() {
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun RulesScreenPreviewDark() {
-    MaterialTheme {
+    NotificappTheme(darkTheme = true, dynamicColor = false) {
         RulesScreenContent(
             uiState = RulesUiState(
                 rules = Resource.Success(

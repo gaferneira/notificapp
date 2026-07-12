@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,21 +14,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 
 /**
  * Card showing a notification (app name, title, content) followed by its extracted field
  * values as chips. Shared between "Test against history" (one card per historical match) and
  * the Extract-data sheet's live sample-notification preview (one card for the current draft).
  *
- * @param extractedFields resolved (field name, extracted value) pairs, in display order
+ * @param extractedFields resolved fields, in display order
  */
 @Composable
 fun NotificationPreviewCard(
     appName: String,
     title: String?,
     content: String?,
-    extractedFields: List<Pair<String, String>>,
+    extractedFields: List<ExtractedField>,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -64,9 +67,9 @@ fun NotificationPreviewCard(
     }
 }
 
-/** Renders resolved (name, value) pairs as suggestion chips; renders nothing when [fields] is empty. */
+/** Renders resolved fields as suggestion chips; renders nothing when [fields] is empty. */
 @Composable
-fun ExtractedFieldChips(fields: List<Pair<String, String>>, modifier: Modifier = Modifier) {
+fun ExtractedFieldChips(fields: List<ExtractedField>, modifier: Modifier = Modifier) {
     if (fields.isEmpty()) return
 
     Column(modifier = modifier) {
@@ -81,5 +84,20 @@ fun ExtractedFieldChips(fields: List<Pair<String, String>>, modifier: Modifier =
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
+    }
+}
+
+@Preview(showBackground = true, name = "PreviewCard Light")
+@Preview(showBackground = true, name = "PreviewCard Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun NotificationPreviewCardPreview() {
+    NotificappTheme(dynamicColor = false) {
+        NotificationPreviewCard(
+            appName = "ICA Bank",
+            title = "Purchase confirmed",
+            content = "Totalt: 153,50 kr",
+            extractedFields = listOf(ExtractedField("Amount", "153,50 kr")),
+            modifier = Modifier.padding(16.dp),
+        )
     }
 }

@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.domain.model
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -9,6 +10,7 @@ import kotlinx.serialization.Serializable
  * Defines when a rule should be applied based on notification properties. Not `@Serializable`:
  * see [Rule].
  */
+@Immutable
 data class RuleCondition(
     val id: String,
     /** For CONDITION type: what to match against */

@@ -113,6 +113,13 @@ internal interface RuleDao {
     @Query("SELECT package_name FROM rule_target_apps WHERE rule_id = :ruleId")
     suspend fun getTargetAppsForRule(ruleId: String): List<String>
 
+    /**
+     * Batched form of [getTargetAppsForRule] for a set of rules - avoids an N+1 fan-out when
+     * assembling multiple rules at once (e.g. [observeAll], [getAll], [getRulesForApp]).
+     */
+    @Query("SELECT * FROM rule_target_apps WHERE rule_id IN (:ruleIds)")
+    suspend fun getTargetAppsForRules(ruleIds: List<String>): List<RuleTargetAppEntity>
+
     @Transaction
     suspend fun saveRuleWithApps(rule: RuleEntity, apps: List<String>?) {
         insert(rule)
@@ -144,6 +151,13 @@ internal interface RuleDao {
     suspend fun getConditionsForRule(ruleId: String): List<RuleConditionEntity>
 
     /**
+     * Batched form of [getConditionsForRule] for a set of rules - avoids an N+1 fan-out when
+     * assembling multiple rules at once (e.g. [observeAll], [getAll], [getRulesForApp]).
+     */
+    @Query("SELECT * FROM rule_conditions WHERE rule_id IN (:ruleIds)")
+    suspend fun getConditionsForRules(ruleIds: List<String>): List<RuleConditionEntity>
+
+    /**
      * Get all conditions for a specific rule as a Flow.
      */
     @Query("SELECT * FROM rule_conditions WHERE rule_id = :ruleId")
@@ -170,19 +184,27 @@ internal interface RuleDao {
     suspend fun getActionsForRule(ruleId: String): List<RuleActionEntity>
 
     /**
+     * Batched form of [getActionsForRule] for a set of rules - avoids an N+1 fan-out when
+     * assembling multiple rules at once (e.g. [observeAll], [getAll], [getRulesForApp]).
+     */
+    @Query("SELECT * FROM rule_actions WHERE rule_id IN (:ruleIds)")
+    suspend fun getActionsForRules(ruleIds: List<String>): List<RuleActionEntity>
+
+    /**
      * Get all actions for a specific rule as a Flow.
      */
     @Query("SELECT * FROM rule_actions WHERE rule_id = :ruleId")
     fun observeActionsForRule(ruleId: String): Flow<List<RuleActionEntity>>
 
     /**
-     * Get all actions of a given [type] (e.g. `CREATE_ALARM`) across every rule. Used for
-     * config-level scans (e.g. checking whether a background image URI is still referenced by
-     * another alarm action) where `rule_actions.config` is an opaque JSON-string column with no
-     * indexed field to query against directly.
+     * Actions of a given [type] (e.g. `CREATE_ALARM`) whose opaque JSON `config` column contains
+     * [uri] as a substring, excluding [excludingActionId]. `config` has no indexed field to query
+     * against directly, so this `LIKE` narrows the candidate set to near-zero before the caller
+     * deserializes the (few) matches to confirm an exact URI match and guard against substring
+     * false positives.
      */
-    @Query("SELECT * FROM rule_actions WHERE type = :type")
-    suspend fun getActionsByType(type: String): List<RuleActionEntity>
+    @Query("SELECT * FROM rule_actions WHERE type = :type AND id != :excludingActionId AND config LIKE '%' || :uri || '%'")
+    suspend fun getActionsByTypeReferencingUri(type: String, uri: String, excludingActionId: String): List<RuleActionEntity>
 
     /**
      * Insert or update actions.
@@ -203,6 +225,13 @@ internal interface RuleDao {
      */
     @Query("SELECT * FROM rule_fields WHERE action_id = :actionId")
     suspend fun getFieldsForAction(actionId: String): List<RuleFieldEntity>
+
+    /**
+     * Batched form of [getFieldsForAction] for a set of actions - avoids an N+1 fan-out when
+     * assembling multiple rules at once (e.g. [observeAll], [getAll], [getRulesForApp]).
+     */
+    @Query("SELECT * FROM rule_fields WHERE action_id IN (:actionIds)")
+    suspend fun getFieldsForActions(actionIds: List<String>): List<RuleFieldEntity>
 
     /**
      * Insert or update fields.

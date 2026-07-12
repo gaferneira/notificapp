@@ -30,7 +30,7 @@ class AddFieldViewModelTest {
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = AddFieldViewModel()
+        viewModel = AddFieldViewModel(defaultDispatcher = testDispatcher)
     }
 
     @AfterEach

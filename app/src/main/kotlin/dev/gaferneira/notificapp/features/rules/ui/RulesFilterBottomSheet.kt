@@ -76,7 +76,7 @@ fun RulesFilterBottomSheet(
 
     // Initialize the ViewModel with current data
     LaunchedEffect(allRules, currentFilter) {
-        viewModel.initialize(allRules, currentFilter)
+        viewModel.onEvent(RulesFilterContract.UiEvent.Init(allRules, currentFilter))
     }
 
     // Collect effects and handle them internally

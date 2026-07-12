@@ -22,4 +22,7 @@ enum class DispatcherType {
 
     /** For IO operations (disk, network) */
     IO,
+
+    /** For main-thread work (UI updates, effect dispatch) */
+    Main,
 }

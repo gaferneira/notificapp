@@ -15,6 +15,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -22,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ExtractedField
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.NotificationPreviewCard
 
 /**
@@ -107,8 +109,10 @@ private fun BacktestResultCard(
     fields: List<RuleField>,
     modifier: Modifier = Modifier,
 ) {
-    val extractedFields = fields.mapNotNull { field ->
-        result.extractedData[field.id]?.let { value -> field.name to value }
+    val extractedFields = remember(fields, result.extractedData) {
+        fields.mapNotNull { field ->
+            result.extractedData[field.id]?.let { value -> ExtractedField(field.name, value) }
+        }
     }
     NotificationPreviewCard(
         appName = result.notification.appName,

@@ -8,6 +8,7 @@ import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.domain.model.SelectedApp
+import dev.gaferneira.notificapp.domain.model.getThrottleResetAt
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository

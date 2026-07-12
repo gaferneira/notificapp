@@ -1,17 +1,15 @@
 package dev.gaferneira.notificapp.features.settings.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEffect
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEvent
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiState
-import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
@@ -27,7 +25,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
+    private val listenerStatus: NotificationListenerStatusProvider,
     private val selectedAppRepository: SelectedAppRepository,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
@@ -65,7 +63,7 @@ class SettingsViewModel @Inject constructor(
     private fun checkListenerStatus() {
         viewModelScope.launch(ioDispatcher) {
             try {
-                val isListenerActive = isNotificationListenerEnabled(context)
+                val isListenerActive = listenerStatus.isEnabled()
                 setState { copy(isNotificationListenerActive = isListenerActive) }
             } catch (e: SecurityException) {
                 Timber.e(e, "Failed to check notification listener status")
@@ -80,7 +78,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // Check notification listener status (one-time check)
-                val isListenerActive = isNotificationListenerEnabled(context)
+                val isListenerActive = listenerStatus.isEnabled()
                 setState {
                     copy(
                         isNotificationListenerActive = isListenerActive,

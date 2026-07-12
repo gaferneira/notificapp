@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.inbox.contract
 
+import androidx.compose.runtime.Immutable
 import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
@@ -19,6 +20,7 @@ data class InboxUiState(
 /**
  * UI representation of a notification item.
  */
+@Immutable
 data class NotificationItem(
     val id: String,
     val appName: String,

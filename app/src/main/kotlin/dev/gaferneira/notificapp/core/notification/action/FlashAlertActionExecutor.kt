@@ -4,6 +4,8 @@ import dev.gaferneira.notificapp.domain.action.ActionExecutor
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.getFlashCount
+import dev.gaferneira.notificapp.domain.model.getFlashDurationMs
 import javax.inject.Inject
 
 /**

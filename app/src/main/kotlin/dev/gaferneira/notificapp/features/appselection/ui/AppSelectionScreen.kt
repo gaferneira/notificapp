@@ -580,7 +580,7 @@ private fun AppListItem(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
                         modifier = Modifier.padding(4.dp),
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
             }

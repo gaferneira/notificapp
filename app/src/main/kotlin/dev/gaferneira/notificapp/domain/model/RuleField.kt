@@ -1,11 +1,13 @@
 package dev.gaferneira.notificapp.domain.model
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
  * Field to extract from a notification.
  */
+@Immutable
 @Serializable
 data class RuleField(
     val id: String,

@@ -295,7 +295,7 @@ class AlarmViewModelTest {
             // Given: the repository reports the uri is still referenced by another alarm action
             coEvery {
                 ruleRepository.isImageUriReferencedByOtherAlarmAction("content://media/bg.jpg", "alarm-1")
-            } returns true
+            } returns Result.success(true)
 
             // When: the ViewModel's suspend wrapper is called (as AlarmBottomSheet would)
             val result = viewModel.isImageUriReferencedByOtherAlarmAction("content://media/bg.jpg", "alarm-1")
@@ -310,13 +310,28 @@ class AlarmViewModelTest {
             // Given: no other alarm action references the uri
             coEvery {
                 ruleRepository.isImageUriReferencedByOtherAlarmAction("content://media/bg.jpg", "alarm-1")
-            } returns false
+            } returns Result.success(false)
 
             // When: checking
             val result = viewModel.isImageUriReferencedByOtherAlarmAction("content://media/bg.jpg", "alarm-1")
 
             // Then: false is returned, so the caller is free to release the grant
             result shouldBe false
+        }
+
+        @Test
+        fun `fails closed and reports the uri as referenced when the repository call fails`() = runTest(testDispatcher) {
+            // Given: the repository check fails (e.g. malformed config JSON, DB error)
+            coEvery {
+                ruleRepository.isImageUriReferencedByOtherAlarmAction("content://media/bg.jpg", "alarm-1")
+            } returns Result.failure(IllegalStateException("db error"))
+
+            // When: checking
+            val result = viewModel.isImageUriReferencedByOtherAlarmAction("content://media/bg.jpg", "alarm-1")
+
+            // Then: true is returned, so the caller does not wrongly release a grant that may
+            // still be in use
+            result shouldBe true
         }
     }
 }

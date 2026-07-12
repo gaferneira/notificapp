@@ -3,20 +3,15 @@ package dev.gaferneira.notificapp.features.rules.viewmodel
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec
 import dev.gaferneira.notificapp.domain.model.ActionType
-import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestRule
+import dev.gaferneira.notificapp.testutil.fakes.FakeRuleRepository
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -31,14 +26,13 @@ class RulesViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
-    private lateinit var ruleRepository: RuleRepository
+    private lateinit var ruleRepository: FakeRuleRepository
     private lateinit var viewModel: RulesViewModel
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        ruleRepository = mockk()
-        every { ruleRepository.observeAllRules() } returns MutableStateFlow(emptyList())
+        ruleRepository = FakeRuleRepository()
         viewModel = RulesViewModel(ruleRepository)
         testDispatcher.scheduler.advanceUntilIdle()
     }
@@ -55,7 +49,7 @@ class RulesViewModelTest {
         fun `export sends a ShareRule effect with the rule's encoded JSON`() = runTest(testDispatcher) {
             // Given: an existing rule
             val rule = createTestRule(id = "rule-1", name = "Bank payment")
-            coEvery { ruleRepository.getRule("rule-1") } returns Result.success(rule)
+            ruleRepository.saveRule(rule)
 
             viewModel.effect.test {
                 // When: exporting it
@@ -70,8 +64,7 @@ class RulesViewModelTest {
 
         @Test
         fun `export of a missing rule sends ShowError`() = runTest(testDispatcher) {
-            // Given: no rule with this id exists
-            coEvery { ruleRepository.getRule("missing") } returns Result.success(null)
+            // Given: no rule with this id exists (fake starts empty)
 
             viewModel.effect.test {
                 // When: exporting it
@@ -139,21 +132,20 @@ class RulesViewModelTest {
         }
 
         @Test
-        fun `confirming import saves the preview rule and clears it`() = runTest(testDispatcher) {
+        fun `confirming import persists the preview and it appears in the observed stream`() = runTest(testDispatcher) {
             // Given: a decoded import preview
             val rule = createTestRule(id = "rule-1", name = "Bank payment")
             viewModel.onEvent(RulesEvent.OnRuleTextReceived(RuleJsonCodec.encode(rule)))
             val preview = viewModel.uiState.value.importPreview
             preview.shouldNotBeNull()
-            coEvery { ruleRepository.saveRule(preview) } returns Result.success(Unit)
 
             // When: confirming the import
             viewModel.onEvent(RulesEvent.OnImportConfirmed)
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // Then: the preview rule is saved and the preview clears
+            // Then: the preview clears and the rule is persisted, visible via the observed stream
             viewModel.uiState.value.importPreview shouldBe null
-            coVerify(exactly = 1) { ruleRepository.saveRule(preview) }
+            ruleRepository.currentRules().single().name shouldBe "Bank payment"
         }
 
         @Test
@@ -167,7 +159,7 @@ class RulesViewModelTest {
 
             // Then: the preview clears and nothing is saved
             viewModel.uiState.value.importPreview shouldBe null
-            coVerify(exactly = 0) { ruleRepository.saveRule(any()) }
+            ruleRepository.currentRules() shouldBe emptyList()
         }
 
         @Test

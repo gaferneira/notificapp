@@ -1,7 +1,7 @@
 package dev.gaferneira.notificapp.core.ui.navigation
 
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,13 +24,15 @@ import javax.inject.Singleton
  * }
  * ```
  *
- * Usage in MainActivity:
+ * Usage in MainActivity (lifecycle-gated so commands aren't collected while stopped):
  * ```kotlin
- * LaunchedEffect(Unit) {
- *     navigationHandler.navigationFlow.collect { command ->
- *         when (command) {
- *             is NavigationCommand.Navigate -> navigator.navigate(command.screen)
- *             is NavigationCommand.GoBack -> navigator.goBack()
+ * LaunchedEffect(navigationHandler, navigator, lifecycleOwner) {
+ *     lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+ *         navigationHandler.navigationFlow.collect { command ->
+ *             when (command) {
+ *                 is NavigationCommand.Navigate -> navigator.navigate(command.screen)
+ *                 is NavigationCommand.GoBack -> navigator.goBack()
+ *             }
  *         }
  *     }
  * }
@@ -38,8 +40,12 @@ import javax.inject.Singleton
  */
 @Singleton
 class NavigationHandler @Inject constructor() {
-    private val _navigationFlow = MutableSharedFlow<NavigationCommand>(extraBufferCapacity = 1)
-    val navigationFlow = _navigationFlow.asSharedFlow()
+    // A Channel (unlike a SharedFlow with replay = 0) suspends/buffers a send when no collector
+    // is attached instead of silently dropping it - commands emitted during a configuration
+    // change or between MainActivity's LaunchedEffect restarts are delivered once collection
+    // resumes, rather than vanishing into a frames-wide gap with no collector subscribed.
+    private val _navigationFlow = Channel<NavigationCommand>(Channel.BUFFERED)
+    val navigationFlow = _navigationFlow.receiveAsFlow()
 
     /**
      * Navigate to a screen.
@@ -47,14 +53,14 @@ class NavigationHandler @Inject constructor() {
      * @param screen The destination screen
      */
     suspend fun navigate(screen: Screen) {
-        _navigationFlow.emit(NavigationCommand.Navigate(screen))
+        _navigationFlow.send(NavigationCommand.Navigate(screen))
     }
 
     /**
      * Navigate back.
      */
     suspend fun goBack() {
-        _navigationFlow.emit(NavigationCommand.GoBack)
+        _navigationFlow.send(NavigationCommand.GoBack)
     }
 
     /**
@@ -63,7 +69,7 @@ class NavigationHandler @Inject constructor() {
      * @param screen The destination screen
      */
     suspend fun clearAndNavigate(screen: Screen) {
-        _navigationFlow.emit(NavigationCommand.ClearAndNavigate(screen))
+        _navigationFlow.send(NavigationCommand.ClearAndNavigate(screen))
     }
 }
 

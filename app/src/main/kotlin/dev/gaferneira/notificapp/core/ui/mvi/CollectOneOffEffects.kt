@@ -7,9 +7,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
@@ -31,15 +29,11 @@ fun <UiEffect> CollectOneOffEffects(
 ) {
     LaunchedEffect(effectFlow, lifecycleOwner, minActiveState) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(minActiveState) {
-            // Collect effects on Dispatchers.Main.immediate for fastest possible processing
-            // and to reduce the window for event loss.[1]
-            withContext(Dispatchers.Main.immediate) {
-                effectFlow.collect { effect ->
-                    try {
-                        onEffect(effect)
-                    } catch (e: Exception) {
-                        Timber.e(e, "Error handling UI effect: $effect")
-                    }
+            effectFlow.collect { effect ->
+                try {
+                    onEffect(effect)
+                } catch (e: Exception) {
+                    Timber.e(e, "Error handling UI effect: $effect")
                 }
             }
         }

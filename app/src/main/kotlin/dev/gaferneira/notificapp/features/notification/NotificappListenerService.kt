@@ -9,12 +9,12 @@ import dev.gaferneira.notificapp.core.notification.NotificationNormalizer
 import dev.gaferneira.notificapp.core.notification.ProcessNotificationUseCase
 import dev.gaferneira.notificapp.core.notification.action.SystemNotificationController
 import dev.gaferneira.notificapp.core.notification.action.SystemNotificationControllerHolder
-import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -49,9 +49,9 @@ class NotificappListenerService :
     private lateinit var serviceScope: CoroutineScope
 
     // Written from a coroutine on serviceScope, read from onNotificationPosted() on the system's
-    // binder thread - @Volatile ensures the binder thread sees the latest published list.
+    // binder thread - @Volatile ensures the binder thread sees the latest published set.
     @Volatile
-    private var enabledApps: List<SelectedApp> = emptyList()
+    private var enabledPackageNames: Set<String> = emptySet()
 
     override fun onCreate() {
         super.onCreate()
@@ -60,10 +60,12 @@ class NotificappListenerService :
 
         // Observe enabled apps
         serviceScope.launch {
-            selectedAppRepository.observeEnabledApps().collect { apps ->
-                enabledApps = apps
-                Timber.d("Updated enabled apps: ${apps.size} apps")
-            }
+            selectedAppRepository.observeEnabledApps()
+                .catch { e -> Timber.e(e, "Enabled-apps observation failed; keeping last known list") }
+                .collect { apps ->
+                    enabledPackageNames = apps.mapTo(mutableSetOf()) { it.packageName }
+                    Timber.d("Updated enabled apps: ${apps.size} apps")
+                }
         }
     }
 
@@ -134,7 +136,7 @@ class NotificappListenerService :
     /**
      * Check if an app is enabled for monitoring.
      */
-    private fun isAppEnabled(packageName: String): Boolean = enabledApps.any { it.packageName == packageName && it.isEnabled }
+    private fun isAppEnabled(packageName: String): Boolean = packageName in enabledPackageNames
 
     /**
      * Determine if a notification should be skipped.

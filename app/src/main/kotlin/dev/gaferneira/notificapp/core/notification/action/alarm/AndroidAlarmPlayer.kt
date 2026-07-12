@@ -34,8 +34,9 @@ class AndroidAlarmPlayer @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : AlarmPlayer {
 
-    private val audioManager: AudioManager
-        get() = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val audioManager: AudioManager by lazy {
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
 
     private val alarmAudioAttributes: AudioAttributes = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_ALARM)

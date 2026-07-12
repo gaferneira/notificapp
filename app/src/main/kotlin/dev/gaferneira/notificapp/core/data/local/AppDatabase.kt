@@ -11,6 +11,7 @@ import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
 import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
 import dev.gaferneira.notificapp.core.data.local.entity.NotificationEntity
+import dev.gaferneira.notificapp.core.data.local.entity.NotificationFtsEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleConditionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleEntity
@@ -33,8 +34,9 @@ import dev.gaferneira.notificapp.core.data.local.entity.SelectedAppEntity
         RuleActionEntity::class,
         RuleExecutionEntity::class,
         ExtractedFieldValueEntity::class,
+        NotificationFtsEntity::class,
     ],
-    version = 1,
+    version = AppDatabase.CURRENT_VERSION,
     exportSchema = true,
 )
 @TypeConverters(RuleTypeConverters::class)
@@ -44,4 +46,9 @@ internal abstract class AppDatabase : RoomDatabase() {
     abstract fun ruleDao(): RuleDao
     abstract fun ruleExecutionDao(): RuleExecutionDao
     abstract fun extractedFieldValueDao(): ExtractedFieldValueDao
+
+    companion object {
+        /** Single source of truth for the `@Database(version = ...)` above, for tests/tooling. */
+        const val CURRENT_VERSION = 1
+    }
 }

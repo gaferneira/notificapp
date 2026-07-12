@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +33,10 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.SnoozeMode
+import dev.gaferneira.notificapp.domain.model.getSnoozeDurationMinutes
+import dev.gaferneira.notificapp.domain.model.getSnoozeMode
+import dev.gaferneira.notificapp.domain.model.getSnoozeSchedule
+import dev.gaferneira.notificapp.domain.model.getThrottleWindowMinutes
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.util.formatDurationMinutes
 
@@ -215,10 +220,11 @@ private fun ActionCardControls(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "DoSection Light")
+@Preview(showBackground = true, name = "DoSection Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun DoSectionPreview() {
-    NotificappTheme {
+    NotificappTheme(dynamicColor = false) {
         DoSection(
             actions = listOf(
                 RuleAction(

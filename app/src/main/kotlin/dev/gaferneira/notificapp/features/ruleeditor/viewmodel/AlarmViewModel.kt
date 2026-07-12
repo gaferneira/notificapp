@@ -12,6 +12,18 @@ import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_SOUND_ENABLED
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_VIBRATION_ENABLED
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.VibrationPattern
+import dev.gaferneira.notificapp.domain.model.getAlarmBackgroundImageUri
+import dev.gaferneira.notificapp.domain.model.getAlarmBackgroundPresetId
+import dev.gaferneira.notificapp.domain.model.getAlarmBackgroundType
+import dev.gaferneira.notificapp.domain.model.getAlarmSnoozeDurationMinutes
+import dev.gaferneira.notificapp.domain.model.getAlarmSnoozeMaxCount
+import dev.gaferneira.notificapp.domain.model.getAlarmSoundUri
+import dev.gaferneira.notificapp.domain.model.getAlarmVibrationPattern
+import dev.gaferneira.notificapp.domain.model.isAlarmBackgroundImageDark
+import dev.gaferneira.notificapp.domain.model.isAlarmFullScreenEnabled
+import dev.gaferneira.notificapp.domain.model.isAlarmSnoozeEnabled
+import dev.gaferneira.notificapp.domain.model.isAlarmSoundEnabled
+import dev.gaferneira.notificapp.domain.model.isAlarmVibrationEnabled
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AlarmContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AlarmContract.UiEvent
@@ -90,8 +102,11 @@ class AlarmViewModel @Inject constructor(
      * through [onEvent]/`UiEvent`) so the Composable can await its result directly, keeping the
      * actual `contentResolver` grant release entirely in the Composable - the ViewModel never
      * touches `Context`.
+     *
+     * On repository failure, fails closed (reports the URI as still referenced) so the caller
+     * doesn't wrongly release a persistable URI grant that may still be in use.
      */
-    suspend fun isImageUriReferencedByOtherAlarmAction(uri: String, excludingActionId: String): Boolean = ruleRepository.isImageUriReferencedByOtherAlarmAction(uri, excludingActionId)
+    suspend fun isImageUriReferencedByOtherAlarmAction(uri: String, excludingActionId: String): Boolean = ruleRepository.isImageUriReferencedByOtherAlarmAction(uri, excludingActionId).getOrDefault(true)
 
     /**
      * Replacing a picked-but-unsaved uri from earlier in this same sheet session: its grant was

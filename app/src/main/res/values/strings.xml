@@ -105,6 +105,12 @@
     <string name="error_test_extraction">No sample notification available</string>
     <string name="error_fix_validation">Please fix validation errors</string>
 
+    <!-- Notification Detail -->
+    <string name="notification_detail_error_load_notification">Failed to load notification</string>
+    <string name="notification_detail_error_not_found">Notification not found</string>
+    <string name="notification_detail_error_load">Failed to load notification details</string>
+    <string name="notification_detail_error_refresh">Failed to refresh rules</string>
+
     <!-- Filter Bottom Sheet -->
     <string name="filter_rules_title">Filter &amp; Sort</string>
     <string name="filter_inbox_title">Filter Notifications</string>

@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,6 +60,7 @@ import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ExtractedField
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.NotificationPreviewCard
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.confirmLabelFor
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.ExtractDataViewModel
@@ -285,11 +287,13 @@ private fun SampleNotificationPreview(
     modifier: Modifier = Modifier,
 ) {
     val noMatchLabel = stringResource(R.string.extract_preview_no_match)
-    val extractedFields = fields.mapNotNull { field ->
-        when (val result = previewResults[field.id]) {
-            is PreviewResult.Success -> field.name to result.value
-            is PreviewResult.Failure -> field.name to noMatchLabel
-            null -> null
+    val extractedFields = remember(fields, previewResults, noMatchLabel) {
+        fields.mapNotNull { field ->
+            when (val result = previewResults[field.id]) {
+                is PreviewResult.Success -> ExtractedField(field.name, result.value)
+                is PreviewResult.Failure -> ExtractedField(field.name, noMatchLabel)
+                null -> null
+            }
         }
     }
     Box(modifier = modifier.fillMaxWidth()) {

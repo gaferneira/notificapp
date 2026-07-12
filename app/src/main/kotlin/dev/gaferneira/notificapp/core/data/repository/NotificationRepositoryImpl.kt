@@ -5,6 +5,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import dev.gaferneira.notificapp.core.common.toFailureResult
+import dev.gaferneira.notificapp.core.data.local.dao.FtsQuerySanitizer
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.entity.NotificationEntity
 import dev.gaferneira.notificapp.core.di.Dispatcher
@@ -85,7 +86,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
             ),
             pagingSourceFactory = {
                 dao.searchFilteredPaged(
-                    query = query,
+                    ftsQuery = FtsQuerySanitizer.toMatchExpression(query),
                     packageNames = if (hasPackageFilter) packageNames else emptyList(),
                     hasPackageFilter = hasPackageFilter,
                     isProcessed = isProcessed ?: false,
@@ -136,7 +137,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
 
     override suspend fun searchNotifications(query: String): Result<List<Notification>> = withContext(ioDispatcher) {
         try {
-            val entities = dao.search(query)
+            val entities = dao.search(FtsQuerySanitizer.toMatchExpression(query))
             Result.success(entities.map { it.toModel() })
         } catch (e: Exception) {
             Timber.e(e, "Failed to search notifications: $query")
@@ -225,17 +226,8 @@ internal class NotificationRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun observeAppsWithNotifications(): Flow<List<AppInfo>> = dao.getUniquePackageNames()
-        .map { packageNames ->
-            packageNames.map { packageName ->
-                // Get the most recent app name for this package
-                val appName = dao.getAppNameForPackage(packageName) ?: packageName
-                AppInfo(
-                    packageName = packageName,
-                    name = appName,
-                )
-            }.sortedBy { it.name }
-        }
+    override fun observeAppsWithNotifications(): Flow<List<AppInfo>> = dao.observeAppsWithLatestName()
+        .map { rows -> rows.map { AppInfo(packageName = it.packageName, name = it.appName) } }
         .flowOn(ioDispatcher)
 }
 

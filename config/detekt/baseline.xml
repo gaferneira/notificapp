@@ -31,7 +31,6 @@
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationCard( notification: NotificationItem, onClick: () -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationColumn( notifications: LazyPagingItems&lt;InboxListItem&gt;, onNotificationClick: (String) -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Preview(showBackground = true, name = "Inbox Preview - Direct Items") @Composable fun PreviewInboxScreenDirect()</ID>
-    <ID>LongMethod:MainActivity.kt$@Composable fun Notificapp( repository: SelectedAppRepository = hiltViewModel&lt;MainViewModel&gt;().repository, navigationHandler: NavigationHandler, )</ID>
     <ID>LongMethod:MatchingLogicBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MatchingLogicBottomSheet( modifier: Modifier = Modifier, viewModel: MatchingLogicViewModel = hiltViewModel(), initialCondition: RuleCondition? = null, onConditionSaved: (RuleCondition) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
     <ID>LongMethod:NotificationDetailScreen.kt$@Composable private fun NotificationDataCard(notification: Notification)</ID>
     <ID>LongMethod:NotificationDetailScreen.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun ExecutionCard(execution: ExecutionWithDetails)</ID>
@@ -65,7 +64,6 @@
     <ID>SpreadOperator:UiText.kt$UiText$(id = id, *args)</ID>
     <ID>SpreadOperator:UiText.kt$UiText$(id, *args)</ID>
     <ID>SwallowedException:InboxScreen.kt$e: Exception</ID>
-    <ID>SwallowedException:MainActivity.kt$e: Exception</ID>
     <ID>SwallowedException:NotificationDetailScreen.kt$e: Exception</ID>
     <ID>SwallowedException:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$e: Exception</ID>
     <ID>SwallowedException:RuleMatcher.kt$RuleMatcher$e: Exception</ID>
@@ -76,7 +74,6 @@
     <ID>TooGenericExceptionCaught:CollectOneOffEffects.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FieldExtractor.kt$FieldExtractor$e: Exception</ID>
     <ID>TooGenericExceptionCaught:InboxScreen.kt$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:MainActivity.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificappListenerService.kt$NotificappListenerService$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificationDetailScreen.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificationDetailViewModel.kt$NotificationDetailViewModel$e: Exception</ID>
@@ -86,7 +83,6 @@
     <ID>TooGenericExceptionCaught:Resource.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RuleExecutionRepositoryImpl.kt$RuleExecutionRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RuleMatcher.kt$RuleMatcher$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:RuleRepositoryImpl.kt$RuleRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RulesScreen.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RulesViewModel.kt$RulesViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SelectedAppRepositoryImpl.kt$SelectedAppRepositoryImpl$e: Exception</ID>

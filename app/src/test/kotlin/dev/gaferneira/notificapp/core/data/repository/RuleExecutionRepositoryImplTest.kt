@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.data.repository
 
+import app.cash.turbine.test
 import dev.gaferneira.notificapp.core.data.local.AppDatabase
 import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
@@ -7,7 +8,10 @@ import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
@@ -15,6 +19,7 @@ import org.junit.jupiter.api.Test
 private const val ACTION_ID = "action-1"
 private const val PACKAGE_NAME = "com.test.app"
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class RuleExecutionRepositoryImplTest {
 
     private val testDispatcher = StandardTestDispatcher()
@@ -101,5 +106,17 @@ class RuleExecutionRepositoryImplTest {
 
         // Then: the failure is wrapped in Result.failure rather than thrown
         result.isFailure shouldBe true
+    }
+
+    @Test
+    fun `observeExecutionsForNotification maps every entity to a domain model`() = runTest(testDispatcher) {
+        every { ruleExecutionDao.observeExecutionsForNotification("notif-e1") } returns
+            flowOf(listOf(executionEntity("e1", createdAt = 1_000L, actionOutcomes = null)))
+        val repository = repository()
+
+        repository.observeExecutionsForNotification("notif-e1").test {
+            awaitItem().single().id shouldBe "e1"
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 }

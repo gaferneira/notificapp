@@ -20,6 +20,8 @@ import dev.gaferneira.notificapp.domain.model.MAX_FLASH_DURATION_MS
 import dev.gaferneira.notificapp.domain.model.MIN_FLASH_COUNT
 import dev.gaferneira.notificapp.domain.model.MIN_FLASH_DURATION_MS
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.getFlashCount
+import dev.gaferneira.notificapp.domain.model.getFlashDurationMs
 
 /**
  * Composable for configuring the flash alert action: number of flashes and the duration of each

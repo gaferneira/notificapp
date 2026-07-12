@@ -2,12 +2,14 @@ package dev.gaferneira.notificapp.features.notificationdetail.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
-import dev.gaferneira.notificapp.core.notification.ProcessNotificationUseCase
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
+import dev.gaferneira.notificapp.domain.action.RuleReEvaluator
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
@@ -35,7 +37,7 @@ import javax.inject.Inject
  * @param notificationRepository Repository for notifications
  * @param ruleExecutionRepository Repository for rule executions
  * @param ruleRepository Repository for rules (to get rule names)
- * @param processNotificationUseCase Use case for re-evaluating rules against a notification
+ * @param ruleReEvaluator Seam for re-evaluating rules against a notification without dispatching actions
  * @param navigationHandler Handler for navigation commands
  * @param ioDispatcher Dispatcher for IO operations
  */
@@ -44,7 +46,7 @@ class NotificationDetailViewModel @Inject constructor(
     private val notificationRepository: NotificationRepository,
     private val ruleExecutionRepository: RuleExecutionRepository,
     private val ruleRepository: RuleRepository,
-    private val processNotificationUseCase: ProcessNotificationUseCase,
+    private val ruleReEvaluator: RuleReEvaluator,
     private val navigationHandler: NavigationHandler,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
@@ -113,13 +115,13 @@ class NotificationDetailViewModel @Inject constructor(
                 val notificationResult = notificationRepository.getNotification(id)
 
                 if (notificationResult.isFailure) {
-                    setState { copy(isLoading = false, error = "Failed to load notification") }
+                    setState { copy(isLoading = false, error = UiText.StringResource(R.string.notification_detail_error_load_notification)) }
                     return@launch
                 }
 
                 val notification = notificationResult.getOrNull()
                 if (notification == null) {
-                    setState { copy(isLoading = false, error = "Notification not found") }
+                    setState { copy(isLoading = false, error = UiText.StringResource(R.string.notification_detail_error_not_found)) }
                     return@launch
                 }
 
@@ -127,7 +129,7 @@ class NotificationDetailViewModel @Inject constructor(
                 observeExecutions(notification)
             } catch (e: Exception) {
                 Timber.e(e, "Failed to load notification detail")
-                setState { copy(isLoading = false, error = "Failed to load: ${e.message}") }
+                setState { copy(isLoading = false, error = UiText.StringResource(R.string.notification_detail_error_load)) }
             }
         }
     }
@@ -228,27 +230,29 @@ class NotificationDetailViewModel @Inject constructor(
                 // 1. Get the notification
                 val notificationResult = notificationRepository.getNotification(id)
                 if (notificationResult.isFailure) {
-                    setState { copy(isLoading = false, error = "Failed to load notification") }
+                    setState { copy(isLoading = false, error = UiText.StringResource(R.string.notification_detail_error_load_notification)) }
                     return@launch
                 }
                 val notification = notificationResult.getOrNull()
                 if (notification == null) {
-                    setState { copy(isLoading = false, error = "Notification not found") }
+                    setState { copy(isLoading = false, error = UiText.StringResource(R.string.notification_detail_error_not_found)) }
                     return@launch
                 }
 
                 // 2. Delete existing executions for this notification and reset its counter
                 val deleteResult = ruleExecutionRepository.deleteExecutionsForNotification(id)
                 if (deleteResult.isFailure) {
-                    setState { copy(isLoading = false, error = "Failed to refresh: ${deleteResult.exceptionOrNull()?.message}") }
+                    Timber.e(deleteResult.exceptionOrNull(), "Failed to delete executions for notification $id")
+                    setState { copy(isLoading = false, error = UiText.StringResource(R.string.notification_detail_error_refresh)) }
                     return@launch
                 }
 
                 // 3. Re-run rule evaluation and persist the new executions, without re-dispatching
                 // actions - refresh recomputes matches/extractions, it doesn't replay side effects
-                val evaluateResult = processNotificationUseCase.evaluateAndPersist(notification, executeActions = false)
+                val evaluateResult = ruleReEvaluator.reEvaluate(notification)
                 if (evaluateResult.isFailure) {
-                    setState { copy(isLoading = false, error = "Failed to refresh: ${evaluateResult.exceptionOrNull()?.message}") }
+                    Timber.e(evaluateResult.exceptionOrNull(), "Failed to re-evaluate rules for notification $id")
+                    setState { copy(isLoading = false, error = UiText.StringResource(R.string.notification_detail_error_refresh)) }
                     return@launch
                 }
 
@@ -265,7 +269,7 @@ class NotificationDetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Timber.e(e, "Failed to refresh rules for notification $id")
-                setState { copy(isLoading = false, error = "Failed to refresh: ${e.message}") }
+                setState { copy(isLoading = false, error = UiText.StringResource(R.string.notification_detail_error_refresh)) }
             }
         }
     }

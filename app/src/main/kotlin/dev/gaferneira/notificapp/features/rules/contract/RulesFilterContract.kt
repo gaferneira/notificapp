@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.rules.contract
 
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.Rule
 
 /**
  * MVI Contract for the FilterBottomSheet.
@@ -33,8 +34,8 @@ object RulesFilterContract {
      * UI Events from user interactions.
      */
     sealed class UiEvent {
-        /** Initialize with current filter state */
-        data class Init(val currentFilter: RuleFilter) : UiEvent()
+        /** Initialize with current filter state and the full rules list (to derive filter options) */
+        data class Init(val allRules: List<Rule>, val currentFilter: RuleFilter) : UiEvent()
 
         /** Toggle a category selection */
         data class OnCategoryToggle(val category: String) : UiEvent()

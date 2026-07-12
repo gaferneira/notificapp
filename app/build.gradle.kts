@@ -59,6 +59,13 @@ android {
             it.useJUnitPlatform()
         }
     }
+
+    sourceSets {
+        getByName("androidTest") {
+            // Exported Room schemas, so MigrationTestHelper can validate migrations against them.
+            assets.srcDirs("$projectDir/schemas")
+        }
+    }
 }
 
 room {
@@ -97,8 +104,9 @@ dependencies {
     // Room Database
     implementation(libs.bundles.room)
     ksp(libs.room.compiler)
-    // Optional: SQLCipher for encrypted database
-    // implementation(libs.sqlcipher.android)
+    // SQLCipher for encrypted database (DATA-02)
+    implementation(libs.sqlcipher.android)
+    implementation(libs.androidx.sqlite)
 
     // DataStore
     implementation(libs.bundles.datastore)

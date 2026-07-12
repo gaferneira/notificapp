@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "4d08f39b2c470ab4001f36457912ce72",
+    "identityHash": "cbb2b24f4dd0108f78029b99dfaf06a1",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -721,11 +721,54 @@
             ]
           }
         ]
+      },
+      {
+        "tableName": "notifications_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`title` TEXT, `content` TEXT, `raw_content` TEXT NOT NULL, content=`notifications`)",
+        "fields": [
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "content",
+            "columnName": "content",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rawContent",
+            "columnName": "raw_content",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": []
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "simple",
+          "tokenizerArgs": [],
+          "contentTable": "notifications",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_notifications_fts_BEFORE_UPDATE BEFORE UPDATE ON `notifications` BEGIN DELETE FROM `notifications_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_notifications_fts_BEFORE_DELETE BEFORE DELETE ON `notifications` BEGIN DELETE FROM `notifications_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_notifications_fts_AFTER_UPDATE AFTER UPDATE ON `notifications` BEGIN INSERT INTO `notifications_fts`(`docid`, `title`, `content`, `raw_content`) VALUES (NEW.`rowid`, NEW.`title`, NEW.`content`, NEW.`raw_content`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_notifications_fts_AFTER_INSERT AFTER INSERT ON `notifications` BEGIN INSERT INTO `notifications_fts`(`docid`, `title`, `content`, `raw_content`) VALUES (NEW.`rowid`, NEW.`title`, NEW.`content`, NEW.`raw_content`); END"
+        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4d08f39b2c470ab4001f36457912ce72')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'cbb2b24f4dd0108f78029b99dfaf06a1')"
     ]
   }
 }
