@@ -209,79 +209,85 @@ object FieldExtractor {
         }
     }
 
+    /**
+     * Walks [content] tracking brace/bracket nesting and string state, invoking [onDelimiter] for
+     * each top-level `:` or `,`. Stops early once [onDelimiter] returns `true`.
+     */
+    private fun scanTopLevel(content: String, onDelimiter: (index: Int, char: Char) -> Boolean) {
+        var depth = 0
+        var inString = false
+        var escapeNext = false
+
+        for (i in content.indices) {
+            val char = content[i]
+            when {
+                escapeNext -> escapeNext = false
+                char == '\\' -> escapeNext = true
+                char == '"' -> inString = !inString
+                inString -> Unit
+                char == '{' || char == '[' -> depth++
+                char == '}' || char == ']' -> depth--
+                depth == 0 && (char == ':' || char == ',') -> if (onDelimiter(i, char)) return
+            }
+        }
+    }
+
     /** Scans a `{...}` span for [key] at its top level, returning the raw unparsed value text. */
     private fun findObjectValue(json: String, key: String): String? {
         val content = json.removeSurrounding("{", "}").trim()
         if (content.isEmpty()) return null
 
-        var braceCount = 0
-        var bracketCount = 0
-        var inString = false
-        var escapeNext = false
         var segmentStart = 0
         var currentKey: String? = null
+        var result: String? = null
 
-        fun captureIfMatch(end: Int) = if (currentKey == key) content.substring(segmentStart, end).trim() else null
-
-        for (i in content.indices) {
-            val char = content[i]
-            when {
-                escapeNext -> escapeNext = false
-                char == '\\' -> escapeNext = true
-                char == '"' -> inString = !inString
-                inString -> Unit
-                char == '{' -> braceCount++
-                char == '}' -> braceCount--
-                char == '[' -> bracketCount++
-                char == ']' -> bracketCount--
-                char == ':' && braceCount == 0 && bracketCount == 0 && currentKey == null -> {
-                    currentKey = content.substring(segmentStart, i).trim().removeSurrounding("\"")
-                    segmentStart = i + 1
-                }
-                char == ',' && braceCount == 0 && bracketCount == 0 -> {
-                    captureIfMatch(i)?.let { return it }
+        scanTopLevel(content) { i, char ->
+            if (char == ':' && currentKey == null) {
+                currentKey = content.substring(segmentStart, i).trim().removeSurrounding("\"")
+                segmentStart = i + 1
+                false
+            } else if (char == ',') {
+                if (currentKey == key) {
+                    result = content.substring(segmentStart, i).trim()
+                    true
+                } else {
                     currentKey = null
                     segmentStart = i + 1
+                    false
                 }
+            } else {
+                false
             }
         }
 
-        return captureIfMatch(content.length)
+        return result ?: if (currentKey == key) content.substring(segmentStart).trim() else null
     }
 
     /** Scans a `[...]` span for the element at [index], returning the raw unparsed value text. */
     private fun findArrayValue(json: String, index: Int): String? {
-        if (index < 0) return null
         val content = json.removeSurrounding("[", "]").trim()
-        if (content.isEmpty()) return null
+        if (index < 0 || content.isEmpty()) return null
 
-        var braceCount = 0
-        var bracketCount = 0
-        var inString = false
-        var escapeNext = false
         var segmentStart = 0
         var currentIndex = 0
+        var result: String? = null
 
-        for (i in content.indices) {
-            val char = content[i]
-            when {
-                escapeNext -> escapeNext = false
-                char == '\\' -> escapeNext = true
-                char == '"' -> inString = !inString
-                inString -> Unit
-                char == '{' -> braceCount++
-                char == '}' -> braceCount--
-                char == '[' -> bracketCount++
-                char == ']' -> bracketCount--
-                char == ',' && braceCount == 0 && bracketCount == 0 -> {
-                    if (currentIndex == index) return content.substring(segmentStart, i).trim()
+        scanTopLevel(content) { i, char ->
+            if (char == ',') {
+                if (currentIndex == index) {
+                    result = content.substring(segmentStart, i).trim()
+                    true
+                } else {
                     currentIndex++
                     segmentStart = i + 1
+                    false
                 }
+            } else {
+                false
             }
         }
 
-        return if (currentIndex == index) content.substring(segmentStart).trim() else null
+        return result ?: if (currentIndex == index) content.substring(segmentStart).trim() else null
     }
 
     /** Unwraps a raw JSON scalar span (string/number/bool/null) into its text form; `null` maps to Kotlin `null`. */
@@ -322,7 +328,6 @@ object FieldExtractor {
 
         return ExtractionResult.Failure("No date detected")
     }
-
 }
 
 /**
