@@ -23,9 +23,9 @@ class NotificationDeduplicatorTest {
         // The delay forces a genuine suspension point inside isDuplicate, so concurrent
         // callers actually interleave at the check-then-act boundary instead of each
         // running to completion before the next one starts.
-        coEvery { notificationRepository.getRecentNotifications(any(), any()) } coAnswers {
+        coEvery { notificationRepository.hasRecentDuplicate(any(), any(), any()) } coAnswers {
             delay(10)
-            Result.success(emptyList())
+            Result.success(false)
         }
         deduplicator = NotificationDeduplicator(notificationRepository)
     }

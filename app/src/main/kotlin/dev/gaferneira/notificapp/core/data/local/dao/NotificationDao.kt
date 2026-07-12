@@ -111,12 +111,14 @@ internal interface NotificationDao {
     suspend fun getSince(since: Long): List<NotificationEntity>
 
     /**
-     * Get recent notifications from a specific app (for deduplication).
+     * Check whether a matching content hash already exists for this app within the lookback
+     * window, without pulling rows into Kotlin to re-hash them (PERF-006).
      */
     @Query(
-        "SELECT * FROM notifications WHERE package_name = :packageName AND timestamp > :since ORDER BY timestamp DESC",
+        "SELECT EXISTS(SELECT 1 FROM notifications " +
+            "WHERE package_name = :packageName AND content_hash = :contentHash AND timestamp > :since)",
     )
-    suspend fun getRecentByPackageName(packageName: String, since: Long): List<NotificationEntity>
+    suspend fun existsRecentDuplicate(packageName: String, contentHash: String, since: Long): Boolean
 
     /**
      * Search notifications by content, backed by the `notifications_fts` FTS4 index (DATA-04).

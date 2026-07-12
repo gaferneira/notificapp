@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.testutil.fakes
 
 import androidx.paging.PagingData
+import dev.gaferneira.notificapp.core.common.ContentHasher
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
@@ -96,7 +97,15 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
 
     override suspend fun getNotificationCount(): Result<Int> = Result.success(notifications.value.size)
 
-    override suspend fun getRecentNotifications(packageName: String, lookbackMs: Long): Result<List<Notification>> = Result.success(notifications.value.filter { it.packageName == packageName })
+    override suspend fun hasRecentDuplicate(packageName: String, contentHash: String, lookbackMs: Long): Result<Boolean> {
+        val since = System.currentTimeMillis() - lookbackMs
+        val found = notifications.value.any {
+            it.packageName == packageName &&
+                it.timestamp > since &&
+                ContentHasher.hash(it.packageName, it.title, it.content) == contentHash
+        }
+        return Result.success(found)
+    }
 
     override suspend fun getUnprocessedCount(): Result<Int> = Result.success(notifications.value.count { !it.isProcessed })
 

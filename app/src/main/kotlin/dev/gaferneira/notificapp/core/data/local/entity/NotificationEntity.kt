@@ -17,6 +17,8 @@ import androidx.room.PrimaryKey
  * @property timestamp When notification was received
  * @property isProcessed Whether processed by rules
  * @property appliedRulesCount Number of rules applied to this notification
+ * @property contentHash MD5 hash of package/title/content, precomputed at write time so
+ *   deduplication can be answered by a `SELECT EXISTS(...)` query instead of re-hashing rows (PERF-006)
  */
 @Entity(
     tableName = "notifications",
@@ -24,6 +26,7 @@ import androidx.room.PrimaryKey
         Index(value = ["package_name", "timestamp"]), // For filtering by app and sorting
         Index(value = ["is_processed"]), // For querying unprocessed notifications
         Index(value = ["timestamp"]), // For time-based queries
+        Index(value = ["package_name", "content_hash", "timestamp"]), // For dedup existence checks
     ],
 )
 internal data class NotificationEntity(
@@ -57,4 +60,7 @@ internal data class NotificationEntity(
 
     @ColumnInfo(name = "sbn_key")
     val sbnKey: String? = null,
+
+    @ColumnInfo(name = "content_hash", defaultValue = "''")
+    val contentHash: String = "",
 )

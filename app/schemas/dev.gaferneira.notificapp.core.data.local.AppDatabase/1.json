@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "cbb2b24f4dd0108f78029b99dfaf06a1",
+    "identityHash": "983e71e45933d3cfab05b672b5ab75a7",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -53,7 +53,7 @@
       },
       {
         "tableName": "notifications",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `package_name` TEXT NOT NULL, `app_name` TEXT NOT NULL, `title` TEXT, `content` TEXT, `raw_content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `is_processed` INTEGER NOT NULL, `applied_rules_count` INTEGER NOT NULL DEFAULT 0, `sbn_key` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `package_name` TEXT NOT NULL, `app_name` TEXT NOT NULL, `title` TEXT, `content` TEXT, `raw_content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `is_processed` INTEGER NOT NULL, `applied_rules_count` INTEGER NOT NULL DEFAULT 0, `sbn_key` TEXT, `content_hash` TEXT NOT NULL DEFAULT '', PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -112,6 +112,13 @@
             "fieldPath": "sbnKey",
             "columnName": "sbn_key",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "contentHash",
+            "columnName": "content_hash",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
           }
         ],
         "primaryKey": {
@@ -148,6 +155,17 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_timestamp` ON `${TABLE_NAME}` (`timestamp`)"
+          },
+          {
+            "name": "index_notifications_package_name_content_hash_timestamp",
+            "unique": false,
+            "columnNames": [
+              "package_name",
+              "content_hash",
+              "timestamp"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_package_name_content_hash_timestamp` ON `${TABLE_NAME}` (`package_name`, `content_hash`, `timestamp`)"
           }
         ]
       },
@@ -768,7 +786,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'cbb2b24f4dd0108f78029b99dfaf06a1')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '983e71e45933d3cfab05b672b5ab75a7')"
     ]
   }
 }

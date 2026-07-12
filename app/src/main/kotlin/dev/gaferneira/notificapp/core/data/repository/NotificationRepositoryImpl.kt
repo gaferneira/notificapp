@@ -4,6 +4,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
+import dev.gaferneira.notificapp.core.common.ContentHasher
 import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.local.dao.FtsQuerySanitizer
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
@@ -215,13 +216,12 @@ internal class NotificationRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getRecentNotifications(packageName: String, lookbackMs: Long): Result<List<Notification>> = withContext(ioDispatcher) {
+    override suspend fun hasRecentDuplicate(packageName: String, contentHash: String, lookbackMs: Long): Result<Boolean> = withContext(ioDispatcher) {
         try {
             val since = System.currentTimeMillis() - lookbackMs
-            val entities = dao.getRecentByPackageName(packageName, since)
-            Result.success(entities.map { it.toModel() })
+            Result.success(dao.existsRecentDuplicate(packageName, contentHash, since))
         } catch (e: Exception) {
-            Timber.e(e, "Failed to get recent notifications for: $packageName")
+            Timber.e(e, "Failed to check recent duplicate for: $packageName")
             e.toFailureResult()
         }
     }
@@ -261,6 +261,7 @@ private fun Notification.toEntity(): NotificationEntity = NotificationEntity(
     isProcessed = this.isProcessed || this.appliedRulesCount > 0,
     appliedRulesCount = this.appliedRulesCount,
     sbnKey = this.sbnKey,
+    contentHash = ContentHasher.hash(this.packageName, this.title, this.content),
 )
 
 /**

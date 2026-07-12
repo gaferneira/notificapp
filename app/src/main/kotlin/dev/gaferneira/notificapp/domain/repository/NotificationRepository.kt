@@ -102,10 +102,11 @@ interface NotificationRepository {
     suspend fun getNotificationCount(): Result<Int>
 
     /**
-     * Get recent notifications from a specific app within a time window.
-     * Used for deduplication.
+     * Check whether a notification with [contentHash] was already saved for [packageName]
+     * within [lookbackMs]. Used for deduplication (PERF-006: answered by a single indexed
+     * DB existence check instead of re-hashing every recent row in Kotlin).
      */
-    suspend fun getRecentNotifications(packageName: String, lookbackMs: Long): Result<List<Notification>>
+    suspend fun hasRecentDuplicate(packageName: String, contentHash: String, lookbackMs: Long): Result<Boolean>
 
     /**
      * Get the count of unprocessed notifications.

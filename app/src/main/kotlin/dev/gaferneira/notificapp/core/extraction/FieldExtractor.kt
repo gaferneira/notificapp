@@ -182,28 +182,115 @@ object FieldExtractor {
         )
     }
 
+    /**
+     * Resolves a dot-notation path (e.g. "data.amount" or "items.0.name") by scanning only the
+     * segments the path touches, never materializing sibling keys/values into a full tree. Since
+     * each segment is a linear scan (no recursion into unrelated branches), an attacker-controlled
+     * notification with a deeply/widely nested JSON payload can't trigger a StackOverflowError.
+     */
     private fun extractJsonPath(text: String, method: ExtractionMethod.JsonPath): ExtractionResult {
-        // Simple JSON path implementation for MVP
-        // Supports dot notation like "data.amount" or "items.0.name"
+        val pathParts = method.path.trimStart('$').trimStart('.').split(".").filter { it.isNotEmpty() }
         return try {
-            var current: Any? = parseJson(text)
-            val pathParts = method.path.trimStart('$').trimStart('.').split(".")
-
+            var current: String? = text.trim()
             for (part in pathParts) {
-                current = when (current) {
-                    is Map<*, *> -> (current as Map<String, *>)[part]
-                    is List<*> -> part.toIntOrNull()?.let { index ->
-                        if (index >= 0 && index < current.size) current[index] else null
-                    }
+                current = when {
+                    current == null -> null
+                    current.startsWith("{") -> findObjectValue(current, part)
+                    current.startsWith("[") -> part.toIntOrNull()?.let { findArrayValue(current, it) }
                     else -> null
                 }
-                if (current == null) break
             }
 
-            current?.toString()?.let { ExtractionResult.Success(it) }
+            current?.let { unwrapJsonScalar(it) }
+                ?.let { ExtractionResult.Success(it) }
                 ?: ExtractionResult.Failure("Path not found: ${method.path}")
         } catch (e: Exception) {
             ExtractionResult.Failure("JSON parsing error: ${e.message}")
+        }
+    }
+
+    /** Scans a `{...}` span for [key] at its top level, returning the raw unparsed value text. */
+    private fun findObjectValue(json: String, key: String): String? {
+        val content = json.removeSurrounding("{", "}").trim()
+        if (content.isEmpty()) return null
+
+        var braceCount = 0
+        var bracketCount = 0
+        var inString = false
+        var escapeNext = false
+        var segmentStart = 0
+        var currentKey: String? = null
+
+        fun captureIfMatch(end: Int) = if (currentKey == key) content.substring(segmentStart, end).trim() else null
+
+        for (i in content.indices) {
+            val char = content[i]
+            when {
+                escapeNext -> escapeNext = false
+                char == '\\' -> escapeNext = true
+                char == '"' -> inString = !inString
+                inString -> Unit
+                char == '{' -> braceCount++
+                char == '}' -> braceCount--
+                char == '[' -> bracketCount++
+                char == ']' -> bracketCount--
+                char == ':' && braceCount == 0 && bracketCount == 0 && currentKey == null -> {
+                    currentKey = content.substring(segmentStart, i).trim().removeSurrounding("\"")
+                    segmentStart = i + 1
+                }
+                char == ',' && braceCount == 0 && bracketCount == 0 -> {
+                    captureIfMatch(i)?.let { return it }
+                    currentKey = null
+                    segmentStart = i + 1
+                }
+            }
+        }
+
+        return captureIfMatch(content.length)
+    }
+
+    /** Scans a `[...]` span for the element at [index], returning the raw unparsed value text. */
+    private fun findArrayValue(json: String, index: Int): String? {
+        if (index < 0) return null
+        val content = json.removeSurrounding("[", "]").trim()
+        if (content.isEmpty()) return null
+
+        var braceCount = 0
+        var bracketCount = 0
+        var inString = false
+        var escapeNext = false
+        var segmentStart = 0
+        var currentIndex = 0
+
+        for (i in content.indices) {
+            val char = content[i]
+            when {
+                escapeNext -> escapeNext = false
+                char == '\\' -> escapeNext = true
+                char == '"' -> inString = !inString
+                inString -> Unit
+                char == '{' -> braceCount++
+                char == '}' -> braceCount--
+                char == '[' -> bracketCount++
+                char == ']' -> bracketCount--
+                char == ',' && braceCount == 0 && bracketCount == 0 -> {
+                    if (currentIndex == index) return content.substring(segmentStart, i).trim()
+                    currentIndex++
+                    segmentStart = i + 1
+                }
+            }
+        }
+
+        return if (currentIndex == index) content.substring(segmentStart).trim() else null
+    }
+
+    /** Unwraps a raw JSON scalar span (string/number/bool/null) into its text form; `null` maps to Kotlin `null`. */
+    private fun unwrapJsonScalar(value: String): String? {
+        val trimmed = value.trim()
+        return when {
+            trimmed == "null" -> null
+            trimmed.startsWith("\"") && trimmed.endsWith("\"") -> trimmed.removeSurrounding("\"")
+            else -> trimmed
         }
     }
 
@@ -236,201 +323,7 @@ object FieldExtractor {
         return ExtractionResult.Failure("No date detected")
     }
 
-    /**
-     * Simple JSON parser for basic extraction needs.
-     * For MVP, handles simple JSON objects and arrays.
-     */
-    private fun parseJson(json: String, depth: Int = 0): Any? {
-        val trimmed = json.trim()
-
-        return when {
-            trimmed.startsWith("{") -> parseJsonObject(trimmed, depth)
-            trimmed.startsWith("[") -> parseJsonArray(trimmed, depth)
-            trimmed.startsWith("\"") -> trimmed.removeSurrounding("\"")
-            trimmed == "true" -> true
-            trimmed == "false" -> false
-            trimmed == "null" -> null
-            else -> trimmed
-        }
-    }
-
-    private fun parseJsonObject(json: String, depth: Int = 0): Map<String, Any?> {
-        checkJsonDepth(depth)
-        val result = mutableMapOf<String, Any?>()
-        val content = json.removeSurrounding("{", "}").trim()
-
-        if (content.isEmpty()) return result
-
-        var braceCount = 0
-        var bracketCount = 0
-        var inString = false
-        var escapeNext = false
-        var currentKey = ""
-        val currentValue = StringBuilder()
-        var isKey = true
-
-        for (char in content) {
-            when {
-                escapeNext -> {
-                    currentValue.append(char)
-                    escapeNext = false
-                }
-                char == '\\' -> {
-                    currentValue.append(char)
-                    escapeNext = true
-                }
-                char == '"' && !escapeNext -> {
-                    inString = !inString
-                    currentValue.append(char)
-                }
-                !inString -> {
-                    when (char) {
-                        '{' -> {
-                            braceCount++
-                            currentValue.append(char)
-                        }
-                        '}' -> {
-                            braceCount--
-                            currentValue.append(char)
-                        }
-                        '[' -> {
-                            bracketCount++
-                            currentValue.append(char)
-                        }
-                        ']' -> {
-                            bracketCount--
-                            currentValue.append(char)
-                        }
-                        ':' -> {
-                            if (braceCount == 0 && bracketCount == 0 && isKey) {
-                                currentKey = currentValue.toString().trim().removeSurrounding("\"")
-                                currentValue.setLength(0)
-                                isKey = false
-                            } else {
-                                currentValue.append(char)
-                            }
-                        }
-                        ',' -> {
-                            if (braceCount == 0 && bracketCount == 0) {
-                                result[currentKey] = parseJsonValue(currentValue.toString().trim(), depth + 1)
-                                currentValue.setLength(0)
-                                isKey = true
-                            } else {
-                                currentValue.append(char)
-                            }
-                        }
-                        else -> currentValue.append(char)
-                    }
-                }
-                else -> currentValue.append(char)
-            }
-        }
-
-        if (!isKey && currentKey.isNotEmpty()) {
-            result[currentKey] = parseJsonValue(currentValue.toString().trim(), depth + 1)
-        }
-
-        return result
-    }
-
-    private fun parseJsonArray(json: String, depth: Int = 0): List<Any?> {
-        checkJsonDepth(depth)
-        val result = mutableListOf<Any?>()
-        val content = json.removeSurrounding("[", "]").trim()
-
-        if (content.isEmpty()) return result
-
-        var braceCount = 0
-        var bracketCount = 0
-        var inString = false
-        var escapeNext = false
-        val currentValue = StringBuilder()
-
-        for (char in content) {
-            when {
-                escapeNext -> {
-                    currentValue.append(char)
-                    escapeNext = false
-                }
-                char == '\\' -> {
-                    currentValue.append(char)
-                    escapeNext = true
-                }
-                char == '"' && !escapeNext -> {
-                    inString = !inString
-                    currentValue.append(char)
-                }
-                !inString -> {
-                    when (char) {
-                        '{' -> {
-                            braceCount++
-                            currentValue.append(char)
-                        }
-                        '}' -> {
-                            braceCount--
-                            currentValue.append(char)
-                        }
-                        '[' -> {
-                            bracketCount++
-                            currentValue.append(char)
-                        }
-                        ']' -> {
-                            bracketCount--
-                            currentValue.append(char)
-                        }
-                        ',' -> {
-                            if (braceCount == 0 && bracketCount == 0) {
-                                result.add(parseJsonValue(currentValue.toString().trim(), depth + 1))
-                                currentValue.setLength(0)
-                            } else {
-                                currentValue.append(char)
-                            }
-                        }
-                        else -> currentValue.append(char)
-                    }
-                }
-                else -> currentValue.append(char)
-            }
-        }
-
-        if (currentValue.isNotEmpty()) {
-            result.add(parseJsonValue(currentValue.toString().trim(), depth + 1))
-        }
-
-        return result
-    }
-
-    private fun parseJsonValue(value: String, depth: Int = 0): Any? {
-        val trimmed = value.trim()
-        return when {
-            trimmed.startsWith("{") -> parseJsonObject(trimmed, depth)
-            trimmed.startsWith("[") -> parseJsonArray(trimmed, depth)
-            trimmed.startsWith("\"") -> trimmed.removeSurrounding("\"")
-            trimmed == "true" -> true
-            trimmed == "false" -> false
-            trimmed == "null" -> null
-            // Numbers are kept as their raw trimmed text rather than boxed into Int/Double:
-            // extractJsonPath only ever calls toString() on the result, and boxing a value like
-            // "150.50" into a Double would silently drop the trailing zero.
-            else -> trimmed
-        }
-    }
-
-    /**
-     * Guards the hand-rolled JSON parser against unbounded recursion: a deeply nested or
-     * malformed payload would otherwise trigger a StackOverflowError, which (unlike a regular
-     * exception) escapes the `catch (Exception)` wrapping in [extract] and [extractJsonPath].
-     */
-    private fun checkJsonDepth(depth: Int) {
-        if (depth > MAX_JSON_DEPTH) {
-            throw JsonDepthExceededException(depth)
-        }
-    }
-
-    private const val MAX_JSON_DEPTH = 32
 }
-
-private class JsonDepthExceededException(depth: Int) : Exception("JSON nesting depth $depth exceeds maximum")
 
 /**
  * Result of a field extraction attempt.

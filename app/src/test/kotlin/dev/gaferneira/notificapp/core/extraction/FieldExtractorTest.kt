@@ -485,11 +485,26 @@ class FieldExtractorTest {
         }
 
         @Test
-        fun `fails gracefully instead of crashing on a maliciously deep payload`() {
-            // Given: JSON nested far past any reasonable extraction target, e.g. a hostile
-            // rule-shared payload designed to trigger a StackOverflowError
+        fun `resolves a shallow path against a deeply nested payload without crashing`() {
+            // Given: JSON nested far past any previous depth guard, e.g. a hostile notification
+            // payload designed to trigger a StackOverflowError in a naive tree-parsing approach
             val text = "{\"a\":".repeat(100000) + "1" + "}".repeat(100000)
             val field = createTestField(method = ExtractionMethod.JsonPath(path = "a.a.a"))
+
+            // When: extracting the field
+            val result = FieldExtractor.extract(text, field)
+
+            // Then: the shallow path resolves normally instead of crashing or hitting an
+            // artificial depth cap, because only the requested segments are ever scanned -
+            // sibling and deeper structure is never materialized
+            result.shouldBeInstanceOf<ExtractionResult.Success>()
+        }
+
+        @Test
+        fun `fails gracefully instead of crashing when a deeply nested payload doesn't contain the path`() {
+            // Given: the same hostile deep payload, but querying a key that isn't present
+            val text = "{\"a\":".repeat(100000) + "1" + "}".repeat(100000)
+            val field = createTestField(method = ExtractionMethod.JsonPath(path = "a.missing"))
 
             // When: extracting the field
             val result = FieldExtractor.extract(text, field)
