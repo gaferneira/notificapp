@@ -53,6 +53,7 @@ Extraction is one action among many in the rules engine — but it is the **diff
 - **Dry-Run Mode** — Per-rule toggle: matches are logged as `RuleExecution`s but no actions execute; surfaced via a `DryRunBadge` in Rules List and Notification Detail — **Backtesting and Dry-Run (Phase 2) is now fully done**
 - **Rule Import/Export** — Versioned JSON format (`docs/rule-format.md`), export via the Android share sheet (`FileProvider`), import from file/clipboard with a validation + preview dialog; imported rules always get fresh IDs and start in dry-run mode
 - **Tech-debt hardening before Phase 3** rule-sharing wire format decoupled from domain models via DTOs (`core/rulesharing/dto/`), destructive Room migration fallback gated to debug builds, backtesting query bounded, GitHub Actions CI added, `ActionBottomSheet`/`AddFieldBottomSheet` split into per-type config composables, `NotificationNormalizer` made pure Kotlin with test coverage, release/Fastlane scaffolding added, Detekt baseline shrink policy documented
+- **Snooze Throttle Mode** — `SnoozeMode.THROTTLE`: lets the first notification through per rule+app within a configurable window (1-1440 min, default 10) and suppresses (`ActionOutcome.SUPPRESSED`) the rest until the window elapses or the user changes the window/re-enables the action; backed by `NotificationThrottleTracker` (in-memory, mutex-guarded, DB fallback via `RuleExecutionRepository.lastThrottleDeliveryAt` on cold start) and a `CurrentTimeProvider` clock seam; UI via `ThrottleWindowSelector` in the Snooze bottom sheet
 
 ### In Progress
 
@@ -97,7 +98,7 @@ Nothing currently in progress — ready to start Phase 3.
 #### Backtesting and Dry-Run — **Done**
 
 - [x] "Test against history" in Rule Editor: run the draft rule against captured notifications and preview matches + extracted fields before saving — `RuleEditorViewModel.testAgainstHistory()` runs the unsaved draft rule (via the existing pure `RuleEngine`) against `NotificationRepository.getNotificationsForBacktest()`, bounded to the 500 most recent and filtered to the rule's target apps at the SQL level (TD-11); results shown in `BacktestResultsBottomSheet`. Purely a preview — nothing is persisted.
-- [x] Per-rule **dry-run mode**: log matches without executing actions — essential safety once dismiss exists (a bad condition silently eating notifications is the worst possible first impression). `Rule.isDryRun` (Room migration 2->3, `RuleEntity.is_dry_run`) gates `ProcessNotificationUseCase.evaluateAndPersist`: dry-run rules never reach `ActionDispatcher`, but the match is still recorded via `RuleExecution.wasDryRun` (also migrated in, `RuleExecutionEntity.was_dry_run`) so the flag is a snapshot at match time, not derived from the rule's current state. Toggle lives in the Rule Editor's metadata step.
+- [x] Per-rule **dry-run mode**: log matches without executing actions — essential safety once dismiss exists (a bad condition silently eating notifications is the worst possible first impression). `Rule.isDryRun` gates `ProcessNotificationUseCase.evaluateAndPersist`: dry-run rules never reach `ActionDispatcher`, but the match is still recorded via `RuleExecution.wasDryRun` (also migrated in, `RuleExecutionEntity.was_dry_run`) so the flag is a snapshot at match time, not derived from the rule's current state. Toggle lives in the Rule Editor's metadata step.
 - [x] Surface dry-run results in Rules List / Notification Detail so users can promote a rule to live with confidence — shared `DryRunBadge` composable (`core/ui/components/`) shown next to the rule name in the Rules list, and next to the rule name + as an explanatory note on each dry-run `ExecutionCard` in Notification Detail.
 
 #### Rule Import/Export — **Done**
@@ -111,7 +112,7 @@ Nothing currently in progress — ready to start Phase 3.
 
 **Goal:** Ship the first rung of the rule-creation ladder (templates), make live rules safe against noisy apps, and build the dedicated screen for browsing, filtering, and exporting extracted data — plus the retention and backup features people need before investing hours in rules.
 
-#### Starter Rule Templates *(promoted from backlog)*
+#### Starter Rule Templates
 
 Guiding principle #1 puts **templates first** in the rule-creation ladder (templates → create-from-notification → raw editor), but nothing on the roadmap built them before the Phase 6 gallery. They're mostly content on top of Phase 2's import machinery, and they seed the gallery.
 
@@ -119,11 +120,11 @@ Guiding principle #1 puts **templates first** in the rule-creation ladder (templ
 - [ ] "Start from a template" entry point in the Rules empty state and as the first option when creating a rule; template import follows the same fresh-ID + dry-run path as Phase 2 imports
 - [ ] Each template doubles as a seed rule for the Phase 6 community gallery (same file format, same validation)
 
-#### Rule Safety: Per-Rule Cooldown *(promoted from backlog)*
+#### Rule Safety: Per-Rule Cooldown
 
 With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 seconds is an uninstall-level bug — this can't wait for someone to hit it.
 
-- [ ] `Rule.cooldownSeconds` (0 = disabled) + Room migration; editor UI in the metadata step next to the dry-run toggle
+- [ ] `Rule.cooldownSeconds` (0 = disabled); editor UI in the metadata step next to the dry-run toggle
 - [ ] `ProcessNotificationUseCase.evaluateAndPersist` skips action dispatch when the rule's latest `RuleExecution` is more recent than the cooldown — the match is still recorded, flagged as cooldown-suppressed (never fail silently, even when suppressing on purpose)
 
 #### Data Screen (New Bottom Nav Tab)

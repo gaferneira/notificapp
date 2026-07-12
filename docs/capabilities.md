@@ -1,0 +1,149 @@
+# Application Functional Capabilities
+
+Notificapp lets users create automation rules that act on the notifications their phone receives — dismissing noise, snoozing, sounding an alarm, or flashing a visual alert — and, uniquely, extract structured data out of a notification's text (like turning a bank alert into a spending record). Everything runs locally on the device, with no account, cloud sync, or network access required.
+
+---
+
+## Core Automation
+
+### Rule Creation & Editing
+* **User Experience:** The user builds a rule in a two-step wizard: first defining conditions (when a notification's title, text, app, or package matches something) and one or more actions to run when it matches, then naming the rule and optionally marking it as "dry-run" (log matches without ever acting) for safe trialing. Rules can also be started pre-filled from a real captured notification, or built from scratch.
+* **System Trigger:** User taps "+" on the Rules screen, or taps "Create rule" from a notification's detail view.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Matching Conditions
+* **User Experience:** The user specifies what a notification must look like to match a rule by picking a property, an operator, and a value. Multiple conditions can be added to the same rule (combined with AND).
+  * Properties that can be checked:
+    * Title
+    * Main text/content
+    * Raw content (the full raw notification text)
+    * App name
+    * Package name
+  * Operators available:
+    * Contains
+    * Does not contain
+    * Starts with
+    * Ends with
+    * Equals (exact match)
+    * Matches regex (pattern match)
+* **System Trigger:** User adds/edits a condition inside the Rule Editor's "Matching Logic" step.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Data Extraction
+* **User Experience:** As one of a rule's actions, the user can configure it to pull specific named pieces of information out of a notification and save them for later viewing. The editor offers a live preview against sample text and can auto-suggest fields from a sample notification.
+  * Extraction methods available:
+    * Fixed position — characters between a start and end index
+    * Text between anchors — whatever sits between two marker strings
+    * Regex pattern — a capture group from a regular expression
+    * Text after keyword — everything after a given keyword (optionally length-capped)
+    * Text before keyword — everything before a given keyword
+    * Line extraction — a specific line by line number
+    * Split by delimiter — split the text and take the Nth part
+    * JSON path — a value from structured/JSON-shaped content by dot-notation path
+    * Smart amount detection — automatically finds a currency amount, no configuration needed
+    * Smart date detection — automatically finds a date, no configuration needed
+  * Each extracted field also has a data type: String, Number, Date, Currency, or Boolean.
+* **System Trigger:** User adds an "Extract data" action while building or editing a rule; the extraction itself runs automatically in the background whenever a matching notification arrives.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Notification Actions
+* **User Experience:** For a matching notification, the user picks one or more actions to run. Each action can be turned on or off independently within a rule.
+  * **Dismiss notification** — silently removes it from the system tray (good for noise like OTP codes or spam).
+  * **Snooze notification** — hides it and re-delivers it later, in one of three modes:
+    * Duration — snooze for a fixed number of minutes from the time of the match
+    * Scheduled — deliver at specific times of day, or on a recurring interval within a time window, optionally restricted to certain weekdays
+    * Throttle — let the first match through, then suppress further matches from that rule+app until a configurable window elapses
+  * **Create alarm** — plays a sound and/or vibrates, with options:
+    * Custom or default alarm sound (via the system ringtone picker)
+    * Choice of vibration pattern
+    * Optional full-screen alarm UI (can wake/unlock-prompt the screen) with a customizable background
+    * Its own built-in snooze (duration + max snooze count)
+  * **Flash alert** — blinks the camera flash/torch a configurable number of times as a visual alert; automatically skipped on devices with no flash or when battery saver is on, and safety-clamped to avoid photosensitivity risk.
+  * **Extract data** — see "Data Extraction" above.
+* **System Trigger:** Runs automatically in the background the moment a monitored notification matches an enabled (non dry-run) rule.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Rule Testing & Safety
+* **User Experience:** Before trusting a new rule, the user has two safety nets:
+  * **Test against history** — preview which previously captured notifications would have matched and what data would have been extracted, without anything actually running or saving.
+  * **Dry-run mode** — flag the whole rule so it logs matches without ever performing its actions, letting the user validate it safely before turning it fully on.
+* **System Trigger:** User taps "Test against history" in the Rule Editor, or toggles the Dry-run switch when saving a rule.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Rule Sharing (Import/Export)
+* **User Experience:** The user can export any rule as a shareable file (via the standard Android share sheet) and import a rule shared by someone else, previewing and confirming it before it's added. Imported rules always start disabled from acting until reviewed.
+* **System Trigger:** User taps "Export" on a rule in the Rules list, or "Import" and selects a shared file/clipboard text.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+---
+
+## User Interface & Setup
+
+### Onboarding
+* **User Experience:** On first launch, the user sees a short explanation of what the app does, then is guided to grant notification access via the system settings screen, returning automatically once permission is granted.
+* **System Trigger:** App opened for the first time; permission status is re-checked when the user returns from system settings.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### App Selection
+* **User Experience:** The user picks which installed apps Notificapp should monitor, searching and toggling apps in a list. Only notifications from selected apps are captured and can be used in rules.
+* **System Trigger:** Shown right after onboarding, or reopened anytime from Settings.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Notification Inbox & Detail
+* **User Experience:** The user browses a time-grouped list of every captured notification, with:
+  * Search by text
+  * Filter by app
+  * Filter by processed-status (All / Processed / Unprocessed)
+  * A warning banner if notification access has been revoked
+  * Tapping an item opens its full content plus a history of which rules matched it, what data was extracted, and what actions ran (with outcome: Success, Failed, Skipped, or Suppressed)
+  * From detail view: "Create rule" from this notification, or "Re-run rules" to manually recompute matches
+* **System Trigger:** User opens the app to the Inbox (its home screen); taps a notification to see details; taps "Re-run rules" to recompute matches manually.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Rules Management
+* **User Experience:** The user views all their rules in one list, with:
+  * Search by name
+  * Filter by category, target app, or status (bottom sheet)
+  * Sort by: category, name A-Z/Z-A, newest/oldest created, recently updated, or status-first
+  * Inline enable/disable toggle without deleting the rule
+  * Export/Import (see "Rule Sharing" below)
+* **System Trigger:** User navigates to the Rules tab.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Settings
+* **User Experience:** The user reviews and manages which apps are monitored, checks whether notification access is still granted (re-enabling it if revoked), and toggles data collection and app-icon display preferences.
+* **System Trigger:** User navigates to the Settings tab.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+---
+
+## Background Data Handling
+
+### Automatic Notification Capture
+* **User Experience:** The user does nothing — notifications from monitored apps are captured automatically the moment they arrive, ready to browse in the Inbox.
+* **System Trigger:** Android system notification broadcast, received continuously while notification access is granted.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Automatic Rule Evaluation & Execution
+* **User Experience:** The user experiences the outcome directly — a notification is dismissed, snoozed, or triggers an alarm/flash — without taking any action themselves, because a rule they set up matched it and ran automatically.
+* **System Trigger:** A new notification is captured from a monitored app; it is deduplicated, checked against every active rule, and each matching rule's enabled actions are executed and logged.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Local Secure Storage
+* **User Experience:** All captured notifications, rules, and extracted data remain on the user's device and are available offline; nothing is uploaded anywhere.
+* **System Trigger:** Runs continuously as part of every capture, rule match, and extraction.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+---
+
+## Status Reference (for planning what to build next)
+
+* **Shipped:** onboarding, app selection, notification capture with dedup/filtering, inbox, notification detail, rule engine (6 condition operators + 10 extraction methods), rules list, rule editor, settings, all 5 action types, backtesting, dry-run mode, rule import/export.
+* **Planned, not yet built:**
+  * Starter rule templates
+  * Per-rule cooldown safety limits
+  * A dedicated "Data" browser tab (browse/filter/export extracted data, retention/backup settings)
+  * Webhooks — a "Send webhook" action to push extracted data to external services (the app's first network access)
+  * Optional on-device AI extraction (separate build flavor)
+  * Community rule gallery
+  * F-Droid distribution

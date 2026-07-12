@@ -13,15 +13,27 @@
 - **Testing**: JUnit 5, Kotest, MockK, Turbine — 286 passing unit tests in `app/src/test` (extraction engine, use case, action executors, notification normalization, rule import/export codec with a golden-file wire-format test, `RuleEditorViewModel`/`AddFieldViewModel`/`NotificationDetailViewModel`/`RulesViewModel`); most other ViewModels and UI tests still pending
 - **Structure**: Monolithic (single app module) with clean package separation, designed for future modularization
 
+## Development Status
+
+**Pre-launch — no installed user base yet.** Notificapp has not shipped a public release (F-Droid/Play). Until it does, there is no production data or backward-compatible surface to protect:
+
+- **Room schema**: prefer a clean schema bump (destructive migration) over hand-written `Migration` objects when changing `core/data/local/entity/`. Don't add a real `Migration` just to preserve existing rows — there are none to preserve.
+- **Rule wire format** (`core/rulesharing/RuleJsonCodec`, `docs/rule-format.md`): free to break `RuleExportDto`/schema version across commits without a compatibility shim — no one has exported rules from a shipped version yet.
+- **Domain model shape**: sealed-class/structural rewrites of `Rule`, `RuleCondition`, etc. are fine — this is the intended checkpoint for the "revisit if rule shape churns" trigger in ADR 011.
+
+Revisit and remove this section once the app has a real release with installed users — at that point migrations and wire-format compatibility become mandatory again.
+
 ## Quick Reference
 
 | I need to... | Reference |
 |--------------|-----------|
 | Understand MVI pattern | `docs/ARCHITECTURE.md` - "MVI Pattern" section |
+| Understand clean architecture layers in depth | `docs/ARCHITECTURE.md` - "Clean Architecture Layers" section |
 | Check architecture decisions | `docs/adr/*.md` - ADRs covering patterns |
 | Check product direction & phases | `docs/roadmap.md` |
-| Add a new screen/feature | See "Adding a New Screen" section below |
-| **Add navigation for a screen** | **See "Navigation Guidelines" section below** |
+| See the full functional/feature map (conditions, extraction methods, actions) | `docs/capabilities.md` — **keep in sync**, see rule below |
+| Add a new screen/repository/extraction method/action type | `docs/guides/common-patterns.md` |
+| **Add navigation for a screen** | **`docs/guides/navigation-guide.md`** |
 | Check file-specific rules | `.firebender/rules/*.mdc` (local tooling, not committed — skip if absent) |
 | See feature specifications | `openspec/specs/[area]/` |
 | Run tests | `./gradlew test` |
@@ -74,17 +86,6 @@ Notificapp/
 └── build.gradle.kts               # Root build script
 ```
 
-### Package Dependencies
-
-```
-features → domain (models + repository interfaces)
-features → core/ui (MVI base, navigation)
-features → core/* pure-Kotlin services (e.g. RuleEngine, RuleJsonCodec - Android-free, no core/data/domain.repository imports of their own)
-core/data → domain (implements repository interfaces)
-core/extraction → domain
-core/notification → core/extraction (runs the rule engine)
-```
-
 **Dependency Rules:**
 - Features depend on domain models, repository interfaces, `core/ui`, and pure-Kotlin `core/*` services (e.g. `RuleEditorViewModel` → `RuleEngine`, `RulesViewModel` → `RuleJsonCodec`) — never on `core/data` or Android-facing `core/notification` internals directly
 - `core/data` implements repository interfaces defined in `domain/repository`
@@ -93,23 +94,7 @@ core/notification → core/extraction (runs the rule engine)
 
 ### Future Modularization Path
 
-When the project grows, packages can be extracted into modules:
-
-```
-:app
-├── :core:model                  # Domain models (pure Kotlin)
-├── :core:data                   # Data layer
-├── :core:extraction             # Rule engine (reusable, testable)
-├── :core:notification           # Android notification APIs
-├── :core:ui                     # MVI base, navigation, theme
-├── :feature:inbox
-├── :feature:ruleeditor
-├── :feature:rules
-├── :feature:notificationdetail
-├── :feature:appselection
-├── :feature:onboarding
-└── :feature:settings
-```
+See `docs/ARCHITECTURE.md` - "Project Structure" section for the planned `:core:*` / `:feature:*` module split.
 
 ## Critical Documents (Always Reference)
 
@@ -121,6 +106,7 @@ When the project grows, packages can be extracted into modules:
 | `docs/adr/*.md` | Architecture Decision Records — canonical index with statuses in `docs/adr/README.md` | When architecture questions arise |
 | `openspec/specs/**/*.md` | Feature specifications with Gherkin scenarios | When implementing or modifying features |
 | `.firebender/rules/*.mdc` | File-pattern-specific coding rules (local Firebender tooling, not committed — skip if absent) | When writing specific file types |
+| `docs/capabilities.md` | Human/agent-readable functional map: every rule condition operator, extraction method, action type, and screen capability | Update it in the same PR whenever you touch `domain/model/RuleCondition.kt`, `RuleField.ExtractionMethod`, `RuleAction`/`ActionType`, or add/remove a screen under `features/*` |
 
 ## Mandatory Pre-Flight Checklist
 
@@ -227,42 +213,7 @@ Before making any code changes:
 - `MviViewModel` exposes effects via a `Channel`; send with `sendEffect()`
 - Collect in Composables with `CollectOneOffEffects` (`core/ui/mvi`)
 
-### Example Structure
-```kotlin
-@HiltViewModel
-class InboxViewModel @Inject constructor(
-    private val notificationRepository: NotificationRepository,
-) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
-
-    override fun onEvent(event: UiEvent) {
-        when (event) {
-            is UiEvent.LoadNotifications -> loadNotifications()
-            is UiEvent.OnNotificationClick -> handleNotificationClick(event.id)
-            is UiEvent.CreateRuleFromNotification -> createRule(event.notificationId)
-        }
-    }
-}
-
-object InboxContract {
-    data class UiState(
-        val notifications: List<Notification> = emptyList(),
-        val isLoading: Boolean = false,
-        val selectedApps: List<String> = emptyList(),
-        val error: UiText? = null,
-    )
-
-    sealed class UiEvent {
-        data object LoadNotifications : UiEvent()
-        data class OnNotificationClick(val id: String) : UiEvent()
-        data class CreateRuleFromNotification(val notificationId: String) : UiEvent()
-    }
-
-    sealed class UiEffect {
-        data class NavigateToRuleEditor(val notificationId: String) : UiEffect()
-        data class ShowError(val message: UiText) : UiEffect()
-    }
-}
-```
+**Example Structure:** see `docs/ARCHITECTURE.md` - "MVI Pattern" section for a full ViewModel + Contract example.
 
 **Reference:** ADR 001, ADR 002 in `docs/adr/`
 
@@ -300,29 +251,7 @@ object InboxContract {
 - **Coroutine Testing**: Use `runTest` with injected dispatchers
 
 ### Test Structure
-```kotlin
-@ExtendWith(MockKExtension::class)
-class RuleMatcherTest {
-
-    @Test
-    fun `notification matches rule with CONTAINS condition`() = runTest {
-        // Given: a notification and a matching condition
-        val notification = createTestNotification(
-            title = "ICA Kvantum",
-            content = "Totalt: 153,50 kr",
-        )
-        val conditions = listOf(
-            createTestCondition(MatchingCondition.CONTENT, MatchingOperator.CONTAINS, "Totalt"),
-        )
-
-        // When: matching the notification
-        val result = RuleMatcher.matches(notification, conditions)
-
-        // Then: the rule matches
-        result shouldBe true
-    }
-}
-```
+Given-When-Then, one behavior per test. See `app/src/test/kotlin/dev/gaferneira/notificapp/core/extraction/RuleMatcherTest.kt` for a living reference example — it's kept up to date by definition, so prefer it over a hardcoded snippet here.
 
 ### Test Coverage Priorities
 1. **Extraction Engine**: All matching operators and extraction methods, edge cases (pure JVM, no emulator)
@@ -330,43 +259,9 @@ class RuleMatcherTest {
 3. **Repositories**: Success and error cases, mapping logic
 4. **Normalization**: Various notification formats from different apps
 
-## Build Configuration
-
-### Build Variants
-| Variant | Purpose | Usage |
-|---------|---------|-------|
-| `debug` | Development with debugging | Daily development |
-| `release` | Production release | Distribution |
-
-### Essential Gradle Commands
-
-```bash
-# Code formatting (REQUIRED before commits)
-./gradlew spotlessApply
-
-# Static analysis (complexity/size budgets, runs as part of `check`)
-./gradlew detekt
-
-# Run all tests
-./gradlew test
-
-# Run tests with coverage
-./gradlew testDebugUnitTest
-
-# Build debug APK
-./gradlew assembleDebug
-
-# Build release APK
-./gradlew assembleRelease
-```
-
 **Reference:** `docs/SDD-METHODOLOGY.md` - Complete OpenSpec workflow (tool-agnostic; use whatever commands/agent your session provides)
 
 ## Code Quality Gates
-
-### Pre-Commit (via Git Hooks)
-1. Spotless format check
-2. Unit tests for changed files
 
 ### Static Analysis (Detekt)
 `./gradlew detekt` runs complexity/size checks (`LongMethod`, `LongParameterList`, `CyclomaticComplexMethod`) on top of the default ruleset, gated the same as Spotless. Pre-existing debt is grandfathered via `config/detekt/baseline.xml` — new code must pass clean. Regenerate the baseline only when intentionally accepting new debt: `./gradlew detektBaseline`.
@@ -428,182 +323,11 @@ Note: the "Pre-Commit via Git Hooks" section above describes the intended gate, 
 
 ## Common Patterns
 
-### Adding a New Screen
-
-1. Create package in `features/[screenname]/` with `contract/`, `ui/`, `viewmodel/` sub-packages
-2. Create Contract object with UiState, UiEvent, UiEffect sealed classes in `contract/`
-3. Create ViewModel extending `MviViewModel<UiState, UiEvent, UiEffect>` in `viewmodel/`
-4. Create screen Composable in `ui/`
-5. Add to navigation (see "Navigation Guidelines" below)
-6. Write unit tests for the ViewModel
-
-### Adding a New Repository
-
-1. Define interface in `domain/repository/`
-2. Create implementation in `core/data/repository/`
-3. Create Room entity in `core/data/local/entity/` (if needed)
-4. Create DAO in `core/data/local/dao/` and mapper in `core/data/local/mapper/`
-5. Bind in `core/di/RepositoryModule` using `@Binds`
-6. Return `Result<T>` or sealed class
-7. Add unit tests
-
-### Adding a New Extraction Method
-
-1. Add the method to `RuleField.ExtractionMethod` (domain model)
-2. Implement in `core/extraction/FieldExtractor` (pure Kotlin, no Android imports)
-3. Add tests in `app/src/test` (pure JVM, no emulator)
-4. Add a config composable in `features/ruleeditor/ui/fieldconfig/` and one `when` branch in `AddFieldBottomSheet.kt`'s `AddFieldBottomSheetContent` (per TD-13)
-
-### Adding a New Action Type
-
-1. Add the type to `ActionType` (domain model); keep config in `RuleAction.config` (`Map<String, String>`) with typed accessor methods. Only `SAVE_DATA` ("Extract data") uses `RuleAction.fields: List<RuleField>` — extraction fields are structured (a sealed `ExtractionMethod`) and don't belong in the string `config` map, so they're a first-class property instead; every other action type leaves `fields` empty.
-2. Implement execution as an `ActionExecutor` (`domain/action/ActionExecutor.kt`) and register it in `core/di/ActionModule.kt` via `@Binds @IntoMap @ActionTypeKey(ActionType.X)` — the `ActionDispatcher` picks it up automatically; no service edits needed
-3. Add a config composable in `features/ruleeditor/ui/actionconfig/` and one `when` branch in `ActionBottomSheet.kt`'s `ActionsContent` (per TD-13 — don't grow the sheet itself, it only dispatches)
-4. Record execution outcome on the `RuleExecution`
-
-### Adding a New Screen (Complete OpenSpec + PR Workflow)
-
-1. Create change: `openspec/changes/[change-name]/` with `proposal.md`, `design.md`, `tasks.md`
-2. Review and edit generated artifacts in `openspec/changes/[name]/`
-3. Implement each task in `tasks.md`, marking it complete as you go
-4. Validate: confirm all scenarios in `openspec/specs/[area]/spec.md` have tests and implementation
-5. Archive: merge delta specs into main specs, move the change to `openspec/changes/archive/`
-6. Create PR referencing the change and spec
+Full step-by-step checklists (adding a screen, repository, extraction method, action type, or a complete OpenSpec + PR workflow) live in **`docs/guides/common-patterns.md`** — read it when doing one of these tasks.
 
 ## Navigation Guidelines
 
-### Navigation Architecture Overview
-
-We use Navigation3 with the following pattern:
-- **Routes**: Defined in `Screen` sealed class with `@Serializable`
-- **Entry Provider**: Maps routes to composables in `MainActivity`
-- **NavigationHandler**: Singleton for ViewModel-driven navigation
-- **Effect Handling**: Internal for sub-flows, specific callbacks for parent coordination
-
-### Adding a Screen to Navigation
-
-1. **Add route to `Screen` sealed class** (`core/ui/navigation/Screen.kt`):
-```kotlin
-@Serializable
-data class NotificationDetails(val notificationId: String) : Screen()
-```
-
-2. **Add factory to `Routes` object** (`core/ui/navigation/Routes.kt`):
-```kotlin
-fun notificationDetails(notificationId: String): Screen =
-    Screen.NotificationDetails(notificationId)
-```
-
-3. **Add entry to `entryProvider`** in `MainActivity.kt`:
-```kotlin
-entry<Screen.NotificationDetails> { screen ->
-    NotificationDetailScreen(
-        notificationId = screen.notificationId,
-        onBackClicked = { navigator.goBack() },
-    )
-}
-```
-
-### Effect Handling: Internal vs Callbacks
-
-**Internal Handling (Bottom Sheets, Self-Contained Flows):**
-```kotlin
-// Screen manages its own bottom sheet
-@Composable
-fun RuleEditorScreen(onBackClicked: () -> Unit) {
-    val sheetState = rememberSheetState()
-
-    // Handle ViewModel effects
-    CollectOneOffEffects(viewModel.effect) { effect ->
-        when (effect) {
-            is UiEffect.ShowAddFieldSheet -> sheetState.show()
-            is UiEffect.NavigateBack -> onBackClicked()
-        }
-    }
-
-    // Bottom sheet is internal implementation detail
-    AddFieldBottomSheet(
-        isVisible = sheetState.isVisible,
-        onDismiss = { sheetState.hide() },
-        onFieldAdded = { field ->
-            viewModel.onEvent(UiEvent.OnFieldAdded(field))
-            sheetState.hide()
-        }
-    )
-}
-```
-
-**Specific Callbacks (When Parent Coordination Needed):**
-```kotlin
-// Good - specific callbacks
-@Composable
-fun AppSelectionScreen(
-    onNavigateToMainApp: () -> Unit,
-    onNavigateBack: () -> Unit,
-    onShowError: (message: String) -> Unit,
-)
-
-// Avoid - generic callback
-@Composable
-fun AppSelectionScreen(
-    onNavigate: (UiEffect) -> Unit,  // Don't do this
-)
-```
-
-**Decision Matrix:**
-
-| Scenario | Pattern | Example |
-|----------|---------|---------|
-| Simple back navigation | Specific callback | `onBackClicked: () -> Unit` |
-| Success/error messages | Specific callbacks | `onShowSuccess: (String) -> Unit` |
-| Results needing parent action | Specific typed callback | `onFieldAdded: (ExtractionField) -> Unit` |
-| Sub-screens within same flow | Internal handling | `AddFieldBottomSheet` in `RuleEditorScreen` |
-| Full screen transitions | NavigationHandler | ViewModel emits effect, MainActivity handles |
-
-### NavOptions Usage
-
-```kotlin
-// Tab switching - clear stack to avoid back stack buildup
-navigator.navigate(Routes.inbox(), navOptions { clearStack() })
-
-// Pop up to specific screen before navigating
-navigator.navigate(
-    Routes.inbox(),
-    navOptions { 
-        popUpTo(Screen.Inbox::class)
-        launchSingleTop = true
-    }
-)
-```
-
-### ViewModel-Driven Navigation
-
-```kotlin
-@HiltViewModel
-class MyViewModel @Inject constructor(
-    private val navigationHandler: NavigationHandler
-) : ViewModel() {
-    fun onItemClick(id: String) {
-        viewModelScope.launch {
-            navigationHandler.navigate(Routes.notificationDetails(id))
-        }
-    }
-}
-```
-
-MainActivity collects commands:
-```kotlin
-LaunchedEffect(Unit) {
-    navigationHandler.navigationFlow.collect { command ->
-        when (command) {
-            is NavigationCommand.Navigate -> navigator.navigate(command.screen)
-            is NavigationCommand.GoBack -> navigator.goBack()
-        }
-    }
-}
-```
-
-**Reference:** ADR 007 - Navigation3 with Custom Navigator
+Navigation3 uses `Screen` sealed routes + `Routes` factories + `entryProvider` in `MainActivity`, with `NavigationHandler` for ViewModel-driven navigation. Full walkthrough, code examples, and the internal-handling-vs-callback decision matrix live in **`docs/guides/navigation-guide.md`** — read it whenever wiring a screen into navigation. Background: ADR 007.
 
 ## Resources & References
 
@@ -618,6 +342,8 @@ LaunchedEffect(Unit) {
 | Type | Location |
 |------|----------|
 | Product roadmap | `docs/roadmap.md` |
+| Common implementation patterns (new screen/repo/extraction method/action) | `docs/guides/common-patterns.md` |
+| Navigation setup guide | `docs/guides/navigation-guide.md` |
 | Feature Specs | `openspec/specs/[area]/spec.md` |
 | Change Proposals | `openspec/changes/[name]/proposal.md` |
 | Change Designs | `openspec/changes/[name]/design.md` |
