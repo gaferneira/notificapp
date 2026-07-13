@@ -4,11 +4,17 @@ import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleCondition
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 
 /**
  * Pure Kotlin object for checking if a notification matches rule conditions.
  *
- * No Android dependencies - fully unit testable.
+ * No Android dependencies - fully unit testable. "Now" arrives as a parameter (never read from a
+ * clock internally) so day-of-week/time-range evaluation stays a pure function of its inputs -
+ * `core/extraction` cannot depend on `core/notification`'s `CurrentTimeProvider` (reverse
+ * dependency), per this change's design D2/D6.
  */
 object RuleMatcher {
 
@@ -17,31 +23,48 @@ object RuleMatcher {
      *
      * @param notification The notification to check
      * @param conditions List of conditions that must all match (AND logic)
+     * @param now The evaluation instant, for day-of-week/time-range conditions
      * @return true if all conditions match, false otherwise
      */
-    fun matches(notification: Notification, conditions: List<RuleCondition>): Boolean {
+    fun matches(notification: Notification, conditions: List<RuleCondition>, now: LocalDateTime): Boolean {
         if (conditions.isEmpty()) return true
         return conditions.all { condition ->
-            matchesCondition(notification, condition)
+            matchesCondition(notification, condition, now)
         }
     }
 
     /**
-     * Check if a single condition matches the notification.
+     * Check if a single condition matches the notification. Total and fail-closed: every sealed
+     * member resolves to a boolean, never throws.
      */
-    private fun matchesCondition(notification: Notification, condition: RuleCondition): Boolean {
-        val value = getValueForCondition(notification, condition.condition ?: return false)
-            ?: return false
+    private fun matchesCondition(notification: Notification, condition: RuleCondition, now: LocalDateTime): Boolean = when (condition) {
+        is RuleCondition.ContentMatchCondition -> matchesContent(notification, condition)
+        is RuleCondition.DayOfWeekCondition -> now.dayOfWeek in condition.days
+        is RuleCondition.TimeRangeCondition -> matchesTimeRange(condition, now.toLocalTime().truncatedTo(ChronoUnit.MINUTES))
+    }
+
+    private fun matchesContent(notification: Notification, condition: RuleCondition.ContentMatchCondition): Boolean {
+        val value = getValueForCondition(notification, condition.condition) ?: return false
 
         return when (condition.operator) {
-            MatchingOperator.CONTAINS -> value.contains(condition.value ?: "")
-            MatchingOperator.STARTS_WITH -> value.startsWith(condition.value ?: "")
-            MatchingOperator.ENDS_WITH -> value.endsWith(condition.value ?: "")
+            MatchingOperator.CONTAINS -> value.contains(condition.value)
+            MatchingOperator.STARTS_WITH -> value.startsWith(condition.value)
+            MatchingOperator.ENDS_WITH -> value.endsWith(condition.value)
             MatchingOperator.EQUALS -> value == condition.value
-            MatchingOperator.REGEX_MATCH -> matchesRegex(value, condition.value ?: "")
-            MatchingOperator.NOT_CONTAINS -> !value.contains(condition.value ?: "")
-            null -> false
+            MatchingOperator.REGEX_MATCH -> matchesRegex(value, condition.value)
+            MatchingOperator.NOT_CONTAINS -> !value.contains(condition.value)
         }
+    }
+
+    /**
+     * Evaluate a [RuleCondition.TimeRangeCondition] against a minute-truncated [t]. Closed-inclusive:
+     * `start <= end` matches `[start, end]`; `start > end` wraps midnight, matching `t >= start` OR
+     * `t <= end`. A degenerate `start == end` range therefore matches only that exact minute.
+     */
+    private fun matchesTimeRange(condition: RuleCondition.TimeRangeCondition, t: LocalTime): Boolean = if (condition.start <= condition.end) {
+        t >= condition.start && t <= condition.end
+    } else {
+        t >= condition.start || t <= condition.end
     }
 
     /**

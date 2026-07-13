@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "983e71e45933d3cfab05b672b5ab75a7",
+    "identityHash": "35b174d6723406e9a040d4d659768c6a",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -392,7 +392,7 @@
       },
       {
         "tableName": "rule_conditions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `rule_id` TEXT NOT NULL, `condition` TEXT, `operator` TEXT, `value` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`rule_id`) REFERENCES `rules`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `rule_id` TEXT NOT NULL, `payload` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`rule_id`) REFERENCES `rules`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -407,19 +407,10 @@
             "notNull": true
           },
           {
-            "fieldPath": "condition",
-            "columnName": "condition",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "operator",
-            "columnName": "operator",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "value",
-            "columnName": "value",
-            "affinity": "TEXT"
+            "fieldPath": "payload",
+            "columnName": "payload",
+            "affinity": "TEXT",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -786,7 +777,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '983e71e45933d3cfab05b672b5ab75a7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '35b174d6723406e9a040d4d659768c6a')"
     ]
   }
 }

@@ -9,13 +9,14 @@ import androidx.room.PrimaryKey
 /**
  * Room entity representing a single trigger condition within a rule.
  *
- * Each condition defines when a rule should be applied based on notification properties.
+ * Each condition defines when a rule should be applied. The condition's family and data (content
+ * match, day-of-week, time-range, ...) are collapsed into a single JSON [payload] column - see
+ * ADR 011's 2026-07-12 amendment - so adding a new condition family never requires a schema
+ * migration.
  *
  * @property id Unique identifier for this condition
  * @property ruleId Foreign key to the parent rule
- * @property condition What to match against (TEXT_CONTENT, TITLE, etc.)
- * @property operator How to perform the match (CONTAINS, EQUALS, etc.)
- * @property value The value to match against
+ * @property payload JSON-serialized, polymorphically-discriminated `ConditionDto`
  */
 @Entity(
     tableName = "rule_conditions",
@@ -39,12 +40,6 @@ internal data class RuleConditionEntity(
     @ColumnInfo(name = "rule_id")
     val ruleId: String,
 
-    @ColumnInfo(name = "condition")
-    val condition: String?, // MatchingCondition enum name
-
-    @ColumnInfo(name = "operator")
-    val operator: String?, // MatchingOperator enum name
-
-    @ColumnInfo(name = "value")
-    val value: String?,
+    @ColumnInfo(name = "payload")
+    val payload: String,
 )

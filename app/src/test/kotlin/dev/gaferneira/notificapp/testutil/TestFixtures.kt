@@ -10,6 +10,8 @@ import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import kotlinx.collections.immutable.toImmutableList
+import java.time.DayOfWeek
+import java.time.LocalTime
 
 /**
  * Test fixture builders for domain models used across pure-Kotlin unit tests.
@@ -44,15 +46,26 @@ fun createTestNotification(
 
 fun createTestCondition(
     id: String = "test-condition-id",
-    condition: MatchingCondition? = MatchingCondition.TEXT_CONTENT,
-    operator: MatchingOperator? = MatchingOperator.CONTAINS,
-    value: String? = "",
-): RuleCondition = RuleCondition(
+    condition: MatchingCondition = MatchingCondition.TEXT_CONTENT,
+    operator: MatchingOperator = MatchingOperator.CONTAINS,
+    value: String = "",
+): RuleCondition.ContentMatchCondition = RuleCondition.ContentMatchCondition(
     id = id,
     condition = condition,
     operator = operator,
     value = value,
 )
+
+fun createTestDayOfWeekCondition(
+    id: String = "test-day-of-week-condition-id",
+    days: Set<DayOfWeek> = setOf(DayOfWeek.MONDAY),
+): RuleCondition.DayOfWeekCondition = RuleCondition.DayOfWeekCondition(id = id, days = days)
+
+fun createTestTimeRangeCondition(
+    id: String = "test-time-range-condition-id",
+    start: LocalTime = LocalTime.of(9, 0),
+    end: LocalTime = LocalTime.of(17, 0),
+): RuleCondition.TimeRangeCondition = RuleCondition.TimeRangeCondition(id = id, start = start, end = end)
 
 fun createTestField(
     id: String = "test-field-id",

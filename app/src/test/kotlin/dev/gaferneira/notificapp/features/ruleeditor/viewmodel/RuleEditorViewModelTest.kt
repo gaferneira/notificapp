@@ -20,6 +20,7 @@ import dev.gaferneira.notificapp.testutil.createTestCondition
 import dev.gaferneira.notificapp.testutil.createTestField
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import dev.gaferneira.notificapp.testutil.createTestRule
+import dev.gaferneira.notificapp.testutil.createTestTimeRangeCondition
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.Runs
@@ -40,6 +41,9 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RuleEditorViewModelTest {
@@ -798,6 +802,30 @@ class RuleEditorViewModelTest {
             // Then: only the notification from the target app is tested and matched
             val state = viewModel.uiState.value
             state.backtestTestedCount shouldBe 1
+            state.backtestResults?.map { it.notification.id } shouldBe listOf("n1")
+        }
+
+        @Test
+        fun `test against history evaluates each notification against its own captured timestamp, not wall-clock now`() = runTest(testDispatcher) {
+            // Given: a draft rule gated on a TimeRangeCondition that only matches 09:00-10:00,
+            // and two notifications captured at different times of day
+            viewModel.onEvent(UiEvent.OnConditionSaved(createTestTimeRangeCondition(start = LocalTime.of(9, 0), end = LocalTime.of(10, 0))))
+
+            val zone = ZoneId.systemDefault()
+            val capturedInsideWindow = LocalDateTime.of(2026, 7, 6, 9, 30).atZone(zone).toInstant().toEpochMilli()
+            val capturedOutsideWindow = LocalDateTime.of(2026, 7, 6, 15, 0).atZone(zone).toInstant().toEpochMilli()
+            val insideWindow = createTestNotification(id = "n1", timestamp = capturedInsideWindow)
+            val outsideWindow = createTestNotification(id = "n2", timestamp = capturedOutsideWindow)
+            coEvery { notificationRepository.getNotificationsForBacktest(any(), any()) } returns Result.success(listOf(insideWindow, outsideWindow))
+
+            // When: testing against history
+            viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: only the notification captured inside the time window matches - each
+            // candidate was evaluated against its own timestamp, not a shared wall-clock instant
+            val state = viewModel.uiState.value
+            state.backtestTestedCount shouldBe 2
             state.backtestResults?.map { it.notification.id } shouldBe listOf("n1")
         }
 

@@ -12,10 +12,12 @@ import dev.gaferneira.notificapp.testutil.createTestNotification
 import dev.gaferneira.notificapp.testutil.createTestRule
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
+import java.time.LocalDateTime
 
 class RuleEngineTest {
 
     private val ruleEngine = RuleEngine()
+    private val now = LocalDateTime.of(2026, 7, 6, 12, 0)
 
     @Test
     fun `rule with matching conditions produces a match with extracted data`() {
@@ -38,7 +40,7 @@ class RuleEngineTest {
         val rule = createTestRule(conditions = listOf(condition), actions = listOf(saveDataAction))
 
         // When: evaluating the notification against the rule
-        val result = ruleEngine.evaluate(notification, listOf(rule))
+        val result = ruleEngine.evaluate(notification, listOf(rule), now)
 
         // Then: a single match is produced with the extracted field value
         result shouldBe listOf(RuleMatch(rule, mapOf("amount" to "153,50 kr")))
@@ -56,7 +58,7 @@ class RuleEngineTest {
         val rule = createTestRule(conditions = listOf(condition))
 
         // When: evaluating the notification against the rule
-        val result = ruleEngine.evaluate(notification, listOf(rule))
+        val result = ruleEngine.evaluate(notification, listOf(rule), now)
 
         // Then: no match is produced
         result shouldBe emptyList()
@@ -84,7 +86,7 @@ class RuleEngineTest {
         val rule = createTestRule(conditions = listOf(condition), actions = listOf(saveDataAction))
 
         // When: evaluating the notification against the rule
-        val result = ruleEngine.evaluate(notification, listOf(rule))
+        val result = ruleEngine.evaluate(notification, listOf(rule), now)
 
         // Then: the rule still matches, with an empty extractedData map (a failed required field
         // only logs a warning, per RuleEngine.extractFields - it does not block the match)
@@ -105,7 +107,7 @@ class RuleEngineTest {
         val rule = createTestRule(conditions = listOf(condition))
 
         // When: evaluating the notification against the rule
-        val result = ruleEngine.evaluate(notification, listOf(rule))
+        val result = ruleEngine.evaluate(notification, listOf(rule), now)
 
         // Then: a single match is produced with no extracted data
         result.size shouldBe 1
@@ -125,7 +127,7 @@ class RuleEngineTest {
         val rule = createTestRule(conditions = listOf(condition), actions = listOf(dismiss))
 
         // When: evaluating the notification against the rule
-        val result = ruleEngine.evaluate(notification, listOf(rule))
+        val result = ruleEngine.evaluate(notification, listOf(rule), now)
 
         // Then: the rule matches but nothing is extracted - fields are sourced from saveDataFields()
         result.size shouldBe 1
@@ -151,7 +153,7 @@ class RuleEngineTest {
         val thirdRule = createTestRule(id = "rule-3", conditions = listOf(matchingCondition))
 
         // When: evaluating the notification against all three rules
-        val result = ruleEngine.evaluate(notification, listOf(firstRule, secondRule, thirdRule))
+        val result = ruleEngine.evaluate(notification, listOf(firstRule, secondRule, thirdRule), now)
 
         // Then: only the matching rules produce a match, in the original order
         result.map { it.rule.id } shouldBe listOf("rule-1", "rule-3")

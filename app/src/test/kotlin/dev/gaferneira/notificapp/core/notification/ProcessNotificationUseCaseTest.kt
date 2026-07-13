@@ -2,6 +2,7 @@ package dev.gaferneira.notificapp.core.notification
 
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.notification.action.ActionDispatcher
+import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
@@ -19,11 +20,14 @@ import dev.gaferneira.notificapp.testutil.createTestRule
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.LocalDateTime
 
 class ProcessNotificationUseCaseTest {
 
@@ -32,8 +36,10 @@ class ProcessNotificationUseCaseTest {
     private lateinit var ruleRepository: RuleRepository
     private lateinit var ruleExecutionRepository: RuleExecutionRepository
     private lateinit var actionDispatcher: ActionDispatcher
+    private lateinit var timeProvider: CurrentTimeProvider
     private lateinit var useCase: ProcessNotificationUseCase
     private val testDispatcher = StandardTestDispatcher()
+    private val fixedNow = LocalDateTime.of(2026, 7, 6, 12, 0)
 
     @BeforeEach
     fun setUp() {
@@ -42,6 +48,8 @@ class ProcessNotificationUseCaseTest {
         ruleRepository = mockk()
         ruleExecutionRepository = mockk()
         actionDispatcher = mockk()
+        timeProvider = mockk()
+        every { timeProvider.now() } returns fixedNow
         useCase = ProcessNotificationUseCase(
             deduplicator = deduplicator,
             notificationRepository = notificationRepository,
@@ -49,6 +57,7 @@ class ProcessNotificationUseCaseTest {
             ruleEngine = RuleEngine(),
             ruleExecutionRepository = ruleExecutionRepository,
             actionDispatcher = actionDispatcher,
+            timeProvider = timeProvider,
             ioDispatcher = testDispatcher,
         )
     }
@@ -282,6 +291,34 @@ class ProcessNotificationUseCaseTest {
 
         // Then: no fields are persisted
         coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(any(), emptyList()) }
+    }
+
+    @Test
+    fun `evaluate is called with timeProvider's now`() = runTest(testDispatcher) {
+        // Given: a use case wired with a mocked RuleEngine, so the exact call args are observable
+        val mockRuleEngine: RuleEngine = mockk()
+        val useCaseWithMockedEngine = ProcessNotificationUseCase(
+            deduplicator = deduplicator,
+            notificationRepository = notificationRepository,
+            ruleRepository = ruleRepository,
+            ruleEngine = mockRuleEngine,
+            ruleExecutionRepository = ruleExecutionRepository,
+            actionDispatcher = actionDispatcher,
+            timeProvider = timeProvider,
+            ioDispatcher = testDispatcher,
+        )
+        val notification = createTestNotification()
+        val rule = createTestRule(id = "rule-1")
+        coEvery { deduplicator.isDuplicate(notification) } returns false
+        coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
+        coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
+        every { mockRuleEngine.evaluate(notification, listOf(rule), fixedNow) } returns emptyList()
+
+        // When: invoking the use case
+        useCaseWithMockedEngine.invoke(notification)
+
+        // Then: RuleEngine.evaluate was called with timeProvider.now()
+        verify(exactly = 1) { mockRuleEngine.evaluate(notification, listOf(rule), fixedNow) }
     }
 
     @Test

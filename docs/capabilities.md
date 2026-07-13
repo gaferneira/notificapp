@@ -12,22 +12,14 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **Technical Spec Reference:** Pending link to deep technical spec
 
 ### Matching Conditions
-* **User Experience:** The user specifies what a notification must look like to match a rule by picking a property, an operator, and a value. Multiple conditions can be added to the same rule (combined with AND).
-  * Properties that can be checked:
-    * Title
-    * Main text/content
-    * Raw content (the full raw notification text)
-    * App name
-    * Package name
-  * Operators available:
-    * Contains
-    * Does not contain
-    * Starts with
-    * Ends with
-    * Equals (exact match)
-    * Matches regex (pattern match)
+* **User Experience:** The user specifies what a notification must look like to match a rule by adding one or more conditions, drawn from three families. Multiple conditions on the same rule are combined with AND.
+  * **Content match** — a notification property compared against a value with an operator:
+    * Properties that can be checked: Title, Main text/content, Raw content (the full raw notification text), App name, Package name
+    * Operators available: Contains, Does not contain, Starts with, Ends with, Equals (exact match), Matches regex (pattern match)
+  * **Day of week** — matches when the current day is one of a chosen set of weekdays. Choosing zero days matches no day (fail-closed), not every day.
+  * **Time range** — matches when the current time falls within a start/end time, inclusive. A range where the end is earlier than the start wraps across midnight (e.g. 22:00–06:00); a range where start equals end matches only that exact instant.
 * **System Trigger:** User adds/edits a condition inside the Rule Editor's "Matching Logic" step.
-* **Technical Spec Reference:** Pending link to deep technical spec
+* **Technical Spec Reference:** `openspec/specs/rule-conditions/`
 
 ### Data Extraction
 * **User Experience:** As one of a rule's actions, the user can configure it to pull specific named pieces of information out of a notification and save them for later viewing. The editor offers a live preview against sample text and can auto-suggest fields from a sample notification.
@@ -138,7 +130,7 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ## Status Reference (for planning what to build next)
 
-* **Shipped:** onboarding, app selection, notification capture with dedup/filtering, inbox, notification detail, rule engine (6 condition operators + 10 extraction methods), rules list, rule editor, settings, all 5 action types, backtesting, dry-run mode, rule import/export.
+* **Shipped:** onboarding, app selection, notification capture with dedup/filtering, inbox, notification detail, rule engine (content-match with 6 operators, day-of-week, and time-range conditions + 10 extraction methods), rules list, rule editor, settings, all 5 action types, backtesting, dry-run mode, rule import/export.
 * **Planned, not yet built:**
   * Starter rule templates
   * Per-rule cooldown safety limits

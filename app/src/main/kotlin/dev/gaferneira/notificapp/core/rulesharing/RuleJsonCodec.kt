@@ -3,6 +3,7 @@ package dev.gaferneira.notificapp.core.rulesharing
 import dev.gaferneira.notificapp.core.rulesharing.dto.RULE_EXPORT_SCHEMA_VERSION
 import dev.gaferneira.notificapp.core.rulesharing.dto.RuleExportDto
 import dev.gaferneira.notificapp.domain.model.Rule
+import dev.gaferneira.notificapp.domain.model.withId
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -63,7 +64,7 @@ object RuleJsonCodec {
             id = UUID.randomUUID().toString(),
             isActive = true,
             isDryRun = true,
-            conditions = conditions.map { it.copy(id = UUID.randomUUID().toString()) }.toImmutableList(),
+            conditions = conditions.map { it.withId(UUID.randomUUID().toString()) }.toImmutableList(),
             actions = actions.map { action ->
                 action.copy(
                     id = UUID.randomUUID().toString(),

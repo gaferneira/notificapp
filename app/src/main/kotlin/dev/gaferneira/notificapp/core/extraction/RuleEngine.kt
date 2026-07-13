@@ -5,6 +5,7 @@ import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleMatch
 import dev.gaferneira.notificapp.domain.model.saveDataFields
 import timber.log.Timber
+import java.time.LocalDateTime
 import javax.inject.Inject
 
 /**
@@ -20,22 +21,25 @@ class RuleEngine @Inject constructor() {
      *
      * @param notification The notification to check
      * @param rules The rules to evaluate against
+     * @param now The evaluation instant, forwarded to [RuleMatcher] for day-of-week/time-range conditions
      * @return One [RuleMatch] per rule whose conditions matched
      */
-    fun evaluate(notification: Notification, rules: List<Rule>): List<RuleMatch> = rules.mapNotNull { rule -> evaluateRule(notification, rule) }
+    fun evaluate(notification: Notification, rules: List<Rule>, now: LocalDateTime): List<RuleMatch> = rules.mapNotNull { rule -> evaluateRule(notification, rule, now) }
 
     /**
      * Evaluate a single rule against a notification.
      *
      * @param notification The notification to check
      * @param rule The rule to evaluate
+     * @param now The evaluation instant
      * @return RuleMatch if the rule's conditions matched, null otherwise
      */
     private fun evaluateRule(
         notification: Notification,
         rule: Rule,
+        now: LocalDateTime,
     ): RuleMatch? {
-        if (!RuleMatcher.matches(notification, rule.conditions)) {
+        if (!RuleMatcher.matches(notification, rule.conditions, now)) {
             Timber.d("Rule ${rule.id} did not match notification ${notification.id}")
             return null
         }

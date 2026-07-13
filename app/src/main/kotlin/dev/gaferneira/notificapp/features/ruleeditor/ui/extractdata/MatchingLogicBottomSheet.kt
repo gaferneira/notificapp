@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,18 +11,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,9 +50,13 @@ import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.displayName
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.MatchingLogicViewModel
+import java.time.DayOfWeek
+import java.time.LocalTime
 
 /**
- * Bottom sheet for configuring matching logic (conditions).
+ * Bottom sheet for configuring matching logic (conditions), across all three [RuleCondition]
+ * families: content-match, day-of-week, and time-range. A type picker dispatches to the relevant
+ * config body (per TD-13 the sheet only dispatches, it doesn't own each family's UI).
  * Uses its own MVI ViewModel for state management.
  *
  * @param initialCondition Pre-populated condition data when editing, or null for new condition
@@ -122,7 +135,14 @@ fun MatchingLogicBottomSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ConditionTypePicker(
+                selected = uiState.conditionType,
+                onSelect = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnConditionTypeChange(it)) },
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Validation error
             uiState.validationError?.let { error ->
@@ -134,21 +154,33 @@ fun MatchingLogicBottomSheet(
                 )
             }
 
-            // Condition content
-            ConditionModeContent(
-                condition = uiState.matchingCondition,
-                operator = uiState.matchingOperator,
-                value = uiState.matchingValue,
-                onConditionChange = {
-                    viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingConditionChange(it))
-                },
-                onOperatorChange = {
-                    viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingOperatorChange(it))
-                },
-                onValueChange = {
-                    viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingValueChange(it))
-                },
-            )
+            // Condition content, dispatched by family
+            when (uiState.conditionType) {
+                MatchingLogicContract.ConditionType.CONTENT -> ConditionModeContent(
+                    condition = uiState.matchingCondition,
+                    operator = uiState.matchingOperator,
+                    value = uiState.matchingValue,
+                    onConditionChange = {
+                        viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingConditionChange(it))
+                    },
+                    onOperatorChange = {
+                        viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingOperatorChange(it))
+                    },
+                    onValueChange = {
+                        viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingValueChange(it))
+                    },
+                )
+                MatchingLogicContract.ConditionType.DAY_OF_WEEK -> DayOfWeekModeContent(
+                    selectedDays = uiState.selectedDays,
+                    onDayToggled = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnDayToggled(it)) },
+                )
+                MatchingLogicContract.ConditionType.TIME_RANGE -> TimeRangeModeContent(
+                    start = uiState.startTime,
+                    end = uiState.endTime,
+                    onStartChange = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnStartTimeChange(it)) },
+                    onEndChange = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnEndTimeChange(it)) },
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -175,6 +207,25 @@ fun MatchingLogicBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ConditionTypePicker(
+    selected: MatchingLogicContract.ConditionType,
+    onSelect: (MatchingLogicContract.ConditionType) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SingleChoiceSegmentedButtonRow(modifier = modifier.fillMaxWidth()) {
+        MatchingLogicContract.ConditionType.entries.forEach { type ->
+            SegmentedButton(
+                selected = selected == type,
+                onClick = { onSelect(type) },
+                shape = RoundedCornerShape(8.dp),
+                label = { Text(type.displayName()) },
+            )
         }
     }
 }
@@ -223,6 +274,112 @@ private fun ConditionModeContent(
             label = { Text("Value to match") },
             placeholder = { Text("e.g., Your purchase") },
             modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DayOfWeekModeContent(
+    selectedDays: Set<DayOfWeek>,
+    onDayToggled: (DayOfWeek) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "Trigger only on these days",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            DayOfWeek.entries.forEach { day ->
+                FilterChip(
+                    selected = day in selectedDays,
+                    onClick = { onDayToggled(day) },
+                    label = { Text(day.name.substring(0, 3)) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimeRangeModeContent(
+    start: LocalTime,
+    end: LocalTime,
+    onStartChange: (LocalTime) -> Unit,
+    onEndChange: (LocalTime) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "From",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        TimePickerButton(hour = start.hour, minute = start.minute, onTimePicked = { h, m -> onStartChange(LocalTime.of(h, m)) })
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "To",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        TimePickerButton(hour = end.hour, minute = end.minute, onTimePicked = { h, m -> onEndChange(LocalTime.of(h, m)) })
+
+        if (start > end) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "This range spans midnight ($start – $end covers overnight).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimePickerButton(
+    hour: Int,
+    minute: Int,
+    onTimePicked: (hour: Int, minute: Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    OutlinedButton(
+        onClick = { showDialog = true },
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Text("%02d:%02d".format(hour, minute))
+    }
+
+    if (showDialog) {
+        val state = rememberTimePickerState(initialHour = hour, initialMinute = minute, is24Hour = true)
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onTimePicked(state.hour, state.minute)
+                        showDialog = false
+                    },
+                ) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+            },
+            text = { TimePicker(state = state) },
         )
     }
 }

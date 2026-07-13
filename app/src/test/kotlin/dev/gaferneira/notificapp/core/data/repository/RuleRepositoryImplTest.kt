@@ -47,9 +47,9 @@ class RuleRepositoryImplTest {
     private fun conditionEntity(id: String, ruleId: String) = RuleConditionEntity(
         id = id,
         ruleId = ruleId,
-        condition = "TEXT_CONTENT",
-        operator = "CONTAINS",
-        value = "purchase",
+        // Storage payload keys the MatchingCondition/MatchingOperator enum constant names
+        // (RuleConditionMapper.toDto uses `.name`), not the wire-format strings.
+        payload = """{"type":"content_match","id":"$id","condition":"TEXT_CONTENT","operator":"CONTAINS","value":"purchase"}""",
     )
 
     @Test

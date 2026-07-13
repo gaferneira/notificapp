@@ -112,6 +112,11 @@ Nothing currently in progress — ready to start Phase 3.
 
 **Goal:** Ship the first rung of the rule-creation ladder (templates), make live rules safe against noisy apps, and build the dedicated screen for browsing, filtering, and exporting extracted data — plus the retention and backup features people need before investing hours in rules.
 
+#### Improve conditionals
+- [x] Add Day of week
+- [x] Add Time Range
+- [ ] Option to decide whether the app condition is to include or not include the selected app(s) (e.g, trigger this rule for all the apps except the selected one)
+
 #### Starter Rule Templates
 
 Guiding principle #1 puts **templates first** in the rule-creation ladder (templates → create-from-notification → raw editor), but nothing on the roadmap built them before the Phase 6 gallery. They're mostly content on top of Phase 2's import machinery, and they seed the gallery.

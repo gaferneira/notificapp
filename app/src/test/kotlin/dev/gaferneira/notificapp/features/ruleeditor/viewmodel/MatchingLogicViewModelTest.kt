@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
+import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract.ConditionType
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract.UiState
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import java.time.DayOfWeek
+import java.time.LocalTime
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MatchingLogicViewModelTest {
@@ -41,8 +44,8 @@ class MatchingLogicViewModelTest {
     inner class InitForEditTests {
 
         @Test
-        fun `hydrates state from the given condition and switches to EDIT mode`() {
-            val condition = RuleCondition(
+        fun `hydrates state from a ContentMatchCondition and switches to EDIT mode`() {
+            val condition = RuleCondition.ContentMatchCondition(
                 id = "cond-1",
                 condition = MatchingCondition.TITLE,
                 operator = MatchingOperator.EQUALS,
@@ -53,6 +56,7 @@ class MatchingLogicViewModelTest {
 
             val state = viewModel.uiState.value
             state.mode shouldBe UiState.Mode.EDIT
+            state.conditionType shouldBe ConditionType.CONTENT
             state.matchingCondition shouldBe MatchingCondition.TITLE
             state.matchingOperator shouldBe MatchingOperator.EQUALS
             state.matchingValue shouldBe "Payment received"
@@ -60,20 +64,40 @@ class MatchingLogicViewModelTest {
         }
 
         @Test
-        fun `falls back to default condition, operator, and empty value when the fields are null`() {
-            val condition = RuleCondition(id = "cond-1", condition = null, operator = null, value = null)
+        fun `hydrates state from a DayOfWeekCondition and switches to EDIT mode`() {
+            val condition = RuleCondition.DayOfWeekCondition(id = "cond-1", days = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY))
 
             viewModel.onEvent(UiEvent.InitForEdit(condition))
 
             val state = viewModel.uiState.value
-            state.matchingCondition shouldBe MatchingCondition.TEXT_CONTENT
-            state.matchingOperator shouldBe MatchingOperator.CONTAINS
-            state.matchingValue shouldBe ""
+            state.mode shouldBe UiState.Mode.EDIT
+            state.conditionType shouldBe ConditionType.DAY_OF_WEEK
+            state.selectedDays shouldBe setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
+        }
+
+        @Test
+        fun `hydrates state from a TimeRangeCondition and switches to EDIT mode`() {
+            val condition = RuleCondition.TimeRangeCondition(id = "cond-1", start = LocalTime.of(22, 0), end = LocalTime.of(6, 0))
+
+            viewModel.onEvent(UiEvent.InitForEdit(condition))
+
+            val state = viewModel.uiState.value
+            state.mode shouldBe UiState.Mode.EDIT
+            state.conditionType shouldBe ConditionType.TIME_RANGE
+            state.startTime shouldBe LocalTime.of(22, 0)
+            state.endTime shouldBe LocalTime.of(6, 0)
         }
     }
 
     @Nested
     inner class FieldUpdateTests {
+
+        @Test
+        fun `changing the condition type switches the active family`() {
+            viewModel.onEvent(UiEvent.OnConditionTypeChange(ConditionType.DAY_OF_WEEK))
+
+            viewModel.uiState.value.conditionType shouldBe ConditionType.DAY_OF_WEEK
+        }
 
         @Test
         fun `updating the matching condition replaces it in state`() {
@@ -103,6 +127,25 @@ class MatchingLogicViewModelTest {
         }
 
         @Test
+        fun `toggling a day adds it, toggling again removes it`() {
+            viewModel.onEvent(UiEvent.OnDayToggled(DayOfWeek.MONDAY))
+            viewModel.uiState.value.selectedDays shouldBe setOf(DayOfWeek.MONDAY)
+
+            viewModel.onEvent(UiEvent.OnDayToggled(DayOfWeek.MONDAY))
+            viewModel.uiState.value.selectedDays shouldBe emptySet()
+        }
+
+        @Test
+        fun `updating start and end time replaces them in state`() {
+            viewModel.onEvent(UiEvent.OnStartTimeChange(LocalTime.of(22, 0)))
+            viewModel.onEvent(UiEvent.OnEndTimeChange(LocalTime.of(6, 0)))
+
+            val state = viewModel.uiState.value
+            state.startTime shouldBe LocalTime.of(22, 0)
+            state.endTime shouldBe LocalTime.of(6, 0)
+        }
+
+        @Test
         fun `OnClearError resets only the validation error`() {
             viewModel.onEvent(UiEvent.OnConfirm)
             viewModel.uiState.value.validationError shouldBe "Please enter a value to match"
@@ -117,7 +160,7 @@ class MatchingLogicViewModelTest {
     inner class ConfirmTests {
 
         @Test
-        fun `confirm with a blank value sets a validation error and emits ShowError without dismissing`() = runTest(testDispatcher) {
+        fun `confirm CONTENT with a blank value sets a validation error and emits ShowError without dismissing`() = runTest(testDispatcher) {
             viewModel.effect.test {
                 viewModel.onEvent(UiEvent.OnConfirm)
                 testDispatcher.scheduler.advanceUntilIdle()
@@ -129,7 +172,7 @@ class MatchingLogicViewModelTest {
         }
 
         @Test
-        fun `confirm in ADD mode emits ConditionCreated with a fresh id, then Dismiss`() = runTest(testDispatcher) {
+        fun `confirm CONTENT in ADD mode emits ConditionCreated with a fresh id, then Dismiss`() = runTest(testDispatcher) {
             viewModel.onEvent(UiEvent.OnMatchingValueChange("purchase"))
 
             viewModel.effect.test {
@@ -137,15 +180,16 @@ class MatchingLogicViewModelTest {
                 testDispatcher.scheduler.advanceUntilIdle()
 
                 val created = awaitItem()
-                created.shouldBeInstanceOf<UiEffect.ConditionCreated>().condition.value shouldBe "purchase"
+                val condition = created.shouldBeInstanceOf<UiEffect.ConditionCreated>().condition
+                condition.shouldBeInstanceOf<RuleCondition.ContentMatchCondition>().value shouldBe "purchase"
                 awaitItem() shouldBe UiEffect.Dismiss
                 cancelAndIgnoreRemainingEvents()
             }
         }
 
         @Test
-        fun `confirm in EDIT mode emits ConditionUpdated with the original id, then Dismiss`() = runTest(testDispatcher) {
-            val original = RuleCondition(
+        fun `confirm CONTENT in EDIT mode emits ConditionUpdated with the original id, then Dismiss`() = runTest(testDispatcher) {
+            val original = RuleCondition.ContentMatchCondition(
                 id = "cond-1",
                 condition = MatchingCondition.TITLE,
                 operator = MatchingOperator.EQUALS,
@@ -160,7 +204,52 @@ class MatchingLogicViewModelTest {
 
                 val updated = awaitItem().shouldBeInstanceOf<UiEffect.ConditionUpdated>()
                 updated.conditionId shouldBe "cond-1"
-                updated.condition.value shouldBe "new value"
+                updated.condition.shouldBeInstanceOf<RuleCondition.ContentMatchCondition>().value shouldBe "new value"
+                awaitItem() shouldBe UiEffect.Dismiss
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
+        fun `confirm DAY_OF_WEEK with no selected days sets a validation error and emits ShowError without dismissing`() = runTest(testDispatcher) {
+            viewModel.onEvent(UiEvent.OnConditionTypeChange(ConditionType.DAY_OF_WEEK))
+
+            viewModel.effect.test {
+                viewModel.onEvent(UiEvent.OnConfirm)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                awaitItem() shouldBe UiEffect.ShowError("Please select at least one day")
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
+        fun `confirm DAY_OF_WEEK with selected days emits ConditionCreated carrying them`() = runTest(testDispatcher) {
+            viewModel.onEvent(UiEvent.OnConditionTypeChange(ConditionType.DAY_OF_WEEK))
+            viewModel.onEvent(UiEvent.OnDayToggled(DayOfWeek.MONDAY))
+            viewModel.onEvent(UiEvent.OnDayToggled(DayOfWeek.TUESDAY))
+
+            viewModel.effect.test {
+                viewModel.onEvent(UiEvent.OnConfirm)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                val created = awaitItem().shouldBeInstanceOf<UiEffect.ConditionCreated>().condition
+                created.shouldBeInstanceOf<RuleCondition.DayOfWeekCondition>().days shouldBe setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY)
+                awaitItem() shouldBe UiEffect.Dismiss
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
+        fun `confirm TIME_RANGE always succeeds, even with default start and end`() = runTest(testDispatcher) {
+            viewModel.onEvent(UiEvent.OnConditionTypeChange(ConditionType.TIME_RANGE))
+
+            viewModel.effect.test {
+                viewModel.onEvent(UiEvent.OnConfirm)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                val created = awaitItem().shouldBeInstanceOf<UiEffect.ConditionCreated>().condition
+                created.shouldBeInstanceOf<RuleCondition.TimeRangeCondition>()
                 awaitItem() shouldBe UiEffect.Dismiss
                 cancelAndIgnoreRemainingEvents()
             }
@@ -186,7 +275,7 @@ class MatchingLogicViewModelTest {
 
         @Test
         fun `dismiss after editing clears the tracked editing id, so a later confirm creates instead of updates`() = runTest(testDispatcher) {
-            val original = RuleCondition(id = "cond-1", condition = MatchingCondition.TITLE, operator = MatchingOperator.EQUALS, value = "old")
+            val original = RuleCondition.ContentMatchCondition(id = "cond-1", condition = MatchingCondition.TITLE, operator = MatchingOperator.EQUALS, value = "old")
             viewModel.onEvent(UiEvent.InitForEdit(original))
 
             viewModel.effect.test {

@@ -26,6 +26,8 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonPrimitive
 import timber.log.Timber
+import java.time.DayOfWeek
+import java.time.LocalTime
 
 private val wireEnumJson = Json { ignoreUnknownKeys = true }
 
@@ -91,19 +93,41 @@ private fun AppInfo.toDto(): AppInfoDto = AppInfoDto(packageName = packageName, 
 
 private fun AppInfoDto.toDomain(): AppInfo = AppInfo(packageName = packageName, name = name, category = category)
 
-private fun RuleCondition.toDto(): ConditionDto = ConditionDto(
-    id = id,
-    condition = condition?.toWireString(MatchingCondition.serializer()),
-    operator = operator?.toWireString(MatchingOperator.serializer()),
-    value = value,
-)
+private fun RuleCondition.toDto(): ConditionDto = when (this) {
+    is RuleCondition.ContentMatchCondition -> ConditionDto.ContentMatch(
+        id = id,
+        condition = condition.toWireString(MatchingCondition.serializer()),
+        operator = operator.toWireString(MatchingOperator.serializer()),
+        value = value,
+    )
+    is RuleCondition.DayOfWeekCondition -> ConditionDto.DayOfWeek(
+        id = id,
+        days = days.map { it.name },
+    )
+    is RuleCondition.TimeRangeCondition -> ConditionDto.TimeRange(
+        id = id,
+        start = start.toString(),
+        end = end.toString(),
+    )
+}
 
-private fun ConditionDto.toDomain(): RuleCondition = RuleCondition(
-    id = id,
-    condition = condition?.fromWireStringStrict(MatchingCondition.serializer(), "condition type"),
-    operator = operator?.fromWireStringStrict(MatchingOperator.serializer(), "operator"),
-    value = value,
-)
+private fun ConditionDto.toDomain(): RuleCondition = when (this) {
+    is ConditionDto.ContentMatch -> RuleCondition.ContentMatchCondition(
+        id = id,
+        condition = condition.fromWireStringStrict(MatchingCondition.serializer(), "condition type"),
+        operator = operator.fromWireStringStrict(MatchingOperator.serializer(), "operator"),
+        value = value,
+    )
+    is ConditionDto.DayOfWeek -> RuleCondition.DayOfWeekCondition(
+        id = id,
+        days = days.map { DayOfWeek.valueOf(it) }.toSet(),
+    )
+    is ConditionDto.TimeRange -> RuleCondition.TimeRangeCondition(
+        id = id,
+        start = LocalTime.parse(start),
+        end = LocalTime.parse(end),
+    )
+}
 
 private fun RuleField.toDto(): FieldDto = FieldDto(
     id = id,

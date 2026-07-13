@@ -7,18 +7,24 @@ import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestCondition
+import dev.gaferneira.notificapp.testutil.createTestDayOfWeekCondition
 import dev.gaferneira.notificapp.testutil.createTestField
 import dev.gaferneira.notificapp.testutil.createTestRule
+import dev.gaferneira.notificapp.testutil.createTestTimeRangeCondition
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
+import java.time.DayOfWeek
+import java.time.LocalTime
 
 class RuleJsonCodecTest {
 
@@ -59,6 +65,26 @@ class RuleJsonCodecTest {
         decodedRule.conditions shouldBe rule.conditions
         decodedRule.saveDataFields() shouldBe rule.saveDataFields()
         decodedRule.actions shouldBe rule.actions
+    }
+
+    @Test
+    fun `export re-import round-trips a rule with mixed condition families`() {
+        // Given: a rule with a content-match, a day-of-week, and a time-range condition
+        val mixedRule = rule.copy(
+            conditions = persistentListOf(
+                createTestCondition(id = "c1", condition = MatchingCondition.TEXT_CONTENT, operator = MatchingOperator.CONTAINS, value = "Payment"),
+                createTestDayOfWeekCondition(id = "c2", days = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)),
+                createTestTimeRangeCondition(id = "c3", start = LocalTime.of(22, 0), end = LocalTime.of(6, 0)),
+            ),
+        )
+
+        // When: exporting then re-importing
+        val encoded = RuleJsonCodec.encode(mixedRule)
+        val decoded = RuleJsonCodec.decode(encoded)
+
+        // Then: the re-imported rule's conditions match the originals in type and value
+        decoded.isSuccess shouldBe true
+        decoded.getOrThrow().rule.conditions shouldBe mixedRule.conditions
     }
 
     @Test
@@ -151,7 +177,8 @@ class RuleJsonCodecTest {
         imported.isDryRun shouldBe true
         // Content is otherwise preserved
         imported.name shouldBe decodedRule.name
-        imported.conditions.single().value shouldBe decodedRule.conditions.single().value
+        (imported.conditions.single() as RuleCondition.ContentMatchCondition).value shouldBe
+            (decodedRule.conditions.single() as RuleCondition.ContentMatchCondition).value
     }
 
     @Test

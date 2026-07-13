@@ -1,5 +1,5 @@
 {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "rule": {
         "id": "fixture-rule-id",
         "name": "Golden Fixture Rule",
@@ -21,40 +21,60 @@
         ],
         "conditions": [
             {
+                "type": "content_match",
                 "id": "cond-contains",
                 "condition": "text_content",
                 "operator": "contains",
                 "value": "Total"
             },
             {
+                "type": "content_match",
                 "id": "cond-starts",
                 "condition": "title",
                 "operator": "starts_with",
                 "value": "Payment"
             },
             {
+                "type": "content_match",
                 "id": "cond-ends",
                 "condition": "app_name",
                 "operator": "ends_with",
                 "value": "Bank"
             },
             {
+                "type": "content_match",
                 "id": "cond-equals",
                 "condition": "package_name",
                 "operator": "equals",
                 "value": "com.bank.example"
             },
             {
+                "type": "content_match",
                 "id": "cond-regex",
                 "condition": "raw_content",
                 "operator": "regex_match",
                 "value": "\\d+"
             },
             {
+                "type": "content_match",
                 "id": "cond-not-contains",
                 "condition": "text_content",
                 "operator": "not_contains",
                 "value": "spam"
+            },
+            {
+                "type": "day_of_week",
+                "id": "cond-day-of-week",
+                "days": [
+                    "SATURDAY",
+                    "SUNDAY"
+                ]
+            },
+            {
+                "type": "time_range",
+                "id": "cond-time-range",
+                "start": "22:00",
+                "end": "06:00"
             }
         ],
         "actions": [

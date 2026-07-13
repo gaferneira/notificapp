@@ -4,6 +4,7 @@ import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.notification.action.ActionDispatcher
+import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
 import dev.gaferneira.notificapp.domain.action.RuleReEvaluator
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
@@ -35,8 +36,10 @@ import javax.inject.Inject
  * @property ruleEngine Pure rule evaluation engine
  * @property ruleExecutionRepository Repository for recording rule executions
  * @property actionDispatcher Dispatches enabled rule actions to their registered executors
+ * @property timeProvider Seam for "now", threaded into [RuleEngine.evaluate] for day-of-week/time-range conditions
  * @property ioDispatcher Coroutine dispatcher for IO operations
  */
+@Suppress("LongParameterList")
 class ProcessNotificationUseCase @Inject constructor(
     private val deduplicator: NotificationDeduplicator,
     private val notificationRepository: NotificationRepository,
@@ -44,6 +47,7 @@ class ProcessNotificationUseCase @Inject constructor(
     private val ruleEngine: RuleEngine,
     private val ruleExecutionRepository: RuleExecutionRepository,
     private val actionDispatcher: ActionDispatcher,
+    private val timeProvider: CurrentTimeProvider,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : RuleReEvaluator {
 
@@ -105,7 +109,7 @@ class ProcessNotificationUseCase @Inject constructor(
                 return@withContext Result.success(emptyList())
             }
 
-            val matches = ruleEngine.evaluate(notification, rules)
+            val matches = ruleEngine.evaluate(notification, rules, timeProvider.now())
             val executions = matches.mapNotNull { match ->
                 // Dry-run rules log the match but never reach ActionDispatcher - that's the whole
                 // point of dry-run mode (trial a rule with zero risk of it acting on anything).

@@ -736,7 +736,7 @@ private fun RuleEditorScreenStep1Preview() {
                     name = "ICA Banken Purchase",
                     targetApps = persistentListOf(),
                     triggers = persistentListOf(
-                        RuleCondition(
+                        RuleCondition.ContentMatchCondition(
                             id = "1",
                             condition = MatchingCondition.TEXT_CONTENT,
                             operator = MatchingOperator.CONTAINS,
@@ -789,7 +789,7 @@ private fun RuleEditorScreenStep1PreviewDark() {
                     name = "ICA Banken Purchase",
                     targetApps = persistentListOf(),
                     triggers = persistentListOf(
-                        RuleCondition(
+                        RuleCondition.ContentMatchCondition(
                             id = "1",
                             condition = MatchingCondition.TEXT_CONTENT,
                             operator = MatchingOperator.CONTAINS,

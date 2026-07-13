@@ -247,13 +247,13 @@ private fun WhenSectionPreview() {
                 AppInfo("com.bank", "Bank App"),
             ),
             conditions = persistentListOf(
-                RuleCondition(
+                RuleCondition.ContentMatchCondition(
                     id = "1",
                     condition = MatchingCondition.TEXT_CONTENT,
                     operator = MatchingOperator.CONTAINS,
                     value = "purchase",
                 ),
-                RuleCondition(
+                RuleCondition.ContentMatchCondition(
                     id = "2",
                     condition = MatchingCondition.TITLE,
                     operator = MatchingOperator.EQUALS,
@@ -290,7 +290,7 @@ private fun WhenSectionAllAppsPreview() {
         WhenSection(
             targetApps = persistentListOf(),
             conditions = persistentListOf(
-                RuleCondition(
+                RuleCondition.ContentMatchCondition(
                     id = "1",
                     condition = MatchingCondition.TEXT_CONTENT,
                     operator = MatchingOperator.CONTAINS,

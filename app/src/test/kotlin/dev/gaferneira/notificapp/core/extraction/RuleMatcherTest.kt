@@ -2,10 +2,19 @@ package dev.gaferneira.notificapp.core.extraction
 
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.testutil.createTestCondition
+import dev.gaferneira.notificapp.testutil.createTestDayOfWeekCondition
 import dev.gaferneira.notificapp.testutil.createTestNotification
+import dev.gaferneira.notificapp.testutil.createTestTimeRangeCondition
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+
+private val FIXED_NOW: LocalDateTime = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(12, 0)) // a Monday
 
 class RuleMatcherTest {
 
@@ -17,23 +26,10 @@ class RuleMatcherTest {
         val notification = createTestNotification()
 
         // When: matching with an empty condition list
-        val result = RuleMatcher.matches(notification, emptyList())
+        val result = RuleMatcher.matches(notification, emptyList(), FIXED_NOW)
 
         // Then: the notification matches
         result shouldBe true
-    }
-
-    @Test
-    fun `null condition type never matches`() {
-        // Given: a condition with no matching condition type set
-        val notification = createTestNotification(title = "Hello World")
-        val condition = createTestCondition(condition = null, operator = MatchingOperator.CONTAINS, value = "Hello")
-
-        // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
-
-        // Then: the condition does not match
-        result shouldBe false
     }
 
     @Test
@@ -47,7 +43,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the condition does not match
         result shouldBe false
@@ -69,7 +65,7 @@ class RuleMatcherTest {
         )
 
         // When: matching with both conditions
-        val result = RuleMatcher.matches(notification, listOf(matchingTitle, matchingContent))
+        val result = RuleMatcher.matches(notification, listOf(matchingTitle, matchingContent), FIXED_NOW)
 
         // Then: the notification matches
         result shouldBe true
@@ -91,7 +87,7 @@ class RuleMatcherTest {
         )
 
         // When: matching with both conditions
-        val result = RuleMatcher.matches(notification, listOf(matchingTitle, nonMatchingContent))
+        val result = RuleMatcher.matches(notification, listOf(matchingTitle, nonMatchingContent), FIXED_NOW)
 
         // Then: the notification does not match
         result shouldBe false
@@ -112,7 +108,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches
         result shouldBe true
@@ -129,7 +125,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule does not match
         result shouldBe false
@@ -146,7 +142,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches
         result shouldBe true
@@ -163,7 +159,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule does not match
         result shouldBe false
@@ -180,7 +176,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches
         result shouldBe true
@@ -197,7 +193,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule does not match
         result shouldBe false
@@ -214,7 +210,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches
         result shouldBe true
@@ -231,26 +227,9 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule does not match
-        result shouldBe false
-    }
-
-    @Test
-    fun `EQUALS with a null condition value never matches`() {
-        // Given: an EQUALS condition with no value configured, against a non-null field
-        val notification = createTestNotification(appName = "Test App")
-        val condition = createTestCondition(
-            condition = MatchingCondition.APP_NAME,
-            operator = MatchingOperator.EQUALS,
-            value = null,
-        )
-
-        // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
-
-        // Then: the rule never matches, since a non-null field value can't equal null
         result shouldBe false
     }
 
@@ -265,7 +244,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches
         result shouldBe true
@@ -282,7 +261,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule does not match
         result shouldBe false
@@ -299,7 +278,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule does not match, and no exception is thrown
         result shouldBe false
@@ -316,7 +295,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches
         result shouldBe true
@@ -333,7 +312,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule does not match
         result shouldBe false
@@ -354,7 +333,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches against the content field
         result shouldBe true
@@ -371,7 +350,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches against the title field
         result shouldBe true
@@ -388,7 +367,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches against the appName field
         result shouldBe true
@@ -405,7 +384,7 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches against the packageName field
         result shouldBe true
@@ -422,10 +401,222 @@ class RuleMatcherTest {
         )
 
         // When: matching the notification
-        val result = RuleMatcher.matches(notification, listOf(condition))
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
 
         // Then: the rule matches against the rawContent field
         result shouldBe true
+    }
+
+    // endregion
+
+    // region DayOfWeekCondition
+
+    @Test
+    fun `single day matches when the current day equals it`() {
+        // Given: a DayOfWeekCondition containing only MONDAY, evaluated on a Monday
+        val notification = createTestNotification()
+        val condition = createTestDayOfWeekCondition(days = setOf(DayOfWeek.MONDAY))
+
+        // When: matching at a fixed Monday instant
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
+
+        // Then: the condition matches
+        result shouldBe true
+    }
+
+    @Test
+    fun `multi-day set matches any listed day`() {
+        // Given: a DayOfWeekCondition containing SATURDAY and SUNDAY, evaluated on a Sunday
+        val notification = createTestNotification()
+        val condition = createTestDayOfWeekCondition(days = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY))
+        val sunday = LocalDateTime.of(LocalDate.of(2026, 7, 12), LocalTime.of(9, 0))
+
+        // When: matching at a fixed Sunday instant
+        val result = RuleMatcher.matches(notification, listOf(condition), sunday)
+
+        // Then: the condition matches
+        result shouldBe true
+    }
+
+    @Test
+    fun `non-listed day does not match`() {
+        // Given: a DayOfWeekCondition containing only weekday values, evaluated on a Saturday
+        val notification = createTestNotification()
+        val condition = createTestDayOfWeekCondition(
+            days = setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY),
+        )
+        val saturday = LocalDateTime.of(LocalDate.of(2026, 7, 11), LocalTime.of(9, 0))
+
+        // When: matching at a fixed Saturday instant
+        val result = RuleMatcher.matches(notification, listOf(condition), saturday)
+
+        // Then: the condition does not match
+        result shouldBe false
+    }
+
+    @Test
+    fun `empty day set never matches, regardless of the current day`() {
+        // Given: a DayOfWeekCondition with an empty days set
+        val notification = createTestNotification()
+        val condition = createTestDayOfWeekCondition(days = emptySet())
+
+        // When: matching at any instant
+        val result = RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
+
+        // Then: the condition never matches (fail-closed, not "match every day")
+        result shouldBe false
+    }
+
+    @Test
+    fun `every individual day of week is a valid selector`() {
+        // Given: one DayOfWeekCondition per single day
+        DayOfWeek.entries.forEach { day ->
+            val notification = createTestNotification()
+            val condition = createTestDayOfWeekCondition(days = setOf(day))
+            val instantOnThatDay = FIXED_NOW.with(java.time.temporal.TemporalAdjusters.nextOrSame(day))
+
+            // When: matching on that exact day
+            val result = RuleMatcher.matches(notification, listOf(condition), instantOnThatDay)
+
+            // Then: it matches only that day
+            result shouldBe true
+        }
+    }
+
+    // endregion
+
+    // region TimeRangeCondition
+
+    @Test
+    fun `same-day range matches within bounds`() {
+        // Given: a 09:00-17:00 range and the current time is 12:00
+        val notification = createTestNotification()
+        val condition = createTestTimeRangeCondition(start = LocalTime.of(9, 0), end = LocalTime.of(17, 0))
+        val noon = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(12, 0))
+
+        // When: matching
+        val result = RuleMatcher.matches(notification, listOf(condition), noon)
+
+        // Then: the condition matches
+        result shouldBe true
+    }
+
+    @Test
+    fun `boundaries are inclusive on both ends`() {
+        // Given: a 09:00-17:00 range
+        val notification = createTestNotification()
+        val condition = createTestTimeRangeCondition(start = LocalTime.of(9, 0), end = LocalTime.of(17, 0))
+        val atStart = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(9, 0))
+        val atEnd = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(17, 0))
+
+        // When/Then: matching exactly at start and exactly at end both match
+        RuleMatcher.matches(notification, listOf(condition), atStart) shouldBe true
+        RuleMatcher.matches(notification, listOf(condition), atEnd) shouldBe true
+    }
+
+    @Test
+    fun `time outside a same-day range does not match`() {
+        // Given: a 09:00-17:00 range and the current time is 08:59
+        val notification = createTestNotification()
+        val condition = createTestTimeRangeCondition(start = LocalTime.of(9, 0), end = LocalTime.of(17, 0))
+        val beforeStart = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(8, 59))
+
+        // When: matching
+        val result = RuleMatcher.matches(notification, listOf(condition), beforeStart)
+
+        // Then: the condition does not match
+        result shouldBe false
+    }
+
+    @Test
+    fun `overnight range matches both sides of midnight`() {
+        // Given: a 22:00-06:00 overnight range
+        val notification = createTestNotification()
+        val condition = createTestTimeRangeCondition(start = LocalTime.of(22, 0), end = LocalTime.of(6, 0))
+        val lateNight = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(23, 30))
+        val earlyMorning = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(5, 0))
+
+        // When/Then: both sides of midnight match
+        RuleMatcher.matches(notification, listOf(condition), lateNight) shouldBe true
+        RuleMatcher.matches(notification, listOf(condition), earlyMorning) shouldBe true
+    }
+
+    @Test
+    fun `overnight range excludes the daytime gap`() {
+        // Given: a 22:00-06:00 overnight range and the current time is 12:00
+        val notification = createTestNotification()
+        val condition = createTestTimeRangeCondition(start = LocalTime.of(22, 0), end = LocalTime.of(6, 0))
+        val noon = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(12, 0))
+
+        // When: matching
+        val result = RuleMatcher.matches(notification, listOf(condition), noon)
+
+        // Then: the condition does not match
+        result shouldBe false
+    }
+
+    @Test
+    fun `degenerate zero-duration range matches only its exact instant`() {
+        // Given: a TimeRangeCondition with start == end == 08:00
+        val notification = createTestNotification()
+        val condition = createTestTimeRangeCondition(start = LocalTime.of(8, 0), end = LocalTime.of(8, 0))
+        val exactInstant = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(8, 0))
+        val oneMinuteLater = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(8, 1))
+
+        // When/Then: only the exact instant matches
+        RuleMatcher.matches(notification, listOf(condition), exactInstant) shouldBe true
+        RuleMatcher.matches(notification, listOf(condition), oneMinuteLater) shouldBe false
+    }
+
+    // endregion
+
+    // region Mixed-family combination and total evaluation
+
+    @Test
+    fun `rule with day, time, and content conditions all satisfied matches`() {
+        // Given: a matching DayOfWeekCondition, TimeRangeCondition, and ContentMatchCondition
+        val notification = createTestNotification(title = "Hello World")
+        val dayCondition = createTestDayOfWeekCondition(days = setOf(DayOfWeek.MONDAY))
+        val timeCondition = createTestTimeRangeCondition(start = LocalTime.of(9, 0), end = LocalTime.of(17, 0))
+        val contentCondition = createTestCondition(condition = MatchingCondition.TITLE, operator = MatchingOperator.CONTAINS, value = "Hello")
+
+        // When: matching at a fixed Monday-noon instant
+        val result = RuleMatcher.matches(notification, listOf(dayCondition, timeCondition, contentCondition), FIXED_NOW)
+
+        // Then: the rule matches
+        result shouldBe true
+    }
+
+    @Test
+    fun `rule fails to match if any one condition fails, even mixed-family`() {
+        // Given: the same three conditions, but the current time falls outside the TimeRangeCondition
+        val notification = createTestNotification(title = "Hello World")
+        val dayCondition = createTestDayOfWeekCondition(days = setOf(DayOfWeek.MONDAY))
+        val timeCondition = createTestTimeRangeCondition(start = LocalTime.of(9, 0), end = LocalTime.of(17, 0))
+        val contentCondition = createTestCondition(condition = MatchingCondition.TITLE, operator = MatchingOperator.CONTAINS, value = "Hello")
+        val outsideTimeRange = LocalDateTime.of(LocalDate.of(2026, 7, 6), LocalTime.of(20, 0))
+
+        // When: matching outside the time range
+        val result = RuleMatcher.matches(notification, listOf(dayCondition, timeCondition, contentCondition), outsideTimeRange)
+
+        // Then: the rule does not match, even though day and content conditions are satisfied
+        result shouldBe false
+    }
+
+    @Test
+    fun `evaluation never throws for any sealed member`() {
+        // Given: one condition of each sealed subtype
+        val notification = createTestNotification()
+        val conditions: List<RuleCondition> = listOf(
+            createTestCondition(),
+            createTestDayOfWeekCondition(),
+            createTestTimeRangeCondition(),
+        )
+
+        // When/Then: evaluating each individually never throws and always resolves to a boolean
+        conditions.forEach { condition ->
+            RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
+        }
     }
 
     // endregion

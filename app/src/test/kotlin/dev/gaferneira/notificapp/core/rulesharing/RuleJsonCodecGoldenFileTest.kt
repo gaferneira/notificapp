@@ -8,10 +8,14 @@ import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.domain.model.RuleField.FieldType
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestCondition
+import dev.gaferneira.notificapp.testutil.createTestDayOfWeekCondition
 import dev.gaferneira.notificapp.testutil.createTestField
 import dev.gaferneira.notificapp.testutil.createTestRule
+import dev.gaferneira.notificapp.testutil.createTestTimeRangeCondition
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
+import java.time.DayOfWeek
+import java.time.LocalTime
 
 /**
  * Locks the rule export wire format to a checked-in golden file. Any change to
@@ -56,6 +60,8 @@ class RuleJsonCodecGoldenFileTest {
             createTestCondition(id = "cond-equals", condition = MatchingCondition.PACKAGE_NAME, operator = MatchingOperator.EQUALS, value = "com.bank.example"),
             createTestCondition(id = "cond-regex", condition = MatchingCondition.RAW_CONTENT, operator = MatchingOperator.REGEX_MATCH, value = "\\d+"),
             createTestCondition(id = "cond-not-contains", condition = MatchingCondition.TEXT_CONTENT, operator = MatchingOperator.NOT_CONTAINS, value = "spam"),
+            createTestDayOfWeekCondition(id = "cond-day-of-week", days = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)),
+            createTestTimeRangeCondition(id = "cond-time-range", start = LocalTime.of(22, 0), end = LocalTime.of(6, 0)),
         ),
         actions = listOf(
             createTestAction(id = "action-save", type = ActionType.SAVE_DATA, fields = fixtureFields),

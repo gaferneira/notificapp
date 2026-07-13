@@ -30,6 +30,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.collections.plus
@@ -427,7 +429,12 @@ class RuleEditorViewModel @Inject constructor(
                     // extraction per candidate - CPU work that doesn't belong on Main.
                     val results = withContext(defaultDispatcher) {
                         candidates.mapNotNull { notification ->
-                            ruleEngine.evaluate(notification, listOf(draftRule)).firstOrNull()?.let { match ->
+                            // Each candidate is evaluated against the LocalDateTime it was actually
+                            // captured at (not wall-clock "now") - see design D6a - so a draft
+                            // day-of-week/time-range condition reflects whether it would have
+                            // matched when the notification arrived, not uniformly across the set.
+                            val capturedAt = Instant.ofEpochMilli(notification.timestamp).atZone(ZoneId.systemDefault()).toLocalDateTime()
+                            ruleEngine.evaluate(notification, listOf(draftRule), capturedAt).firstOrNull()?.let { match ->
                                 BacktestMatch(notification = notification, extractedData = match.extractedData)
                             }
                         }
