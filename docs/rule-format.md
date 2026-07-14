@@ -29,6 +29,7 @@ Every exported file is a single JSON object:
 | `isActive` | boolean | Ignored on import — imported rules are always activated. |
 | `isDryRun` | boolean | Ignored on import — **imported rules always start in dry-run mode**, regardless of what's in the file. This is a deliberate safety rule: you review what an imported rule would have done (via "Test against history" and its dry-run execution log) before trusting it to act on real notifications. See `docs/adr/` and the roadmap's Backtesting and Dry-Run section. |
 | `targetApps` | array of `{packageName, name}` \| `null` | `null` or an empty array means "all apps". |
+| `isIncludeMode` | boolean | `true` = [targetApps] is an include-list (rule fires only for listed apps). `false` = exclude-list (rule fires for every app NOT listed). Ignored when `targetApps` is `null` or empty. |
 | `conditions` | array of condition objects | See below. IDs are regenerated on import. |
 | `actions` | array of action objects | See below. IDs are regenerated on import. Extraction fields are nested under the `save_data` action (see below) - there is no rule-level `fields` array. |
 | `createdAt` / `updatedAt` | number (epoch ms) | Ignored on import — reset to the import time. |
@@ -89,7 +90,7 @@ A rule that extracts a payment amount from bank notifications and saves it, expo
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "rule": {
     "id": "b3f1e2b0-6c7b-4b8e-9b0a-000000000000",
     "name": "Bank payment received",
@@ -97,6 +98,7 @@ A rule that extracts a payment amount from bank notifications and saves it, expo
     "category": "Finance",
     "isActive": true,
     "isDryRun": false,
+    "isIncludeMode": true,
     "targetApps": [
       { "packageName": "com.bank.example", "name": "Example Bank" }
     ],

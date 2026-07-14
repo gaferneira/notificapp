@@ -61,6 +61,7 @@ class RuleJsonCodecTest {
         val decodedRule = decoded.getOrThrow().rule
         decodedRule.name shouldBe rule.name
         decodedRule.category shouldBe rule.category
+        decodedRule.isIncludeMode shouldBe rule.isIncludeMode
         decodedRule.targetApps shouldBe rule.targetApps
         decodedRule.conditions shouldBe rule.conditions
         decodedRule.saveDataFields() shouldBe rule.saveDataFields()
@@ -94,6 +95,25 @@ class RuleJsonCodecTest {
 
         // Then: the envelope carries the current schema version
         encoded shouldContain "\"schemaVersion\": $RULE_EXPORT_SCHEMA_VERSION"
+    }
+
+    @Test
+    fun `exclude-mode rule round-trips isIncludeMode and targetApps`() {
+        // Given: an exclude-mode rule with a target app
+        val excludeRule = rule.copy(
+            isIncludeMode = false,
+            targetApps = persistentListOf(AppInfo("com.spam.app", "Spam App")),
+        )
+
+        // When: exporting then re-importing
+        val encoded = RuleJsonCodec.encode(excludeRule)
+        val decoded = RuleJsonCodec.decode(encoded)
+
+        // Then: the mode and target apps survive the round trip
+        decoded.isSuccess shouldBe true
+        val decodedRule = decoded.getOrThrow().rule
+        decodedRule.isIncludeMode shouldBe false
+        decodedRule.targetApps shouldBe excludeRule.targetApps
     }
 
     @Test

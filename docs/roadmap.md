@@ -108,14 +108,14 @@ Nothing currently in progress — ready to start Phase 3.
 - [x] Import a rule from file/clipboard with validation + preview before saving — `RulesScreen`'s import menu (`ActivityResultContracts.OpenDocument` / clipboard read) feeds decoded text through `RuleJsonCodec.decode`, showing a preview dialog (name, condition/field/action counts, target apps) before the user confirms
 - [x] Import safety: imported rules start in dry-run mode by default — `RuleJsonCodec.withFreshIdentityForImport()` also regenerates the rule's and every nested condition/field/action's ID, so importing the same file twice never collides with itself
 
-### Phase 3: Starter Rules, Data Browser & Data Lifecycle
-
-**Goal:** Ship the first rung of the rule-creation ladder (templates), make live rules safe against noisy apps, and build the dedicated screen for browsing, filtering, and exporting extracted data — plus the retention and backup features people need before investing hours in rules.
-
 #### Improve conditionals
 - [x] Add Day of week
 - [x] Add Time Range
-- [ ] Option to decide whether the app condition is to include or not include the selected app(s) (e.g, trigger this rule for all the apps except the selected one)
+- [x] Option to decide whether the app condition is to include or exclude the selected app(s) (e.g, trigger this rule for all the apps except the selected one)
+
+### Phase 3: Starter Rules, Data Browser & Data Lifecycle
+
+**Goal:** Ship the first rung of the rule-creation ladder (templates), make live rules safe against noisy apps, and build the dedicated screen for browsing, filtering, and exporting extracted data — plus the retention and backup features people need before investing hours in rules.
 
 #### Starter Rule Templates
 

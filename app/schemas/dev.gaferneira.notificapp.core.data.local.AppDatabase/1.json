@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "35b174d6723406e9a040d4d659768c6a",
+    "identityHash": "76ac18d0f009a4b49969f52c890353ba",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -171,7 +171,7 @@
       },
       {
         "tableName": "rules",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT, `category` TEXT, `is_active` INTEGER NOT NULL, `is_dry_run` INTEGER NOT NULL DEFAULT 0, `is_global` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT, `category` TEXT, `is_active` INTEGER NOT NULL, `is_dry_run` INTEGER NOT NULL DEFAULT 0, `is_include_mode` INTEGER NOT NULL DEFAULT 1, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -209,10 +209,11 @@
             "defaultValue": "0"
           },
           {
-            "fieldPath": "isGlobal",
-            "columnName": "is_global",
+            "fieldPath": "isIncludeMode",
+            "columnName": "is_include_mode",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": true,
+            "defaultValue": "1"
           },
           {
             "fieldPath": "createdAt",
@@ -251,15 +252,6 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_rules_updated_at` ON `${TABLE_NAME}` (`updated_at`)"
-          },
-          {
-            "name": "index_rules_is_global",
-            "unique": false,
-            "columnNames": [
-              "is_global"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_rules_is_global` ON `${TABLE_NAME}` (`is_global`)"
           }
         ]
       },
@@ -777,7 +769,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '35b174d6723406e9a040d4d659768c6a')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '76ac18d0f009a4b49969f52c890353ba')"
     ]
   }
 }

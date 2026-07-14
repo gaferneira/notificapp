@@ -49,13 +49,19 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
         isProcessed: Boolean?,
     ): Flow<PagingData<Notification>> = pagedNotifications
 
-    override suspend fun getNotificationsForBacktest(targetPackages: List<String>?, limit: Int): Result<List<Notification>> {
+    override suspend fun getNotificationsForBacktest(
+        targetPackages: List<String>?,
+        isIncludeMode: Boolean,
+        limit: Int,
+    ): Result<List<Notification>> {
         backtestCallCount++
         backtestError?.let { return Result.failure(it) }
         val filtered = if (targetPackages.isNullOrEmpty()) {
             notifications.value
-        } else {
+        } else if (isIncludeMode) {
             notifications.value.filter { it.packageName in targetPackages }
+        } else {
+            notifications.value.filter { it.packageName !in targetPackages }
         }
         return Result.success(filtered.take(limit))
     }

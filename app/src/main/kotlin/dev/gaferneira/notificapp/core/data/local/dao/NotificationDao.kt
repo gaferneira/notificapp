@@ -38,6 +38,16 @@ internal interface NotificationDao {
     suspend fun getRecentByPackageNames(packageNames: List<String>, limit: Int): List<NotificationEntity>
 
     /**
+     * Get the most recently captured notifications EXCLUDING specific apps, bounded by [limit].
+     * This mirrors RuleDao's exclude-mode NOT EXISTS branch for backtesting exclude rules.
+     */
+    @Query(
+        "SELECT * FROM notifications WHERE package_name NOT IN (:packageNames) " +
+            "ORDER BY timestamp DESC LIMIT :limit",
+    )
+    suspend fun getRecentByPackageNamesExcluding(packageNames: List<String>, limit: Int): List<NotificationEntity>
+
+    /**
      * Get notifications for a specific app.
      */
     @Query("SELECT * FROM notifications WHERE package_name = :packageName ORDER BY timestamp DESC")

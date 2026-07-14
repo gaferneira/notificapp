@@ -449,6 +449,31 @@ class RuleEditorViewModelTest {
             state.rule.targetApps shouldBe apps
             state.isAppSheetVisible shouldBe false
         }
+
+        @Test
+        fun `app scope mode changed updates isIncludeMode`() {
+            // Given: a rule with a selected app, defaulting to include mode
+            viewModel.onEvent(UiEvent.OnAppsSelected(persistentListOf(AppInfo("com.a", "App A"))))
+            viewModel.uiState.value.rule.isIncludeMode shouldBe true
+
+            // When: switching to exclude mode
+            viewModel.onEvent(UiEvent.OnAppScopeModeChanged(false))
+
+            // Then: the rule is now in exclude mode
+            viewModel.uiState.value.rule.isIncludeMode shouldBe false
+        }
+
+        @Test
+        fun `app scope mode toggle is ignored when no apps are selected`() {
+            // Given: a rule with no target apps
+            viewModel.uiState.value.rule.targetApps shouldBe emptyList()
+
+            // When: attempting to change scope mode
+            viewModel.onEvent(UiEvent.OnAppScopeModeChanged(false))
+
+            // Then: the mode stays at its default (include) because there is nothing to include/exclude
+            viewModel.uiState.value.rule.isIncludeMode shouldBe true
+        }
     }
 
     @Nested
@@ -748,7 +773,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `test against history with no captured notifications yields zero matches`() = runTest(testDispatcher) {
             // Given: no notifications have ever been captured
-            coEvery { notificationRepository.getNotificationsForBacktest(any(), any()) } returns Result.success(emptyList())
+            coEvery { notificationRepository.getNotificationsForBacktest(any(), any(), any()) } returns Result.success(emptyList())
 
             // When: testing against history
             viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
@@ -771,7 +796,7 @@ class RuleEditorViewModelTest {
 
             val matching = createTestNotification(id = "n1", content = "Total: 100", rawContent = "Total: 100")
             val nonMatching = createTestNotification(id = "n2", content = "no match here", rawContent = "no match here")
-            coEvery { notificationRepository.getNotificationsForBacktest(any(), any()) } returns Result.success(listOf(matching, nonMatching))
+            coEvery { notificationRepository.getNotificationsForBacktest(any(), any(), any()) } returns Result.success(listOf(matching, nonMatching))
 
             // When: testing against history
             viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
@@ -792,7 +817,7 @@ class RuleEditorViewModelTest {
 
             val fromTargetApp = createTestNotification(id = "n1", packageName = "com.a")
             coEvery {
-                notificationRepository.getNotificationsForBacktest(listOf("com.a"), any())
+                notificationRepository.getNotificationsForBacktest(listOf("com.a"), true, any())
             } returns Result.success(listOf(fromTargetApp))
 
             // When: testing against history
@@ -800,6 +825,28 @@ class RuleEditorViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
 
             // Then: only the notification from the target app is tested and matched
+            val state = viewModel.uiState.value
+            state.backtestTestedCount shouldBe 1
+            state.backtestResults?.map { it.notification.id } shouldBe listOf("n1")
+        }
+
+        @Test
+        fun `test against history passes exclude mode to the repository`() = runTest(testDispatcher) {
+            // Given: a draft rule in exclude mode with one excluded app
+            viewModel.onEvent(UiEvent.OnConditionSaved(createTestCondition()))
+            viewModel.onEvent(UiEvent.OnAppsSelected(persistentListOf(AppInfo("com.a", "App A"))))
+            viewModel.onEvent(UiEvent.OnAppScopeModeChanged(false))
+
+            val fromOtherApp = createTestNotification(id = "n1", packageName = "com.b")
+            coEvery {
+                notificationRepository.getNotificationsForBacktest(listOf("com.a"), false, any())
+            } returns Result.success(listOf(fromOtherApp))
+
+            // When: testing against history
+            viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: the repository is called with exclude mode and the candidate is tested
             val state = viewModel.uiState.value
             state.backtestTestedCount shouldBe 1
             state.backtestResults?.map { it.notification.id } shouldBe listOf("n1")
@@ -816,7 +863,7 @@ class RuleEditorViewModelTest {
             val capturedOutsideWindow = LocalDateTime.of(2026, 7, 6, 15, 0).atZone(zone).toInstant().toEpochMilli()
             val insideWindow = createTestNotification(id = "n1", timestamp = capturedInsideWindow)
             val outsideWindow = createTestNotification(id = "n2", timestamp = capturedOutsideWindow)
-            coEvery { notificationRepository.getNotificationsForBacktest(any(), any()) } returns Result.success(listOf(insideWindow, outsideWindow))
+            coEvery { notificationRepository.getNotificationsForBacktest(any(), any(), any()) } returns Result.success(listOf(insideWindow, outsideWindow))
 
             // When: testing against history
             viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
@@ -833,7 +880,7 @@ class RuleEditorViewModelTest {
         fun `test against history failure surfaces an error and stops the loading state`() = runTest(testDispatcher) {
             // Given: the notification repository fails
             coEvery {
-                notificationRepository.getNotificationsForBacktest(any(), any())
+                notificationRepository.getNotificationsForBacktest(any(), any(), any())
             } returns Result.failure(IllegalStateException("db error"))
 
             viewModel.effect.test {
@@ -851,7 +898,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `dismiss backtest results clears them`() = runTest(testDispatcher) {
             // Given: a completed backtest run
-            coEvery { notificationRepository.getNotificationsForBacktest(any(), any()) } returns Result.success(emptyList())
+            coEvery { notificationRepository.getNotificationsForBacktest(any(), any(), any()) } returns Result.success(emptyList())
             viewModel.onEvent(UiEvent.OnTestAgainstHistoryClicked)
             testDispatcher.scheduler.advanceUntilIdle()
 

@@ -101,13 +101,16 @@ internal class NotificationRepositoryImpl @Inject constructor(
 
     override suspend fun getNotificationsForBacktest(
         targetPackages: List<String>?,
+        isIncludeMode: Boolean,
         limit: Int,
     ): Result<List<Notification>> = withContext(ioDispatcher) {
         try {
             val entities = if (targetPackages.isNullOrEmpty()) {
                 dao.getRecent(limit)
-            } else {
+            } else if (isIncludeMode) {
                 dao.getRecentByPackageNames(targetPackages, limit)
+            } else {
+                dao.getRecentByPackageNamesExcluding(targetPackages, limit)
             }
             Result.success(entities.map { it.toModel() })
         } catch (e: Exception) {

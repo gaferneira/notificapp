@@ -52,9 +52,15 @@ interface NotificationRepository {
      * Used for rule backtesting; bounded by [limit] so a preview can never load the full table.
      *
      * @param targetPackages Filter by app package names (null or empty = no app filter)
+     * @param isIncludeMode When true, include only [targetPackages]; when false, exclude them.
+     *   Ignored when [targetPackages] is null or empty.
      * @param limit Maximum number of notifications to return
      */
-    suspend fun getNotificationsForBacktest(targetPackages: List<String>?, limit: Int): Result<List<Notification>>
+    suspend fun getNotificationsForBacktest(
+        targetPackages: List<String>?,
+        isIncludeMode: Boolean = true,
+        limit: Int,
+    ): Result<List<Notification>>
 
     /**
      * Get a specific notification by ID.

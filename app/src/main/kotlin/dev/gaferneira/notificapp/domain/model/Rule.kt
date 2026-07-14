@@ -29,6 +29,12 @@ data class Rule(
     val isDryRun: Boolean = false,
     /** App scope: null means all apps, or list of specific package names */
     val targetApps: ImmutableList<AppInfo>? = null,
+    /**
+     * When true, [targetApps] is an include-list (rule fires only for listed apps).
+     * When false, [targetApps] is an exclude-list (rule fires for every app NOT listed).
+     * Ignored when [targetApps] is null or empty — the rule is global.
+     */
+    val isIncludeMode: Boolean = true,
     /** Triggers that determine when rule applies */
     val conditions: ImmutableList<RuleCondition> = persistentListOf(),
     /** Actions to take when rule matches */
@@ -43,3 +49,16 @@ data class Rule(
  * consumers should read extraction fields from (see `action-execution` spec).
  */
 fun Rule.saveDataFields(): ImmutableList<RuleField> = actions.firstOrNull { it.type == ActionType.SAVE_DATA && it.isEnabled }?.fields ?: persistentListOf()
+
+/**
+ * Single source of truth for whether this rule applies to a given app package.
+ *
+ * - Null or empty [targetApps] → applies to all apps (mode is ignored).
+ * - Include mode → applies only to listed packages.
+ * - Exclude mode → applies to every package NOT listed.
+ */
+fun Rule.appliesToPackage(pkg: String): Boolean = when {
+    targetApps.isNullOrEmpty() -> true
+    isIncludeMode -> targetApps.any { it.packageName == pkg }
+    else -> targetApps.none { it.packageName == pkg }
+}

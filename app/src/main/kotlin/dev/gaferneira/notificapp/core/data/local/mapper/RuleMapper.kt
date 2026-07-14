@@ -38,7 +38,8 @@ internal object RuleMapper {
         category = entity.category?.takeIf { it.isNotBlank() },
         isActive = entity.isActive,
         isDryRun = entity.isDryRun,
-        targetApps = if (entity.isGlobal) null else targetApps?.toImmutableList(),
+        targetApps = targetApps?.toImmutableList()?.takeIf { it.isNotEmpty() },
+        isIncludeMode = entity.isIncludeMode,
         conditions = RuleConditionMapper.toDomainList(conditionEntities).toImmutableList(),
         actions = RuleActionMapper.toDomainList(actionEntities, fieldEntities).toImmutableList(),
         createdAt = entity.createdAt,
@@ -60,7 +61,7 @@ internal object RuleMapper {
         category = domain.category?.takeIf { it.isNotBlank() },
         isActive = domain.isActive,
         isDryRun = domain.isDryRun,
-        isGlobal = domain.targetApps == null,
+        isIncludeMode = domain.isIncludeMode,
         createdAt = domain.createdAt,
         updatedAt = domain.updatedAt,
     )

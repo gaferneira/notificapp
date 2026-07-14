@@ -130,6 +130,9 @@ object RuleEditorContract {
         /** Apps selected from AppBottomSheet */
         data class OnAppsSelected(val apps: ImmutableList<AppInfo>) : UiEvent()
 
+        /** Toggle between include-list and exclude-list app scope */
+        data class OnAppScopeModeChanged(val isIncludeMode: Boolean) : UiEvent()
+
         /** Show the action type-picker dialog */
         data object OnAddActionClicked : UiEvent()
 

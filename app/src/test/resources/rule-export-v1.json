@@ -1,5 +1,5 @@
 {
-    "schemaVersion": 2,
+    "schemaVersion": 1,
     "rule": {
         "id": "fixture-rule-id",
         "name": "Golden Fixture Rule",
@@ -19,6 +19,7 @@
                 "category": null
             }
         ],
+        "isIncludeMode": true,
         "conditions": [
             {
                 "type": "content_match",

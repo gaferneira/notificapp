@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.data.local.mapper
 
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestField
@@ -8,6 +9,8 @@ import dev.gaferneira.notificapp.testutil.createTestRule
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
+
+private val appA = AppInfo("com.a", "App A")
 
 class RuleMapperTest {
 
@@ -33,5 +36,36 @@ class RuleMapperTest {
         // And: no other action type carries any fields
         val loadedDismiss = domain.actions.single { it.type == ActionType.DISMISS_NOTIFICATION }
         loadedDismiss.fields.shouldBeEmpty()
+    }
+
+    @Test
+    fun `isIncludeMode round-trips through entity mapping`() {
+        // Given: an exclude-mode rule with target apps
+        val rule = createTestRule(
+            id = "rule-1",
+            isIncludeMode = false,
+            targetApps = listOf(appA),
+        )
+
+        // When: mapping to entity and back
+        val entity = RuleMapper.toEntity(rule)
+        val domain = RuleMapper.toDomain(entity, emptyList(), emptyList(), emptyList(), listOf(appA))
+
+        // Then: the mode and target apps survive
+        domain.isIncludeMode shouldBe false
+        domain.targetApps shouldBe listOf(appA)
+    }
+
+    @Test
+    fun `empty targetApps collapses to global rule`() {
+        // Given: no rows in rule_target_apps for this rule
+        val rule = createTestRule(id = "rule-1", isIncludeMode = false, targetApps = emptyList())
+        val entity = RuleMapper.toEntity(rule)
+
+        // When: mapping back to domain with an empty target-apps list
+        val domain = RuleMapper.toDomain(entity, emptyList(), emptyList(), emptyList(), emptyList())
+
+        // Then: it collapses to global (null targetApps, mode ignored)
+        domain.targetApps shouldBe null
     }
 }

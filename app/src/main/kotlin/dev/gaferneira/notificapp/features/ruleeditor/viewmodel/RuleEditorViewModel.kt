@@ -86,6 +86,7 @@ class RuleEditorViewModel @Inject constructor(
             is UiEvent.OnConditionItemClicked -> openConditionForEditing(event.conditionId)
             is UiEvent.OnAppsClicked -> showAppSheet()
             is UiEvent.OnAppsSelected -> onAppsSelected(event.apps)
+            is UiEvent.OnAppScopeModeChanged -> onAppScopeModeChanged(event.isIncludeMode)
             is UiEvent.OnAddActionClicked -> showActionTypePicker()
             is UiEvent.OnActionTypeSelected -> onActionTypeSelected(event.type)
             is UiEvent.OnDismissActionTypePicker -> setState { copy(isActionTypePickerVisible = false) }
@@ -275,6 +276,12 @@ class RuleEditorViewModel @Inject constructor(
         }
     }
 
+    private fun onAppScopeModeChanged(isIncludeMode: Boolean) {
+        // Mode is only meaningful when at least one app is selected; otherwise keep include.
+        if (uiState.value.rule.targetApps.isEmpty()) return
+        setState { copy(rule = rule.copy(isIncludeMode = isIncludeMode)) }
+    }
+
     private fun showActionTypePicker() {
         setState { copy(isActionTypePickerVisible = true) }
     }
@@ -423,7 +430,11 @@ class RuleEditorViewModel @Inject constructor(
         viewModelScope.launch {
             setState { copy(isBacktesting = true) }
 
-            notificationRepository.getNotificationsForBacktest(targetPackages, BACKTEST_NOTIFICATION_LIMIT)
+            notificationRepository.getNotificationsForBacktest(
+                targetPackages = targetPackages,
+                isIncludeMode = draftRule.isIncludeMode,
+                limit = BACKTEST_NOTIFICATION_LIMIT,
+            )
                 .onSuccess { candidates ->
                     // Evaluating up to BACKTEST_NOTIFICATION_LIMIT notifications runs regex/JSON
                     // extraction per candidate - CPU work that doesn't belong on Main.

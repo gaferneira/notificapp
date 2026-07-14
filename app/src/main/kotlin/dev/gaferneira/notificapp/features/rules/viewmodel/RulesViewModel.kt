@@ -7,6 +7,7 @@ import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec.withFreshIdentit
 import dev.gaferneira.notificapp.core.ui.Resource
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Rule
+import dev.gaferneira.notificapp.domain.model.appliesToPackage
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
 import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
@@ -144,13 +145,12 @@ class RulesViewModel @Inject constructor(
                 rule.category in currentFilter.selectedCategories
             }
 
-            // Apply app filter
+            // Apply app filter using effective scope, not literal list membership.
+            // An exclude-mode rule that omits a selected app still fires for it, so it matches.
             val matchesAppFilter = if (currentFilter.selectedApps.isEmpty()) {
                 true
             } else {
-                val ruleApps = rule.targetApps?.map { it.packageName } ?: emptyList()
-                // Match if any selected app is in the rule's target apps
-                currentFilter.selectedApps.any { it in ruleApps }
+                currentFilter.selectedApps.any { rule.appliesToPackage(it) }
             }
 
             matchesSearch && matchesStatusFilter && matchesCategoryFilter && matchesAppFilter

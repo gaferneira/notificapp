@@ -29,12 +29,11 @@ class RuleRepositoryImplTest {
     private val selectedAppDao: SelectedAppDao = mockk()
     private val repository = RuleRepositoryImpl(ruleDao, selectedAppDao, testDispatcher)
 
-    private fun ruleEntity(id: String, isGlobal: Boolean = false) = RuleEntity(
+    private fun ruleEntity(id: String) = RuleEntity(
         id = id,
         name = "Rule $id",
         description = null,
         category = null,
-        isGlobal = isGlobal,
     )
 
     private fun actionEntity(id: String, ruleId: String, type: String) = RuleActionEntity(
@@ -54,7 +53,7 @@ class RuleRepositoryImplTest {
 
     @Test
     fun `getAllRules reassembles the full aggregate from every dao source`() = runTest(testDispatcher) {
-        val entity = ruleEntity(id = "r1", isGlobal = false)
+        val entity = ruleEntity(id = "r1")
         coEvery { ruleDao.getAll() } returns listOf(entity)
         coEvery { ruleDao.getConditionsForRules(listOf("r1")) } returns listOf(conditionEntity("c1", "r1"))
         coEvery { ruleDao.getActionsForRules(listOf("r1")) } returns listOf(actionEntity("a1", "r1", "SAVE_DATA"))
@@ -83,14 +82,12 @@ class RuleRepositoryImplTest {
     }
 
     @Test
-    fun `global rule yields null targetApps even when target-app rows exist`() = runTest(testDispatcher) {
-        coEvery { ruleDao.getAll() } returns listOf(ruleEntity(id = "g", isGlobal = true))
+    fun `rule with no target-app rows yields null targetApps`() = runTest(testDispatcher) {
+        coEvery { ruleDao.getAll() } returns listOf(ruleEntity(id = "g"))
         coEvery { ruleDao.getConditionsForRules(listOf("g")) } returns emptyList()
         coEvery { ruleDao.getActionsForRules(listOf("g")) } returns emptyList()
         coEvery { ruleDao.getFieldsForActions(emptyList()) } returns emptyList()
-        coEvery { ruleDao.getTargetAppsForRules(listOf("g")) } returns listOf(RuleTargetAppEntity("g", "com.bank"))
-        coEvery { selectedAppDao.getByPackageNames(listOf("com.bank")) } returns
-            listOf(SelectedAppEntity(packageName = "com.bank", appName = "Bank"))
+        coEvery { ruleDao.getTargetAppsForRules(listOf("g")) } returns emptyList()
 
         val result = repository.getAllRules()
 
@@ -110,7 +107,7 @@ class RuleRepositoryImplTest {
 
     @Test
     fun `observeAllRules assembles rules from the reactive dao stream`() = runTest(testDispatcher) {
-        val entity = ruleEntity(id = "r1", isGlobal = true)
+        val entity = ruleEntity(id = "r1")
         coEvery { ruleDao.observeAll() } returns MutableStateFlow(listOf(entity))
         coEvery { ruleDao.getConditionsForRules(listOf("r1")) } returns emptyList()
         coEvery { ruleDao.getActionsForRules(listOf("r1")) } returns emptyList()
@@ -134,7 +131,7 @@ class RuleRepositoryImplTest {
 
     @Test
     fun `getRule assembles a single rule from its own dao calls`() = runTest(testDispatcher) {
-        val entity = ruleEntity(id = "r1", isGlobal = true)
+        val entity = ruleEntity(id = "r1")
         coEvery { ruleDao.getById("r1") } returns entity
         coEvery { ruleDao.getTargetAppsForRule("r1") } returns emptyList()
         coEvery { ruleDao.getActionsForRule("r1") } returns emptyList()

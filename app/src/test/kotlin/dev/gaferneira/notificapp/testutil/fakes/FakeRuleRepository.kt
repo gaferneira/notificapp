@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.testutil.fakes
 
 import dev.gaferneira.notificapp.domain.model.Rule
+import dev.gaferneira.notificapp.domain.model.appliesToPackage
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +31,7 @@ class FakeRuleRepository(initial: List<Rule> = emptyList()) : RuleRepository {
     override suspend fun getRule(id: String): Result<Rule?> = Result.success(rules.value.find { it.id == id })
 
     override suspend fun getRulesForApp(packageName: String): Result<List<Rule>> = Result.success(
-        rules.value.filter { rule -> rule.targetApps == null || rule.targetApps.any { it.packageName == packageName } },
+        rules.value.filter { rule -> rule.appliesToPackage(packageName) },
     )
 
     override suspend fun saveRule(rule: Rule): Result<Unit> {

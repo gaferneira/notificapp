@@ -3,6 +3,8 @@ package dev.gaferneira.notificapp.features.rules.viewmodel
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
 import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
 import dev.gaferneira.notificapp.testutil.createTestAction
@@ -10,6 +12,7 @@ import dev.gaferneira.notificapp.testutil.createTestRule
 import dev.gaferneira.notificapp.testutil.fakes.FakeRuleRepository
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -173,6 +176,56 @@ class RulesViewModelTest {
 
             // Then: it clears
             viewModel.uiState.value.importError shouldBe null
+        }
+    }
+
+    @Nested
+    inner class AppFilterTests {
+
+        @Test
+        fun `filtering by an unlisted app surfaces an exclude-mode rule`() = runTest(testDispatcher) {
+            // Given: an exclude-mode rule that omits com.a, and a filter for com.a
+            val excludeRule = createTestRule(
+                id = "rule-1",
+                isIncludeMode = false,
+                targetApps = listOf(AppInfo("com.b", "App B")),
+            )
+            ruleRepository.saveRule(excludeRule)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // When: filtering by the unlisted app
+            viewModel.onEvent(
+                RulesEvent.OnFilterChange(
+                    RuleFilter(selectedApps = setOf("com.a")),
+                ),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: the exclude-mode rule is surfaced because it fires for com.a
+            viewModel.uiState.value.rules.getDataOrThrow() shouldBe persistentListOf(excludeRule)
+        }
+
+        @Test
+        fun `filtering by a listed app excludes an exclude-mode rule`() = runTest(testDispatcher) {
+            // Given: an exclude-mode rule that omits com.a, and a filter for com.b (the listed app)
+            val excludeRule = createTestRule(
+                id = "rule-1",
+                isIncludeMode = false,
+                targetApps = listOf(AppInfo("com.b", "App B")),
+            )
+            ruleRepository.saveRule(excludeRule)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // When: filtering by the listed app
+            viewModel.onEvent(
+                RulesEvent.OnFilterChange(
+                    RuleFilter(selectedApps = setOf("com.b")),
+                ),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: the exclude-mode rule is hidden because it does not fire for com.b
+            viewModel.uiState.value.rules.getDataOrThrow() shouldBe persistentListOf()
         }
     }
 }

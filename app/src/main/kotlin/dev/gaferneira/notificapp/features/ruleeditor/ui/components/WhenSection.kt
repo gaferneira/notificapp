@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,6 +24,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -44,16 +48,20 @@ import kotlinx.collections.immutable.persistentListOf
  * The "When" section showing target apps and configured conditions.
  *
  * @param targetApps Selected target apps (empty = all apps)
- * @param conditions List of matching conditions
+ * @param isIncludeMode When true, [targetApps] is an include-list; when false, exclude-list.
  * @param onAppsClick Called when the apps card is clicked
+ * @param onAppScopeModeChanged Called when the include/exclude mode changes
+ * @param conditions List of matching conditions
  * @param onRemoveCondition Called when a condition should be removed
  * @param onConditionClick Called when a condition card is clicked
  */
 @Composable
 fun WhenSection(
     targetApps: ImmutableList<AppInfo>,
-    conditions: ImmutableList<RuleCondition>,
+    isIncludeMode: Boolean,
     onAppsClick: () -> Unit,
+    onAppScopeModeChanged: (Boolean) -> Unit,
+    conditions: ImmutableList<RuleCondition>,
     onRemoveCondition: (String) -> Unit,
     onConditionClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -65,7 +73,9 @@ fun WhenSection(
         // Apps card (always shown, even if empty - shows "All apps" when empty)
         AppsCard(
             selectedApps = targetApps,
+            isIncludeMode = isIncludeMode,
             onClick = onAppsClick,
+            onAppScopeModeChanged = onAppScopeModeChanged,
         )
 
         // Condition cards
@@ -82,15 +92,11 @@ fun WhenSection(
 @Composable
 private fun AppsCard(
     selectedApps: ImmutableList<AppInfo>,
+    isIncludeMode: Boolean,
     onClick: () -> Unit,
+    onAppScopeModeChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val displayText = when {
-        selectedApps.isEmpty() -> "All apps"
-        selectedApps.size == 1 -> selectedApps.first().name
-        else -> "${selectedApps.size} apps selected"
-    }
-
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -101,61 +107,132 @@ private fun AppsCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f),
-            ) {
-                // Icon container
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.tertiaryContainer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Apps,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
+        AppsCardContent(
+            selectedApps = selectedApps,
+            isIncludeMode = isIncludeMode,
+            onAppScopeModeChanged = onAppScopeModeChanged,
+        )
+    }
+}
 
-                Spacer(modifier = Modifier.width(16.dp))
+@Composable
+private fun AppsCardContent(
+    selectedApps: ImmutableList<AppInfo>,
+    isIncludeMode: Boolean,
+    onAppScopeModeChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val displayText = resolveAppsDisplayText(selectedApps, isIncludeMode)
 
-                Column {
-                    Text(
-                        text = "APPS",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = displayText,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-
-            // Edit indicator - was Icons.Default.Add, which signals "add" next to
-            // condition cards whose trailing icon (x) means "remove"; ChevronRight
-            // matches the actual tap-to-edit affordance.
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Edit apps",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+    ) {
+        AppsCardLabel(displayText = displayText, modifier = Modifier.fillMaxWidth())
+        if (selectedApps.isNotEmpty()) {
+            Spacer(modifier.height(8.dp))
+            AppScopeModeToggle(
+                isIncludeMode = isIncludeMode,
+                onModeChanged = onAppScopeModeChanged,
+                enabled = true,
             )
         }
+    }
+}
+
+private fun resolveAppsDisplayText(
+    selectedApps: ImmutableList<AppInfo>,
+    isIncludeMode: Boolean,
+): String = when {
+    selectedApps.isEmpty() -> "All apps"
+    !isIncludeMode -> "All apps except " + if (selectedApps.size == 1) selectedApps.first().name else "${selectedApps.size}"
+    selectedApps.size == 1 -> selectedApps.first().name
+    else -> "${selectedApps.size} apps selected"
+}
+
+@Composable
+private fun AppsCardLabel(
+    displayText: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.tertiaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Apps,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = "APPS",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.tertiary,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = displayText,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "Edit apps",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun AppScopeModeToggle(
+    isIncludeMode: Boolean,
+    onModeChanged: (Boolean) -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    SingleChoiceSegmentedButtonRow(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        SegmentedButton(
+            selected = isIncludeMode,
+            onClick = { onModeChanged(true) },
+            shape = SegmentedButtonDefaults.itemShape(
+                index = 0,
+                count = 2,
+            ),
+            enabled = enabled,
+            label = { Text("Only these apps") },
+        )
+        SegmentedButton(
+            selected = !isIncludeMode,
+            onClick = { onModeChanged(false) },
+            shape = SegmentedButtonDefaults.itemShape(
+                index = 1,
+                count = 2,
+            ),
+            enabled = enabled,
+            label = { Text("All apps except these") },
+        )
     }
 }
 
@@ -246,6 +323,8 @@ private fun WhenSectionPreview() {
                 AppInfo("com.swish", "Swish"),
                 AppInfo("com.bank", "Bank App"),
             ),
+            isIncludeMode = true,
+            onAppScopeModeChanged = {},
             conditions = persistentListOf(
                 RuleCondition.ContentMatchCondition(
                     id = "1",
@@ -274,6 +353,8 @@ private fun WhenSectionEmptyPreview() {
     NotificappTheme {
         WhenSection(
             targetApps = persistentListOf(),
+            isIncludeMode = true,
+            onAppScopeModeChanged = {},
             conditions = persistentListOf(),
             onAppsClick = {},
             onRemoveCondition = {},
@@ -289,6 +370,8 @@ private fun WhenSectionAllAppsPreview() {
     NotificappTheme {
         WhenSection(
             targetApps = persistentListOf(),
+            isIncludeMode = true,
+            onAppScopeModeChanged = {},
             conditions = persistentListOf(
                 RuleCondition.ContentMatchCondition(
                     id = "1",

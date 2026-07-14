@@ -40,13 +40,17 @@ internal interface RuleDao {
 
     /**
      * Get rules that apply to a specific app package.
-     * Returns global rules (is_global = 1) plus rules specifically targeting this app.
+     * Mirrors [Rule.appliesToPackage]: global rules, include-mode rules listing this app,
+     * and exclude-mode rules NOT listing this app.
      */
     @Query(
         """
         SELECT r.* FROM rules r
-        LEFT JOIN rule_target_apps ta ON r.id = ta.rule_id
-        WHERE r.is_global = 1 OR ta.package_name = :packageName
+        WHERE NOT EXISTS (SELECT 1 FROM rule_target_apps ta WHERE ta.rule_id = r.id)
+           OR (r.is_include_mode = 1 AND EXISTS
+               (SELECT 1 FROM rule_target_apps ta WHERE ta.rule_id = r.id AND ta.package_name = :packageName))
+           OR (r.is_include_mode = 0 AND NOT EXISTS
+               (SELECT 1 FROM rule_target_apps ta WHERE ta.rule_id = r.id AND ta.package_name = :packageName))
         ORDER BY r.updated_at DESC
         """,
     )
@@ -58,8 +62,14 @@ internal interface RuleDao {
     @Query(
         """
         SELECT r.* FROM rules r
-        LEFT JOIN rule_target_apps ta ON r.id = ta.rule_id
-        WHERE r.is_active = 1 AND (r.is_global = 1 OR ta.package_name = :packageName)
+        WHERE r.is_active = 1
+          AND (
+            NOT EXISTS (SELECT 1 FROM rule_target_apps ta WHERE ta.rule_id = r.id)
+            OR (r.is_include_mode = 1 AND EXISTS
+                (SELECT 1 FROM rule_target_apps ta WHERE ta.rule_id = r.id AND ta.package_name = :packageName))
+            OR (r.is_include_mode = 0 AND NOT EXISTS
+                (SELECT 1 FROM rule_target_apps ta WHERE ta.rule_id = r.id AND ta.package_name = :packageName))
+          )
         ORDER BY r.updated_at DESC
         """,
     )

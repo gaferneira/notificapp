@@ -17,7 +17,7 @@ import androidx.room.PrimaryKey
  * @property area Optional area/location
  * @property isActive Whether the rule is active
  * @property isDryRun When true, matches are logged but no actions execute
- * @property isGlobal Whether this rule applies to all apps (true) or specific apps (false)
+ * @property isIncludeMode Whether [targetApps] is an include-list (true) or exclude-list (false).
  * @property createdAt Creation timestamp
  * @property updatedAt Last update timestamp
  */
@@ -26,7 +26,6 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["is_active"]),
         Index(value = ["updated_at"]),
-        Index(value = ["is_global"]),
     ],
 )
 internal data class RuleEntity(
@@ -49,8 +48,8 @@ internal data class RuleEntity(
     @ColumnInfo(name = "is_dry_run", defaultValue = "0")
     val isDryRun: Boolean = false,
 
-    @ColumnInfo(name = "is_global")
-    val isGlobal: Boolean = true,
+    @ColumnInfo(name = "is_include_mode", defaultValue = "1")
+    val isIncludeMode: Boolean = true,
 
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),

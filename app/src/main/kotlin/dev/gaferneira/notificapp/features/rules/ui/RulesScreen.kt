@@ -429,8 +429,13 @@ private fun ImportPreviewDialog(
     onDismiss: () -> Unit,
 ) {
     val appsSummary = rule.targetApps?.takeIf { it.isNotEmpty() }
-        ?.joinToString(", ") { it.name }
-        ?.let { "Apps: $it" }
+        ?.let { apps ->
+            if (rule.isIncludeMode) {
+                "Apps: ${apps.joinToString(", ") { it.name }}"
+            } else {
+                "Apps: All apps except ${apps.joinToString(", ") { it.name }}"
+            }
+        }
         ?: "Apps: All apps"
 
     AlertDialog(
@@ -753,7 +758,9 @@ private fun RuleCard(
     onExport: () -> Unit,
 ) {
     val context = LocalContext.current
-    val primaryApp = rule.targetApps?.takeIf { it.size == 1 }?.firstOrNull()
+    // Only a single-app include-mode rule actually targets this one app; in exclude mode a
+    // single listed app is the app the rule does NOT apply to, so it must not drive the icon.
+    val primaryApp = rule.targetApps?.takeIf { rule.isIncludeMode && it.size == 1 }?.firstOrNull()
 
     // Load app icon if available
     val appIcon: ImageBitmap? = remember(primaryApp) {
@@ -771,9 +778,10 @@ private fun RuleCard(
     // Target apps label - "N apps" for multi-app rules instead of a raw joined list, which
     // both avoids an unbounded line length and avoids double-prefixing with "App:"/"Apps:"
     // (RuleCardInfo already renders "App: $appName").
-    val appName: String = remember(rule.targetApps) {
+    val appName: String = remember(rule.targetApps, rule.isIncludeMode) {
         when {
             rule.targetApps.isNullOrEmpty() -> "All apps"
+            !rule.isIncludeMode -> "All apps except ${rule.targetApps.size}"
             rule.targetApps.size == 1 -> primaryApp?.name ?: "1 app"
             else -> "${rule.targetApps.size} apps"
         }

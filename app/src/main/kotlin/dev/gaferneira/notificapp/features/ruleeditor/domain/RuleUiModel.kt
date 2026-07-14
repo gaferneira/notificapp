@@ -33,6 +33,8 @@ data class RuleUiModel(
     val isDryRun: Boolean = true,
     /** Target app package names (empty = all apps) */
     val targetApps: PersistentList<AppInfo> = persistentListOf(),
+    /** When true, [targetApps] is an include-list; when false, an exclude-list. Ignored when empty. */
+    val isIncludeMode: Boolean = true,
     /** List of configured triggers */
     val triggers: PersistentList<RuleCondition> = persistentListOf(),
     /** List of configured actions */
@@ -50,6 +52,7 @@ data class RuleUiModel(
         isActive = true,
         isDryRun = isDryRun,
         targetApps = targetApps,
+        isIncludeMode = isIncludeMode,
     )
 
     /**
@@ -76,6 +79,7 @@ data class RuleUiModel(
             category = rule.category.orEmpty(),
             isDryRun = rule.isDryRun,
             targetApps = rule.targetApps?.toPersistentList() ?: persistentListOf(),
+            isIncludeMode = rule.isIncludeMode,
             triggers = rule.conditions.toPersistentList(),
             actions = rule.actions.toPersistentList(),
             fields = rule.saveDataFields().toPersistentList(),

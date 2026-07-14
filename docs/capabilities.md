@@ -99,6 +99,10 @@ Notificapp lets users create automation rules that act on the notifications thei
   * Sort by: category, name A-Z/Z-A, newest/oldest created, recently updated, or status-first
   * Inline enable/disable toggle without deleting the rule
   * Export/Import (see "Rule Sharing" below)
+* **App Scope:** Each rule can target apps in one of three modes:
+  * All apps — no app restriction
+  * Include-list — rule fires only for the listed apps
+  * Exclude-list — rule fires for every app except the listed ones
 * **System Trigger:** User navigates to the Rules tab.
 * **Technical Spec Reference:** Pending link to deep technical spec
 

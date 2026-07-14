@@ -2,15 +2,20 @@ package dev.gaferneira.notificapp.features.rules.viewmodel
 
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.SelectedApp
+import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
 import dev.gaferneira.notificapp.features.rules.contract.RulesFilterContract.UiEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesFilterContract.UiEvent
 import dev.gaferneira.notificapp.testutil.createTestRule
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -23,12 +28,21 @@ import org.junit.jupiter.api.Test
 class FilterBottomSheetViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
+    private lateinit var selectedAppRepository: SelectedAppRepository
+    private lateinit var monitoredAppsFlow: MutableStateFlow<List<SelectedApp>>
     private lateinit var viewModel: FilterBottomSheetViewModel
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = FilterBottomSheetViewModel()
+
+        monitoredAppsFlow = MutableStateFlow(emptyList())
+        selectedAppRepository = mockk {
+            every { observeEnabledApps() } returns monitoredAppsFlow
+        }
+
+        viewModel = FilterBottomSheetViewModel(selectedAppRepository)
+        testDispatcher.scheduler.advanceUntilIdle()
     }
 
     @AfterEach
@@ -53,6 +67,31 @@ class FilterBottomSheetViewModelTest {
         val state = viewModel.uiState.value
         state.availableCategories shouldBe listOf("Deliveries", "Finance")
         state.availableApps.map { it.name } shouldBe listOf("Alpha", "Bank")
+    }
+
+    @Test
+    fun `availableApps includes monitored apps not referenced by any rule`() = runTest(testDispatcher) {
+        // Given: a rule referencing App A, and App B monitored but not referenced by any rule
+        monitoredAppsFlow.value = listOf(
+            SelectedApp("com.a", "App A"),
+            SelectedApp("com.b", "App B"),
+        )
+
+        viewModel.onEvent(
+            UiEvent.Init(
+                allRules = persistentListOf(
+                    createTestRule(targetApps = listOf(AppInfo("com.a", "App A"))),
+                ),
+                currentFilter = RuleFilter(),
+            ),
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then: both apps are available as filter facets
+        viewModel.uiState.value.availableApps shouldBe listOf(
+            AppInfo("com.a", "App A"),
+            AppInfo("com.b", "App B"),
+        )
     }
 
     @Test
