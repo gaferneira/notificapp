@@ -87,6 +87,16 @@ class AppSelectionViewModelTest {
         }
 
         @Test
+        fun `initial setup defaults to every app selected and persisted`() = runTest(testDispatcher) {
+            val apps = listOf(AppInfo("com.a", "Alpha"), AppInfo("com.b", "Bank"))
+            val viewModel = buildViewModel(apps)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.selectedPackageNames shouldBe setOf("com.a", "com.b")
+            selectedAppRepository.currentApps().map { it.packageName }.toSet() shouldBe setOf("com.a", "com.b")
+        }
+
+        @Test
         fun `pre-selected apps means not initial setup`() = runTest(testDispatcher) {
             val viewModel = buildViewModel(
                 emptyList(),
@@ -140,6 +150,59 @@ class AppSelectionViewModelTest {
 
             viewModel.uiState.value.selectedPackageNames shouldBe emptySet()
             selectedAppRepository.currentApps() shouldBe emptyList()
+        }
+    }
+
+    @Nested
+    inner class SelectAllTests {
+
+        @Test
+        fun `select all toggle deselects everything when all filtered apps are selected`() = runTest(testDispatcher) {
+            val apps = listOf(AppInfo("com.a", "Alpha"), AppInfo("com.b", "Bank"))
+            val viewModel = buildViewModel(apps)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(UiEvent.OnSelectAllToggled)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.selectedPackageNames shouldBe emptySet()
+            selectedAppRepository.currentApps() shouldBe emptyList()
+        }
+
+        @Test
+        fun `select all toggle selects every filtered app when none or some are selected`() = runTest(testDispatcher) {
+            val apps = listOf(AppInfo("com.a", "Alpha"), AppInfo("com.b", "Bank"))
+            val viewModel = buildViewModel(
+                apps,
+                preSelected = listOf(SelectedApp(packageName = "com.a", appName = "Alpha", isEnabled = true)),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(UiEvent.OnSelectAllToggled)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.selectedPackageNames shouldBe setOf("com.a", "com.b")
+            selectedAppRepository.currentApps().map { it.packageName }.toSet() shouldBe setOf("com.a", "com.b")
+        }
+
+        @Test
+        fun `select all toggle only applies to search-filtered apps`() = runTest(testDispatcher) {
+            val apps = listOf(AppInfo("com.a", "Alpha"), AppInfo("com.b", "Bank"))
+            val viewModel = buildViewModel(
+                apps,
+                preSelected = listOf(
+                    SelectedApp(packageName = "com.a", appName = "Alpha", isEnabled = true),
+                    SelectedApp(packageName = "com.b", appName = "Bank", isEnabled = true),
+                ),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(UiEvent.OnSearchQueryChanged("ban"))
+            viewModel.onEvent(UiEvent.OnSelectAllToggled)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.selectedPackageNames shouldBe setOf("com.a")
+            selectedAppRepository.currentApps().map { it.packageName }.toSet() shouldBe setOf("com.a")
         }
     }
 

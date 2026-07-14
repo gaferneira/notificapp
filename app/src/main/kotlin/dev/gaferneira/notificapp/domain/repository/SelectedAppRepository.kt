@@ -64,6 +64,11 @@ interface SelectedAppRepository {
     suspend fun removeApp(packageName: String): Result<Unit>
 
     /**
+     * Remove multiple apps from the selected list.
+     */
+    suspend fun removeApps(packageNames: List<String>): Result<Unit>
+
+    /**
      * Toggle the enabled state of an app.
      */
     suspend fun setAppEnabled(packageName: String, isEnabled: Boolean): Result<Unit>

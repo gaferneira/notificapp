@@ -48,6 +48,9 @@ class AppSelectionViewModel @Inject constructor(
             is UiEvent.OnAppToggled -> {
                 toggleAppSelection(event.packageName, event.isSelected)
             }
+            is UiEvent.OnSelectAllToggled -> {
+                toggleSelectAll()
+            }
             is UiEvent.OnSearchQueryChanged -> {
                 updateSearchQuery(event.query)
             }
@@ -98,13 +101,23 @@ class AppSelectionViewModel @Inject constructor(
 
                 // Check which apps are already selected
                 val existingApps = selectedAppRepository.getAllApps().getOrNull() ?: emptyList()
-                val selectedPackages = existingApps
-                    .filter { it.isEnabled }
-                    .map { it.packageName }
-                    .toSet()
 
                 // Determine if this is initial setup (no apps selected yet)
                 val isInitialSetup = existingApps.isEmpty()
+
+                // On initial setup, default to every app selected (opt-out UX) and persist
+                // immediately so Continue works even if the user never touches an individual app.
+                val selectedPackages = if (isInitialSetup) {
+                    val allPackages = installedApps.map { it.packageName }.toSet()
+                    selectedAppRepository.addApps(
+                        installedApps.map { app ->
+                            SelectedApp(packageName = app.packageName, appName = app.name, isEnabled = true)
+                        },
+                    )
+                    allPackages
+                } else {
+                    existingApps.filter { it.isEnabled }.map { it.packageName }.toSet()
+                }
 
                 // Sort apps initially: selected first (alphabetically), then unselected (alphabetically)
                 // This creates a stable order that won't change during selection
@@ -181,6 +194,45 @@ class AppSelectionViewModel @Inject constructor(
                 Timber.d("${if (isSelected) "Added" else "Removed"} app $packageName")
             } catch (e: Exception) {
                 Timber.e(e, "Failed to toggle app $packageName")
+            }
+        }
+    }
+
+    /**
+     * Select or deselect every currently filtered (search-visible) app in one action.
+     * Deselects if all filtered apps are already selected, otherwise selects them all.
+     */
+    private fun toggleSelectAll() {
+        val currentState = uiState.value
+        val filteredApps = currentState.filteredApps
+        if (filteredApps.isEmpty()) return
+
+        val shouldSelectAll = !currentState.areAllFilteredSelected
+        val filteredPackageNames = filteredApps.map { it.packageName }
+
+        setState {
+            val newSelection = if (shouldSelectAll) {
+                selectedPackageNames + filteredPackageNames
+            } else {
+                selectedPackageNames - filteredPackageNames.toSet()
+            }
+            copy(selectedPackageNames = newSelection)
+        }
+
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                if (shouldSelectAll) {
+                    selectedAppRepository.addApps(
+                        filteredApps.map { app ->
+                            SelectedApp(packageName = app.packageName, appName = app.name, isEnabled = true)
+                        },
+                    )
+                } else {
+                    selectedAppRepository.removeApps(filteredPackageNames)
+                }
+                Timber.d("${if (shouldSelectAll) "Selected" else "Deselected"} all ${filteredPackageNames.size} filtered apps")
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to toggle select-all")
             }
         }
     }

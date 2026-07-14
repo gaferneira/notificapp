@@ -64,6 +64,10 @@ object AppSelectionContract {
         /** Count of selected apps */
         val selectedCount: Int
             get() = selectedPackageNames.size
+
+        /** Whether every app currently visible (post-search) is selected */
+        val areAllFilteredSelected: Boolean
+            get() = filteredApps.isNotEmpty() && filteredApps.all { selectedPackageNames.contains(it.packageName) }
     }
 
     /**
@@ -72,6 +76,9 @@ object AppSelectionContract {
     sealed class UiEvent {
         /** User toggled an app's selection */
         data class OnAppToggled(val packageName: String, val isSelected: Boolean) : UiEvent()
+
+        /** User clicked Select All / Deselect All (applies to currently filtered apps) */
+        data object OnSelectAllToggled : UiEvent()
 
         /** User typed in search field */
         data class OnSearchQueryChanged(val query: String) : UiEvent()

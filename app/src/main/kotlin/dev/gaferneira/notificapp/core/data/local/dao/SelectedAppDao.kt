@@ -95,6 +95,12 @@ internal interface SelectedAppDao {
     suspend fun deleteByPackageName(packageName: String)
 
     /**
+     * Delete multiple apps by package name (batch delete).
+     */
+    @Query("DELETE FROM selected_apps WHERE package_name IN (:packageNames)")
+    suspend fun deleteByPackageNames(packageNames: List<String>)
+
+    /**
      * Delete all selected apps.
      */
     @Query("DELETE FROM selected_apps")

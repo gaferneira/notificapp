@@ -45,6 +45,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -155,9 +156,14 @@ private fun AppSelectionScreenContent(
                 InitialSetupHeader()
             }
 
-            // Selected apps count - reserves a fixed-height slot so toggling
-            // the first app doesn't push the search field/list up and down.
-            SelectionCountBanner(hasSelection = uiState.hasSelection, selectedCount = uiState.selectedCount)
+            // Selected apps count + Select All/Deselect All - reserves a fixed-height slot
+            // so toggling the first app doesn't push the search field/list up and down.
+            SelectionCountBanner(
+                hasSelection = uiState.hasSelection,
+                selectedCount = uiState.selectedCount,
+                areAllFilteredSelected = uiState.areAllFilteredSelected,
+                onSelectAllToggled = { onEvent(UiEvent.OnSelectAllToggled) },
+            )
             Spacer(modifier = Modifier.height(12.dp))
 
             // Search field
@@ -180,27 +186,33 @@ private fun AppSelectionScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Continue/Save button
-            ContinueButton(
-                enabled = uiState.hasSelection,
-                selectedCount = uiState.selectedCount,
-                isInitialSetup = uiState.isInitialSetup == true,
-                onClick = { onEvent(UiEvent.OnContinueClicked) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            if (!uiState.hasSelection) {
-                Spacer(modifier = Modifier.height(8.dp))
-                ContinueDisabledHint()
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Security footer
-            SecurityFooter()
-
-            Spacer(modifier = Modifier.height(24.dp))
+            AppSelectionFooter(uiState = uiState, onEvent = onEvent)
         }
+    }
+}
+
+/** Continue/Save button, its disabled hint, and the security footer. */
+@Composable
+private fun AppSelectionFooter(uiState: UiState, onEvent: (UiEvent) -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        ContinueButton(
+            enabled = uiState.hasSelection,
+            selectedCount = uiState.selectedCount,
+            isInitialSetup = uiState.isInitialSetup == true,
+            onClick = { onEvent(UiEvent.OnContinueClicked) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        if (!uiState.hasSelection) {
+            Spacer(modifier = Modifier.height(8.dp))
+            ContinueDisabledHint()
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        SecurityFooter()
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -269,13 +281,24 @@ private fun InitialSetupHeader(modifier: Modifier = Modifier) {
 }
 
 /**
- * Selected-apps count banner. Always reserves [SELECTION_BANNER_HEIGHT] so toggling
- * the first app doesn't push the search field/list up and down.
+ * Selected-apps count banner with a Select All/Deselect All action. Always reserves
+ * [SELECTION_BANNER_HEIGHT] so toggling the first app doesn't push the search field/list
+ * up and down, and the action button stays visible even with zero apps selected.
  */
 @Composable
-private fun SelectionCountBanner(hasSelection: Boolean, selectedCount: Int, modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxWidth().height(SELECTION_BANNER_HEIGHT)) {
-        androidx.compose.animation.AnimatedVisibility(
+private fun SelectionCountBanner(
+    hasSelection: Boolean,
+    selectedCount: Int,
+    areAllFilteredSelected: Boolean,
+    onSelectAllToggled: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth().height(SELECTION_BANNER_HEIGHT),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        AnimatedVisibility(
             visible = hasSelection,
             enter = fadeIn(),
             exit = fadeOut(),
@@ -283,7 +306,6 @@ private fun SelectionCountBanner(hasSelection: Boolean, selectedCount: Int, modi
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -304,6 +326,14 @@ private fun SelectionCountBanner(hasSelection: Boolean, selectedCount: Int, modi
                     )
                 }
             }
+        }
+
+        TextButton(onClick = onSelectAllToggled) {
+            Text(
+                text = if (areAllFilteredSelected) "Deselect All" else "Select All",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+            )
         }
     }
 }

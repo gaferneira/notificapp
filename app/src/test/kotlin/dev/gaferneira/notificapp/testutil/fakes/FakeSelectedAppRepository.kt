@@ -53,6 +53,12 @@ class FakeSelectedAppRepository(initial: List<SelectedApp> = emptyList()) : Sele
         return Result.success(Unit)
     }
 
+    override suspend fun removeApps(packageNames: List<String>): Result<Unit> {
+        val toRemove = packageNames.toSet()
+        apps.update { list -> list.filterNot { it.packageName in toRemove } }
+        return Result.success(Unit)
+    }
+
     override suspend fun setAppEnabled(packageName: String, isEnabled: Boolean): Result<Unit> {
         apps.update { list -> list.map { if (it.packageName == packageName) it.copy(isEnabled = isEnabled) else it } }
         return Result.success(Unit)

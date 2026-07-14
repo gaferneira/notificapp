@@ -116,6 +116,16 @@ internal class SelectedAppRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun removeApps(packageNames: List<String>): Result<Unit> = withContext(ioDispatcher) {
+        try {
+            dao.deleteByPackageNames(packageNames)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to remove ${packageNames.size} apps")
+            e.toFailureResult()
+        }
+    }
+
     override suspend fun setAppEnabled(packageName: String, isEnabled: Boolean): Result<Unit> = withContext(ioDispatcher) {
         try {
             dao.setEnabled(packageName, isEnabled)
