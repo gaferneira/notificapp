@@ -87,6 +87,7 @@ class RuleEditorViewModel @Inject constructor(
             is UiEvent.OnAppsClicked -> showAppSheet()
             is UiEvent.OnAppsSelected -> onAppsSelected(event.apps)
             is UiEvent.OnAppScopeModeChanged -> onAppScopeModeChanged(event.isIncludeMode)
+            is UiEvent.OnConditionLogicChanged -> setState { copy(rule = rule.copy(conditionLogic = event.logic)) }
             is UiEvent.OnAddActionClicked -> showActionTypePicker()
             is UiEvent.OnActionTypeSelected -> onActionTypeSelected(event.type)
             is UiEvent.OnDismissActionTypePicker -> setState { copy(isActionTypePickerVisible = false) }

@@ -2,6 +2,7 @@ package dev.gaferneira.notificapp.features.ruleeditor.contract
 
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
@@ -132,6 +133,9 @@ object RuleEditorContract {
 
         /** Toggle between include-list and exclude-list app scope */
         data class OnAppScopeModeChanged(val isIncludeMode: Boolean) : UiEvent()
+
+        /** Toggle whether conditions must ALL match or ANY match */
+        data class OnConditionLogicChanged(val logic: ConditionCombinator) : UiEvent()
 
         /** Show the action type-picker dialog */
         data object OnAddActionClicked : UiEvent()

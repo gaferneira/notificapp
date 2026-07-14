@@ -20,6 +20,7 @@
             }
         ],
         "isIncludeMode": true,
+        "conditionLogic": "ALL",
         "conditions": [
             {
                 "type": "content_match",

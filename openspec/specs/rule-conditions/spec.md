@@ -65,16 +65,28 @@ Defines the typed `RuleCondition` families a rule can be gated on — notificati
 - **WHEN** a `TimeRangeCondition` has `start == end == 08:00`
 - **THEN** the condition matches only when the current time is exactly `08:00`
 
-### Requirement: Multiple conditions on a rule combine with AND
-When a rule has more than one condition, all conditions SHALL match for the rule to match. This applies across families: a `DayOfWeekCondition`, a `TimeRangeCondition`, and a `ContentMatchCondition` on the same rule SHALL all evaluate true for the rule to fire.
+### Requirement: Multiple conditions on a rule combine per `conditionLogic`
+A rule's conditions combine according to its `conditionLogic` field: `ALL` (AND semantics, the default) or `ANY` (OR semantics). When `conditionLogic = ALL`, all conditions SHALL match for the rule to match. When `conditionLogic = ANY`, at least one condition SHALL match for the rule to match. An empty `conditions` list SHALL match regardless of `conditionLogic` (global rule).
 
-#### Scenario: Rule with day, time, and content conditions all satisfied
-- **WHEN** a rule has an enabled `DayOfWeekCondition` matching the current day, a `TimeRangeCondition` matching the current time, and a `ContentMatchCondition` matching the notification content
+#### Scenario: ALL combinator — rule matches only when every condition matches
+- **WHEN** a rule has `conditionLogic = ALL` and three conditions (day, time, and content), all of which match the current notification/time
 - **THEN** the rule matches
+- **WHEN** any one of those three conditions fails to match
+- **THEN** the rule does not match
 
-#### Scenario: Rule fails to match if any one condition fails
-- **WHEN** a rule has the same three conditions as above but the current time falls outside the `TimeRangeCondition`
-- **THEN** the rule does not match, even though the day and content conditions are satisfied
+#### Scenario: ANY combinator — rule matches when at least one condition matches
+- **WHEN** a rule has `conditionLogic = ANY` and three conditions, and exactly one of them matches
+- **THEN** the rule matches
+- **WHEN** none of the conditions match
+- **THEN** the rule does not match
+
+#### Scenario: Empty conditions list matches under both combinators
+- **WHEN** a rule has an empty `conditions` list, regardless of whether `conditionLogic` is `ALL` or `ANY`
+- **THEN** the rule matches (global rule)
+
+#### Scenario: Default combinator is ALL
+- **WHEN** a `Rule` is constructed without explicitly setting `conditionLogic`
+- **THEN** its `conditionLogic` defaults to `ALL` and it evaluates with AND semantics (preserving pre-change behavior)
 
 ### Requirement: Content-match condition preserves existing behavior
 `ContentMatchCondition` SHALL carry the same `field` + `operator` + `value` shape and evaluation semantics that `RuleCondition` had before this change (all existing `MatchingCondition` fields and `MatchingOperator` operators, unchanged). Rules that previously used only content conditions SHALL match identically to their pre-change behavior.

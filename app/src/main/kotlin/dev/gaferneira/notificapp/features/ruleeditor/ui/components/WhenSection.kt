@@ -37,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
@@ -52,8 +53,10 @@ import kotlinx.collections.immutable.persistentListOf
  * @param onAppsClick Called when the apps card is clicked
  * @param onAppScopeModeChanged Called when the include/exclude mode changes
  * @param conditions List of matching conditions
+ * @param conditionLogic How [conditions] are combined (ALL/ANY). Meaningless with fewer than 2.
  * @param onRemoveCondition Called when a condition should be removed
  * @param onConditionClick Called when a condition card is clicked
+ * @param onConditionLogicChanged Called when the ALL/ANY combinator changes
  */
 @Composable
 fun WhenSection(
@@ -62,8 +65,10 @@ fun WhenSection(
     onAppsClick: () -> Unit,
     onAppScopeModeChanged: (Boolean) -> Unit,
     conditions: ImmutableList<RuleCondition>,
+    conditionLogic: ConditionCombinator,
     onRemoveCondition: (String) -> Unit,
     onConditionClick: (String) -> Unit,
+    onConditionLogicChanged: (ConditionCombinator) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -78,12 +83,55 @@ fun WhenSection(
             onAppScopeModeChanged = onAppScopeModeChanged,
         )
 
+        // Combinator only makes sense with 2+ conditions to combine
+        if (conditions.size > 1) {
+            ConditionLogicToggle(
+                conditionLogic = conditionLogic,
+                onLogicChanged = onConditionLogicChanged,
+            )
+        }
+
         // Condition cards
         conditions.forEach { condition ->
             ConditionCard(
                 condition = condition,
                 onClick = { onConditionClick(condition.id) },
                 onRemove = { onRemoveCondition(condition.id) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ConditionLogicToggle(
+    conditionLogic: ConditionCombinator,
+    onLogicChanged: (ConditionCombinator) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Match",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
+            SegmentedButton(
+                selected = conditionLogic == ConditionCombinator.ALL,
+                onClick = { onLogicChanged(ConditionCombinator.ALL) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                label = { Text("All conditions") },
+            )
+            SegmentedButton(
+                selected = conditionLogic == ConditionCombinator.ANY,
+                onClick = { onLogicChanged(ConditionCombinator.ANY) },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                label = { Text("Any condition") },
             )
         }
     }
@@ -339,9 +387,11 @@ private fun WhenSectionPreview() {
                     value = "Payment received",
                 ),
             ),
+            conditionLogic = ConditionCombinator.ALL,
             onAppsClick = {},
             onRemoveCondition = {},
             onConditionClick = {},
+            onConditionLogicChanged = {},
             modifier = Modifier.padding(16.dp),
         )
     }
@@ -356,9 +406,11 @@ private fun WhenSectionEmptyPreview() {
             isIncludeMode = true,
             onAppScopeModeChanged = {},
             conditions = persistentListOf(),
+            conditionLogic = ConditionCombinator.ALL,
             onAppsClick = {},
             onRemoveCondition = {},
             onConditionClick = {},
+            onConditionLogicChanged = {},
             modifier = Modifier.padding(16.dp),
         )
     }
@@ -380,9 +432,11 @@ private fun WhenSectionAllAppsPreview() {
                     value = "delivery",
                 ),
             ),
+            conditionLogic = ConditionCombinator.ALL,
             onAppsClick = {},
             onRemoveCondition = {},
             onConditionClick = {},
+            onConditionLogicChanged = {},
             modifier = Modifier.padding(16.dp),
         )
     }

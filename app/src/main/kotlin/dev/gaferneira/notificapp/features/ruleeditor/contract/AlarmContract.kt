@@ -19,9 +19,6 @@ import java.util.UUID
 
 /**
  * MVI Contract for [dev.gaferneira.notificapp.features.ruleeditor.ui.AlarmBottomSheet].
- *
- * Full Contract MVI per ADR 001/002. Promoted from the ADR 014 lightweight ViewModel pattern:
- * see ADR 014's "Promotion path" for why.
  */
 object AlarmContract {
 

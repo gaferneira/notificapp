@@ -35,6 +35,11 @@ data class Rule(
      * Ignored when [targetApps] is null or empty — the rule is global.
      */
     val isIncludeMode: Boolean = true,
+    /**
+     * How the conditions of this rule are combined when matching a notification.
+     * ALL = every condition must match (AND); ANY = at least one must match (OR).
+     */
+    val conditionLogic: ConditionCombinator = ConditionCombinator.ALL,
     /** Triggers that determine when rule applies */
     val conditions: ImmutableList<RuleCondition> = persistentListOf(),
     /** Actions to take when rule matches */

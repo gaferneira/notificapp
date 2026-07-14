@@ -2,6 +2,7 @@ package dev.gaferneira.notificapp.core.data.local.mapper
 
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestField
@@ -67,5 +68,44 @@ class RuleMapperTest {
 
         // Then: it collapses to global (null targetApps, mode ignored)
         domain.targetApps shouldBe null
+    }
+
+    @Test
+    fun `conditionLogic round-trips through entity mapping`() {
+        // Given: a rule with ANY combinator
+        val rule = createTestRule(id = "rule-1", conditionLogic = ConditionCombinator.ANY)
+
+        // When: mapping to entity and back
+        val entity = RuleMapper.toEntity(rule)
+        val domain = RuleMapper.toDomain(entity, emptyList(), emptyList(), emptyList())
+
+        // Then: the combinator survives the round trip
+        domain.conditionLogic shouldBe ConditionCombinator.ANY
+    }
+
+    @Test
+    fun `pre-existing entity rows default conditionLogic to ALL`() {
+        // Given: an entity with no condition_logic value (simulating a pre-existing row)
+        val rule = createTestRule(id = "rule-1")
+        val entity = RuleMapper.toEntity(rule).copy(conditionLogic = "")
+
+        // When: mapping back to domain
+        val domain = RuleMapper.toDomain(entity, emptyList(), emptyList(), emptyList())
+
+        // Then: it defaults to ALL
+        domain.conditionLogic shouldBe ConditionCombinator.ALL
+    }
+
+    @Test
+    fun `unknown conditionLogic string maps to ALL`() {
+        // Given: an entity with a garbage condition_logic value
+        val rule = createTestRule(id = "rule-1")
+        val entity = RuleMapper.toEntity(rule).copy(conditionLogic = "GARBAGE")
+
+        // When: mapping back to domain
+        val domain = RuleMapper.toDomain(entity, emptyList(), emptyList(), emptyList())
+
+        // Then: it safely defaults to ALL instead of throwing
+        domain.conditionLogic shouldBe ConditionCombinator.ALL
     }
 }

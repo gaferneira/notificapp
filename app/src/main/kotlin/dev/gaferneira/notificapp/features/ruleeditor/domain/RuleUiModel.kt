@@ -2,6 +2,7 @@ package dev.gaferneira.notificapp.features.ruleeditor.domain
 
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
@@ -35,6 +36,8 @@ data class RuleUiModel(
     val targetApps: PersistentList<AppInfo> = persistentListOf(),
     /** When true, [targetApps] is an include-list; when false, an exclude-list. Ignored when empty. */
     val isIncludeMode: Boolean = true,
+    /** How [triggers] are combined when matching a notification. Meaningless with fewer than 2 triggers. */
+    val conditionLogic: ConditionCombinator = ConditionCombinator.ALL,
     /** List of configured triggers */
     val triggers: PersistentList<RuleCondition> = persistentListOf(),
     /** List of configured actions */
@@ -47,6 +50,7 @@ data class RuleUiModel(
         name = name.trim(),
         description = description.takeIf { it.isNotBlank() },
         category = category,
+        conditionLogic = conditionLogic,
         conditions = triggers,
         actions = actionsWithFieldsAttached(),
         isActive = true,
@@ -80,6 +84,7 @@ data class RuleUiModel(
             isDryRun = rule.isDryRun,
             targetApps = rule.targetApps?.toPersistentList() ?: persistentListOf(),
             isIncludeMode = rule.isIncludeMode,
+            conditionLogic = rule.conditionLogic,
             triggers = rule.conditions.toPersistentList(),
             actions = rule.actions.toPersistentList(),
             fields = rule.saveDataFields().toPersistentList(),

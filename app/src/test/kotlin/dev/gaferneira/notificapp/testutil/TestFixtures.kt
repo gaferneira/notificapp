@@ -2,6 +2,7 @@ package dev.gaferneira.notificapp.testutil
 
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.Notification
@@ -104,6 +105,7 @@ fun createTestRule(
     isActive: Boolean = true,
     isDryRun: Boolean = false,
     isIncludeMode: Boolean = true,
+    conditionLogic: ConditionCombinator = ConditionCombinator.ALL,
     targetApps: List<AppInfo>? = null,
     conditions: List<RuleCondition> = emptyList(),
     actions: List<RuleAction> = emptyList(),
@@ -117,6 +119,7 @@ fun createTestRule(
     isActive = isActive,
     isDryRun = isDryRun,
     isIncludeMode = isIncludeMode,
+    conditionLogic = conditionLogic,
     targetApps = targetApps?.toImmutableList(),
     conditions = conditions.toImmutableList(),
     actions = actions.toImmutableList(),

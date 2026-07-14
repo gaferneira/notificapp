@@ -277,7 +277,7 @@ Recorded so they aren't lost; none are committed. Promote to a phase only when t
 ### Rules
 - **Per-rule health stats**: "matched 0 times in 30 days" indicator in the Rules list — a dead rule silently not firing violates "never fail silently", and the `RuleExecution` data to compute it already exists
 - **Time-window conditions**: rule active only during set hours/days
-- **OR condition groups**: currently conditions are AND-only (feeds the ADR 011 schema decision)
+- **OR condition groups**: currently conditions are AND-only
 
 ### Privacy
 - **Raw-content retention per rule**: keep only extracted fields, auto-delete the raw notification after extraction — minimizes stored sensitive text

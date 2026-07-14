@@ -4,8 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Wire *and* storage representation of the `RuleCondition` domain model (see ADR 011's
- * 2026-07-12 amendment - this dual use is a deliberate, documented coupling, not an accident).
+ * Wire *and* storage representation of the `RuleCondition` domain model.
  * `@SerialName`-discriminated sealed hierarchy, mirroring [ExtractionMethodDto]. [ContentMatch]'s
  * [ContentMatch.condition]/[ContentMatch.operator] cross the wire as raw strings rather than the
  * domain enums, so `RuleWireMapper` controls exactly how an unrecognized value is handled

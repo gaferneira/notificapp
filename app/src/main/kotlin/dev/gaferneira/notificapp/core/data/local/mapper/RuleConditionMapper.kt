@@ -11,9 +11,9 @@ import java.time.LocalTime
 
 /**
  * Mapper functions for converting between [RuleCondition] domain models and [RuleConditionEntity]
- * database models, via the polymorphic [ConditionDto] payload (ADR 011's 2026-07-12 amendment).
- * The same [ConditionDto] hierarchy is reused by `RuleWireMapper` for the wire format - see that
- * class's documentation for the accepted storage/wire coupling this introduces.
+ * database models, via the polymorphic [ConditionDto] payload.  The same [ConditionDto] hierarchy is reused by `RuleWireMapper`
+ * for the wire format - see that class's documentation for the accepted storage/wire coupling
+ * this introduces.
  */
 internal object RuleConditionMapper {
 

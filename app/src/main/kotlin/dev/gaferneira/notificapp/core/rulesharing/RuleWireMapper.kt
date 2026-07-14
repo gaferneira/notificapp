@@ -10,6 +10,7 @@ import dev.gaferneira.notificapp.core.rulesharing.dto.RuleDto
 import dev.gaferneira.notificapp.core.rulesharing.dto.RuleExportDto
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.Rule
@@ -57,6 +58,7 @@ fun Rule.toDto(): RuleExportDto = RuleExportDto(
         isDryRun = isDryRun,
         targetApps = targetApps?.map { it.toDto() },
         isIncludeMode = isIncludeMode,
+        conditionLogic = conditionLogic.name,
         conditions = conditions.map { it.toDto() },
         actions = actions.map { it.toDto() },
         createdAt = createdAt,
@@ -83,6 +85,7 @@ fun RuleExportDto.toDomain(): RuleImportResult {
         isDryRun = rule.isDryRun,
         targetApps = rule.targetApps?.map { it.toDomain() }?.toImmutableList(),
         isIncludeMode = rule.isIncludeMode,
+        conditionLogic = ConditionCombinator.fromStorageValue(rule.conditionLogic),
         conditions = rule.conditions.map { it.toDomain() }.toImmutableList(),
         actions = mappedActions.mapNotNull { (_, action) -> action }.toImmutableList(),
         createdAt = rule.createdAt,

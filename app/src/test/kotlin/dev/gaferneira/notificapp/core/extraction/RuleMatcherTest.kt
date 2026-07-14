@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.extraction
 
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
@@ -91,6 +92,154 @@ class RuleMatcherTest {
 
         // Then: the notification does not match
         result shouldBe false
+    }
+
+    // endregion
+
+    // region ConditionCombinator
+
+    @Test
+    fun `ALL matches only when every condition matches`() {
+        // Given: three conditions and a notification that satisfies all of them
+        val notification = createTestNotification(title = "Hello World", content = "Some content", appName = "Test App")
+        val titleCondition = createTestCondition(
+            condition = MatchingCondition.TITLE,
+            operator = MatchingOperator.CONTAINS,
+            value = "Hello",
+        )
+        val contentCondition = createTestCondition(
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "Some",
+        )
+        val appCondition = createTestCondition(
+            condition = MatchingCondition.APP_NAME,
+            operator = MatchingOperator.EQUALS,
+            value = "Test App",
+        )
+
+        // When/Then: ALL matches when every condition matches
+        RuleMatcher.matches(
+            notification,
+            listOf(titleCondition, contentCondition, appCondition),
+            FIXED_NOW,
+            ConditionCombinator.ALL,
+        ) shouldBe true
+
+        // And: ALL fails as soon as one condition fails
+        val failingContent = contentCondition.copy(value = "Nope")
+        RuleMatcher.matches(
+            notification,
+            listOf(titleCondition, failingContent, appCondition),
+            FIXED_NOW,
+            ConditionCombinator.ALL,
+        ) shouldBe false
+    }
+
+    @Test
+    fun `ANY matches when at least one condition matches`() {
+        // Given: three content conditions, only one of which matches the notification
+        val notification = createTestNotification(content = "Payment received")
+        val conditionOne = createTestCondition(
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "Invoice",
+        )
+        val conditionTwo = createTestCondition(
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "Payment",
+        )
+        val conditionThree = createTestCondition(
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "Reminder",
+        )
+
+        // When: matching with ANY combinator
+        val result = RuleMatcher.matches(
+            notification,
+            listOf(conditionOne, conditionTwo, conditionThree),
+            FIXED_NOW,
+            ConditionCombinator.ANY,
+        )
+
+        // Then: the rule matches because conditionTwo matches
+        result shouldBe true
+    }
+
+    @Test
+    fun `empty conditions list matches under both combinators`() {
+        // Given: a notification and no conditions
+        val notification = createTestNotification()
+
+        // When/Then: an empty list matches under ALL and ANY
+        RuleMatcher.matches(notification, emptyList(), FIXED_NOW, ConditionCombinator.ALL) shouldBe true
+        RuleMatcher.matches(notification, emptyList(), FIXED_NOW, ConditionCombinator.ANY) shouldBe true
+    }
+
+    @Test
+    fun `ANY with every condition failing does not match`() {
+        // Given: three conditions, none of which match the notification
+        val notification = createTestNotification(content = "Totalt: 153,50 kr")
+        val conditionOne = createTestCondition(
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "Invoice",
+        )
+        val conditionTwo = createTestCondition(
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "Payment",
+        )
+        val conditionThree = createTestCondition(
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "Reminder",
+        )
+
+        // When: matching with ANY combinator
+        val result = RuleMatcher.matches(
+            notification,
+            listOf(conditionOne, conditionTwo, conditionThree),
+            FIXED_NOW,
+            ConditionCombinator.ANY,
+        )
+
+        // Then: the rule does not match
+        result shouldBe false
+    }
+
+    @Test
+    fun `ANY short-circuits correctly regardless of match order`() {
+        // Given: three conditions where the first fails and a later one matches
+        val notification = createTestNotification(content = "Payment received")
+        val failingFirst = createTestCondition(
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "Invoice",
+        )
+        val matchingSecond = createTestCondition(
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "Payment",
+        )
+        val failingThird = createTestCondition(
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "Reminder",
+        )
+
+        // When: matching with ANY combinator
+        val result = RuleMatcher.matches(
+            notification,
+            listOf(failingFirst, matchingSecond, failingThird),
+            FIXED_NOW,
+            ConditionCombinator.ANY,
+        )
+
+        // Then: the rule matches despite the first condition failing
+        result shouldBe true
     }
 
     // endregion

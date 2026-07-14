@@ -2,7 +2,7 @@
 
 Notificapp rules can be exported to a JSON file (or clipboard text) and imported back — by you, on another device, or by anyone using a rule you shared. This document specifies that format.
 
-See `docs/adr/011-rule-definition-storage.md` for why this is a wire format only: storage stays the normalized Room tables it always was. The DTOs in `core/rulesharing/dto/` (not the domain models) are the canonical definition of this format — every field carries an explicit `@SerialName`, so a domain-model rename never changes exported JSON. `core/rulesharing/RuleWireMapper.kt` maps between the two; `core/rulesharing/RuleJsonCodec.kt` encodes/decodes. A golden-file test (`app/src/test/resources/rule-export-v1.json`) locks this exact shape — any change to it that isn't a deliberate `schemaVersion` bump is normally a test failure, not a silent break for every rule file already exported by users. The move of `fields` from the rule level onto the `save_data` action (below) is an exception made while the app has no real users yet: it's a deliberate breaking change to the shape without a version bump, and no back-compat decoding for the old shape exists — see "No back-compat" below.
+This format is a **wire format only** — the source of truth is the normalized Room tables (`rules`, `rule_conditions`, `rule_fields`, `rule_actions`, `rule_target_apps`). The DTOs in `core/rulesharing/dto/` (not the domain models) are the canonical definition of this format: every field carries an explicit `@SerialName`, so a domain-model rename never changes exported JSON. `core/rulesharing/RuleWireMapper.kt` maps between the two; `core/rulesharing/RuleJsonCodec.kt` encodes/decodes. A golden-file test (`app/src/test/resources/rule-export-v1.json`) locks this exact shape — any change to it that isn't a deliberate `schemaVersion` bump is normally a test failure, not a silent break for every rule file already exported by users. The move of `fields` from the rule level onto the `save_data` action (below) is an exception made while the app has no real users yet: it's a deliberate breaking change to the shape without a version bump, and no back-compat decoding for the old shape exists — see "No back-compat" below.
 
 ## Envelope
 
@@ -20,19 +20,20 @@ Every exported file is a single JSON object:
 
 ## `rule` object
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | string | Ignored on import — a fresh ID is always generated, so importing the same file twice never collides with itself. |
-| `name` | string | Required; import is rejected if blank. |
-| `description` | string? | Optional. |
-| `category` | string? | Optional. |
-| `isActive` | boolean | Ignored on import — imported rules are always activated. |
-| `isDryRun` | boolean | Ignored on import — **imported rules always start in dry-run mode**, regardless of what's in the file. This is a deliberate safety rule: you review what an imported rule would have done (via "Test against history" and its dry-run execution log) before trusting it to act on real notifications. See `docs/adr/` and the roadmap's Backtesting and Dry-Run section. |
-| `targetApps` | array of `{packageName, name}` \| `null` | `null` or an empty array means "all apps". |
-| `isIncludeMode` | boolean | `true` = [targetApps] is an include-list (rule fires only for listed apps). `false` = exclude-list (rule fires for every app NOT listed). Ignored when `targetApps` is `null` or empty. |
-| `conditions` | array of condition objects | See below. IDs are regenerated on import. |
-| `actions` | array of action objects | See below. IDs are regenerated on import. Extraction fields are nested under the `save_data` action (see below) - there is no rule-level `fields` array. |
-| `createdAt` / `updatedAt` | number (epoch ms) | Ignored on import — reset to the import time. |
+| Field                     | Type                                     | Notes                                                                                                                                                                                                                                                                                                                                                                    |
+|---------------------------|------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `id`                      | string                                   | Ignored on import — a fresh ID is always generated, so importing the same file twice never collides with itself.                                                                                                                                                                                                                                                         |
+| `name`                    | string                                   | Required; import is rejected if blank.                                                                                                                                                                                                                                                                                                                                   |
+| `description`             | string?                                  | Optional.                                                                                                                                                                                                                                                                                                                                                                |
+| `category`                | string?                                  | Optional.                                                                                                                                                                                                                                                                                                                                                                |
+| `isActive`                | boolean                                  | Ignored on import — imported rules are always activated.                                                                                                                                                                                                                                                                                                                 |
+| `isDryRun`                | boolean                                  | Ignored on import — **imported rules always start in dry-run mode**, regardless of what's in the file. This is a deliberate safety rule: you review what an imported rule would have done (via "Test against history" and its dry-run execution log) before trusting it to act on real notifications. See `docs/adr/` and the roadmap's Backtesting and Dry-Run section. |
+| `targetApps`              | array of `{packageName, name}` \| `null` | `null` or an empty array means "all apps".                                                                                                                                                                                                                                                                                                                               |
+| `isIncludeMode`           | boolean                                  | `true` = [targetApps] is an include-list (rule fires only for listed apps). `false` = exclude-list (rule fires for every app NOT listed). Ignored when `targetApps` is `null` or empty.                                                                                                                                                                                  |
+| `conditionLogic`          | string                                   | `ALL` (default) = every condition must match (AND). `ANY` = at least one condition must match (OR). Unknown values on import default to `ALL`.                                                                                                                                                                                                                           |
+| `conditions`              | array of condition objects               | See below. IDs are regenerated on import.                                                                                                                                                                                                                                                                                                                                |
+| `actions`                 | array of action objects                  | See below. IDs are regenerated on import. Extraction fields are nested under the `save_data` action (see below) - there is no rule-level `fields` array.                                                                                                                                                                                                                 |
+| `createdAt` / `updatedAt` | number (epoch ms)                        | Ignored on import — reset to the import time.                                                                                                                                                                                                                                                                                                                            |
 
 ## `conditions[]` — `RuleCondition`
 
@@ -71,18 +72,18 @@ Every exported file is a single JSON object:
 
 `method` is a tagged union on its `type` field — one of:
 
-| `type` | Extra fields |
-|---|---|
-| `fixed_position` | `startIndex`, `endIndex` |
+| `type`                 | Extra fields               |
+|------------------------|----------------------------|
+| `fixed_position`       | `startIndex`, `endIndex`   |
 | `text_between_anchors` | `startAnchor`, `endAnchor` |
-| `regex` | `pattern`, `captureGroup` |
-| `text_after_keyword` | `keyword`, `maxLength?` |
-| `text_before_keyword` | `keyword` |
-| `line_extraction` | `lineNumber` |
-| `split_by_delimiter` | `delimiter`, `takeIndex` |
-| `json_path` | `path` |
-| `smart_amount` | (none) |
-| `smart_date` | (none) |
+| `regex`                | `pattern`, `captureGroup`  |
+| `text_after_keyword`   | `keyword`, `maxLength?`    |
+| `text_before_keyword`  | `keyword`                  |
+| `line_extraction`      | `lineNumber`               |
+| `split_by_delimiter`   | `delimiter`, `takeIndex`   |
+| `json_path`            | `path`                     |
+| `smart_amount`         | (none)                     |
+| `smart_date`           | (none)                     |
 
 ## Full example
 
@@ -90,7 +91,7 @@ A rule that extracts a payment amount from bank notifications and saves it, expo
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 1,
   "rule": {
     "id": "b3f1e2b0-6c7b-4b8e-9b0a-000000000000",
     "name": "Bank payment received",
@@ -99,6 +100,7 @@ A rule that extracts a payment amount from bank notifications and saves it, expo
     "isActive": true,
     "isDryRun": false,
     "isIncludeMode": true,
+    "conditionLogic": "ALL",
     "targetApps": [
       { "packageName": "com.bank.example", "name": "Example Bank" }
     ],

@@ -39,7 +39,7 @@ class RuleEngine @Inject constructor() {
         rule: Rule,
         now: LocalDateTime,
     ): RuleMatch? {
-        if (!RuleMatcher.matches(notification, rule.conditions, now)) {
+        if (!RuleMatcher.matches(notification, rule.conditions, now, rule.conditionLogic)) {
             Timber.d("Rule ${rule.id} did not match notification ${notification.id}")
             return null
         }

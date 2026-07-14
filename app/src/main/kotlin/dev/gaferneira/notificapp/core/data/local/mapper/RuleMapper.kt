@@ -5,6 +5,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.RuleConditionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
@@ -40,6 +41,7 @@ internal object RuleMapper {
         isDryRun = entity.isDryRun,
         targetApps = targetApps?.toImmutableList()?.takeIf { it.isNotEmpty() },
         isIncludeMode = entity.isIncludeMode,
+        conditionLogic = ConditionCombinator.fromStorageValue(entity.conditionLogic),
         conditions = RuleConditionMapper.toDomainList(conditionEntities).toImmutableList(),
         actions = RuleActionMapper.toDomainList(actionEntities, fieldEntities).toImmutableList(),
         createdAt = entity.createdAt,
@@ -62,6 +64,7 @@ internal object RuleMapper {
         isActive = domain.isActive,
         isDryRun = domain.isDryRun,
         isIncludeMode = domain.isIncludeMode,
+        conditionLogic = domain.conditionLogic.name,
         createdAt = domain.createdAt,
         updatedAt = domain.updatedAt,
     )

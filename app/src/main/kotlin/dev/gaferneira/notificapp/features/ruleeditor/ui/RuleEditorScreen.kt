@@ -451,8 +451,10 @@ private fun LogicStep(
                 onAppsClick = { onEvent(UiEvent.OnAppsClicked) },
                 onAppScopeModeChanged = { onEvent(UiEvent.OnAppScopeModeChanged(it)) },
                 conditions = uiState.rule.triggers,
+                conditionLogic = uiState.rule.conditionLogic,
                 onRemoveCondition = { onEvent(UiEvent.OnRemoveConditionClicked(it)) },
                 onConditionClick = { onEvent(UiEvent.OnConditionItemClicked(it)) },
+                onConditionLogicChanged = { onEvent(UiEvent.OnConditionLogicChanged(it)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 

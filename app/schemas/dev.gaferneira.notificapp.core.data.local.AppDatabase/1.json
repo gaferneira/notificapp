@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "76ac18d0f009a4b49969f52c890353ba",
+    "identityHash": "a5957f88a08b1427ebc6eb3f539f520d",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -171,7 +171,7 @@
       },
       {
         "tableName": "rules",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT, `category` TEXT, `is_active` INTEGER NOT NULL, `is_dry_run` INTEGER NOT NULL DEFAULT 0, `is_include_mode` INTEGER NOT NULL DEFAULT 1, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT, `category` TEXT, `is_active` INTEGER NOT NULL, `is_dry_run` INTEGER NOT NULL DEFAULT 0, `is_include_mode` INTEGER NOT NULL DEFAULT 1, `condition_logic` TEXT NOT NULL DEFAULT 'ALL', `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -214,6 +214,13 @@
             "affinity": "INTEGER",
             "notNull": true,
             "defaultValue": "1"
+          },
+          {
+            "fieldPath": "conditionLogic",
+            "columnName": "condition_logic",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'ALL'"
           },
           {
             "fieldPath": "createdAt",
@@ -769,7 +776,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '76ac18d0f009a4b49969f52c890353ba')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a5957f88a08b1427ebc6eb3f539f520d')"
     ]
   }
 }

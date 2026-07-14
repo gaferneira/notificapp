@@ -10,9 +10,8 @@ import androidx.room.PrimaryKey
  * Room entity representing a single trigger condition within a rule.
  *
  * Each condition defines when a rule should be applied. The condition's family and data (content
- * match, day-of-week, time-range, ...) are collapsed into a single JSON [payload] column - see
- * ADR 011's 2026-07-12 amendment - so adding a new condition family never requires a schema
- * migration.
+ * match, day-of-week, time-range, ...) are collapsed into a single JSON [payload] column - so
+ * adding a new condition family never requires a schema migration.
  *
  * @property id Unique identifier for this condition
  * @property ruleId Foreign key to the parent rule

@@ -51,6 +51,9 @@ internal data class RuleEntity(
     @ColumnInfo(name = "is_include_mode", defaultValue = "1")
     val isIncludeMode: Boolean = true,
 
+    @ColumnInfo(name = "condition_logic", defaultValue = "ALL")
+    val conditionLogic: String = "ALL",
+
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis(),
 

@@ -35,6 +35,7 @@ data class RuleDto(
     @SerialName("isDryRun") val isDryRun: Boolean = false,
     @SerialName("targetApps") val targetApps: List<AppInfoDto>? = null,
     @SerialName("isIncludeMode") val isIncludeMode: Boolean = true,
+    @SerialName("conditionLogic") val conditionLogic: String = "ALL",
     @SerialName("conditions") val conditions: List<ConditionDto> = emptyList(),
     @SerialName("actions") val actions: List<ActionDto> = emptyList(),
     @SerialName("createdAt") val createdAt: Long = 0L,

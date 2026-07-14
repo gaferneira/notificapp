@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.extraction
 
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.Notification
@@ -19,17 +20,28 @@ import java.time.temporal.ChronoUnit
 object RuleMatcher {
 
     /**
-     * Check if a notification matches all the given conditions.
+     * Check if a notification matches the given conditions according to [combinator].
      *
      * @param notification The notification to check
-     * @param conditions List of conditions that must all match (AND logic)
+     * @param conditions List of conditions to evaluate
      * @param now The evaluation instant, for day-of-week/time-range conditions
-     * @return true if all conditions match, false otherwise
+     * @param combinator How to combine the conditions: ALL (AND) or ANY (OR)
+     * @return true if the conditions match according to the combinator, false otherwise
      */
-    fun matches(notification: Notification, conditions: List<RuleCondition>, now: LocalDateTime): Boolean {
+    fun matches(
+        notification: Notification,
+        conditions: List<RuleCondition>,
+        now: LocalDateTime,
+        combinator: ConditionCombinator = ConditionCombinator.ALL,
+    ): Boolean {
         if (conditions.isEmpty()) return true
-        return conditions.all { condition ->
-            matchesCondition(notification, condition, now)
+        return when (combinator) {
+            ConditionCombinator.ALL -> conditions.all { condition ->
+                matchesCondition(notification, condition, now)
+            }
+            ConditionCombinator.ANY -> conditions.any { condition ->
+                matchesCondition(notification, condition, now)
+            }
         }
     }
 
@@ -37,6 +49,7 @@ object RuleMatcher {
      * Check if a single condition matches the notification. Total and fail-closed: every sealed
      * member resolves to a boolean, never throws.
      */
+
     private fun matchesCondition(notification: Notification, condition: RuleCondition, now: LocalDateTime): Boolean = when (condition) {
         is RuleCondition.ContentMatchCondition -> matchesContent(notification, condition)
         is RuleCondition.DayOfWeekCondition -> now.dayOfWeek in condition.days

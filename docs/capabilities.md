@@ -12,7 +12,7 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **Technical Spec Reference:** Pending link to deep technical spec
 
 ### Matching Conditions
-* **User Experience:** The user specifies what a notification must look like to match a rule by adding one or more conditions, drawn from three families. Multiple conditions on the same rule are combined with AND.
+* **User Experience:** The user specifies what a notification must look like to match a rule by adding one or more conditions, drawn from three families. Multiple conditions on the same rule are combined with a per-rule combinator (`ALL` = every condition must match, `ANY` = at least one condition must match). The three condition families are:
   * **Content match** — a notification property compared against a value with an operator:
     * Properties that can be checked: Title, Main text/content, Raw content (the full raw notification text), App name, Package name
     * Operators available: Contains, Does not contain, Starts with, Ends with, Equals (exact match), Matches regex (pattern match)
@@ -134,7 +134,6 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ## Status Reference (for planning what to build next)
 
-* **Shipped:** onboarding, app selection, notification capture with dedup/filtering, inbox, notification detail, rule engine (content-match with 6 operators, day-of-week, and time-range conditions + 10 extraction methods), rules list, rule editor, settings, all 5 action types, backtesting, dry-run mode, rule import/export.
 * **Planned, not yet built:**
   * Starter rule templates
   * Per-rule cooldown safety limits

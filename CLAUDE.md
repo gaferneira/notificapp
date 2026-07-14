@@ -19,7 +19,7 @@
 
 - **Room schema**: prefer a clean schema bump (destructive migration) over hand-written `Migration` objects when changing `core/data/local/entity/`. Don't add a real `Migration` just to preserve existing rows — there are none to preserve.
 - **Rule wire format** (`core/rulesharing/RuleJsonCodec`, `docs/rule-format.md`): free to break `RuleExportDto`/schema version across commits without a compatibility shim — no one has exported rules from a shipped version yet.
-- **Domain model shape**: sealed-class/structural rewrites of `Rule`, `RuleCondition`, etc. are fine — this is the intended checkpoint for the "revisit if rule shape churns" trigger in ADR 011.
+- **Domain model shape**: sealed-class/structural rewrites of `Rule`, `RuleCondition`, etc. are fine — condition storage uses a JSON polymorphic column (`rule_conditions.payload`), so adding new condition families never requires a Room migration.
 
 Revisit and remove this section once the app has a real release with installed users — at that point migrations and wire-format compatibility become mandatory again.
 
@@ -363,4 +363,4 @@ Navigation3 uses `Screen` sealed routes + `Routes` factories + `entryProvider` i
 | Hilt Modules | `app/src/main/kotlin/.../core/di/` |
 | Feature Strings | `app/src/main/res/values/strings.xml` |
 | Theme | `app/src/main/kotlin/.../core/ui/theme/` |
-| Architecture Check rules / baseline | `config/architecture/architectureCheck.gradle.kts`, `config/architecture/baseline.txt` |
+| Architecture Check rules / baseline | `config/architecture/architectureCheck.gradle.kts`, `config/architecture/baseline.txt`
