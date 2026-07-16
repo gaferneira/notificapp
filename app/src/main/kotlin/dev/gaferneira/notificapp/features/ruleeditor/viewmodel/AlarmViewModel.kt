@@ -4,6 +4,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.AlarmBackgroundType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_BACKGROUND_IMAGE_IS_DARK
+import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_COOLDOWN_SECONDS
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_FULLSCREEN_ENABLED
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_SNOOZE_DURATION_MINUTES
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_SNOOZE_ENABLED
@@ -15,6 +16,7 @@ import dev.gaferneira.notificapp.domain.model.VibrationPattern
 import dev.gaferneira.notificapp.domain.model.getAlarmBackgroundImageUri
 import dev.gaferneira.notificapp.domain.model.getAlarmBackgroundPresetId
 import dev.gaferneira.notificapp.domain.model.getAlarmBackgroundType
+import dev.gaferneira.notificapp.domain.model.getAlarmCooldownSeconds
 import dev.gaferneira.notificapp.domain.model.getAlarmSnoozeDurationMinutes
 import dev.gaferneira.notificapp.domain.model.getAlarmSnoozeMaxCount
 import dev.gaferneira.notificapp.domain.model.getAlarmSoundUri
@@ -67,6 +69,7 @@ class AlarmViewModel @Inject constructor(
         is UiEvent.OnSnoozeToggle -> copy(snoozeEnabled = event.enabled)
         is UiEvent.OnSnoozeDurationChange -> copy(snoozeDurationMinutes = event.minutes)
         is UiEvent.OnSnoozeMaxCountChange -> copy(snoozeMaxCount = event.count)
+        is UiEvent.OnCooldownSecondsChange -> copy(cooldownSeconds = event.seconds)
         is UiEvent.OnBackgroundImageIsDarkToggle -> copy(backgroundImageIsDark = event.isDark)
         else -> this
     }
@@ -86,6 +89,7 @@ class AlarmViewModel @Inject constructor(
                 snoozeEnabled = initial?.isAlarmSnoozeEnabled() ?: DEFAULT_ALARM_SNOOZE_ENABLED,
                 snoozeDurationMinutes = initial?.getAlarmSnoozeDurationMinutes() ?: DEFAULT_ALARM_SNOOZE_DURATION_MINUTES,
                 snoozeMaxCount = initial?.getAlarmSnoozeMaxCount() ?: DEFAULT_ALARM_SNOOZE_MAX_COUNT,
+                cooldownSeconds = initial?.getAlarmCooldownSeconds() ?: DEFAULT_ALARM_COOLDOWN_SECONDS,
                 backgroundType = initial?.getAlarmBackgroundType() ?: AlarmBackgroundType.NONE,
                 backgroundPresetId = initial?.getAlarmBackgroundPresetId(),
                 backgroundImageUri = initial?.getAlarmBackgroundImageUri(),

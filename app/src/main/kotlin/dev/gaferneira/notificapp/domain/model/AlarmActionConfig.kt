@@ -124,6 +124,28 @@ const val ALARM_BACKGROUND_IMAGE_IS_DARK_KEY = "alarm_background_image_is_dark"
 const val DEFAULT_ALARM_BACKGROUND_IMAGE_IS_DARK = true
 
 /**
+ * Configuration key for the rule-safety cooldown, in seconds: after this alarm fires, further
+ * matches are suppressed (backed by [dev.gaferneira.notificapp.core.notification.action.NotificationThrottleTracker])
+ * until the window elapses. `0` disables cooldown - the alarm fires on every match, as before
+ * this option existed.
+ */
+const val ALARM_COOLDOWN_SECONDS_KEY = "alarm_cooldown_seconds"
+
+/**
+ * Default alarm cooldown in seconds - disabled, matching legacy rules persisted before this
+ * option existed.
+ */
+const val DEFAULT_ALARM_COOLDOWN_SECONDS = 0
+
+/**
+ * Alarm cooldown is clamped to this range, mirroring the [FLASH_COUNT_KEY] defense-in-depth
+ * coercion pattern. The upper bound is generous (24h) since a rule author may legitimately want
+ * a long-lived "don't re-alarm today" cooldown.
+ */
+const val MIN_ALARM_COOLDOWN_SECONDS = 0
+const val MAX_ALARM_COOLDOWN_SECONDS = 86_400
+
+/**
  * Get the configured alarm sound URI, or null to use the device's default alarm sound.
  */
 fun RuleAction.getAlarmSoundUri(): String? = config[ALARM_SOUND_URI_KEY]
@@ -200,6 +222,13 @@ fun RuleAction.isAlarmBackgroundImageDark(): Boolean = config[ALARM_BACKGROUND_I
     ?: DEFAULT_ALARM_BACKGROUND_IMAGE_IS_DARK
 
 /**
+ * Get the configured alarm cooldown in seconds, clamped to a sane range regardless of what's
+ * stored in config (defense in depth against a malformed or imported rule). `0` means disabled.
+ */
+fun RuleAction.getAlarmCooldownSeconds(): Int = (config[ALARM_COOLDOWN_SECONDS_KEY]?.toIntOrNull() ?: DEFAULT_ALARM_COOLDOWN_SECONDS)
+    .coerceIn(MIN_ALARM_COOLDOWN_SECONDS, MAX_ALARM_COOLDOWN_SECONDS)
+
+/**
  * Grouping value object for the extended `CREATE_ALARM` options ([RuleAction.createAlarm]),
  * including the legacy `fullScreenEnabled` flag, that don't fit as flat parameters without
  * exceeding detekt's `LongParameterList` function threshold (6). [snooze] and [background] are
@@ -212,6 +241,7 @@ data class AlarmOptionsConfig(
     val fullScreenEnabled: Boolean = DEFAULT_ALARM_FULLSCREEN_ENABLED,
     val snooze: AlarmSnoozeConfig = AlarmSnoozeConfig(),
     val background: AlarmBackgroundConfig = AlarmBackgroundConfig(),
+    val cooldownSeconds: Int = DEFAULT_ALARM_COOLDOWN_SECONDS,
 )
 
 /**

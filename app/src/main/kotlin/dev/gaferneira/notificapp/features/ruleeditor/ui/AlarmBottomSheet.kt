@@ -29,8 +29,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -43,18 +45,23 @@ import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmRingOptions
 import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmService
 import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmSnoozeSettings
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
+import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AlarmBackgroundConfig
+import dev.gaferneira.notificapp.domain.model.AlarmBackgroundType
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.VibrationPattern
 import dev.gaferneira.notificapp.features.alarm.ui.AlarmActivity
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AlarmContract
 import dev.gaferneira.notificapp.features.ruleeditor.domain.AlarmOptions
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AdvancedSettingsSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AlarmBackgroundSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AlarmNotificationPermissionGate
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AlarmToggleRow
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.CooldownSecondsSelector
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.FullScreenIntentPermissionHint
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.SnoozeRow
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.SoundRow
@@ -205,51 +212,64 @@ fun AlarmOptionsSelector(
     onChooseImageClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp),
+    Column(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(16.dp),
+                )
+                .padding(16.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.alarm_options_title),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            .padding(16.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.alarm_options_title),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (LocalInspectionMode.current.not()) {
+                AlarmNotificationPermissionGate()
+            }
+
+            SoundRow(options = options, onEvent = onEvent)
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            VibrationRow(options = options, onEvent = onEvent)
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            AlarmToggleRow(
+                label = "Full-screen alarm (when screen is off)",
+                checked = options.fullScreenEnabled,
+                onCheckedChange = { onEvent(AlarmContract.UiEvent.OnFullScreenToggle(it)) },
+            )
+
+            if (options.fullScreenEnabled) {
+                FullScreenIntentPermissionHint()
+                AlarmBackgroundSection(
+                    options = options,
+                    onBackgroundPresetSelected = { onEvent(AlarmContract.UiEvent.OnBackgroundPresetSelected(it)) },
+                    onChooseImageClicked = onChooseImageClicked,
+                    onImageIsDarkToggle = { onEvent(AlarmContract.UiEvent.OnBackgroundImageIsDarkToggle(it)) },
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        AlarmNotificationPermissionGate()
+        AdvancedSettingsSection {
+            SnoozeRow(options = options, onEvent = onEvent)
 
-        SoundRow(options = options, onEvent = onEvent)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-        VibrationRow(options = options, onEvent = onEvent)
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-        SnoozeRow(options = options, onEvent = onEvent)
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        AlarmToggleRow(
-            label = "Full-screen alarm (call style)",
-            checked = options.fullScreenEnabled,
-            onCheckedChange = { onEvent(AlarmContract.UiEvent.OnFullScreenToggle(it)) },
-        )
-
-        if (options.fullScreenEnabled) {
-            FullScreenIntentPermissionHint()
-            AlarmBackgroundSection(
-                options = options,
-                onBackgroundPresetSelected = { onEvent(AlarmContract.UiEvent.OnBackgroundPresetSelected(it)) },
-                onChooseImageClicked = onChooseImageClicked,
-                onImageIsDarkToggle = { onEvent(AlarmContract.UiEvent.OnBackgroundImageIsDarkToggle(it)) },
+            CooldownSecondsSelector(
+                selectedSeconds = options.cooldownSeconds,
+                onSecondsChange = { onEvent(AlarmContract.UiEvent.OnCooldownSecondsChange(it)) },
             )
         }
     }
@@ -307,5 +327,38 @@ private fun rememberNotificationPermissionRequest(): suspend () -> Unit {
                 launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "Full-screen enabled")
+@Preview(showBackground = true, name = "Full-screen enabled - Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun AlarmOptionsSelectorPreview() {
+    NotificappTheme {
+        AlarmOptionsSelector(
+            options = AlarmContract.UiState(
+                fullScreenEnabled = true,
+                backgroundType = AlarmBackgroundType.PRESET,
+                backgroundPresetId = "blue_gradient",
+            ).toOptions(),
+            onEvent = {},
+            onChooseImageClicked = {},
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Pulse Vibration")
+@Composable
+private fun AlarmOptionsSelectorPulsePreview() {
+    NotificappTheme {
+        AlarmOptionsSelector(
+            options = AlarmContract.UiState(
+                vibrationPattern = VibrationPattern.PULSE,
+            ).toOptions(),
+            onEvent = {},
+            onChooseImageClicked = {},
+            modifier = Modifier.padding(16.dp),
+        )
     }
 }

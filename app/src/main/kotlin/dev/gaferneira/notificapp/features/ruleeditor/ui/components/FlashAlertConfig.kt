@@ -30,41 +30,56 @@ import dev.gaferneira.notificapp.domain.model.getFlashDurationMs
  *
  * @param flashCount Currently configured number of flashes
  * @param flashDurationMs Currently configured duration of each flash phase, in milliseconds
+ * @param cooldownSeconds Currently configured rule-safety cooldown, in seconds (`0` = disabled)
  * @param onFlashCountChange Callback when the flash count changes
  * @param onFlashDurationChange Callback when the flash duration changes
+ * @param onCooldownSecondsChange Callback when the cooldown changes
  * @param modifier Modifier for the component
  */
 @Composable
 fun FlashOptionsSelector(
     flashCount: Int,
     flashDurationMs: Long,
+    cooldownSeconds: Int,
     onFlashCountChange: (Int) -> Unit,
     onFlashDurationChange: (Long) -> Unit,
+    onCooldownSecondsChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp),
+    Column(modifier = modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(16.dp),
+                )
+                .padding(16.dp),
+        ) {
+            Text(
+                text = "Flash options",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
-            .padding(16.dp),
-    ) {
-        Text(
-            text = "Flash options",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            FlashCountSlider(flashCount = flashCount, onFlashCountChange = onFlashCountChange)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            FlashDurationSlider(flashDurationMs = flashDurationMs, onFlashDurationChange = onFlashDurationChange)
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        FlashCountSlider(flashCount = flashCount, onFlashCountChange = onFlashCountChange)
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        FlashDurationSlider(flashDurationMs = flashDurationMs, onFlashDurationChange = onFlashDurationChange)
+        AdvancedSettingsSection {
+            CooldownSecondsSelector(
+                selectedSeconds = cooldownSeconds,
+                onSecondsChange = onCooldownSecondsChange,
+            )
+        }
     }
 }
 

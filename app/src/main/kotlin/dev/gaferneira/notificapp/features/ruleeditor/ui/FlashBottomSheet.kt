@@ -7,9 +7,11 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COOLDOWN_SECONDS
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COUNT
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_DURATION_MS
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.getFlashCooldownSeconds
 import dev.gaferneira.notificapp.domain.model.getFlashCount
 import dev.gaferneira.notificapp.domain.model.getFlashDurationMs
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
@@ -35,6 +37,9 @@ fun FlashBottomSheet(
     var flashDurationMs by remember {
         mutableLongStateOf(initial?.getFlashDurationMs() ?: DEFAULT_FLASH_DURATION_MS)
     }
+    var cooldownSeconds by remember {
+        mutableIntStateOf(initial?.getFlashCooldownSeconds() ?: DEFAULT_FLASH_COOLDOWN_SECONDS)
+    }
 
     ActionConfigSheet(
         title = "Flash alert",
@@ -46,6 +51,7 @@ fun FlashBottomSheet(
                     flashCount = flashCount,
                     flashDurationMs = flashDurationMs,
                     isEnabled = initial?.isEnabled ?: true,
+                    cooldownSeconds = cooldownSeconds,
                 ),
             )
         },
@@ -55,8 +61,10 @@ fun FlashBottomSheet(
         FlashOptionsSelector(
             flashCount = flashCount,
             flashDurationMs = flashDurationMs,
+            cooldownSeconds = cooldownSeconds,
             onFlashCountChange = { flashCount = it },
             onFlashDurationChange = { flashDurationMs = it },
+            onCooldownSecondsChange = { cooldownSeconds = it },
         )
     }
 }

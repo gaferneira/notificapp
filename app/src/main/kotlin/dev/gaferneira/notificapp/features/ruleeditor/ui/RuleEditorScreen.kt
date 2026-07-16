@@ -677,7 +677,7 @@ private fun DryRunToggle(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = "Log matches without dismissing, snoozing, or alerting - review results before trusting this rule",
+                text = "Matches are recorded but no actions run - test this rule safely before turning it loose",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

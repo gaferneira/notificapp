@@ -6,6 +6,7 @@ import dev.gaferneira.notificapp.domain.model.AlarmBackgroundType
 import dev.gaferneira.notificapp.domain.model.AlarmOptionsConfig
 import dev.gaferneira.notificapp.domain.model.AlarmSnoozeConfig
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_BACKGROUND_IMAGE_IS_DARK
+import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_COOLDOWN_SECONDS
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_FULLSCREEN_ENABLED
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_SNOOZE_DURATION_MINUTES
 import dev.gaferneira.notificapp.domain.model.DEFAULT_ALARM_SNOOZE_ENABLED
@@ -43,6 +44,7 @@ object AlarmContract {
         val backgroundPresetId: String? = null,
         val backgroundImageUri: String? = null,
         val backgroundImageIsDark: Boolean = DEFAULT_ALARM_BACKGROUND_IMAGE_IS_DARK,
+        val cooldownSeconds: Int = DEFAULT_ALARM_COOLDOWN_SECONDS,
     ) {
         fun toOptions(): AlarmOptions = AlarmOptions(
             soundUri = soundUri,
@@ -57,6 +59,7 @@ object AlarmContract {
             backgroundPresetId = backgroundPresetId,
             backgroundImageUri = backgroundImageUri,
             backgroundImageIsDark = backgroundImageIsDark,
+            cooldownSeconds = cooldownSeconds,
         )
 
         fun toRuleAction(): RuleAction = RuleAction.createAlarm(
@@ -75,6 +78,7 @@ object AlarmContract {
                     imageUri = backgroundImageUri,
                     imageIsDark = backgroundImageIsDark,
                 ),
+                cooldownSeconds = cooldownSeconds,
             ),
         )
     }
@@ -94,6 +98,7 @@ object AlarmContract {
         data class OnSnoozeToggle(val enabled: Boolean) : UiEvent()
         data class OnSnoozeDurationChange(val minutes: Int) : UiEvent()
         data class OnSnoozeMaxCountChange(val count: Int) : UiEvent()
+        data class OnCooldownSecondsChange(val seconds: Int) : UiEvent()
         data class OnBackgroundPresetSelected(val preset: AlarmBackgroundPreset) : UiEvent()
 
         /** A new background image was picked; see [AlarmViewModel.onEvent] for the URI-release logic */

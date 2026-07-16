@@ -12,13 +12,29 @@ import dev.gaferneira.notificapp.domain.model.AlarmOptionsConfig
 import dev.gaferneira.notificapp.domain.model.AlarmSnoozeConfig
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.VibrationPattern
+import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import io.kotest.matchers.shouldBe
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import java.time.LocalDateTime
+
+private class AlarmFixedTimeProvider(private val fixed: LocalDateTime, var fixedEpochMillis: Long) : CurrentTimeProvider {
+    override fun now(): LocalDateTime = fixed
+
+    override fun nowEpochMillis(): Long = fixedEpochMillis
+}
+
+private fun noopThrottleTracker(timeProvider: AlarmFixedTimeProvider = AlarmFixedTimeProvider(LocalDateTime.of(2026, 7, 11, 9, 30), 0L)): NotificationThrottleTracker {
+    val ruleExecutionRepository: RuleExecutionRepository = mockk {
+        coEvery { lastThrottleDeliveryAt(any(), any(), any()) } returns Result.success(null)
+    }
+    return NotificationThrottleTracker(ruleExecutionRepository, timeProvider)
+}
 
 class AlarmActionExecutorTest {
 
@@ -27,7 +43,7 @@ class AlarmActionExecutorTest {
         // Given: an alarm action with no explicit sound and vibration left at its default (on)
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns true
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification(title = "Payment received", content = "You got \$50", appName = "Bank")
         val action = RuleAction.createAlarm(id = "action-1")
 
@@ -53,7 +69,7 @@ class AlarmActionExecutorTest {
         // Given: a triggering notification with no title
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns true
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification(title = null, content = null, appName = "Bank")
         val action = RuleAction.createAlarm(id = "action-1")
 
@@ -71,7 +87,7 @@ class AlarmActionExecutorTest {
         // Given: an alarm action configured with a specific sound URI
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns true
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification()
         val action = RuleAction.createAlarm(id = "action-1", soundUri = "content://media/custom-alarm")
 
@@ -89,7 +105,7 @@ class AlarmActionExecutorTest {
         // Given: an alarm action with vibration explicitly turned off
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns true
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification()
         val action = RuleAction.createAlarm(id = "action-1", vibrationEnabled = false)
 
@@ -108,7 +124,7 @@ class AlarmActionExecutorTest {
         // Given: an alarm action with the full-screen (call-style) option turned off
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns true
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification()
         val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(fullScreenEnabled = false))
 
@@ -126,7 +142,7 @@ class AlarmActionExecutorTest {
         // Given: the controller refuses to start (e.g. notifications disabled -> unstoppable)
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns false
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification()
         val action = RuleAction.createAlarm(id = "action-1")
 
@@ -151,7 +167,7 @@ class AlarmActionExecutorTest {
         // Given: an alarm action with sound explicitly turned off
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns true
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification()
         val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(soundEnabled = false))
 
@@ -169,7 +185,7 @@ class AlarmActionExecutorTest {
         // Given: an alarm action configured with a non-default vibration pattern
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns true
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification()
         val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(vibrationPattern = VibrationPattern.PULSE))
 
@@ -187,7 +203,7 @@ class AlarmActionExecutorTest {
         // Given: an alarm action with non-default snooze settings
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns true
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification()
         val action = RuleAction.createAlarm(
             id = "action-1",
@@ -212,7 +228,7 @@ class AlarmActionExecutorTest {
         // Given: an alarm action configured with a preset background
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns true
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification()
         val action = RuleAction.createAlarm(
             id = "action-1",
@@ -239,7 +255,7 @@ class AlarmActionExecutorTest {
         // Given: an alarm action configured with a custom background image
         val alarmController = mockk<AlarmController>()
         every { alarmController.start(any()) } returns true
-        val executor = AlarmActionExecutor(alarmController)
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification()
         val action = RuleAction.createAlarm(
             id = "action-1",
@@ -259,5 +275,65 @@ class AlarmActionExecutorTest {
                 },
             )
         }
+    }
+
+    @Test
+    fun `alarm within its cooldown window is suppressed and never started`() = runTest {
+        // Given: an alarm action with a 60s cooldown, already delivered once at t=0
+        val alarmController = mockk<AlarmController>()
+        every { alarmController.start(any()) } returns true
+        val timeProvider = AlarmFixedTimeProvider(LocalDateTime.of(2026, 7, 11, 9, 30), 0L)
+        val throttleTracker = noopThrottleTracker(timeProvider)
+        val executor = AlarmActionExecutor(alarmController, throttleTracker)
+        val notification = createTestNotification(packageName = "com.test.app")
+        val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(cooldownSeconds = 60))
+        executor.execute(notification, action)
+
+        // When: a second match arrives 30s later, still inside the window
+        timeProvider.fixedEpochMillis = 30_000L
+        val outcome = executor.execute(notification, action)
+
+        // Then: it is suppressed and the controller is never started again
+        outcome shouldBe ActionOutcome.SUPPRESSED
+        verify(exactly = 1) { alarmController.start(any()) }
+    }
+
+    @Test
+    fun `alarm delivers again once its cooldown window elapses`() = runTest {
+        // Given: an alarm action with a 60s cooldown, delivered once at t=0
+        val alarmController = mockk<AlarmController>()
+        every { alarmController.start(any()) } returns true
+        val timeProvider = AlarmFixedTimeProvider(LocalDateTime.of(2026, 7, 11, 9, 30), 0L)
+        val throttleTracker = noopThrottleTracker(timeProvider)
+        val executor = AlarmActionExecutor(alarmController, throttleTracker)
+        val notification = createTestNotification(packageName = "com.test.app")
+        val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(cooldownSeconds = 60))
+        executor.execute(notification, action)
+
+        // When: the 60s window has fully elapsed
+        timeProvider.fixedEpochMillis = 60_000L
+        val outcome = executor.execute(notification, action)
+
+        // Then: it delivers again
+        outcome shouldBe ActionOutcome.SUCCESS
+        verify(exactly = 2) { alarmController.start(any()) }
+    }
+
+    @Test
+    fun `alarm with cooldown disabled always starts, ignoring repeated matches`() = runTest {
+        // Given: an alarm action with cooldown left at its default (disabled)
+        val alarmController = mockk<AlarmController>()
+        every { alarmController.start(any()) } returns true
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
+        val notification = createTestNotification(packageName = "com.test.app")
+        val action = RuleAction.createAlarm(id = "action-1")
+        executor.execute(notification, action)
+
+        // When: a second immediate match arrives
+        val outcome = executor.execute(notification, action)
+
+        // Then: it still delivers - no cooldown was configured
+        outcome shouldBe ActionOutcome.SUCCESS
+        verify(exactly = 2) { alarmController.start(any()) }
     }
 }

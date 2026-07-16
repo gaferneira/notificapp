@@ -21,6 +21,8 @@ import dev.gaferneira.notificapp.domain.model.VibrationPattern
  * [backgroundType] is `IMAGE`
  * @property backgroundImageIsDark Whether the custom background image is dark, meaningful only
  * when [backgroundType] is `IMAGE`
+ * @property cooldownSeconds Rule-safety cooldown, in seconds (`0` disables it): a chatty source
+ * app re-matching this rule within the window is suppressed instead of re-ringing
  */
 data class AlarmOptions(
     val soundUri: String?,
@@ -35,4 +37,5 @@ data class AlarmOptions(
     val backgroundPresetId: String?,
     val backgroundImageUri: String?,
     val backgroundImageIsDark: Boolean,
+    val cooldownSeconds: Int,
 )

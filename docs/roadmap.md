@@ -131,8 +131,8 @@ Guiding principle #1 puts **templates first** in the rule-creation ladder (templ
 
 With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 seconds is an uninstall-level bug — this can't wait for someone to hit it. Scoped to the *action*, not the rule: the danger is specific to which actions a rule carries (Alarm/Flash Alert/Snooze are disruptive; Dismiss/Extract-data are not), so a rule combining Alarm with Extract-data only suppresses the alarm, extraction always runs. Reuses the existing per-action `NotificationThrottleTracker` (previously wired only to Snooze's THROTTLE mode) unmodified.
 
-- [ ] `ALARM_COOLDOWN_SECONDS_KEY`/`FLASH_COOLDOWN_SECONDS_KEY` config fields (0 = disabled), clamped in `AlarmActionConfig.kt`/`FlashActionConfig.kt`; editor UI (`CooldownSecondsSelector`) in the Alarm and Flash Alert action forms
-- [ ] `AlarmActionExecutor`/`FlashAlertActionExecutor` return `ActionOutcome.SUPPRESSED` via `NotificationThrottleTracker.shouldDeliver` when the action's cooldown window is still open — the match is still recorded via `ProcessNotificationUseCase`, never silently dropped
+- [x] `ALARM_COOLDOWN_SECONDS_KEY`/`FLASH_COOLDOWN_SECONDS_KEY` config fields (0 = disabled), clamped in `AlarmActionConfig.kt`/`FlashActionConfig.kt`; editor UI (`CooldownSecondsSelector`) in the Alarm and Flash Alert action forms
+- [x] `AlarmActionExecutor`/`FlashAlertActionExecutor` return `ActionOutcome.SUPPRESSED` via `NotificationThrottleTracker.shouldDeliver` when the action's cooldown window is still open — the match is still recorded via `ProcessNotificationUseCase`, never silently dropped
 
 #### Data Screen (New Bottom Nav Tab)
 

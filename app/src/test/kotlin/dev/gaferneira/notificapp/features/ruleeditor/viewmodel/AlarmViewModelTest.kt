@@ -61,6 +61,7 @@ class AlarmViewModelTest {
             state.snoozeEnabled shouldBe false
             state.backgroundType shouldBe AlarmBackgroundType.NONE
             state.backgroundImageUri shouldBe null
+            state.cooldownSeconds shouldBe 0
         }
 
         @Test
@@ -79,6 +80,7 @@ class AlarmViewModelTest {
                         type = AlarmBackgroundType.IMAGE,
                         imageUri = "content://image",
                     ),
+                    cooldownSeconds = 90,
                 ),
             )
 
@@ -99,6 +101,7 @@ class AlarmViewModelTest {
             state.snoozeMaxCount shouldBe 2
             state.backgroundType shouldBe AlarmBackgroundType.IMAGE
             state.backgroundImageUri shouldBe "content://image"
+            state.cooldownSeconds shouldBe 90
         }
     }
 
@@ -117,6 +120,7 @@ class AlarmViewModelTest {
             viewModel.onEvent(AlarmContract.UiEvent.OnSnoozeToggle(false))
             viewModel.onEvent(AlarmContract.UiEvent.OnSnoozeDurationChange(15))
             viewModel.onEvent(AlarmContract.UiEvent.OnSnoozeMaxCountChange(5))
+            viewModel.onEvent(AlarmContract.UiEvent.OnCooldownSecondsChange(120))
             viewModel.onEvent(AlarmContract.UiEvent.OnBackgroundPresetSelected(AlarmBackgroundPreset.entries.first()))
 
             val state = viewModel.uiState.value
@@ -128,6 +132,7 @@ class AlarmViewModelTest {
             state.snoozeEnabled shouldBe false
             state.snoozeDurationMinutes shouldBe 15
             state.snoozeMaxCount shouldBe 5
+            state.cooldownSeconds shouldBe 120
             state.backgroundType shouldBe AlarmBackgroundType.PRESET
             state.backgroundPresetId shouldBe AlarmBackgroundPreset.entries.first().id
         }

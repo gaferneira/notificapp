@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +29,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.util.formatDurationSeconds
 
 /**
@@ -43,7 +46,7 @@ private val COOLDOWN_SECONDS_PRESETS = listOf(30, 60, 300, 900)
  * against a malformed or imported config, not a UI target - a cooldown longer than an hour is a
  * rare enough case that it doesn't need dedicated slider real estate.
  */
-private const val MAX_SLIDER_COOLDOWN_SECONDS = 3600
+private const val MAX_SLIDER_COOLDOWN_SECONDS = 1800
 
 /**
  * Composable for enabling and selecting a per-action cooldown window, modeled on
@@ -67,18 +70,9 @@ fun CooldownSecondsSelector(
         mutableStateOf(enabled && selectedSeconds !in COOLDOWN_SECONDS_PRESETS)
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp),
-            )
-            .padding(16.dp),
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         CooldownHeader(
             enabled = enabled,
-            selectedSeconds = selectedSeconds,
             onEnabledChange = { checked ->
                 onSecondsChange(if (checked) COOLDOWN_SECONDS_PRESETS.first() else 0)
             },
@@ -105,7 +99,7 @@ fun CooldownSecondsSelector(
 }
 
 @Composable
-private fun CooldownHeader(enabled: Boolean, selectedSeconds: Int, onEnabledChange: (Boolean) -> Unit) {
+private fun CooldownHeader(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -127,21 +121,6 @@ private fun CooldownHeader(enabled: Boolean, selectedSeconds: Int, onEnabledChan
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (enabled) {
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = RoundedCornerShape(8.dp),
-                        )
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        text = formatDurationSeconds(selectedSeconds),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
                 Spacer(modifier = Modifier.width(8.dp))
             }
             Switch(checked = enabled, onCheckedChange = onEnabledChange)
@@ -191,11 +170,33 @@ private fun CooldownPresetChips(
 private fun CustomCooldownSlider(selectedSeconds: Int, onSecondsChange: (Int) -> Unit) {
     Spacer(modifier = Modifier.height(8.dp))
 
-    Text(
-        text = "Drag to set custom cooldown",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Drag to set custom cooldown",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Box(
+            modifier = Modifier
+                .background(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            Text(
+                text = formatDurationSeconds(selectedSeconds),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
 
     Spacer(modifier = Modifier.height(4.dp))
 
@@ -224,6 +225,43 @@ private fun CustomCooldownSlider(selectedSeconds: Int, onSecondsChange: (Int) ->
             text = formatDurationSeconds(MAX_SLIDER_COOLDOWN_SECONDS),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Disabled")
+@Composable
+private fun CooldownSecondsSelectorDisabledPreview() {
+    NotificappTheme {
+        CooldownSecondsSelector(
+            selectedSeconds = 0,
+            onSecondsChange = {},
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Preset selected")
+@Composable
+private fun CooldownSecondsSelectorPresetPreview() {
+    NotificappTheme {
+        CooldownSecondsSelector(
+            selectedSeconds = 60,
+            onSecondsChange = {},
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Custom value Light")
+@Preview(showBackground = true, name = "Custom value Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun CooldownSecondsSelectorCustomPreview() {
+    NotificappTheme {
+        CooldownSecondsSelector(
+            selectedSeconds = 450,
+            onSecondsChange = {},
+            modifier = Modifier.padding(16.dp),
         )
     }
 }

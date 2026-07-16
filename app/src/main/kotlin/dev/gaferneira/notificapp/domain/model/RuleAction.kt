@@ -151,17 +151,22 @@ data class RuleAction(
                 options.background.presetId?.let { put(ALARM_BACKGROUND_PRESET_KEY, it) }
                 options.background.imageUri?.let { put(ALARM_BACKGROUND_IMAGE_URI_KEY, it) }
                 put(ALARM_BACKGROUND_IMAGE_IS_DARK_KEY, options.background.imageIsDark.toString())
+                put(ALARM_COOLDOWN_SECONDS_KEY, options.cooldownSeconds.toString())
             },
         )
 
         /**
          * Create a flash alert action with an optional custom flash count and duration.
+         *
+         * @param cooldownSeconds rule-safety cooldown, in seconds (`0` disables it) - see
+         * [FLASH_COOLDOWN_SECONDS_KEY].
          */
         fun createFlashAlert(
             id: String,
             flashCount: Int = DEFAULT_FLASH_COUNT,
             flashDurationMs: Long = DEFAULT_FLASH_DURATION_MS,
             isEnabled: Boolean = true,
+            cooldownSeconds: Int = DEFAULT_FLASH_COOLDOWN_SECONDS,
         ): RuleAction = RuleAction(
             id = id,
             type = ActionType.FLASH_ALERT,
@@ -169,6 +174,7 @@ data class RuleAction(
             config = mapOf(
                 FLASH_COUNT_KEY to flashCount.toString(),
                 FLASH_DURATION_MS_KEY to flashDurationMs.toString(),
+                FLASH_COOLDOWN_SECONDS_KEY to cooldownSeconds.toString(),
             ),
         )
     }

@@ -36,6 +36,29 @@ const val MIN_FLASH_DURATION_MS = 200L
 const val MAX_FLASH_DURATION_MS = 1000L
 
 /**
+ * Configuration key for the rule-safety cooldown, in seconds: after this flash alert fires,
+ * further matches are suppressed (backed by
+ * [dev.gaferneira.notificapp.core.notification.action.NotificationThrottleTracker]) until the
+ * window elapses. `0` disables cooldown - the flash fires on every match, as before this option
+ * existed.
+ */
+const val FLASH_COOLDOWN_SECONDS_KEY = "flash_cooldown_seconds"
+
+/**
+ * Default flash cooldown in seconds - disabled, matching legacy rules persisted before this
+ * option existed.
+ */
+const val DEFAULT_FLASH_COOLDOWN_SECONDS = 0
+
+/**
+ * Flash cooldown is clamped to this range, mirroring the [FLASH_COUNT_KEY] defense-in-depth
+ * coercion pattern. The upper bound is generous (24h) since a rule author may legitimately want
+ * a long-lived "don't re-flash today" cooldown.
+ */
+const val MIN_FLASH_COOLDOWN_SECONDS = 0
+const val MAX_FLASH_COOLDOWN_SECONDS = 86_400
+
+/**
  * Get the number of torch flashes, clamped to a photosensitivity-safe range regardless of
  * what's stored in config (defense in depth against a malformed or imported rule).
  */
@@ -48,3 +71,10 @@ fun RuleAction.getFlashCount(): Int = (config[FLASH_COUNT_KEY]?.toIntOrNull() ?:
  */
 fun RuleAction.getFlashDurationMs(): Long = (config[FLASH_DURATION_MS_KEY]?.toLongOrNull() ?: DEFAULT_FLASH_DURATION_MS)
     .coerceIn(MIN_FLASH_DURATION_MS, MAX_FLASH_DURATION_MS)
+
+/**
+ * Get the configured flash cooldown in seconds, clamped to a sane range regardless of what's
+ * stored in config (defense in depth against a malformed or imported rule). `0` means disabled.
+ */
+fun RuleAction.getFlashCooldownSeconds(): Int = (config[FLASH_COOLDOWN_SECONDS_KEY]?.toIntOrNull() ?: DEFAULT_FLASH_COOLDOWN_SECONDS)
+    .coerceIn(MIN_FLASH_COOLDOWN_SECONDS, MAX_FLASH_COOLDOWN_SECONDS)
