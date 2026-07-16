@@ -1,6 +1,8 @@
 package dev.gaferneira.notificapp.features.settings.contract
 
 import dev.gaferneira.notificapp.domain.model.SelectedApp
+import dev.gaferneira.notificapp.domain.model.StorageStats
+import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 
 /**
  * Contract for the Settings screen.
@@ -22,6 +24,10 @@ object SettingsContract {
         val isCollectionEnabled: Boolean = true,
         /** Whether to show app icons in lists */
         val showAppIcons: Boolean = true,
+        /** Notification retention period (auto-delete window) */
+        val retentionPeriod: RetentionPeriod = RetentionPeriod.NEVER,
+        /** One-shot storage usage snapshot; null until loaded */
+        val storageStats: StorageStats? = null,
         /** Whether the screen is loading */
         val isLoading: Boolean = true,
         /** Error message if loading failed */
@@ -48,6 +54,9 @@ object SettingsContract {
 
         /** User toggled show app icons preference */
         data class OnShowAppIconsToggled(val isEnabled: Boolean) : UiEvent()
+
+        /** User picked a new retention period from the selection dialog */
+        data class RetentionPeriodChanged(val period: RetentionPeriod) : UiEvent()
 
         /** User refreshed the settings */
         data object OnRefresh : UiEvent()

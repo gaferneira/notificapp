@@ -22,7 +22,7 @@ import dev.gaferneira.notificapp.core.data.local.security.DatabaseRekeyer
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import javax.inject.Singleton
 
-private const val DATABASE_NAME = "notificapp_database"
+internal const val DATABASE_NAME = "notificapp_database"
 
 /**
  * Dagger module for providing database dependencies.

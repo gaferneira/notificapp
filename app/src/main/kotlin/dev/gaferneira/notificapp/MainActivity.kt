@@ -28,12 +28,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.currentStateAsState
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import dagger.hilt.android.AndroidEntryPoint
+import dev.gaferneira.notificapp.core.notification.EnforceRetentionUseCase
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationCommand
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Navigator
@@ -50,6 +52,7 @@ import dev.gaferneira.notificapp.features.rules.ui.RulesScreen
 import dev.gaferneira.notificapp.features.settings.ui.SettingsScreen
 import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -57,9 +60,22 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var navigationHandler: NavigationHandler
 
+    @Inject
+    lateinit var enforceRetentionUseCase: EnforceRetentionUseCase
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Interim retention sweep (no WorkManager yet): apply the user's retention preference
+        // once per process lifetime, driven by their actual setting instead of a hardcoded
+        // window. Guarded so config changes (e.g. rotation), which recreate the Activity and
+        // re-run onCreate, don't re-issue the delete query every time.
+        if (!hasEnforcedRetentionThisProcess) {
+            hasEnforcedRetentionThisProcess = true
+            lifecycleScope.launch { enforceRetentionUseCase() }
+        }
+
         setContent {
             NotificappTheme {
                 Surface(
@@ -72,6 +88,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private companion object {
+        var hasEnforcedRetentionThisProcess = false
     }
 }
 

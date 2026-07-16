@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import dev.gaferneira.notificapp.core.data.preferences.UserPreferencesLocalDataSource
 import dev.gaferneira.notificapp.domain.model.preferences.InboxFilterSettings
 import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter
+import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.domain.model.preferences.ThemePreference
 import dev.gaferneira.notificapp.domain.model.preferences.UserPreferences
 import io.kotest.matchers.shouldBe
@@ -95,6 +96,40 @@ class UserPreferencesRepositoryImplTest {
         result.isSuccess shouldBe true
         slot.captured.themePreference shouldBe ThemePreference.LIGHT
         slot.captured.inboxFilterSettings.selectedApps shouldBe listOf("com.bank")
+    }
+
+    @Test
+    fun `observeRetentionPeriod projects only the retention period`() = runTest(testDispatcher) {
+        val prefs = UserPreferences(retentionPeriod = RetentionPeriod.DAYS_90)
+        every { localDataSource.observeUserPreferences() } returns MutableStateFlow(prefs)
+
+        repository.observeRetentionPeriod().test {
+            awaitItem() shouldBe RetentionPeriod.DAYS_90
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setRetentionPeriod merges the new period into the current preferences and persists them`() = runTest(testDispatcher) {
+        val current = UserPreferences(themePreference = ThemePreference.DARK)
+        every { localDataSource.observeUserPreferences() } returns MutableStateFlow(current)
+        val slot = slot<UserPreferences>()
+        coEvery { localDataSource.updateUserPreferences(capture(slot)) } returns Result.success(Unit)
+
+        val result = repository.setRetentionPeriod(RetentionPeriod.DAYS_30)
+
+        result.isSuccess shouldBe true
+        slot.captured.retentionPeriod shouldBe RetentionPeriod.DAYS_30
+        slot.captured.themePreference shouldBe ThemePreference.DARK
+    }
+
+    @Test
+    fun `setRetentionPeriod maps a datasource exception to Result_failure without throwing`() = runTest(testDispatcher) {
+        every { localDataSource.observeUserPreferences() } throws IllegalStateException("io error")
+
+        val result = repository.setRetentionPeriod(RetentionPeriod.DAYS_30)
+
+        result.isFailure shouldBe true
     }
 
     @Test

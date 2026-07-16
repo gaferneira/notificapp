@@ -108,7 +108,7 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **Technical Spec Reference:** Pending link to deep technical spec
 
 ### Settings
-* **User Experience:** The user reviews and manages which apps are monitored, checks whether notification access is still granted (re-enabling it if revoked), and toggles data collection and app-icon display preferences.
+* **User Experience:** The user reviews and manages which apps are monitored, checks whether notification access is still granted (re-enabling it if revoked), toggles data collection and app-icon display preferences, sets a notification retention period (30 days / 90 days / Never, auto-deleting older notifications on app start), and views a storage usage summary (database size, row counts per data type).
 * **System Trigger:** User navigates to the Settings tab.
 * **Technical Spec Reference:** Pending link to deep technical spec
 

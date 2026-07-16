@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.domain.repository
 
 import dev.gaferneira.notificapp.domain.model.preferences.InboxFilterSettings
+import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.domain.model.preferences.RulesFilterSettings
 import dev.gaferneira.notificapp.domain.model.preferences.ThemePreference
 import dev.gaferneira.notificapp.domain.model.preferences.UserPreferences
@@ -56,6 +57,16 @@ interface UserPreferencesRepository {
      * Update theme preference.
      */
     suspend fun setTheme(theme: ThemePreference): Result<Unit>
+
+    /**
+     * Observe notification retention period as a Flow.
+     */
+    fun observeRetentionPeriod(): Flow<RetentionPeriod>
+
+    /**
+     * Update notification retention period.
+     */
+    suspend fun setRetentionPeriod(period: RetentionPeriod): Result<Unit>
 
     /**
      * Reset all preferences to default values.

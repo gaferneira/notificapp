@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.testutil.fakes
 
 import dev.gaferneira.notificapp.domain.model.preferences.InboxFilterSettings
+import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.domain.model.preferences.RulesFilterSettings
 import dev.gaferneira.notificapp.domain.model.preferences.ThemePreference
 import dev.gaferneira.notificapp.domain.model.preferences.UserPreferences
@@ -46,6 +47,13 @@ class FakeUserPreferencesRepository(initial: UserPreferences = UserPreferences()
 
     override suspend fun setTheme(theme: ThemePreference): Result<Unit> {
         preferences.value = preferences.value.copy(themePreference = theme)
+        return Result.success(Unit)
+    }
+
+    override fun observeRetentionPeriod(): Flow<RetentionPeriod> = preferences.map { it.retentionPeriod }
+
+    override suspend fun setRetentionPeriod(period: RetentionPeriod): Result<Unit> {
+        preferences.value = preferences.value.copy(retentionPeriod = period)
         return Result.success(Unit)
     }
 

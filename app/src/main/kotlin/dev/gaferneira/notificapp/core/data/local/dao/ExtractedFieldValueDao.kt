@@ -118,4 +118,10 @@ internal interface ExtractedFieldValueDao {
      */
     @Query("SELECT COUNT(*) FROM extracted_field_values WHERE rule_execution_id = :executionId")
     suspend fun getCountForExecution(executionId: String): Int
+
+    /**
+     * Get count of all extracted field values.
+     */
+    @Query("SELECT COUNT(*) FROM extracted_field_values")
+    suspend fun getCount(): Int
 }

@@ -9,12 +9,14 @@ import dev.gaferneira.notificapp.core.data.repository.NotificationRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.RuleExecutionRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.RuleRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.SelectedAppRepositoryImpl
+import dev.gaferneira.notificapp.core.data.repository.StorageStatsRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.UserPreferencesRepositoryImpl
 import dev.gaferneira.notificapp.domain.repository.DataBrowserRepository
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
+import dev.gaferneira.notificapp.domain.repository.StorageStatsRepository
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 
 /**
@@ -59,4 +61,10 @@ internal abstract class RepositoryModule {
      */
     @Binds
     abstract fun bindDataBrowserRepository(impl: DataBrowserRepositoryImpl): DataBrowserRepository
+
+    /**
+     * Binds StorageStatsRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindStorageStatsRepository(impl: StorageStatsRepositoryImpl): StorageStatsRepository
 }

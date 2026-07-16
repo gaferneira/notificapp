@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,6 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -38,6 +41,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -59,11 +65,16 @@ import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.OnResumeEffect
 import dev.gaferneira.notificapp.domain.model.SelectedApp
+import dev.gaferneira.notificapp.domain.model.StorageStats
+import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEffect
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEvent
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiState
 import dev.gaferneira.notificapp.features.settings.viewmodel.SettingsViewModel
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
+import java.util.Locale
+import kotlin.math.ln
+import kotlin.math.pow
 
 /**
  * Settings screen for app configuration.
@@ -222,6 +233,19 @@ private fun SettingsList(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
+        // Storage Section
+        item {
+            SectionHeader(title = "Storage")
+        }
+
+        item {
+            StorageUsageCard(storageStats = uiState.storageStats)
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         // About Section
         item {
             SectionHeader(title = "About")
@@ -263,7 +287,26 @@ private fun GeneralSettingsCard(
             checked = uiState.showAppIcons,
             onCheckedChange = { onEvent(UiEvent.OnShowAppIconsToggled(it)) },
         )
+
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+        SelectableSettingItem(
+            icon = Icons.Default.Storage,
+            iconTint = MaterialTheme.colorScheme.tertiary,
+            title = "Notification Retention",
+            subtitle = "Auto-delete notifications after",
+            selectedValueLabel = uiState.retentionPeriod.label(),
+            onValueSelected = { onEvent(UiEvent.RetentionPeriodChanged(it)) },
+            currentValue = uiState.retentionPeriod,
+        )
     }
+}
+
+/** Human-readable label for a [RetentionPeriod], used both in the row and the dialog. */
+private fun RetentionPeriod.label(): String = when (this) {
+    RetentionPeriod.DAYS_30 -> "30 days"
+    RetentionPeriod.DAYS_90 -> "90 days"
+    RetentionPeriod.NEVER -> "Never"
 }
 
 @Composable
@@ -457,24 +500,7 @@ private fun ToggleSettingItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // Icon
-        Surface(
-            shape = CircleShape,
-            color = iconTint.copy(alpha = 0.1f),
-            modifier = Modifier.size(40.dp),
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
+        SettingIcon(icon = icon, iconTint = iconTint)
 
         // Text
         Column(
@@ -502,6 +528,187 @@ private fun ToggleSettingItem(
         )
     }
 }
+
+/**
+ * Row styled like [ToggleSettingItem] (icon + title/subtitle) but clickable instead of a toggle,
+ * showing the currently selected value and opening a 3-option [AlertDialog] with [RadioButton]
+ * rows to pick a new one.
+ */
+@Composable
+private fun SelectableSettingItem(
+    icon: ImageVector,
+    iconTint: Color,
+    title: String,
+    subtitle: String,
+    selectedValueLabel: String,
+    currentValue: RetentionPeriod,
+    onValueSelected: (RetentionPeriod) -> Unit,
+) {
+    var isDialogVisible by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { isDialogVisible = true }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        SettingIcon(icon = icon, iconTint = iconTint)
+
+        Column(
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Text(
+            text = selectedValueLabel,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+
+    if (isDialogVisible) {
+        RetentionPeriodDialog(
+            currentValue = currentValue,
+            onValueSelected = {
+                onValueSelected(it)
+                isDialogVisible = false
+            },
+            onDismiss = { isDialogVisible = false },
+        )
+    }
+}
+
+/** Icon-in-circle used by [ToggleSettingItem] and [SelectableSettingItem]. */
+@Composable
+private fun SettingIcon(icon: ImageVector, iconTint: Color) {
+    Surface(
+        shape = CircleShape,
+        color = iconTint.copy(alpha = 0.1f),
+        modifier = Modifier.size(40.dp),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun RetentionPeriodDialog(
+    currentValue: RetentionPeriod,
+    onValueSelected: (RetentionPeriod) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Notification Retention") },
+        text = {
+            Column {
+                RetentionPeriod.entries.forEach { period ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onValueSelected(period) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = period == currentValue,
+                            onClick = { onValueSelected(period) },
+                        )
+                        Text(
+                            text = period.label(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        },
+    )
+}
+
+/** Database size + row counts, mirroring [MonitoredAppsCard]'s card shape. */
+@Composable
+private fun StorageUsageCard(storageStats: StorageStats?) {
+    SettingsCard {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            StorageStatRow(label = "Database size", value = storageStats?.databaseSizeBytes?.toHumanReadableSize() ?: "—")
+            StorageStatRow(label = "Notifications", value = storageStats?.notificationCount?.toString() ?: "—")
+            StorageStatRow(label = "Rules", value = storageStats?.ruleCount?.toString() ?: "—")
+            StorageStatRow(label = "Rule executions", value = storageStats?.ruleExecutionCount?.toString() ?: "—")
+            StorageStatRow(label = "Extracted values", value = storageStats?.extractedFieldValueCount?.toString() ?: "—")
+            StorageStatRow(label = "Monitored apps", value = storageStats?.selectedAppCount?.toString() ?: "—", showDivider = false)
+        }
+    }
+}
+
+@Composable
+private fun StorageStatRow(label: String, value: String, showDivider: Boolean = true) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+    if (showDivider) {
+        HorizontalDivider()
+    }
+}
+
+/** Formats a byte count as a human-readable size (e.g. "2.3 MB"). */
+private fun Long.toHumanReadableSize(): String {
+    if (this <= 0) return "0 B"
+    val units = arrayOf("B", "KB", "MB", "GB", "TB")
+    val digitGroups = (ln(this.toDouble()) / ln(BYTES_UNIT)).toInt().coerceIn(0, units.size - 1)
+    val size = this / BYTES_UNIT.pow(digitGroups)
+    return if (digitGroups == 0) {
+        "$this ${units[0]}"
+    } else {
+        String.format(Locale.ROOT, "%.1f %s", size, units[digitGroups])
+    }
+}
+
+private const val BYTES_UNIT = 1024.0
 
 @Composable
 private fun AboutCard() {

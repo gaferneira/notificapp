@@ -5,6 +5,7 @@ import dev.gaferneira.notificapp.core.data.preferences.UserPreferencesLocalDataS
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.domain.model.preferences.InboxFilterSettings
+import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.domain.model.preferences.RulesFilterSettings
 import dev.gaferneira.notificapp.domain.model.preferences.ThemePreference
 import dev.gaferneira.notificapp.domain.model.preferences.UserPreferences
@@ -63,9 +64,7 @@ internal class UserPreferencesRepositoryImpl @Inject constructor(
 
     override suspend fun setRulesFilters(filters: RulesFilterSettings): Result<Unit> = withContext(ioDispatcher) {
         try {
-            val current = localDataSource.observeUserPreferences()
-                .map { it }.flowOn(ioDispatcher)
-                .firstOrNull() ?: UserPreferences()
+            val current = localDataSource.observeUserPreferences().firstOrNull() ?: UserPreferences()
 
             val updated = current.copy(rulesFilterSettings = filters)
             localDataSource.updateUserPreferences(updated)
@@ -81,14 +80,28 @@ internal class UserPreferencesRepositoryImpl @Inject constructor(
 
     override suspend fun setTheme(theme: ThemePreference): Result<Unit> = withContext(ioDispatcher) {
         try {
-            val current = localDataSource.observeUserPreferences()
-                .map { it }.flowOn(ioDispatcher)
-                .firstOrNull() ?: UserPreferences()
+            val current = localDataSource.observeUserPreferences().firstOrNull() ?: UserPreferences()
 
             val updated = current.copy(themePreference = theme)
             localDataSource.updateUserPreferences(updated)
         } catch (e: Exception) {
             Timber.e(e, "Failed to set theme preference")
+            e.toFailureResult()
+        }
+    }
+
+    override fun observeRetentionPeriod(): Flow<RetentionPeriod> = localDataSource.observeUserPreferences()
+        .map { it.retentionPeriod }
+        .flowOn(ioDispatcher)
+
+    override suspend fun setRetentionPeriod(period: RetentionPeriod): Result<Unit> = withContext(ioDispatcher) {
+        try {
+            val current = localDataSource.observeUserPreferences().firstOrNull() ?: UserPreferences()
+
+            val updated = current.copy(retentionPeriod = period)
+            localDataSource.updateUserPreferences(updated)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to set retention period")
             e.toFailureResult()
         }
     }
