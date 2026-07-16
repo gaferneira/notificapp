@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DataObject
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
@@ -19,6 +20,7 @@ enum class AppDestinations(
     val icon: ImageVector,
 ) {
     INBOX("Inbox", Icons.Default.Notifications),
+    DATA("Data", Icons.Default.DataObject),
     RULES("Rules", Icons.Default.Home),
     SETTINGS("Settings", Icons.Default.Settings),
 }
@@ -71,6 +73,10 @@ fun MainBottomNav(
                         )
                         AppDestinations.RULES -> navigateTo(
                             Screen.Rules,
+                            navOptions { clearStack() },
+                        )
+                        AppDestinations.DATA -> navigateTo(
+                            Screen.Data,
                             navOptions { clearStack() },
                         )
                         AppDestinations.SETTINGS -> navigateTo(

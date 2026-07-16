@@ -44,6 +44,7 @@ import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.navigation.rememberNavigationState
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.features.appselection.ui.AppSelectionScreen
+import dev.gaferneira.notificapp.features.databrowser.ui.DataBrowserScreen
 import dev.gaferneira.notificapp.features.inbox.ui.InboxScreen
 import dev.gaferneira.notificapp.features.notificationdetail.ui.NotificationDetailScreen
 import dev.gaferneira.notificapp.features.onboarding.ui.OnboardingScreen
@@ -188,6 +189,12 @@ private fun NotificappNavHost(navigator: Navigator, context: Context) {
 
                 entry<Screen.Inbox> {
                     InboxScreen(
+                        navigateTo = navigator::navigate,
+                    )
+                }
+
+                entry<Screen.Data> {
+                    DataBrowserScreen(
                         navigateTo = navigator::navigate,
                     )
                 }

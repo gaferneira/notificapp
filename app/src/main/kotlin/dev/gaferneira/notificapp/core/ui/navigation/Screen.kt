@@ -24,6 +24,12 @@ sealed class Screen : NavKey {
     data object Rules : Screen()
 
     /**
+     * Data Browser screen - browse, filter, search, and export extracted rule data.
+     */
+    @Serializable
+    data object Data : Screen()
+
+    /**
      * Settings screen - app settings and configuration.
      */
     @Serializable

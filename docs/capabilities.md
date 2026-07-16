@@ -112,6 +112,19 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **System Trigger:** User navigates to the Settings tab.
 * **Technical Spec Reference:** Pending link to deep technical spec
 
+### Data Browser
+* **User Experience:** The user browses every piece of data their rules have extracted (field name, value, source app, rule, timestamp), in a paginated list newest-first by default. They can:
+  * Filter by any combination of rule, source app, date range, and field type
+  * Search extracted values with free-text search (FTS4-backed)
+  * Sort by date, rule name, app, or field name
+  * See a plain-text stats header: total extractions, extractions this week, most active rule (no chart rendering yet — trend data is computed but not visualized, see `docs/roadmap.md`)
+  * Delete a single entry directly from the list
+  * Bulk-delete everything matching the current filters, after a confirmation dialog showing the exact affected count — the delete always targets the previewed ID set, so data arriving between preview and confirmation is never swept in
+  * Export the currently filtered set as CSV or JSON via the Android share sheet; export streams in fixed-size batches so it never materializes the full result set in memory, even for tens of thousands of rows
+  * Dry-run rule executions (test/preview matches) are excluded from every Data Browser view by default: browsing, search, statistics, export, and deletion
+* **System Trigger:** User navigates to the Data tab (bottom navigation, between Inbox and Rules).
+* **Technical Spec Reference:** `openspec/changes/data-browser/specs/data-browsing/spec.md`, `data-statistics/spec.md`, `data-export/spec.md`, `data-deletion/spec.md`
+
 ---
 
 ## Background Data Handling
@@ -136,9 +149,8 @@ Notificapp lets users create automation rules that act on the notifications thei
 ## Status Reference (for planning what to build next)
 
 * **Planned, not yet built:**
-  * Starter rule templates
-  * Per-rule cooldown safety limits
-  * A dedicated "Data" browser tab (browse/filter/export extracted data, retention/backup settings)
+  * Trend chart rendering for the Data Browser's computed trend series (bar/line chart, last 7/30 days) — the Data Browser itself (browse/filter/search/stats/export/delete) is done, see "Data Browser" above
+  * Data retention/backup settings
   * Webhooks — a "Send webhook" action to push extracted data to external services (the app's first network access)
   * Optional on-device AI extraction (separate build flavor)
   * Community rule gallery

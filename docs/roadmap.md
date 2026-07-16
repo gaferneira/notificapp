@@ -136,33 +136,34 @@ With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 se
 
 #### Data Screen (New Bottom Nav Tab)
 
-- [ ] Add "Data" tab to bottom navigation: **Inbox → Data → Rules → Settings** (chart icon)
-- [ ] Navigation route: `Screen.Data`
-- [ ] Feature module: `features/databrowser/` with contract + viewmodel + UI
+- [x] Add "Data" tab to bottom navigation: **Inbox → Data → Rules → Settings** (chart icon)
+- [x] Navigation route: `Screen.Data`
+- [x] Feature module: `features/databrowser/` with contract + viewmodel + UI
 
 #### Browse and Filter
 
-- [ ] Paginated list of extracted data entries (field name, value, source notification, rule, timestamp)
-- [ ] Filter by: rule, source app, date range, field type
-- [ ] Search across all extracted values (text search)
-- [ ] Sort by: date, rule name, app, field name
+- [x] Paginated list of extracted data entries (field name, value, source notification, rule, timestamp)
+- [x] Filter by: rule, source app, date range, field type
+- [x] Search across all extracted values (text search)
+- [x] Sort by: date, rule name, app, field name
 
 #### Statistics
 
-- [ ] Summary header: total extractions count, extractions this week, most active rule
-- [ ] Per-rule and per-app extraction counts
-- [ ] Trend: extractions over time (simple bar/line chart — last 7/30 days)
+- [x] Summary header: total extractions count, extractions this week, most active rule
+- [x] Per-rule and per-app extraction counts
+- [x] Trend data computed: day-bucketed extraction counts over the last 7/30 days, local timezone (`DataBrowserRepository.statistics().trend`)
+- [ ] Trend chart rendered: visualize the computed trend data as a bar/line chart — deferred to the visualization phase; this change delivers computation only, no chart-rendering dependency
 
 #### Export and Delete
 
-- [ ] Delete individual entries or bulk delete with filters applied
-- [ ] Export: CSV or JSON format via Android share sheet with current filters applied
+- [x] Delete individual entries or bulk delete with filters applied
+- [x] Export: CSV or JSON format via Android share sheet with current filters applied
 
 #### Data Lifecycle
 
-- [ ] **Interim retention sweep — do this first**: delete captured notifications older than 90 days on app start. The table currently grows unboundedly and stores OTPs/private messages forever, which contradicts the privacy story and is the root cause of the backtest memory issue (TD-11); the full settings UI below can follow later
-- [ ] Retention settings: auto-delete captured notifications after 30/90 days/never
-- [ ] Storage usage view in Settings (DB size, counts per table)
+- [x] **Interim retention sweep — do this first**: delete captured notifications older than 90 days on app start. The table currently grows unboundedly and stores OTPs/private messages forever, which contradicts the privacy story and is the root cause of the backtest memory issue (TD-11); the full settings UI below can follow later
+- [x] Retention settings: auto-delete captured notifications after 30/90 days/never
+- [x] Storage usage view in Settings (DB size, counts per table)
 - [ ] Local backup/restore: export/import rules — and optionally extracted data — to a local file (people won't invest in rules that vanish with a lost phone; stays local-first)
 
 ### Phase 4: Webhooks
@@ -301,17 +302,17 @@ Explicitly **not** part of the MVP; may be revisited post-launch:
 
 ## Technical Notes
 
-| Area | Decision |
-|---|---|
-| Notification pipeline | `ProcessNotificationUseCase` orchestrates normalize → dedupe → persist → match → extract → act; listener service is a thin adapter |
-| Action execution | `ActionExecutor` per `ActionType` via Hilt multibindings; system actions behind `SystemNotificationController` implemented by the listener service |
-| Execution records | Per-action outcome (`SUCCESS`/`FAILED`/`SKIPPED`) stored on `RuleExecution` |
-| Rule sharing | Versioned JSON wire format defined by dedicated DTOs in `core/rulesharing` (TD-9), decoupled from domain models and pinned by a golden-file test; spec in `docs/rule-format.md`; imported rules default to dry-run |
-| Rule storage | If rule shape keeps churning (OR-groups, nesting), consider JSON-column rule definition + thin queryable metadata instead of 5 normalized tables — reevaluate before Phase 2 |
-| Webhook delivery | WorkManager retries; Room table for failed event queue; per-webhook last-status indicator |
-| On-device AI | `AiExtractor` abstraction; Gemini Nano impl in separate build flavor (F-Droid-safe main flavor) |
-| Data browser | Paging3 consistent with Inbox; reuse extracted-field storage via `RuleExecutionRepository` |
-| Export | Android `ShareCompat` / share sheet intent with temp file URI |
-| Bottom nav | 4 tabs: Inbox, Data, Rules, Settings |
-| Payload customization | Checkbox field selection stored as list in `RuleAction.config` |
-| Action config | Keep `Map<String, String>` (schemaless = no migrations for new action types); wrap access in small typed readers per action type |
+| Area                  | Decision                                                                                                                                                                                                           |
+|-----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Notification pipeline | `ProcessNotificationUseCase` orchestrates normalize → dedupe → persist → match → extract → act; listener service is a thin adapter                                                                                 |
+| Action execution      | `ActionExecutor` per `ActionType` via Hilt multibindings; system actions behind `SystemNotificationController` implemented by the listener service                                                                 |
+| Execution records     | Per-action outcome (`SUCCESS`/`FAILED`/`SKIPPED`) stored on `RuleExecution`                                                                                                                                        |
+| Rule sharing          | Versioned JSON wire format defined by dedicated DTOs in `core/rulesharing` (TD-9), decoupled from domain models and pinned by a golden-file test; spec in `docs/rule-format.md`; imported rules default to dry-run |
+| Rule storage          | If rule shape keeps churning (OR-groups, nesting), consider JSON-column rule definition + thin queryable metadata instead of 5 normalized tables — reevaluate before Phase 2                                       |
+| Webhook delivery      | WorkManager retries; Room table for failed event queue; per-webhook last-status indicator                                                                                                                          |
+| On-device AI          | `AiExtractor` abstraction; Gemini Nano impl in separate build flavor (F-Droid-safe main flavor)                                                                                                                    |
+| Data browser          | Paging3 consistent with Inbox; reuse extracted-field storage via `RuleExecutionRepository`                                                                                                                         |
+| Export                | Android `ShareCompat` / share sheet intent with temp file URI                                                                                                                                                      |
+| Bottom nav            | 4 tabs: Inbox, Data, Rules, Settings                                                                                                                                                                               |
+| Payload customization | Checkbox field selection stored as list in `RuleAction.config`                                                                                                                                                     |
+| Action config         | Keep `Map<String, String>` (schemaless = no migrations for new action types); wrap access in small typed readers per action type                                                                                   |
