@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.data.local.converter
 
 import androidx.room.TypeConverter
+import dev.gaferneira.notificapp.domain.model.RuleField
 import kotlinx.serialization.json.Json
 
 /**
@@ -32,4 +33,13 @@ class RuleTypeConverters {
 
     @TypeConverter
     fun toStringList(jsonString: String): List<String> = json.decodeFromString(jsonString)
+
+    // ========== RuleField.FieldType (for the DataBrowserRow raw-query projection) ==========
+    // Column storage format matches RuleFieldMapper, which persists `fieldType.name` (not the
+    // kotlinx-serialization @SerialName).
+    @TypeConverter
+    fun fromFieldType(fieldType: RuleField.FieldType): String = fieldType.name
+
+    @TypeConverter
+    fun toFieldType(value: String): RuleField.FieldType = RuleField.FieldType.valueOf(value)
 }

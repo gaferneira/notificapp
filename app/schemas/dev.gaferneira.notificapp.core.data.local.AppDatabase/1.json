@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "a5957f88a08b1427ebc6eb3f539f520d",
+    "identityHash": "190232130ceef62ad49b720a3cb34915",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -772,11 +772,43 @@
           "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_notifications_fts_AFTER_UPDATE AFTER UPDATE ON `notifications` BEGIN INSERT INTO `notifications_fts`(`docid`, `title`, `content`, `raw_content`) VALUES (NEW.`rowid`, NEW.`title`, NEW.`content`, NEW.`raw_content`); END",
           "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_notifications_fts_AFTER_INSERT AFTER INSERT ON `notifications` BEGIN INSERT INTO `notifications_fts`(`docid`, `title`, `content`, `raw_content`) VALUES (NEW.`rowid`, NEW.`title`, NEW.`content`, NEW.`raw_content`); END"
         ]
+      },
+      {
+        "tableName": "extracted_field_values_fts",
+        "createSql": "CREATE VIRTUAL TABLE IF NOT EXISTS `${TABLE_NAME}` USING FTS4(`value_text` TEXT, content=`extracted_field_values`)",
+        "fields": [
+          {
+            "fieldPath": "valueText",
+            "columnName": "value_text",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": []
+        },
+        "ftsVersion": "FTS4",
+        "ftsOptions": {
+          "tokenizer": "simple",
+          "tokenizerArgs": [],
+          "contentTable": "extracted_field_values",
+          "languageIdColumnName": "",
+          "matchInfo": "FTS4",
+          "notIndexedColumns": [],
+          "prefixSizes": [],
+          "preferredOrder": "ASC"
+        },
+        "contentSyncTriggers": [
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_extracted_field_values_fts_BEFORE_UPDATE BEFORE UPDATE ON `extracted_field_values` BEGIN DELETE FROM `extracted_field_values_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_extracted_field_values_fts_BEFORE_DELETE BEFORE DELETE ON `extracted_field_values` BEGIN DELETE FROM `extracted_field_values_fts` WHERE `docid`=OLD.`rowid`; END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_extracted_field_values_fts_AFTER_UPDATE AFTER UPDATE ON `extracted_field_values` BEGIN INSERT INTO `extracted_field_values_fts`(`docid`, `value_text`) VALUES (NEW.`rowid`, NEW.`value_text`); END",
+          "CREATE TRIGGER IF NOT EXISTS room_fts_content_sync_extracted_field_values_fts_AFTER_INSERT AFTER INSERT ON `extracted_field_values` BEGIN INSERT INTO `extracted_field_values_fts`(`docid`, `value_text`) VALUES (NEW.`rowid`, NEW.`value_text`); END"
+        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a5957f88a08b1427ebc6eb3f539f520d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '190232130ceef62ad49b720a3cb34915')"
     ]
   }
 }

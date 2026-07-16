@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.gaferneira.notificapp.BuildConfig
 import dev.gaferneira.notificapp.core.data.local.AppDatabase
+import dev.gaferneira.notificapp.core.data.local.dao.DataBrowserDao
 import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
@@ -108,4 +109,13 @@ internal object DatabaseModule {
      */
     @Provides
     fun provideExtractedFieldValueDao(database: AppDatabase): ExtractedFieldValueDao = database.extractedFieldValueDao()
+
+    /**
+     * Provides the DataBrowserDao.
+     *
+     * @param database AppDatabase instance
+     * @return DataBrowserDao
+     */
+    @Provides
+    fun provideDataBrowserDao(database: AppDatabase): DataBrowserDao = database.dataBrowserDao()
 }

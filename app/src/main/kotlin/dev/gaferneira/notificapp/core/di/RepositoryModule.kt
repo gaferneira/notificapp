@@ -4,11 +4,13 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import dev.gaferneira.notificapp.core.data.repository.DataBrowserRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.NotificationRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.RuleExecutionRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.RuleRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.SelectedAppRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.UserPreferencesRepositoryImpl
+import dev.gaferneira.notificapp.domain.repository.DataBrowserRepository
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
@@ -51,4 +53,10 @@ internal abstract class RepositoryModule {
      */
     @Binds
     abstract fun bindRuleExecutionRepository(impl: RuleExecutionRepositoryImpl): RuleExecutionRepository
+
+    /**
+     * Binds DataBrowserRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindDataBrowserRepository(impl: DataBrowserRepositoryImpl): DataBrowserRepository
 }
