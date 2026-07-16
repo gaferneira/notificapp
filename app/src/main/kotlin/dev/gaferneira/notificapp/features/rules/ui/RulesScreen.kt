@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -102,6 +103,7 @@ import dev.gaferneira.notificapp.features.rules.contract.RulesUiState
 import dev.gaferneira.notificapp.features.rules.viewmodel.RulesViewModel
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
@@ -210,6 +212,7 @@ private fun RulesTopBar(
     onShowFilterSheet: () -> Unit,
     onImportFromFile: () -> Unit,
     onImportFromClipboard: () -> Unit,
+    onImportFromTemplates: () -> Unit,
 ) {
     var showImportMenu by remember { mutableStateOf(false) }
 
@@ -254,6 +257,7 @@ private fun RulesTopBar(
                     onDismiss = { showImportMenu = false },
                     onImportFromFile = onImportFromFile,
                     onImportFromClipboard = onImportFromClipboard,
+                    onImportFromTemplates = onImportFromTemplates,
                 )
             }
         },
@@ -266,6 +270,7 @@ private fun RulesImportMenu(
     onDismiss: () -> Unit,
     onImportFromFile: () -> Unit,
     onImportFromClipboard: () -> Unit,
+    onImportFromTemplates: () -> Unit,
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         DropdownMenuItem(
@@ -280,6 +285,13 @@ private fun RulesImportMenu(
             onClick = {
                 onDismiss()
                 onImportFromClipboard()
+            },
+        )
+        DropdownMenuItem(
+            text = { Text("Import from templates") },
+            onClick = {
+                onDismiss()
+                onImportFromTemplates()
             },
         )
     }
@@ -298,24 +310,8 @@ internal fun RulesScreenContent(
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
     val ioDispatcher = LocalIoDispatcher.current
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        // A null uri means the user cancelled the picker - not an import attempt, so don't
-        // surface an error dialog for it.
-        if (uri == null) return@rememberLauncherForActivityResult
-
-        coroutineScope.launch {
-            val text = withContext(ioDispatcher) {
-                runCatching {
-                    context.contentResolver.openInputStream(uri)?.use { stream ->
-                        stream.readUpTo(MAX_IMPORT_FILE_SIZE_BYTES)?.decodeToString()
-                    }
-                }.getOrNull()
-            }
-            onEvent(RulesEvent.OnRuleTextReceived(text.orEmpty()))
-        }
-    }
+    var showTemplatePicker by remember { mutableStateOf(false) }
+    val filePickerLauncher = rememberRuleFilePickerLauncher(onEvent, coroutineScope, ioDispatcher)
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -328,6 +324,9 @@ internal fun RulesScreenContent(
                 onImportFromClipboard = {
                     val text = clipboardManager.getText()?.text.orEmpty()
                     onEvent(RulesEvent.OnRuleTextReceived(text))
+                },
+                onImportFromTemplates = {
+                    showTemplatePicker = true
                 },
             )
         },
@@ -348,6 +347,7 @@ internal fun RulesScreenContent(
         RulesBody(
             uiState = uiState,
             onEvent = onEvent,
+            onBrowseTemplates = { showTemplatePicker = true },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
@@ -356,12 +356,85 @@ internal fun RulesScreenContent(
     }
 
     RulesImportDialogs(uiState = uiState, onEvent = onEvent)
+
+    if (showTemplatePicker) {
+        RulesTemplatePickerHost(
+            onEvent = onEvent,
+            coroutineScope = coroutineScope,
+            ioDispatcher = ioDispatcher,
+            context = context,
+            onDismiss = { showTemplatePicker = false },
+        )
+    }
+}
+
+/**
+ * Registers the "import from file" [ActivityResultContracts.OpenDocument] launcher and wires its
+ * result into [RulesEvent.OnRuleTextReceived], off the main thread.
+ */
+@Composable
+private fun rememberRuleFilePickerLauncher(
+    onEvent: (RulesEvent) -> Unit,
+    coroutineScope: CoroutineScope,
+    ioDispatcher: CoroutineDispatcher,
+) = run {
+    val context = LocalContext.current
+    rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        // A null uri means the user cancelled the picker - not an import attempt, so don't
+        // surface an error dialog for it.
+        if (uri == null) return@rememberLauncherForActivityResult
+
+        coroutineScope.launch {
+            val text = withContext(ioDispatcher) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { stream ->
+                        stream.readUpTo(MAX_IMPORT_FILE_SIZE_BYTES)?.decodeToString()
+                    }
+                }.getOrNull()
+            }
+            onEvent(RulesEvent.OnRuleTextReceived(text.orEmpty()))
+        }
+    }
+}
+
+/**
+ * Hosts the "Browse templates" [RuleTemplatePickerSheet]: reads the selected template's asset
+ * JSON off the main thread and feeds it into the same [RulesEvent.OnRuleTextReceived] path used
+ * by file/clipboard import, then closes the sheet.
+ */
+@Composable
+private fun RulesTemplatePickerHost(
+    onEvent: (RulesEvent) -> Unit,
+    coroutineScope: CoroutineScope,
+    ioDispatcher: CoroutineDispatcher,
+    context: Context,
+    onDismiss: () -> Unit,
+) {
+    RuleTemplatePickerSheet(
+        onTemplateSelected = { template ->
+            onDismiss()
+            coroutineScope.launch {
+                val text = withContext(ioDispatcher) {
+                    runCatching {
+                        context.assets.open("rules/${template.assetFileName}")
+                            .bufferedReader()
+                            .use { it.readText() }
+                    }.getOrNull()
+                }
+                onEvent(RulesEvent.OnRuleTextReceived(text.orEmpty()))
+            }
+        },
+        onDismiss = onDismiss,
+    )
 }
 
 @Composable
 private fun RulesBody(
     uiState: RulesUiState,
     onEvent: (RulesEvent) -> Unit,
+    onBrowseTemplates: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -383,6 +456,7 @@ private fun RulesBody(
                     searchQuery = uiState.searchQuery,
                     filter = uiState.filter,
                     onEvent = onEvent,
+                    onBrowseTemplates = onBrowseTemplates,
                 )
             }
         }
@@ -539,6 +613,7 @@ private fun SuccessState(
     searchQuery: String,
     filter: RuleFilter,
     onEvent: (RulesEvent) -> Unit,
+    onBrowseTemplates: () -> Unit,
 ) {
     Column {
         RulesSearchBar(
@@ -549,15 +624,21 @@ private fun SuccessState(
         Spacer(modifier = Modifier.height(8.dp))
 
         if (rules.isEmpty()) {
-            Box(
+            Column(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
                 Text(
                     text = "No rules yet\nTap + to create your first rule",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+                TextButton(onClick = onBrowseTemplates) {
+                    Text("Browse templates")
+                }
             }
         } else {
             RulesList(rules = rules, filter = filter, onEvent = onEvent)
@@ -741,7 +822,7 @@ private fun StatusHeader(
 }
 
 @Composable
-private fun getCategoryIcon(category: String): ImageVector = when (category.lowercase()) {
+internal fun getCategoryIcon(category: String): ImageVector = when (category.lowercase()) {
     "finance", "financial", "banking", "payments" -> Icons.Outlined.AccountBalance
     "deliveries", "delivery", "shipping", "logistics" -> Icons.Outlined.LocalShipping
     "shopping", "e-commerce", "retail" -> Icons.Outlined.ShoppingCart

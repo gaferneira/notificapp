@@ -65,6 +65,11 @@ android {
             // Exported Room schemas, so MigrationTestHelper can validate migrations against them.
             assets.srcDirs("$projectDir/schemas")
         }
+        getByName("test") {
+            // Makes app/src/main/assets/rules/*.json (starter rule templates) visible on the JVM
+            // unit test classpath, same trick app/src/test/resources already relies on.
+            resources.srcDirs("$projectDir/src/main/assets")
+        }
     }
 }
 

@@ -121,16 +121,18 @@ Nothing currently in progress — ready to start Phase 3.
 
 Guiding principle #1 puts **templates first** in the rule-creation ladder (templates → create-from-notification → raw editor), but nothing on the roadmap built them before the Phase 6 gallery. They're mostly content on top of Phase 2's import machinery, and they seed the gallery.
 
-- [ ] Curate 5–10 starter rules for the hero use cases (bank transaction → spending row, carrier tracking, OTP auto-dismiss, noisy-app dismiss), stored as raw JSON assets in the APK using the `RuleJsonCodec` wire format — **requires the frozen DTO format from TD-9 first**
-- [ ] "Start from a template" entry point in the Rules empty state and as the first option when creating a rule; template import follows the same fresh-ID + dry-run path as Phase 2 imports
-- [ ] Each template doubles as a seed rule for the Phase 6 community gallery (same file format, same validation)
+- [x] Curate 5–10 starter rules for the hero use cases (at least one per action type), stored as raw JSON assets in the APK using the `RuleJsonCodec` wire format — **requires the frozen DTO format from TD-9 first**
+- [x] "Start from a template" entry point in the Rules empty state; template import follows the same fresh-ID + dry-run path as Phase 2 imports
+- [x] Each template doubles as a seed rule for the Phase 6 community gallery (same file format, same validation)
+- [ ] "Start from a template" entry point as the first option when creating a rule (FAB/RuleEditor flow) — follow-up, not done yet
 
-#### Rule Safety: Per-Rule Cooldown
 
-With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 seconds is an uninstall-level bug — this can't wait for someone to hit it.
+#### Rule Safety: Per-Action Cooldown (Alarm / Flash Alert)
 
-- [ ] `Rule.cooldownSeconds` (0 = disabled); editor UI in the metadata step next to the dry-run toggle
-- [ ] `ProcessNotificationUseCase.evaluateAndPersist` skips action dispatch when the rule's latest `RuleExecution` is more recent than the cooldown — the match is still recorded, flagged as cooldown-suppressed (never fail silently, even when suppressing on purpose)
+With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 seconds is an uninstall-level bug — this can't wait for someone to hit it. Scoped to the *action*, not the rule: the danger is specific to which actions a rule carries (Alarm/Flash Alert/Snooze are disruptive; Dismiss/Extract-data are not), so a rule combining Alarm with Extract-data only suppresses the alarm, extraction always runs. Reuses the existing per-action `NotificationThrottleTracker` (previously wired only to Snooze's THROTTLE mode) unmodified.
+
+- [ ] `ALARM_COOLDOWN_SECONDS_KEY`/`FLASH_COOLDOWN_SECONDS_KEY` config fields (0 = disabled), clamped in `AlarmActionConfig.kt`/`FlashActionConfig.kt`; editor UI (`CooldownSecondsSelector`) in the Alarm and Flash Alert action forms
+- [ ] `AlarmActionExecutor`/`FlashAlertActionExecutor` return `ActionOutcome.SUPPRESSED` via `NotificationThrottleTracker.shouldDeliver` when the action's cooldown window is still open — the match is still recorded via `ProcessNotificationUseCase`, never silently dropped
 
 #### Data Screen (New Bottom Nav Tab)
 

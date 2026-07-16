@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "rule": {
+    "id": "template-flash-verification-codes",
+    "name": "Flash alert for verification codes",
+    "description": "Flashes the camera torch when a one-time verification code arrives, so you notice it immediately even with the phone face-down.",
+    "category": "Security",
+    "isActive": true,
+    "isDryRun": true,
+    "targetApps": null,
+    "isIncludeMode": true,
+    "conditionLogic": "ANY",
+    "conditions": [
+      { "type": "content_match", "id": "cond-1", "condition": "text_content", "operator": "contains", "value": "verification code" },
+      { "type": "content_match", "id": "cond-2", "condition": "text_content", "operator": "contains", "value": "OTP" },
+      { "type": "content_match", "id": "cond-3", "condition": "text_content", "operator": "contains", "value": "one-time code" }
+    ],
+    "actions": [
+      { "id": "action-1", "type": "flash_alert", "isEnabled": true, "config": {}, "fields": [] }
+    ],
+    "createdAt": 0,
+    "updatedAt": 0
+  }
+}

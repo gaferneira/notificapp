@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "rule": {
+    "id": "template-wake-for-urgent-alerts",
+    "name": "Wake me for urgent alerts",
+    "description": "Rings a full alarm when a notification is marked urgent or an emergency, even if the phone is on silent. Pick which apps should be able to wake you in the next step.",
+    "category": "Alerts",
+    "isActive": true,
+    "isDryRun": true,
+    "targetApps": null,
+    "isIncludeMode": true,
+    "conditionLogic": "ANY",
+    "conditions": [
+      { "type": "content_match", "id": "cond-1", "condition": "text_content", "operator": "contains", "value": "urgent" },
+      { "type": "content_match", "id": "cond-2", "condition": "text_content", "operator": "contains", "value": "emergency" }
+    ],
+    "actions": [
+      { "id": "action-1", "type": "create_alarm", "isEnabled": true, "config": {}, "fields": [] }
+    ],
+    "createdAt": 0,
+    "updatedAt": 0
+  }
+}

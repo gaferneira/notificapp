@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "rule": {
+    "id": "template-package-delivery-tracker",
+    "name": "Package delivery tracker",
+    "description": "Catches delivery notifications and pulls out the tracking number so every package ends up in one searchable place. Select your carrier apps in the next step.",
+    "category": "Deliveries",
+    "isActive": true,
+    "isDryRun": true,
+    "targetApps": null,
+    "isIncludeMode": true,
+    "conditionLogic": "ANY",
+    "conditions": [
+      { "type": "content_match", "id": "cond-1", "condition": "text_content", "operator": "contains", "value": "delivered" },
+      { "type": "content_match", "id": "cond-2", "condition": "text_content", "operator": "contains", "value": "shipped" },
+      { "type": "content_match", "id": "cond-3", "condition": "text_content", "operator": "contains", "value": "out for delivery" }
+    ],
+    "actions": [
+      {
+        "id": "action-1",
+        "type": "save_data",
+        "isEnabled": true,
+        "config": {},
+        "fields": [
+          { "id": "field-1", "name": "Tracking number", "fieldType": "string", "isRequired": false, "method": { "type": "regex", "pattern": "([A-Z0-9]{10,})", "captureGroup": 1 } }
+        ]
+      }
+    ],
+    "createdAt": 0,
+    "updatedAt": 0
+  }
+}

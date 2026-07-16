@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "rule": {
+    "id": "template-mute-promotions",
+    "name": "Mute promotional notifications",
+    "description": "Automatically dismisses notifications that look like sales or promotions, so your notification shade stays for things that matter.",
+    "category": "Noise control",
+    "isActive": true,
+    "isDryRun": true,
+    "targetApps": null,
+    "isIncludeMode": true,
+    "conditionLogic": "ANY",
+    "conditions": [
+      { "type": "content_match", "id": "cond-1", "condition": "text_content", "operator": "contains", "value": "% off" },
+      { "type": "content_match", "id": "cond-2", "condition": "text_content", "operator": "contains", "value": "Sale" },
+      { "type": "content_match", "id": "cond-3", "condition": "text_content", "operator": "contains", "value": "Limited time" }
+    ],
+    "actions": [
+      { "id": "action-1", "type": "dismiss_notification", "isEnabled": true, "config": {}, "fields": [] }
+    ],
+    "createdAt": 0,
+    "updatedAt": 0
+  }
+}

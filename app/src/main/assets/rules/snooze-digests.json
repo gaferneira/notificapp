@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "rule": {
+    "id": "template-snooze-digests",
+    "name": "Snooze newsletters and digests",
+    "description": "Holds back newsletter and digest notifications for 4 hours so they arrive in a batch instead of interrupting you one at a time.",
+    "category": "Noise control",
+    "isActive": true,
+    "isDryRun": true,
+    "targetApps": null,
+    "isIncludeMode": true,
+    "conditionLogic": "ANY",
+    "conditions": [
+      { "type": "content_match", "id": "cond-1", "condition": "text_content", "operator": "contains", "value": "newsletter" },
+      { "type": "content_match", "id": "cond-2", "condition": "text_content", "operator": "contains", "value": "digest" }
+    ],
+    "actions": [
+      { "id": "action-1", "type": "snooze_notification", "isEnabled": true, "config": { "snooze_duration_minutes": "240" }, "fields": [] }
+    ],
+    "createdAt": 0,
+    "updatedAt": 0
+  }
+}

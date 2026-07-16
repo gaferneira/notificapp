@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "rule": {
+    "id": "template-bank-payment-tracker",
+    "name": "Bank payment tracker",
+    "description": "Extracts the amount and date from your bank's payment notifications into a searchable dataset. Pick your banking app in the next step and tweak the condition to match its exact wording.",
+    "category": "Finance",
+    "isActive": true,
+    "isDryRun": true,
+    "targetApps": null,
+    "isIncludeMode": true,
+    "conditionLogic": "ALL",
+    "conditions": [
+      { "type": "content_match", "id": "cond-1", "condition": "text_content", "operator": "contains", "value": "paid" }
+    ],
+    "actions": [
+      {
+        "id": "action-1",
+        "type": "save_data",
+        "isEnabled": true,
+        "config": {},
+        "fields": [
+          { "id": "field-1", "name": "Amount", "fieldType": "currency", "isRequired": false, "method": { "type": "smart_amount" } },
+          { "id": "field-2", "name": "Date", "fieldType": "date", "isRequired": false, "method": { "type": "smart_date" } }
+        ]
+      }
+    ],
+    "createdAt": 0,
+    "updatedAt": 0
+  }
+}
