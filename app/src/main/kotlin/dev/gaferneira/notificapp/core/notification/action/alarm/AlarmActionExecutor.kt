@@ -79,6 +79,7 @@ class AlarmActionExecutor @Inject constructor(
                         imageIsDark = action.isAlarmBackgroundImageDark(),
                     ),
                 ),
+                sourceKey = notification.sbnKey,
             ),
         )
         return if (started) ActionOutcome.SUCCESS else ActionOutcome.SKIPPED

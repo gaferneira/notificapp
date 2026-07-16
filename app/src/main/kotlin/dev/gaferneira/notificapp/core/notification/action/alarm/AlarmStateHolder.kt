@@ -21,7 +21,19 @@ class AlarmStateHolder @Inject constructor() {
     /** Emits `true` while an alarm is ringing, `false` once it has stopped. */
     val isRinging: StateFlow<Boolean> = _isRinging.asStateFlow()
 
-    fun setRinging(ringing: Boolean) {
+    private val _ringingSourceKey = MutableStateFlow<String?>(null)
+
+    /**
+     * The [dev.gaferneira.notificapp.domain.model.Notification.sbnKey] of the notification whose
+     * rule started the currently-ringing alarm, or `null` while nothing is ringing (or the ring
+     * has no real source, e.g. the rule editor's alarm preview). Lets `AndroidAlarmController`
+     * check "is this notification's alarm the one ringing" without waking [AlarmService] for every
+     * unrelated notification dismissal.
+     */
+    val ringingSourceKey: StateFlow<String?> = _ringingSourceKey.asStateFlow()
+
+    fun setRinging(ringing: Boolean, sourceKey: String? = null) {
         _isRinging.value = ringing
+        _ringingSourceKey.value = if (ringing) sourceKey else null
     }
 }

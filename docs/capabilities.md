@@ -51,6 +51,7 @@ Notificapp lets users create automation rules that act on the notifications thei
     * Optional full-screen alarm UI (can wake/unlock-prompt the screen) with a customizable background
     * Its own built-in snooze (duration + max snooze count)
     * Optional cooldown (in seconds, 0 = disabled): a chatty source app re-matching this rule within the window is suppressed instead of re-ringing
+    * Automatically stops if the user dismisses the source notification (swipe, clear-all, or tap-to-open) — but not if a rule's own Dismiss action removes it, so a rule can pair Dismiss + Create Alarm without the alarm instantly silencing itself
   * **Flash alert** — blinks the camera flash/torch a configurable number of times as a visual alert; automatically skipped on devices with no flash or when battery saver is on, and safety-clamped to avoid photosensitivity risk. Also supports an optional cooldown (in seconds, 0 = disabled), same suppression behavior as the alarm's.
   * **Extract data** — see "Data Extraction" above.
 * **System Trigger:** Runs automatically in the background the moment a monitored notification matches an enabled (non dry-run) rule.

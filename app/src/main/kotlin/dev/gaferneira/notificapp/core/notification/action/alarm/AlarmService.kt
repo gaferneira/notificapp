@@ -36,8 +36,9 @@ import javax.inject.Inject
  * that triggered it is what lets the alarm keep ringing until the user acts.
  *
  * Commands arrive as intents: [ACTION_START] (from [AndroidAlarmController] and the snooze re-ring),
- * [ACTION_DISMISS] and [ACTION_SNOOZE] (from the notification actions). Per ADR 013 the alarm's
- * lifetime is owned here, not by `AlarmActionExecutor`.
+ * [ACTION_DISMISS] and [ACTION_SNOOZE] (from the notification actions), and [ACTION_STOP_FOR_SOURCE]
+ * (from [AndroidAlarmController] when the notification that triggered the ringing alarm is
+ * dismissed). Per ADR 013 the alarm's lifetime is owned here, not by `AlarmActionExecutor`.
  */
 @AndroidEntryPoint
 class AlarmService : Service() {
@@ -60,6 +61,7 @@ class AlarmService : Service() {
             ACTION_START -> handleStart(intent)
             ACTION_DISMISS -> handleDismiss()
             ACTION_SNOOZE -> handleSnooze()
+            ACTION_STOP_FOR_SOURCE -> handleStopForSource(intent)
             else -> {
                 // Unknown/null intent (e.g. a system restart): make sure we don't leave a
                 // half-started foreground service lingering.
@@ -97,12 +99,39 @@ class AlarmService : Service() {
         alarmPlayer.stop()
         if (current.soundEnabled) alarmPlayer.play(current.soundUri)
         if (current.vibrationEnabled) alarmPlayer.vibrate(current.vibrationPattern)
-        alarmStateHolder.setRinging(true)
+        alarmStateHolder.setRinging(true, current.sourceKey)
     }
 
     private fun handleDismiss() {
         if (!current.suppressNotification) promoteToForeground()
         stopAlarm()
+    }
+
+    /**
+     * Stops the ringing alarm if it was started by the notification identified by
+     * [EXTRA_SOURCE_KEY] — called when that notification is dismissed. Re-checks against [current]
+     * even though [AndroidAlarmController.stopIfSource] already checked [AlarmStateHolder] before
+     * sending this intent, since the ringing alarm can change between that check and delivery.
+     */
+    private fun handleStopForSource(intent: Intent) {
+        val sourceKey = intent.getStringExtra(EXTRA_SOURCE_KEY)
+        when {
+            sourceKey != null && sourceKey == current.sourceKey -> {
+                if (!current.suppressNotification) promoteToForeground()
+                stopAlarm()
+            }
+            current == EMPTY_REQUEST -> {
+                // Cold-started solely for this stop request (the ring already ended naturally just
+                // before this intent arrived): nothing to stop, but don't leave a half-started
+                // foreground service lingering.
+                promoteToForeground()
+                stopAlarm()
+            }
+            else -> {
+                // A different alarm is genuinely ringing right now (lost the race against
+                // AndroidAlarmController.stopIfSource's state check): leave it running.
+            }
+        }
     }
 
     private fun handleSnooze() {
@@ -265,6 +294,7 @@ class AlarmService : Service() {
             ),
             suppressNotification = getBooleanExtra(EXTRA_SUPPRESS_NOTIFICATION, false),
         ),
+        sourceKey = getStringExtra(EXTRA_SOURCE_KEY),
     )
 
     companion object {
@@ -274,6 +304,7 @@ class AlarmService : Service() {
         private const val ACTION_START = "dev.gaferneira.notificapp.action.ALARM_START"
         private const val ACTION_DISMISS = "dev.gaferneira.notificapp.action.ALARM_DISMISS"
         private const val ACTION_SNOOZE = "dev.gaferneira.notificapp.action.ALARM_SNOOZE"
+        private const val ACTION_STOP_FOR_SOURCE = "dev.gaferneira.notificapp.action.ALARM_STOP_FOR_SOURCE"
 
         private const val EXTRA_SOUND_URI = "extra_sound_uri"
         private const val EXTRA_VIBRATION_ENABLED = "extra_vibration_enabled"
@@ -292,6 +323,7 @@ class AlarmService : Service() {
         private const val EXTRA_BACKGROUND_IMAGE_URI = "extra_background_image_uri"
         private const val EXTRA_BACKGROUND_IMAGE_IS_DARK = "extra_background_image_is_dark"
         private const val EXTRA_SUPPRESS_NOTIFICATION = "extra_suppress_notification"
+        private const val EXTRA_SOURCE_KEY = "extra_source_key"
 
         private const val REQUEST_DISMISS = 1
         private const val REQUEST_SNOOZE = 2
@@ -331,11 +363,21 @@ class AlarmService : Service() {
             .putExtra(EXTRA_BACKGROUND_IMAGE_URI, request.backgroundImageUri)
             .putExtra(EXTRA_BACKGROUND_IMAGE_IS_DARK, request.backgroundImageIsDark)
             .putExtra(EXTRA_SUPPRESS_NOTIFICATION, request.suppressNotification)
+            .putExtra(EXTRA_SOURCE_KEY, request.sourceKey)
 
         /** Intent that dismisses the ringing alarm — used by the alarm UI's Dismiss control. */
         fun dismissIntent(context: Context): Intent = Intent(context, AlarmService::class.java).setAction(ACTION_DISMISS)
 
         /** Intent that snoozes the ringing alarm — used by the alarm UI's Snooze control. */
         fun snoozeIntent(context: Context): Intent = Intent(context, AlarmService::class.java).setAction(ACTION_SNOOZE)
+
+        /**
+         * Intent that stops the ringing alarm only if it was started by the notification
+         * identified by [sourceKey] — used by [AndroidAlarmController.stopIfSource] when that
+         * notification is dismissed.
+         */
+        fun stopForSourceIntent(context: Context, sourceKey: String): Intent = Intent(context, AlarmService::class.java)
+            .setAction(ACTION_STOP_FOR_SOURCE)
+            .putExtra(EXTRA_SOURCE_KEY, sourceKey)
     }
 }
