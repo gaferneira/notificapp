@@ -130,6 +130,10 @@ dependencies {
     // Image Loading
     implementation(libs.bundles.coil)
 
+    // Network - plain OkHttp Call for the webhook test-payload egress (no Retrofit; URLs are
+    // fully user-entered/dynamic)
+    implementation(libs.okhttp)
+
     // Debug/Preview
     debugImplementation(libs.bundles.compose.debug)
 

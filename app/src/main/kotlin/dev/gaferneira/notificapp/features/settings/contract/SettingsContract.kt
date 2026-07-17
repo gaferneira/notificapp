@@ -49,6 +49,9 @@ object SettingsContract {
         /** User clicked to select/monitor apps */
         data object OnSelectAppsClicked : UiEvent()
 
+        /** User clicked to manage webhooks */
+        data object OnWebhooksClicked : UiEvent()
+
         /** User toggled data collection */
         data class OnCollectionToggled(val isEnabled: Boolean) : UiEvent()
 
@@ -74,6 +77,9 @@ object SettingsContract {
     sealed class UiEffect {
         /** Navigate to app selection screen */
         data object NavigateToAppSelection : UiEffect()
+
+        /** Navigate to the webhook list screen */
+        data object NavigateToWebhookList : UiEffect()
 
         /** Show error message */
         data class ShowError(val message: String) : UiEffect()

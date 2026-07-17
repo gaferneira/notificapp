@@ -31,6 +31,8 @@ import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
@@ -51,6 +53,8 @@ import dev.gaferneira.notificapp.features.onboarding.ui.OnboardingScreen
 import dev.gaferneira.notificapp.features.ruleeditor.ui.RuleEditorScreen
 import dev.gaferneira.notificapp.features.rules.ui.RulesScreen
 import dev.gaferneira.notificapp.features.settings.ui.SettingsScreen
+import dev.gaferneira.notificapp.features.webhook.ui.WebhookEditorScreen
+import dev.gaferneira.notificapp.features.webhook.ui.WebhookListScreen
 import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
 import kotlinx.coroutines.launch
@@ -176,59 +180,76 @@ private fun NotificappNavHost(navigator: Navigator, context: Context) {
                 rememberSaveableStateHolderNavEntryDecorator(),
                 rememberViewModelStoreNavEntryDecorator(),
             ),
-            entryProvider = entryProvider {
-                entry<Screen.Onboarding> {
-                    OnboardingScreen(
-                        onOpenNotificationSettings = { openNotificationListenerSettings(context) },
-                    )
-                }
-
-                entry<Screen.AppSelection> { screen ->
-                    AppSelectionScreen()
-                }
-
-                entry<Screen.Inbox> {
-                    InboxScreen(
-                        navigateTo = navigator::navigate,
-                    )
-                }
-
-                entry<Screen.Data> {
-                    DataBrowserScreen(
-                        navigateTo = navigator::navigate,
-                    )
-                }
-
-                entry<Screen.Rules> {
-                    RulesScreen(
-                        navigateTo = navigator::navigate,
-                    )
-                }
-
-                entry<Screen.Settings> {
-                    SettingsScreen(
-                        navigateTo = navigator::navigate,
-                    )
-                }
-
-                // Detail screens with slide transitions
-                entry<Screen.NotificationDetails> { screen ->
-                    NotificationDetailScreen(
-                        notificationId = screen.notificationId,
-                    )
-                }
-
-                entry<Screen.RuleEditor> { screen ->
-                    RuleEditorScreen(
-                        ruleId = screen.ruleId,
-                        notificationId = screen.notificationId,
-                    )
-                }
-            },
+            entryProvider = notificappEntryProvider(navigator, context),
         )
 
         // Debug overlay (only in debug builds)
         DebugNavOverlay(navigator = navigator)
+    }
+}
+
+/** Builds the `entryProvider` mapping every [Screen] to its Composable, split out of
+ * [NotificappNavHost] to keep that function within the LongMethod threshold. */
+private fun notificappEntryProvider(navigator: Navigator, context: Context): (NavKey) -> NavEntry<NavKey> = entryProvider {
+    entry<Screen.Onboarding> {
+        OnboardingScreen(
+            onOpenNotificationSettings = { openNotificationListenerSettings(context) },
+        )
+    }
+
+    entry<Screen.AppSelection> { screen ->
+        AppSelectionScreen()
+    }
+
+    entry<Screen.Inbox> {
+        InboxScreen(
+            navigateTo = navigator::navigate,
+        )
+    }
+
+    entry<Screen.Data> {
+        DataBrowserScreen(
+            navigateTo = navigator::navigate,
+        )
+    }
+
+    entry<Screen.Rules> {
+        RulesScreen(
+            navigateTo = navigator::navigate,
+        )
+    }
+
+    entry<Screen.Settings> {
+        SettingsScreen(
+            navigateTo = navigator::navigate,
+        )
+    }
+
+    // Detail screens with slide transitions
+    entry<Screen.NotificationDetails> { screen ->
+        NotificationDetailScreen(
+            notificationId = screen.notificationId,
+        )
+    }
+
+    entry<Screen.RuleEditor> { screen ->
+        RuleEditorScreen(
+            ruleId = screen.ruleId,
+            notificationId = screen.notificationId,
+        )
+    }
+
+    entry<Screen.WebhookList> {
+        WebhookListScreen(
+            onBackClick = navigator::goBack,
+        )
+    }
+
+    entry<Screen.WebhookEditor> { screen ->
+        WebhookEditorScreen(
+            webhookId = screen.webhookId,
+            onBackClick = navigator::goBack,
+        )
     }
 }
 

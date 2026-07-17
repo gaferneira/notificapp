@@ -18,10 +18,16 @@ Notificapp needs it for one purpose: reading the text of notifications **from th
 
 ## What we never do
 
-- No data transmission off your device
+- No data transmission off your device, except to webhook URLs you explicitly configure and trigger
 - No analytics, telemetry, crash reporting, or tracking of any kind
 - No advertising, no third-party SDKs that phone home
 - No accounts, no login, no cloud AI
+
+## Network access
+
+Starting with this version, Notificapp requests the **INTERNET** permission. This is used for exactly one thing: sending a webhook POST request to a URL *you* configure, and only when you explicitly trigger it — by tapping "Send test payload" in the webhook editor, or, once rule-action wiring ships, when a rule with a webhook action fires. No other network traffic happens: no analytics, no update checks, no background calls.
+
+The destination URL, any custom headers, and the authentication method/value are entirely user-configured — Notificapp never sends data to a URL you didn't enter yourself, and there is still no server of ours involved.
 
 ## Your controls
 
@@ -36,13 +42,7 @@ Be deliberate about which apps you monitor. If you enable an app that delivers O
 
 ## Future changes
 
-The [roadmap](docs/roadmap.md) includes an optional **webhooks** feature. When that ships:
-
-- Network access will be used **exclusively** to deliver data to webhook URLs that *you* configure — there is still no server of ours involved
-- The change will be disclosed prominently in the release notes and this policy will be updated
-- Everything else above remains true
-
-This policy changes only via a public commit to this repository, so its history is fully auditable.
+Webhook egress has shipped and is described in the "Network access" section above. This policy changes only via a public commit to this repository, so its history is fully auditable.
 
 ## Contact
 

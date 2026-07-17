@@ -11,6 +11,7 @@ import dev.gaferneira.notificapp.core.data.repository.RuleRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.SelectedAppRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.StorageStatsRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.UserPreferencesRepositoryImpl
+import dev.gaferneira.notificapp.core.data.repository.WebhookRepositoryImpl
 import dev.gaferneira.notificapp.domain.repository.DataBrowserRepository
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
@@ -18,6 +19,7 @@ import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.domain.repository.StorageStatsRepository
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
+import dev.gaferneira.notificapp.domain.repository.WebhookRepository
 
 /**
  * Dagger module for binding repository interfaces to their implementations.
@@ -67,4 +69,10 @@ internal abstract class RepositoryModule {
      */
     @Binds
     abstract fun bindStorageStatsRepository(impl: StorageStatsRepositoryImpl): StorageStatsRepository
+
+    /**
+     * Binds WebhookRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindWebhookRepository(impl: WebhookRepositoryImpl): WebhookRepository
 }

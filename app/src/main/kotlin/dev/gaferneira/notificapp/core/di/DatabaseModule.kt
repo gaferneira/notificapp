@@ -16,6 +16,7 @@ import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
+import dev.gaferneira.notificapp.core.data.local.dao.WebhookDao
 import dev.gaferneira.notificapp.core.data.local.migration.APP_DATABASE_MIGRATIONS
 import dev.gaferneira.notificapp.core.data.local.security.DatabasePassphraseProvider
 import dev.gaferneira.notificapp.core.data.local.security.DatabaseRekeyer
@@ -118,4 +119,13 @@ internal object DatabaseModule {
      */
     @Provides
     fun provideDataBrowserDao(database: AppDatabase): DataBrowserDao = database.dataBrowserDao()
+
+    /**
+     * Provides the WebhookDao.
+     *
+     * @param database AppDatabase instance
+     * @return WebhookDao
+     */
+    @Provides
+    fun provideWebhookDao(database: AppDatabase): WebhookDao = database.webhookDao()
 }

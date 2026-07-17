@@ -10,6 +10,7 @@ import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
+import dev.gaferneira.notificapp.core.data.local.dao.WebhookDao
 import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
 import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueFtsEntity
 import dev.gaferneira.notificapp.core.data.local.entity.NotificationEntity
@@ -21,6 +22,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleTargetAppEntity
 import dev.gaferneira.notificapp.core.data.local.entity.SelectedAppEntity
+import dev.gaferneira.notificapp.core.data.local.entity.WebhookEntity
 
 /**
  * Room database for Notificapp.
@@ -38,6 +40,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.SelectedAppEntity
         ExtractedFieldValueEntity::class,
         NotificationFtsEntity::class,
         ExtractedFieldValueFtsEntity::class,
+        WebhookEntity::class,
     ],
     version = AppDatabase.CURRENT_VERSION,
     exportSchema = true,
@@ -50,9 +53,17 @@ internal abstract class AppDatabase : RoomDatabase() {
     abstract fun ruleExecutionDao(): RuleExecutionDao
     abstract fun extractedFieldValueDao(): ExtractedFieldValueDao
     abstract fun dataBrowserDao(): DataBrowserDao
+    abstract fun webhookDao(): WebhookDao
 
     companion object {
-        /** Single source of truth for the `@Database(version = ...)` above, for tests/tooling. */
-        const val CURRENT_VERSION = 1
+        /**
+         * Single source of truth for the `@Database(version = ...)` above, for tests/tooling.
+         *
+         * Bumped 1->2 for [WebhookEntity] (webhook-management, Phase 4 PR1). No `Migration` is
+         * added - pre-launch destructive-bump policy (see CLAUDE.md "Development Status"): a
+         * fresh install creates v2 directly, and debug builds fall back to
+         * `fallbackToDestructiveMigration()`. This is NOT safe post-first-release.
+         */
+        const val CURRENT_VERSION = 2
     }
 }

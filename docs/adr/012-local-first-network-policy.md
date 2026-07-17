@@ -17,6 +17,10 @@ Notificapp's notification-listener permission grants access to extremely sensiti
 
 5. **Community features avoid in-app network access**: the rules gallery (Roadmap Phase 2) lives in the GitHub repository; import is manual (file/clipboard) rather than fetched, keeping the app fully local pre-webhooks.
 
+## Status update (webhook-management, Phase 4 PR1)
+
+Decision #1's "user-configured webhook delivery (Roadmap Phase 4) is the *only* network egress" is now **realized**: the webhook test-payload button (`WebhookTestClient`, `core/network/`) is the first shipped egress. It is triggered only on an explicit user tap ("Send test payload" in the webhook editor) — no background traffic, no automatic retries. `PRIVACY.md` and the `INTERNET` permission landed in the same PR, per decision #1's disclosure requirement. This is not a policy reversal.
+
 ## Consequences
 
 **Positive:**

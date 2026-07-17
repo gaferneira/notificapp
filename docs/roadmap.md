@@ -172,12 +172,12 @@ With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 se
 
 #### Webhook Management
 
-- [ ] Domain model: `Webhook` (id, name, url, headers, auth config)
-- [ ] Room entity + DAO + `WebhookRepository` interface and implementation
-- [ ] Webhook form screen: name, URL, custom headers (key/value pairs), optional auth (API key header, bearer token)
-- [ ] Webhook list screen accessible from Settings
-- [ ] Edit and delete existing webhooks
-- [ ] "Send test payload" button on the webhook form
+- [x] Domain model: `Webhook` (id, name, url, headers, auth config)
+- [x] Room entity + DAO + `WebhookRepository` interface and implementation
+- [x] Webhook form screen: name, URL, custom headers (key/value pairs), optional auth (API key header, bearer token)
+- [x] Webhook list screen accessible from Settings
+- [x] Edit and delete existing webhooks
+- [x] "Send test payload" button on the webhook form
 
 #### Webhook as Rule Action
 
