@@ -17,6 +17,7 @@ import javax.inject.Inject
  */
 class AndroidAlarmController @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val alarmStateHolder: AlarmStateHolder,
 ) : AlarmController {
 
     override fun start(request: AlarmRequest): Boolean {
@@ -26,5 +27,12 @@ class AndroidAlarmController @Inject constructor(
         }
         ContextCompat.startForegroundService(context, AlarmService.startIntent(context, request))
         return true
+    }
+
+    override fun stopIfSource(sourceKey: String) {
+        // Checked here (rather than always sending the intent and letting AlarmService decide) so
+        // dismissing an ordinary, non-alarm-triggering notification never wakes the service.
+        if (alarmStateHolder.ringingSourceKey.value != sourceKey) return
+        ContextCompat.startForegroundService(context, AlarmService.stopForSourceIntent(context, sourceKey))
     }
 }

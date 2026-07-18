@@ -14,6 +14,11 @@ import dev.gaferneira.notificapp.domain.model.VibrationPattern
  * What to show and play for a ringing alarm. [title]/[text]/[appName] come from the notification
  * that triggered the alarm so the ongoing notification reflects it, rather than static text.
  *
+ * [sourceKey] is the triggering notification's [dev.gaferneira.notificapp.domain.model.Notification.sbnKey]
+ * (null when there is no real source, e.g. the rule editor's alarm preview). It lets
+ * `AlarmController.stopIfSource` stop only the alarm a given notification actually started when
+ * that notification is dismissed, rather than any alarm that happens to be ringing.
+ *
  * [snoozeCount] is a direct top-level field (rather than folded into [options]) so
  * `AlarmService.scheduleReRing` can rebuild the re-ring request with a plain
  * `current.copy(snoozeCount = current.snoozeCount + 1)`. The rest of the ring behavior is grouped
@@ -29,6 +34,7 @@ data class AlarmRequest(
     val appName: String,
     val snoozeCount: Int = 0,
     val options: AlarmRingOptions = AlarmRingOptions(),
+    val sourceKey: String? = null,
 ) {
     val vibrationEnabled: Boolean get() = options.vibrationEnabled
     val fullScreenEnabled: Boolean get() = options.fullScreenEnabled
@@ -99,4 +105,10 @@ interface AlarmController {
      * Dismiss/Snooze controls and could not be stopped.
      */
     fun start(request: AlarmRequest): Boolean
+
+    /**
+     * Stop the ringing alarm if — and only if — it was started by the notification identified by
+     * [sourceKey] (its `sbnKey`). A no-op when no alarm is ringing, or a different one is.
+     */
+    fun stopIfSource(sourceKey: String)
 }

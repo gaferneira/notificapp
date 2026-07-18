@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.notification
 
 import android.service.notification.NotificationListenerService
+import android.service.notification.NotificationListenerService.RankingMap
 import android.service.notification.StatusBarNotification
 import dagger.hilt.android.AndroidEntryPoint
 import dev.gaferneira.notificapp.core.di.Dispatcher
@@ -9,6 +10,7 @@ import dev.gaferneira.notificapp.core.notification.NotificationNormalizer
 import dev.gaferneira.notificapp.core.notification.ProcessNotificationUseCase
 import dev.gaferneira.notificapp.core.notification.action.SystemNotificationController
 import dev.gaferneira.notificapp.core.notification.action.SystemNotificationControllerHolder
+import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmController
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +43,9 @@ class NotificappListenerService :
 
     @Inject
     lateinit var systemNotificationControllerHolder: SystemNotificationControllerHolder
+
+    @Inject
+    lateinit var alarmController: AlarmController
 
     @Inject
     @field:Dispatcher(DispatcherType.IO)
@@ -127,10 +132,20 @@ class NotificappListenerService :
         }
     }
 
-    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        // We could handle notification removal here if needed
-        // For now, we keep notifications in the database even after they're dismissed
-        Timber.d("Notification removed: ${sbn?.packageName}_${sbn?.key}")
+    override fun onNotificationRemoved(sbn: StatusBarNotification?, rankingMap: RankingMap?, reason: Int) {
+        // We keep notifications in the database even after they're dismissed - this only handles
+        // stopping an alarm that notification triggered.
+        Timber.d("Notification removed: ${sbn?.packageName}_${sbn?.key} (reason=$reason)")
+
+        val sbnKey = sbn?.key ?: return
+        // Only a genuine user-initiated dismissal should stop the alarm: REASON_CANCEL/_ALL is a
+        // swipe or clear-all, REASON_CLICK is an auto-cancel-on-tap. REASON_APP_CANCEL and
+        // REASON_LISTENER_CANCEL (the latter is exactly what our own DISMISS_NOTIFICATION rule
+        // action triggers via cancelNotification()) are programmatic removals and must NOT stop an
+        // alarm a rule just started alongside that same dismiss.
+        if (reason != REASON_CANCEL && reason != REASON_CANCEL_ALL && reason != REASON_CLICK) return
+
+        alarmController.stopIfSource(sbnKey)
     }
 
     /**

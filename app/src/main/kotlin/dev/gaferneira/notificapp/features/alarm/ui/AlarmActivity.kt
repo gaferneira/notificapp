@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -74,6 +75,7 @@ class AlarmActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         showOverLockScreen()
+        setupBackPressHandler()
 
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         val text = intent.getStringExtra(EXTRA_TEXT).orEmpty()
@@ -130,6 +132,25 @@ class AlarmActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (alarmStateHolder.isRinging.value) {
+            startService(AlarmService.dismissIntent(this))
+        }
+    }
+
+    private fun setupBackPressHandler() {
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    startService(AlarmService.dismissIntent(this@AlarmActivity))
+                    finish()
+                }
+            },
+        )
     }
 
     private fun showOverLockScreen() {

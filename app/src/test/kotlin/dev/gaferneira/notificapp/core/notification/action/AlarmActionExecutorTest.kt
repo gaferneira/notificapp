@@ -65,6 +65,25 @@ class AlarmActionExecutorTest {
     }
 
     @Test
+    fun `alarm request carries the triggering notification's sbnKey as its source`() = runTest {
+        // Given: a triggering notification with a known sbnKey
+        val alarmController = mockk<AlarmController>()
+        every { alarmController.start(any()) } returns true
+        val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
+        val notification = createTestNotification(sbnKey = "com.test.app|123|0")
+        val action = RuleAction.createAlarm(id = "action-1")
+
+        // When: executing the action
+        executor.execute(notification, action, emptyMap())
+
+        // Then: the request's sourceKey is the notification's sbnKey, so a later dismissal of that
+        // notification can stop this specific alarm
+        verify(exactly = 1) {
+            alarmController.start(match { it.sourceKey == "com.test.app|123|0" })
+        }
+    }
+
+    @Test
     fun `alarm falls back to app name when the notification has no title`() = runTest {
         // Given: a triggering notification with no title
         val alarmController = mockk<AlarmController>()
