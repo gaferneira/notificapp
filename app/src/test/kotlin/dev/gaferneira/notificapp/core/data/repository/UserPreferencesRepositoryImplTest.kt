@@ -145,6 +145,40 @@ class UserPreferencesRepositoryImplTest {
     }
 
     @Test
+    fun `observeMonitoringPaused projects only the monitoring paused flag`() = runTest(testDispatcher) {
+        val prefs = UserPreferences(monitoringPaused = true)
+        every { localDataSource.observeUserPreferences() } returns MutableStateFlow(prefs)
+
+        repository.observeMonitoringPaused().test {
+            awaitItem() shouldBe true
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `setMonitoringPaused merges the new flag into the current preferences and persists them`() = runTest(testDispatcher) {
+        val current = UserPreferences(themePreference = ThemePreference.DARK)
+        every { localDataSource.observeUserPreferences() } returns MutableStateFlow(current)
+        val slot = slot<UserPreferences>()
+        coEvery { localDataSource.updateUserPreferences(capture(slot)) } returns Result.success(Unit)
+
+        val result = repository.setMonitoringPaused(true)
+
+        result.isSuccess shouldBe true
+        slot.captured.monitoringPaused shouldBe true
+        slot.captured.themePreference shouldBe ThemePreference.DARK
+    }
+
+    @Test
+    fun `setMonitoringPaused maps a datasource exception to Result_failure without throwing`() = runTest(testDispatcher) {
+        every { localDataSource.observeUserPreferences() } throws IllegalStateException("io error")
+
+        val result = repository.setMonitoringPaused(true)
+
+        result.isFailure shouldBe true
+    }
+
+    @Test
     fun `getUserPreferences delegates to the local data source`() = runTest(testDispatcher) {
         coEvery { localDataSource.getUserPreferences() } returns Result.success(UserPreferences())
 

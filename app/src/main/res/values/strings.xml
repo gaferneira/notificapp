@@ -178,4 +178,9 @@
     <string name="extract_history_open_cd">Browse notification history</string>
     <string name="extract_history_clear_override_cd">Clear selected notification</string>
     <string name="extract_history_empty">No notification history available</string>
+
+    <!-- Monitoring Quick Settings tile -->
+    <string name="monitoring_tile_label">Notificapp</string>
+    <string name="monitoring_tile_subtitle_active">Monitoring on</string>
+    <string name="monitoring_tile_subtitle_paused">Paused</string>
 </resources>

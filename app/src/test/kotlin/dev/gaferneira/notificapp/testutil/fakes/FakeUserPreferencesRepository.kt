@@ -57,6 +57,13 @@ class FakeUserPreferencesRepository(initial: UserPreferences = UserPreferences()
         return Result.success(Unit)
     }
 
+    override fun observeMonitoringPaused(): Flow<Boolean> = preferences.map { it.monitoringPaused }
+
+    override suspend fun setMonitoringPaused(paused: Boolean): Result<Unit> {
+        preferences.value = preferences.value.copy(monitoringPaused = paused)
+        return Result.success(Unit)
+    }
+
     override suspend fun resetToDefaults(): Result<Unit> {
         preferences.value = UserPreferences()
         return Result.success(Unit)

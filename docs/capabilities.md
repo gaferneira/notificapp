@@ -130,6 +130,11 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ## Background Data Handling
 
+### Global Monitoring Pause (Quick Settings Tile)
+* **User Experience:** The user adds a Notificapp tile to their Android Quick Settings panel and taps it to instantly pause or resume all notification monitoring — a privacy kill switch reachable without opening the app. While paused, the tile shows "Paused" and freshly posted notifications are not captured, processed, or acted on at all (existing rules stay configured; they simply see nothing new until monitoring resumes).
+* **System Trigger:** User taps the Quick Settings tile, or the tile is displayed (it reads the current state on `onStartListening`).
+* **Technical Spec Reference:** `features/notification/MonitoringTileService.kt`, gated in `core/notification/ProcessNotificationUseCase.kt`.
+
 ### Automatic Notification Capture
 * **User Experience:** The user does nothing — notifications from monitored apps are captured automatically the moment they arrive, ready to browse in the Inbox.
 * **System Trigger:** Android system notification broadcast, received continuously while notification access is granted.

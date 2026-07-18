@@ -17,6 +17,7 @@ import dev.gaferneira.notificapp.testutil.createTestCondition
 import dev.gaferneira.notificapp.testutil.createTestField
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import dev.gaferneira.notificapp.testutil.createTestRule
+import dev.gaferneira.notificapp.testutil.fakes.FakeUserPreferencesRepository
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -37,6 +38,7 @@ class ProcessNotificationUseCaseTest {
     private lateinit var ruleExecutionRepository: RuleExecutionRepository
     private lateinit var actionDispatcher: ActionDispatcher
     private lateinit var timeProvider: CurrentTimeProvider
+    private lateinit var userPreferencesRepository: FakeUserPreferencesRepository
     private lateinit var useCase: ProcessNotificationUseCase
     private val testDispatcher = StandardTestDispatcher()
     private val fixedNow = LocalDateTime.of(2026, 7, 6, 12, 0)
@@ -49,6 +51,7 @@ class ProcessNotificationUseCaseTest {
         ruleExecutionRepository = mockk()
         actionDispatcher = mockk()
         timeProvider = mockk()
+        userPreferencesRepository = FakeUserPreferencesRepository()
         every { timeProvider.now() } returns fixedNow
         useCase = ProcessNotificationUseCase(
             deduplicator = deduplicator,
@@ -58,8 +61,27 @@ class ProcessNotificationUseCaseTest {
             ruleExecutionRepository = ruleExecutionRepository,
             actionDispatcher = actionDispatcher,
             timeProvider = timeProvider,
+            userPreferencesRepository = userPreferencesRepository,
             ioDispatcher = testDispatcher,
         )
+    }
+
+    @Test
+    fun `monitoring paused skips capture entirely without deduplicating, saving, or evaluating rules`() = runTest(testDispatcher) {
+        // Given: the global monitoring kill switch is on
+        userPreferencesRepository.setMonitoringPaused(true)
+        val notification = createTestNotification()
+
+        // When: invoking the use case with a freshly captured notification
+        val result = useCase.invoke(notification)
+
+        // Then: an empty success is returned and nothing downstream of the gate ever runs
+        result shouldBe Result.success(emptyList())
+        coVerify(exactly = 0) { deduplicator.isDuplicate(any()) }
+        coVerify(exactly = 0) { notificationRepository.saveNotification(any()) }
+        coVerify(exactly = 0) { ruleRepository.getRulesForApp(any()) }
+        coVerify(exactly = 0) { ruleExecutionRepository.saveExecution(any(), any()) }
+        coVerify(exactly = 0) { actionDispatcher.executeAll(any(), any()) }
     }
 
     @Test
@@ -305,6 +327,7 @@ class ProcessNotificationUseCaseTest {
             ruleExecutionRepository = ruleExecutionRepository,
             actionDispatcher = actionDispatcher,
             timeProvider = timeProvider,
+            userPreferencesRepository = userPreferencesRepository,
             ioDispatcher = testDispatcher,
         )
         val notification = createTestNotification()

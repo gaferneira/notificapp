@@ -106,6 +106,22 @@ internal class UserPreferencesRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun observeMonitoringPaused(): Flow<Boolean> = localDataSource.observeUserPreferences()
+        .map { it.monitoringPaused }
+        .flowOn(ioDispatcher)
+
+    override suspend fun setMonitoringPaused(paused: Boolean): Result<Unit> = withContext(ioDispatcher) {
+        try {
+            val current = localDataSource.observeUserPreferences().firstOrNull() ?: UserPreferences()
+
+            val updated = current.copy(monitoringPaused = paused)
+            localDataSource.updateUserPreferences(updated)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to set monitoring paused flag")
+            e.toFailureResult()
+        }
+    }
+
     override suspend fun resetToDefaults(): Result<Unit> = withContext(ioDispatcher) {
         try {
             localDataSource.updateUserPreferences(UserPreferences())

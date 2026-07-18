@@ -14,9 +14,11 @@ import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
+import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.util.UUID
@@ -37,6 +39,8 @@ import javax.inject.Inject
  * @property ruleExecutionRepository Repository for recording rule executions
  * @property actionDispatcher Dispatches enabled rule actions to their registered executors
  * @property timeProvider Seam for "now", threaded into [RuleEngine.evaluate] for day-of-week/time-range conditions
+ * @property userPreferencesRepository Source of the global monitoring-paused kill switch, checked
+ * at the top of [invoke] so a paused user's notifications are never captured or processed
  * @property ioDispatcher Coroutine dispatcher for IO operations
  */
 @Suppress("LongParameterList")
@@ -48,6 +52,7 @@ class ProcessNotificationUseCase @Inject constructor(
     private val ruleExecutionRepository: RuleExecutionRepository,
     private val actionDispatcher: ActionDispatcher,
     private val timeProvider: CurrentTimeProvider,
+    private val userPreferencesRepository: UserPreferencesRepository,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : RuleReEvaluator {
 
@@ -63,6 +68,11 @@ class ProcessNotificationUseCase @Inject constructor(
      */
     suspend operator fun invoke(notification: Notification): Result<List<RuleExecution>> = withContext(ioDispatcher) {
         try {
+            if (userPreferencesRepository.observeMonitoringPaused().first()) {
+                Timber.d("Monitoring paused; skipping notification from ${notification.packageName}")
+                return@withContext Result.success(emptyList())
+            }
+
             if (deduplicator.isDuplicate(notification)) {
                 Timber.d("Duplicate notification skipped from ${notification.packageName}")
                 return@withContext Result.success(emptyList())

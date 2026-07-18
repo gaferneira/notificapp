@@ -69,6 +69,16 @@ interface UserPreferencesRepository {
     suspend fun setRetentionPeriod(period: RetentionPeriod): Result<Unit>
 
     /**
+     * Observe the global monitoring pause flag as a Flow.
+     */
+    fun observeMonitoringPaused(): Flow<Boolean>
+
+    /**
+     * Update the global monitoring pause flag.
+     */
+    suspend fun setMonitoringPaused(paused: Boolean): Result<Unit>
+
+    /**
      * Reset all preferences to default values.
      */
     suspend fun resetToDefaults(): Result<Unit>

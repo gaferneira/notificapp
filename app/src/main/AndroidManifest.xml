@@ -71,6 +71,21 @@
             </intent-filter>
         </service>
 
+        <!-- Quick Settings tile: global monitoring pause/resume kill switch. -->
+        <service
+            android:name=".features.notification.MonitoringTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_monitoring_tile"
+            android:label="@string/monitoring_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false" />
+        </service>
+
         <!-- Foreground service that owns a ringing CREATE_ALARM alarm: looping audio + repeating
              vibration + the ongoing Dismiss/Snooze notification, until the user acts on it. -->
         <service
