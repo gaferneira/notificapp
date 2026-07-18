@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,7 +51,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -61,7 +59,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.BuildConfig
-import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.AppLinks
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
@@ -73,7 +70,6 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.OnResumeEffect
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.model.StorageStats
-import dev.gaferneira.notificapp.domain.model.preferences.AppLanguage
 import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEffect
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEvent
@@ -129,6 +125,8 @@ private fun SettingsScreenContent(
     onEvent: (UiEvent) -> Unit,
     navigateTo: (Screen, NavOptions?) -> Unit,
 ) {
+    val context = LocalContext.current
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -176,236 +174,64 @@ private fun SettingsScreenContent(
                     )
                 }
                 else -> {
-                    SettingsList(
-                        uiState = uiState,
-                        onEvent = onEvent,
+                    LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                    )
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        item {
+                            NotificationListenerStatusCard(
+                                isActive = uiState.isNotificationListenerActive,
+                                onEnableClick = { openNotificationListenerSettings(context) },
+                            )
+                        }
+
+                        item {
+                            MonitoredAppsCard(
+                                appsCount = uiState.monitoredAppsCount,
+                                onSelectApps = { onEvent(UiEvent.OnSelectAppsClicked) },
+                            )
+                        }
+
+                        item {
+                            WebhooksCard(
+                                onClick = { onEvent(UiEvent.OnWebhooksClicked) },
+                            )
+                        }
+
+                        item {
+                            PreferencesCard(
+                                uiState = uiState,
+                                onEvent = onEvent,
+                            )
+                        }
+
+                        item {
+                            StorageUsageCard(storageStats = uiState.storageStats)
+                        }
+
+                        item {
+                            AboutCard()
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-/** Monitored Apps + Webhooks sections, split out of [SettingsList] to keep it within the LongMethod budget. */
-private fun LazyListScope.monitoredAppsAndWebhooksSections(uiState: UiState, onEvent: (UiEvent) -> Unit) {
-    item {
-        SectionHeader(title = "Monitored Apps")
-    }
-
-    item {
-        MonitoredAppsCard(
-            appsCount = uiState.monitoredAppsCount,
-            onSelectApps = {
-                onEvent(UiEvent.OnSelectAppsClicked)
-            },
-        )
-    }
-
-    item {
-        Spacer(modifier = Modifier.height(8.dp))
-    }
-
-    item {
-        SectionHeader(title = "Webhooks")
-    }
-
-    item {
-        WebhooksCard(onClick = { onEvent(UiEvent.OnWebhooksClicked) })
-    }
-
-    item {
-        Spacer(modifier = Modifier.height(8.dp))
-    }
-}
-
 @Composable
-private fun SettingsList(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val context = LocalContext.current
-
-    LazyColumn(
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        // Listener health - the most important status on this screen, since the
-        // entire app is inert if this permission is revoked or killed by the OS.
-        item {
-            ListenerStatusCard(
-                isActive = uiState.isNotificationListenerActive,
-                onEnableClick = { openNotificationListenerSettings(context) },
-            )
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        monitoredAppsAndWebhooksSections(uiState = uiState, onEvent = onEvent)
-
-        // General Settings Section
-        item {
-            SectionHeader(title = "General")
-        }
-
-        item {
-            GeneralSettingsCard(uiState = uiState, onEvent = onEvent)
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        // Storage Section
-        item {
-            SectionHeader(title = "Storage")
-        }
-
-        item {
-            StorageUsageCard(storageStats = uiState.storageStats)
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        // About Section
-        item {
-            SectionHeader(title = "About")
-        }
-
-        item {
-            AboutCard()
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-}
-
-/** Data Collection + Show App Icons toggles, grouped under "General". */
-@Composable
-private fun GeneralSettingsCard(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-) {
-    SettingsCard {
-        ToggleSettingItem(
-            icon = Icons.Default.Notifications,
-            iconTint = MaterialTheme.colorScheme.primary,
-            title = "Data Collection",
-            subtitle = if (uiState.isCollectionEnabled) "Active - monitoring notifications" else "Paused - not collecting data",
-            checked = uiState.isCollectionEnabled,
-            onCheckedChange = { onEvent(UiEvent.OnCollectionToggled(it)) },
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-
-        ToggleSettingItem(
-            icon = Icons.Default.Apps,
-            iconTint = MaterialTheme.colorScheme.secondary,
-            title = "Show App Icons",
-            subtitle = "Display app icons in lists",
-            checked = uiState.showAppIcons,
-            onCheckedChange = { onEvent(UiEvent.OnShowAppIconsToggled(it)) },
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-
-        SelectableSettingItem(
-            icon = Icons.Default.Storage,
-            iconTint = MaterialTheme.colorScheme.tertiary,
-            title = "Notification Retention",
-            subtitle = "Auto-delete notifications after",
-            selectedValueLabel = uiState.retentionPeriod.label(),
-            currentValue = uiState.retentionPeriod,
-            onValueSelected = { onEvent(UiEvent.RetentionPeriodChanged(it)) },
-            dialog = { current, onSelected, onDismiss ->
-                RetentionPeriodDialog(currentValue = current, onValueSelected = onSelected, onDismiss = onDismiss)
-            },
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-
-        SelectableSettingItem(
-            icon = Icons.Default.Language,
-            iconTint = MaterialTheme.colorScheme.secondary,
-            title = stringResource(R.string.settings_language_title),
-            subtitle = "Choose your preferred language",
-            selectedValueLabel = uiState.appLanguage.label(),
-            currentValue = uiState.appLanguage,
-            onValueSelected = { onEvent(UiEvent.AppLanguageChanged(it)) },
-            dialog = { current, onSelected, onDismiss ->
-                AppLanguageDialog(currentValue = current, onValueSelected = onSelected, onDismiss = onDismiss)
-            },
-        )
-    }
-}
-
-/** Human-readable label for a [RetentionPeriod], used both in the row and the dialog. */
-private fun RetentionPeriod.label(): String = when (this) {
-    RetentionPeriod.DAYS_30 -> "30 days"
-    RetentionPeriod.DAYS_90 -> "90 days"
-    RetentionPeriod.NEVER -> "Never"
-}
-
-/** Human-readable label for an [AppLanguage], used both in the row and the dialog. */
-@Composable
-private fun AppLanguage.label(): String = when (this) {
-    AppLanguage.SYSTEM -> stringResource(R.string.settings_language_system)
-    AppLanguage.EN -> stringResource(R.string.settings_language_english)
-    AppLanguage.ES -> stringResource(R.string.settings_language_spanish)
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-    )
-}
-
-@Composable
-private fun SettingsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-        ),
-    ) {
-        Column {
-            content()
-        }
-    }
-}
-
-/**
- * Notification listener health - surfaced as its own card since the entire app
- * is inert when this permission is revoked or killed by the OS.
- */
-@Composable
-private fun ListenerStatusCard(
+private fun NotificationListenerStatusCard(
     isActive: Boolean,
     onEnableClick: () -> Unit,
 ) {
     val containerColor = if (isActive) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
     } else {
-        MaterialTheme.colorScheme.errorContainer
+        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
     }
     val contentColor = if (isActive) {
-        MaterialTheme.colorScheme.primary
+        MaterialTheme.colorScheme.onSurface
     } else {
         MaterialTheme.colorScheme.onErrorContainer
     }
@@ -596,6 +422,70 @@ private fun WebhooksCard(onClick: () -> Unit) {
 }
 
 @Composable
+private fun PreferencesCard(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+) {
+    SettingsCard {
+        ToggleSettingItem(
+            icon = Icons.Default.Storage,
+            iconTint = MaterialTheme.colorScheme.primary,
+            title = "Collection",
+            subtitle = "Extract data from notifications",
+            checked = uiState.isCollectionEnabled,
+            onCheckedChange = { onEvent(UiEvent.OnCollectionToggled(it)) },
+        )
+
+        HorizontalDivider()
+
+        ToggleSettingItem(
+            icon = Icons.Default.Apps,
+            iconTint = MaterialTheme.colorScheme.primary,
+            title = "Show App Icons",
+            subtitle = "Display app icons in notification list",
+            checked = uiState.showAppIcons,
+            onCheckedChange = { onEvent(UiEvent.OnShowAppIconsToggled(it)) },
+        )
+
+        HorizontalDivider()
+
+        SelectableSettingItem(
+            icon = Icons.Default.Storage,
+            iconTint = MaterialTheme.colorScheme.primary,
+            title = "Notification Retention",
+            subtitle = "How long to keep processed notifications",
+            selectedValueLabel = uiState.retentionPeriod.label(),
+            currentValue = uiState.retentionPeriod,
+            onValueSelected = { onEvent(UiEvent.RetentionPeriodChanged(it)) },
+        )
+    }
+}
+
+@Composable
+private fun SettingsCard(
+    content: @Composable () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        ),
+    ) {
+        Column {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun RetentionPeriod.label(): String = when (this) {
+    RetentionPeriod.DAYS_30 -> "30 days"
+    RetentionPeriod.DAYS_90 -> "90 days"
+    RetentionPeriod.NEVER -> "Forever"
+}
+
+@Composable
 private fun ToggleSettingItem(
     icon: ImageVector,
     iconTint: Color,
@@ -635,9 +525,6 @@ private fun ToggleSettingItem(
             )
         }
 
-        // Toggle - onCheckedChange is null so the row's toggleable modifier
-        // is the single source of truth for taps; avoids double-firing when
-        // both the row and the switch handle the same touch.
         Switch(
             checked = checked,
             onCheckedChange = null,
@@ -645,22 +532,15 @@ private fun ToggleSettingItem(
     }
 }
 
-/**
- * Row styled like [ToggleSettingItem] (icon + title/subtitle) but clickable instead of a toggle,
- * showing the currently selected value and opening [dialog] - an [AlertDialog] with a
- * [RadioButton] row per option - to pick a new one. Generic over the option type [T] so it's
- * shared between e.g. [RetentionPeriod] and [AppLanguage].
- */
 @Composable
-private fun <T> SelectableSettingItem(
+private fun SelectableSettingItem(
     icon: ImageVector,
     iconTint: Color,
     title: String,
     subtitle: String,
     selectedValueLabel: String,
-    currentValue: T,
-    onValueSelected: (T) -> Unit,
-    dialog: @Composable (currentValue: T, onValueSelected: (T) -> Unit, onDismiss: () -> Unit) -> Unit,
+    currentValue: RetentionPeriod,
+    onValueSelected: (RetentionPeriod) -> Unit,
 ) {
     var isDialogVisible by remember { mutableStateOf(false) }
 
@@ -699,19 +579,17 @@ private fun <T> SelectableSettingItem(
     }
 
     if (isDialogVisible) {
-        // Kotlin prohibits named arguments when invoking a function-type value, so the two
-        // callbacks are named here instead to keep the call site readable.
-        val onDialogValueSelected: (T) -> Unit = { selectedValue ->
-            onValueSelected(selectedValue)
-            isDialogVisible = false
-        }
-        val onDialogDismiss: () -> Unit = { isDialogVisible = false }
-
-        dialog(currentValue, onDialogValueSelected, onDialogDismiss)
+        RetentionPeriodDialog(
+            currentValue = currentValue,
+            onValueSelected = {
+                onValueSelected(it)
+                isDialogVisible = false
+            },
+            onDismiss = { isDialogVisible = false },
+        )
     }
 }
 
-/** Icon-in-circle used by [ToggleSettingItem] and [SelectableSettingItem]. */
 @Composable
 private fun SettingIcon(icon: ImageVector, iconTint: Color) {
     Surface(
@@ -774,47 +652,6 @@ private fun RetentionPeriodDialog(
 }
 
 @Composable
-private fun AppLanguageDialog(
-    currentValue: AppLanguage,
-    onValueSelected: (AppLanguage) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_language_title)) },
-        text = {
-            Column {
-                AppLanguage.entries.forEach { language ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onValueSelected(language) }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(
-                            selected = language == currentValue,
-                            onClick = { onValueSelected(language) },
-                        )
-                        Text(
-                            text = language.label(),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-        },
-    )
-}
-
-/** Database size + row counts, mirroring [MonitoredAppsCard]'s card shape. */
-@Composable
 private fun StorageUsageCard(storageStats: StorageStats?) {
     SettingsCard {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -854,7 +691,6 @@ private fun StorageStatRow(label: String, value: String, showDivider: Boolean = 
     }
 }
 
-/** Formats a byte count as a human-readable size (e.g. "2.3 MB"). */
 private fun Long.toHumanReadableSize(): String {
     if (this <= 0) return "0 B"
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
