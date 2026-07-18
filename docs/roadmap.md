@@ -52,18 +52,18 @@ Everything committed to the first public (F-Droid) release ships together here. 
 
 ### Structural locks (decide the shape before users have data to migrate)
 
-- [ ] **Nested condition groups** — commit the recursive condition shape in the domain model + wire format, modeled as a group node inside the existing `payload` JSON so **no Room migration** is needed. UI may expose only a single level of grouping — or stay hidden — at first; the point is to freeze the *shape* so v1 shared rules never need a format migration later. *(Was tracked as the "condition groups" idea; resolves the "reevaluate before Phase 2" Technical Note.)*
-- [ ] **Per-rule raw-content retention flag** — boolean on `Rule` ("keep only extracted fields, delete the raw notification after extraction"). Rule-model + wire field and a privacy win.
+- [x] **Nested condition groups** — commit the recursive condition shape in the domain model + wire format, modeled as a group node inside the existing `payload` JSON so **no Room migration** is needed. UI may expose only a single level of grouping — or stay hidden — at first; the point is to freeze the *shape* so v1 shared rules never need a format migration later. *(Was tracked as the "condition groups" idea; resolves the "reevaluate before Phase 2" Technical Note.)*
+- [x] **Per-rule raw-content retention flag** — boolean on `Rule` ("keep only extracted fields, delete the raw notification after extraction"). Rule-model + wire field and a privacy win.
 
 ### Rule creation & trust (the differentiator)
 
-- [ ] **"Start from a template" as the first option in the create-rule flow** (FAB/RuleEditor) — Guiding Principle #1's "templates first"; seed templates already exist, this only wires the entry point. Highest activation ROI on the board.
-- [ ] **Read-aloud (TTS) action** — speak extracted fields on match ("Received 45 euros from Maria"); fully local, accessibility/hands-free differentiator. Additive (schemaless action config), committed to v1 by product choice rather than structural necessity — first candidate to cut if the timeline slips.
-- [ ] **Notification reply/interaction** — send replies or trigger a notification's own actions. RemoteInput + per-app fragility; not core.
+- [x] **"Start from a template" as the first option in the create-rule flow** (FAB/RuleEditor) — Guiding Principle #1's "templates first"; seed templates already exist, this only wires the entry point. Highest activation ROI on the board.
+- [x] **Read-aloud (TTS) action** — speak extracted fields on match ("Received 45 euros from Maria"); fully local, accessibility/hands-free differentiator. Additive (schemaless action config), committed to v1 by product choice rather than structural necessity — first candidate to cut if the timeline slips.
+- [x] **Notification reply/interaction** — send replies or trigger a notification's own actions. RemoteInput + per-app fragility; not core. *(Shipped marked **beta**; `SEND_REPLY` via RemoteInput, exempt from starter-template coverage.)*
 
 ### Correctness (blocks the flagship use case)
 
-- [ ] **`extractCurrencyValue` drops thousands-separated amounts** — `ExtractedFieldValueMapper.extractCurrencyValue` replaces every comma with a dot and then parses the first `[\d.]+` run, so `"$1,234.56"` becomes `"1.234.56"` → `toDoubleOrNull()` returns null and the CURRENCY field silently degrades to text-only (no queryable `value_number`). Same failure for European `"1.234,56 EUR"`. Needs locale-aware separator handling. Pure parser fix — no schema change, no migration — but it silently breaks the **expense-tracking hero use case** on the most common bank-notification format, and does so precisely in the `1.234,56` locale we ship at launch (Spanish). Not post-v1 polish.
+- [x] **`extractCurrencyValue` drops thousands-separated amounts** — `ExtractedFieldValueMapper.extractCurrencyValue` replaces every comma with a dot and then parses the first `[\d.]+` run, so `"$1,234.56"` becomes `"1.234.56"` → `toDoubleOrNull()` returns null and the CURRENCY field silently degrades to text-only (no queryable `value_number`). Same failure for European `"1.234,56 EUR"`. Needs locale-aware separator handling. Pure parser fix — no schema change, no migration — but it silently breaks the **expense-tracking hero use case** on the most common bank-notification format, and does so precisely in the `1.234,56` locale we ship at launch (Spanish). Not post-v1 polish.
 
 ### UI, design system & i18n
 
@@ -72,12 +72,12 @@ Everything committed to the first public (F-Droid) release ships together here. 
 
 ### Privacy & safety
 
-- [ ] **Link the privacy statement from onboarding and Settings** — cheap trust win for a listener app that sees OTPs and private messages.
-- [ ] **Quick Settings tile to pause/resume all monitoring** — cheap to build, gives privacy-conscious users a visible kill switch.
+- [x] **Link the privacy statement from onboarding and Settings** — cheap trust win for a listener app that sees OTPs and private messages.
+- [x] **Quick Settings tile to pause/resume all monitoring** — cheap to build, gives privacy-conscious users a visible kill switch.
 
 ### Release mechanics
 
-- [ ] **fastlane + CI for release** — automate build/sign/publish.
+- [x] **fastlane + CI for release** — automate build/sign/publish. *(Release signing + `v*` tag workflow: GitHub Release with signed APK, gated Play internal-track `supply` lane. F-Droid still source-built.)*
 - [ ] **F-Droid listing** — primary channel; local-first, no-tracker, notification-listener profile is an F-Droid darling. Fastlane metadata descriptions and versioning/release-checklist scaffolding are done (`fastlane/metadata/`, `docs/RELEASING.md`, TD-15); **screenshots still needed**.
 - [ ] **30-second demo GIF** (bank notification → spending row) embedded at the marked TODO in `README.md`.
 
