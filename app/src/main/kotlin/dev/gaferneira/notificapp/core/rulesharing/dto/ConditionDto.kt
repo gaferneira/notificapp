@@ -10,6 +10,11 @@ import kotlinx.serialization.Serializable
  * domain enums, so `RuleWireMapper` controls exactly how an unrecognized value is handled
  * (currently: fail the import - a rule that can't evaluate its conditions is meaningless) instead
  * of kotlinx's default enum-decoding behavior.
+ *
+ * [Group] is the recursive nested-condition-group variant: additive to the wire format, so
+ * `RULE_EXPORT_SCHEMA_VERSION` does not need to change to introduce it. `RuleWireMapper` enforces
+ * `MAX_CONDITION_DEPTH` on import so a hand-crafted file with deeply nested groups can't be used
+ * as a stack-overflow DoS on decode.
  */
 @Serializable
 sealed class ConditionDto {
@@ -40,5 +45,14 @@ sealed class ConditionDto {
         @SerialName("start") val start: String,
         /** `HH:mm` formatted local time. */
         @SerialName("end") val end: String,
+    ) : ConditionDto()
+
+    @Serializable
+    @SerialName("group")
+    data class Group(
+        @SerialName("id") override val id: String,
+        /** `ALL` or `ANY` - see [dev.gaferneira.notificapp.domain.model.ConditionCombinator]. */
+        @SerialName("combinator") val combinator: String,
+        @SerialName("children") val children: List<ConditionDto>,
     ) : ConditionDto()
 }

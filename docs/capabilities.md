@@ -12,12 +12,13 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`, `openspec/specs/rule-storage/`
 
 ### Matching Conditions
-* **User Experience:** The user specifies what a notification must look like to match a rule by adding one or more conditions, drawn from three families. Multiple conditions on the same rule are combined with a per-rule combinator (`ALL` = every condition must match, `ANY` = at least one condition must match). The three condition families are:
+* **User Experience:** The user specifies what a notification must look like to match a rule by adding one or more conditions, drawn from three editable families. Multiple conditions on the same rule are combined with a per-rule combinator (`ALL` = every condition must match, `ANY` = at least one condition must match). The three condition families are:
   * **Content match** — a notification property compared against a value with an operator:
     * Properties that can be checked: Title, Main text/content, Raw content (the full raw notification text), App name, Package name
     * Operators available: Contains, Does not contain, Starts with, Ends with, Equals (exact match), Matches regex (pattern match)
   * **Day of week** — matches when the current day is one of a chosen set of weekdays. Choosing zero days matches no day (fail-closed), not every day.
   * **Time range** — matches when the current time falls within a start/end time, inclusive. A range where the end is earlier than the start wraps across midnight (e.g. 22:00–06:00); a range where start equals end matches only that exact instant.
+  * **Group** (`RuleCondition.Group`) — a nested, recursively-structured set of conditions combined by its own ALL/ANY combinator, letting a rule express `(A AND B) OR C`-style trees. Not creatable or editable in this app version's editor — it exists so a rule imported from a shared file (or a future version's group editor) round-trips without silently losing conditions. The rule editor shows it as a read-only summary row ("Group: N conditions (ALL/ANY)") that can be removed like any other condition but not opened for editing. Nesting is capped at 5 levels deep on import (`RuleWireMapper.MAX_CONDITION_DEPTH`) to prevent a hand-crafted file from being a stack-overflow DoS.
 * **System Trigger:** User adds/edits a condition inside the Rule Editor's "Matching Logic" step.
 * **Technical Spec Reference:** `openspec/specs/rule-conditions/`
 

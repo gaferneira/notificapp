@@ -68,6 +68,12 @@ fun createTestTimeRangeCondition(
     end: LocalTime = LocalTime.of(17, 0),
 ): RuleCondition.TimeRangeCondition = RuleCondition.TimeRangeCondition(id = id, start = start, end = end)
 
+fun createTestGroupCondition(
+    id: String = "test-group-condition-id",
+    combinator: ConditionCombinator = ConditionCombinator.ALL,
+    children: List<RuleCondition> = listOf(createTestCondition()),
+): RuleCondition.Group = RuleCondition.Group(id = id, combinator = combinator, children = children.toImmutableList())
+
 fun createTestField(
     id: String = "test-field-id",
     name: String = "Test Field",

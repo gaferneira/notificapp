@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.domain.model
 
 import androidx.compose.runtime.Immutable
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.DayOfWeek
@@ -50,6 +51,20 @@ sealed interface RuleCondition {
         val start: LocalTime,
         val end: LocalTime,
     ) : RuleCondition
+
+    /**
+     * A nested group of conditions, combined by its own [combinator] - the recursive shape that
+     * lets a rule express `(A AND B) OR C`-style trees. Group-of-group nesting is allowed, bounded
+     * by `RuleWireMapper.MAX_CONDITION_DEPTH` on import to keep a hand-crafted import from being a
+     * stack-overflow DoS. The rule editor treats an imported [Group] as read-only: it survives a
+     * load/save round trip but has no in-app editor - see `WhenSection`'s condition list UI.
+     */
+    @Immutable
+    data class Group(
+        override val id: String,
+        val combinator: ConditionCombinator,
+        val children: ImmutableList<RuleCondition>,
+    ) : RuleCondition
 }
 
 /**
@@ -62,6 +77,7 @@ fun RuleCondition.withId(id: String): RuleCondition = when (this) {
     is RuleCondition.ContentMatchCondition -> copy(id = id)
     is RuleCondition.DayOfWeekCondition -> copy(id = id)
     is RuleCondition.TimeRangeCondition -> copy(id = id)
+    is RuleCondition.Group -> copy(id = id)
 }
 
 /**

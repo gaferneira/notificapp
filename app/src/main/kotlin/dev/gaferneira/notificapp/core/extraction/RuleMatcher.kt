@@ -54,6 +54,7 @@ object RuleMatcher {
         is RuleCondition.ContentMatchCondition -> matchesContent(notification, condition)
         is RuleCondition.DayOfWeekCondition -> now.dayOfWeek in condition.days
         is RuleCondition.TimeRangeCondition -> matchesTimeRange(condition, now.toLocalTime().truncatedTo(ChronoUnit.MINUTES))
+        is RuleCondition.Group -> matches(notification, condition.children, now, condition.combinator)
     }
 
     private fun matchesContent(notification: Notification, condition: RuleCondition.ContentMatchCondition): Boolean {

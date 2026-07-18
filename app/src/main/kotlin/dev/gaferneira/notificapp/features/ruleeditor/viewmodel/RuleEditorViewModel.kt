@@ -255,7 +255,12 @@ class RuleEditorViewModel @Inject constructor(
     }
 
     private fun openConditionForEditing(conditionId: String) {
-        uiState.value.rule.triggers.find { it.id == conditionId } ?: return
+        val condition = uiState.value.rule.triggers.find { it.id == conditionId } ?: return
+        // A Group is read-only in this editor - it has no leaf-editing UI, so it must not open the
+        // MatchingLogicBottomSheet. It still survives load/save round trips untouched (see
+        // RuleUiModel.fromDomain/toEntity, which copy `triggers` generically) and can be removed
+        // like any other condition via OnRemoveConditionClicked.
+        if (condition is RuleCondition.Group) return
         setState {
             copy(
                 editingConditionId = conditionId,

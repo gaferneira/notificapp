@@ -217,4 +217,5 @@ val RuleCondition.displayText: String
             days.sortedBy { it.value }.joinToString(", ") { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }
         }
         is RuleCondition.TimeRangeCondition -> "%02d:%02d–%02d:%02d".format(start.hour, start.minute, end.hour, end.minute)
+        is RuleCondition.Group -> "Group: ${children.size} conditions (${combinator.name})"
     }

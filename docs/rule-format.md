@@ -38,11 +38,29 @@ Every exported file is a single JSON object:
 ## `conditions[]` — `RuleCondition`
 
 ```json
-{ "id": "...", "condition": "text_content", "operator": "contains", "value": "Total" }
+{ "type": "content_match", "id": "...", "condition": "text_content", "operator": "contains", "value": "Total" }
 ```
 
 `condition` is one of: `text_content`, `title`, `app_name`, `package_name`, `raw_content`.
 `operator` is one of: `contains`, `starts_with`, `ends_with`, `equals`, `regex_match`, `not_contains`.
+
+### `group` — nested condition groups
+
+```json
+{
+  "type": "group",
+  "id": "...",
+  "combinator": "ANY",
+  "children": [
+    { "type": "content_match", "id": "...", "condition": "text_content", "operator": "contains", "value": "Total" },
+    { "type": "day_of_week", "id": "...", "days": ["SATURDAY", "SUNDAY"] }
+  ]
+}
+```
+
+A `group` condition nests its own `children` array (any mix of `content_match`, `day_of_week`, `time_range`, or another `group`), combined by its own `combinator` (`ALL`/`ANY`, same semantics as the rule-level `conditionLogic`; unknown values default to `ALL`). This is additive to the wire format - it did not require a `schemaVersion` bump - but this app version's editor treats an imported group as **read-only**: it survives being loaded and re-saved untouched, is shown as a summary row ("Group: N conditions (ALL/ANY)"), and can be removed but not edited or created from the UI.
+
+**Depth limit:** nesting deeper than **5 levels** (the top-level `conditions` array is level 1, each `children` array is one level deeper) is rejected on import with a clear error. This bounds what would otherwise be an unbounded-recursion import file - a hand-crafted rule with thousands of nested groups - from becoming a stack-overflow denial of service on decode.
 
 ## `actions[]` — `RuleAction`
 

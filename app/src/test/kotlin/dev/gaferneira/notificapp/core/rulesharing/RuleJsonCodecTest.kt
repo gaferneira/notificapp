@@ -5,6 +5,7 @@ import dev.gaferneira.notificapp.core.rulesharing.dto.RULE_EXPORT_SCHEMA_VERSION
 import dev.gaferneira.notificapp.core.rulesharing.dto.RuleExportDto
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
@@ -180,6 +181,80 @@ class RuleJsonCodecTest {
 
         // Then: decoding fails rather than silently dropping or misinterpreting the condition
         result.isFailure shouldBe true
+    }
+
+    @Test
+    fun `export re-import round-trips a rule with a nested condition group`() {
+        // Given: a rule with one top-level Group whose children are a leaf condition and another,
+        // nested Group - exercising the recursive shape end to end
+        val innerGroup = RuleCondition.Group(
+            id = "g2",
+            combinator = ConditionCombinator.ANY,
+            children = persistentListOf(
+                createTestCondition(id = "c2", condition = MatchingCondition.TEXT_CONTENT, operator = MatchingOperator.CONTAINS, value = "Payment"),
+                createTestDayOfWeekCondition(id = "c3", days = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)),
+            ),
+        )
+        val groupedRule = rule.copy(
+            conditions = persistentListOf(
+                RuleCondition.Group(
+                    id = "g1",
+                    combinator = ConditionCombinator.ALL,
+                    children = persistentListOf(
+                        createTestCondition(id = "c1", condition = MatchingCondition.TITLE, operator = MatchingOperator.STARTS_WITH, value = "Payment"),
+                        innerGroup,
+                    ),
+                ),
+            ),
+        )
+
+        // When: exporting then re-importing
+        val encoded = RuleJsonCodec.encode(groupedRule)
+        val decoded = RuleJsonCodec.decode(encoded)
+
+        // Then: the group tree survives the round trip exactly, at every nesting level
+        decoded.isSuccess shouldBe true
+        decoded.getOrThrow().rule.conditions shouldBe groupedRule.conditions
+    }
+
+    @Test
+    fun `decode accepts a condition tree exactly at MAX_CONDITION_DEPTH`() {
+        // Given: nested groups whose deepest node (the leaf) sits exactly at MAX_CONDITION_DEPTH
+        // (the boundary is inclusive) - one fewer group level than the leaf's depth
+        val tree = nestedGroupTree(depth = MAX_CONDITION_DEPTH - 1)
+        val encoded = RuleJsonCodec.encode(rule.copy(conditions = persistentListOf(tree)))
+
+        // When: decoding it
+        val result = RuleJsonCodec.decode(encoded)
+
+        // Then: decoding succeeds - the boundary itself is not rejected
+        result.isSuccess shouldBe true
+    }
+
+    @Test
+    fun `decode rejects a condition tree nested deeper than MAX_CONDITION_DEPTH`() {
+        // Given: nested groups whose deepest node (the leaf) sits one level past MAX_CONDITION_DEPTH
+        val tooDeepTree = nestedGroupTree(depth = MAX_CONDITION_DEPTH)
+        val encoded = RuleJsonCodec.encode(rule.copy(conditions = persistentListOf(tooDeepTree)))
+
+        // When: decoding it
+        val result = RuleJsonCodec.decode(encoded)
+
+        // Then: decoding fails cleanly instead of risking a stack overflow evaluating the rule
+        result.isFailure shouldBe true
+    }
+
+    /**
+     * Builds a chain of [depth] nested [RuleCondition.Group]s around a single leaf condition, e.g.
+     * `depth = 2` produces `Group(children = [Group(children = [leaf])])`. The outermost group sits
+     * at nesting level 1 (same convention as [MAX_CONDITION_DEPTH]); the leaf sits at level `depth + 1`.
+     */
+    private fun nestedGroupTree(depth: Int): RuleCondition {
+        var current: RuleCondition = createTestCondition(id = "leaf")
+        for (level in depth downTo 1) {
+            current = RuleCondition.Group(id = "g$level", combinator = ConditionCombinator.ALL, children = persistentListOf(current))
+        }
+        return current
     }
 
     @Test

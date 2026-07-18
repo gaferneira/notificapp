@@ -6,9 +6,11 @@ import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.testutil.createTestCondition
 import dev.gaferneira.notificapp.testutil.createTestDayOfWeekCondition
+import dev.gaferneira.notificapp.testutil.createTestGroupCondition
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import dev.gaferneira.notificapp.testutil.createTestTimeRangeCondition
 import io.kotest.matchers.shouldBe
+import kotlinx.collections.immutable.persistentListOf
 import org.junit.jupiter.api.Test
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -760,12 +762,112 @@ class RuleMatcherTest {
             createTestCondition(),
             createTestDayOfWeekCondition(),
             createTestTimeRangeCondition(),
+            createTestGroupCondition(),
         )
 
         // When/Then: evaluating each individually never throws and always resolves to a boolean
         conditions.forEach { condition ->
             RuleMatcher.matches(notification, listOf(condition), FIXED_NOW)
         }
+    }
+
+    // endregion
+
+    // region RuleCondition.Group
+
+    @Test
+    fun `group with ALL combinator requires every child to match`() {
+        // Given: a group of two content conditions, combined with ALL
+        val notification = createTestNotification(title = "Hello World", content = "Some content")
+        val matchingTitle = createTestCondition(condition = MatchingCondition.TITLE, operator = MatchingOperator.CONTAINS, value = "Hello")
+        val matchingContent = createTestCondition(condition = MatchingCondition.TEXT_CONTENT, operator = MatchingOperator.CONTAINS, value = "Some")
+        val group = createTestGroupCondition(combinator = ConditionCombinator.ALL, children = listOf(matchingTitle, matchingContent))
+
+        // When/Then: the group matches when both children match
+        RuleMatcher.matches(notification, listOf(group), FIXED_NOW) shouldBe true
+
+        // And: the group fails to match as soon as one child fails
+        val failingContent = matchingContent.copy(value = "Nope")
+        val failingGroup = group.copy(children = persistentListOf(matchingTitle, failingContent))
+        RuleMatcher.matches(notification, listOf(failingGroup), FIXED_NOW) shouldBe false
+    }
+
+    @Test
+    fun `group with ANY combinator matches when at least one child matches`() {
+        // Given: a group of two content conditions, only one of which matches, combined with ANY
+        val notification = createTestNotification(content = "Payment received")
+        val failingChild = createTestCondition(condition = MatchingCondition.TEXT_CONTENT, operator = MatchingOperator.CONTAINS, value = "Invoice")
+        val matchingChild = createTestCondition(condition = MatchingCondition.TEXT_CONTENT, operator = MatchingOperator.CONTAINS, value = "Payment")
+        val group = createTestGroupCondition(combinator = ConditionCombinator.ANY, children = listOf(failingChild, matchingChild))
+
+        // When: matching the group
+        val result = RuleMatcher.matches(notification, listOf(group), FIXED_NOW)
+
+        // Then: the group matches
+        result shouldBe true
+    }
+
+    @Test
+    fun `(A AND B) OR C - a group combined with a sibling condition under top-level ANY`() {
+        // Given: a rule with `(TITLE contains "Hello" AND CONTENT contains "Some") OR (APP_NAME equals "Wallet")`,
+        // where the notification only satisfies the sibling, standalone condition
+        val notification = createTestNotification(title = "Irrelevant", content = "Irrelevant", appName = "Wallet")
+        val groupChildA = createTestCondition(condition = MatchingCondition.TITLE, operator = MatchingOperator.CONTAINS, value = "Hello")
+        val groupChildB = createTestCondition(condition = MatchingCondition.TEXT_CONTENT, operator = MatchingOperator.CONTAINS, value = "Some")
+        val group = createTestGroupCondition(id = "group-1", combinator = ConditionCombinator.ALL, children = listOf(groupChildA, groupChildB))
+        val siblingC = createTestCondition(condition = MatchingCondition.APP_NAME, operator = MatchingOperator.EQUALS, value = "Wallet")
+
+        // When: matching the top-level list `[group, siblingC]` with ANY
+        val result = RuleMatcher.matches(notification, listOf(group, siblingC), FIXED_NOW, ConditionCombinator.ANY)
+
+        // Then: the rule matches because siblingC matches, even though the group's AND fails
+        result shouldBe true
+    }
+
+    @Test
+    fun `deeply nested groups recurse through every level`() {
+        // Given: a group containing a group containing a group containing a matching leaf condition
+        val notification = createTestNotification(content = "unique-nested-marker")
+        val leaf = createTestCondition(condition = MatchingCondition.TEXT_CONTENT, operator = MatchingOperator.EQUALS, value = "unique-nested-marker")
+        val innermost = createTestGroupCondition(id = "g3", combinator = ConditionCombinator.ALL, children = listOf(leaf))
+        val middle = createTestGroupCondition(id = "g2", combinator = ConditionCombinator.ALL, children = listOf(innermost))
+        val outer = createTestGroupCondition(id = "g1", combinator = ConditionCombinator.ALL, children = listOf(middle))
+
+        // When: matching the outer group
+        val result = RuleMatcher.matches(notification, listOf(outer), FIXED_NOW)
+
+        // Then: the match recurses all the way down to the leaf and succeeds
+        result shouldBe true
+    }
+
+    @Test
+    fun `empty group matches, consistent with an empty top-level condition list`() {
+        // Given: a group with no children
+        val notification = createTestNotification()
+        val emptyGroup = createTestGroupCondition(children = emptyList())
+
+        // When: matching a rule whose only condition is the empty group
+        val result = RuleMatcher.matches(notification, listOf(emptyGroup), FIXED_NOW)
+
+        // Then: the group matches - `matches()` already treats an empty condition list as
+        // vacuously true, and a group recurses into the same function
+        result shouldBe true
+    }
+
+    @Test
+    fun `group with mixed leaf types evaluates every family correctly`() {
+        // Given: a group combining a content-match, a day-of-week, and a time-range condition, all satisfied
+        val notification = createTestNotification(title = "Hello World")
+        val contentChild = createTestCondition(condition = MatchingCondition.TITLE, operator = MatchingOperator.CONTAINS, value = "Hello")
+        val dayChild = createTestDayOfWeekCondition(days = setOf(DayOfWeek.MONDAY))
+        val timeChild = createTestTimeRangeCondition(start = LocalTime.of(9, 0), end = LocalTime.of(17, 0))
+        val group = createTestGroupCondition(combinator = ConditionCombinator.ALL, children = listOf(contentChild, dayChild, timeChild))
+
+        // When: matching at a fixed Monday-noon instant
+        val result = RuleMatcher.matches(notification, listOf(group), FIXED_NOW)
+
+        // Then: the group matches because every mixed-family child matches
+        result shouldBe true
     }
 
     // endregion

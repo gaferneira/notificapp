@@ -70,6 +70,10 @@ class MatchingLogicViewModel @Inject constructor() :
                     endTime = condition.end,
                     validationError = null,
                 )
+                // Groups are read-only in this editor (see RuleEditorViewModel.openConditionForEditing,
+                // which never opens this sheet for one) - unreachable in practice, kept only for
+                // exhaustiveness over the RuleCondition sealed interface.
+                is RuleCondition.Group -> this
             }
         }
     }
