@@ -112,11 +112,15 @@ class AlarmService : Service() {
      * [EXTRA_SOURCE_KEY] — called when that notification is dismissed. Re-checks against [current]
      * even though [AndroidAlarmController.stopIfSource] already checked [AlarmStateHolder] before
      * sending this intent, since the ringing alarm can change between that check and delivery.
+     *
+     * Also cancels any pending snooze re-rings for this source, so the alarm doesn't restart after
+     * the user dismisses the notification (e.g., dismissed during snooze wait).
      */
     private fun handleStopForSource(intent: Intent) {
         val sourceKey = intent.getStringExtra(EXTRA_SOURCE_KEY)
         when {
             sourceKey != null && sourceKey == current.sourceKey -> {
+                cancelPendingReRing()
                 if (!current.suppressNotification) promoteToForeground()
                 stopAlarm()
             }
@@ -189,6 +193,18 @@ class AlarmService : Service() {
         // setAndAllowWhileIdle still fires through Doze.
         alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
         Timber.d("Alarm snoozed; will re-ring in ${delayMs / MINUTES_TO_MS} min")
+    }
+
+    private fun cancelPendingReRing() {
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        val pendingIntent = PendingIntent.getService(
+            this,
+            REQUEST_RE_RING,
+            Intent(this, AlarmService::class.java),
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_UPDATE_CURRENT,
+        ) ?: return
+        alarmManager.cancel(pendingIntent)
+        Timber.d("Cancelled pending snooze re-ring")
     }
 
     /**

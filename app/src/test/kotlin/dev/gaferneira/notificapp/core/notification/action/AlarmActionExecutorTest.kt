@@ -74,7 +74,7 @@ class AlarmActionExecutorTest {
         val action = RuleAction.createAlarm(id = "action-1")
 
         // When: executing the action
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // Then: the request's sourceKey is the notification's sbnKey, so a later dismissal of that
         // notification can stop this specific alarm
