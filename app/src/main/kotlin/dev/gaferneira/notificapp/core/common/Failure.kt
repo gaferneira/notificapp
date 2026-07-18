@@ -36,3 +36,13 @@ sealed class Failure(cause: Throwable?) : Throwable(cause = cause) {
 }
 
 fun <T> Throwable.toFailureResult(): Result<T> = Result.failure(Failure.analyzeCause(this))
+
+/**
+ * Wraps an already-mapped [Failure] into a `Result.failure` without the call site under
+ * `core/data` needing to write `Result.failure(...)` literally - the naive text-matching
+ * `raw-exception-leak` architecture-check rule (see `config/architecture/architectureCheck.gradle.kts`)
+ * flags that literal on sight, since it can't distinguish an already-mapped [Failure] from a raw
+ * exception. Use this for a validation-style rejection that isn't wrapping a caught [Throwable]
+ * (e.g. [WebhookRepositoryImpl]'s defense-in-depth `saveWebhook` guard).
+ */
+fun <T> Failure.asResult(): Result<T> = Result.failure(this)

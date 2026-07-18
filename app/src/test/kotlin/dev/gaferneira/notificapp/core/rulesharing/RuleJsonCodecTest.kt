@@ -153,9 +153,11 @@ class RuleJsonCodecTest {
 
     @Test
     fun `decode drops an unrecognized action but keeps the rest of the rule`() {
-        // Given: a rule whose JSON has an action type this app version doesn't recognize
+        // Given: a rule whose JSON has an action type this app version doesn't recognize (a
+        // placeholder token, not a real `ActionType` - see webhook-delivery's addition of
+        // `send_webhook` as a genuinely recognized type)
         val encoded = RuleJsonCodec.encode(rule)
-        val tampered = encoded.replace("\"save_data\"", "\"send_webhook\"")
+        val tampered = encoded.replace("\"save_data\"", "\"some_future_action_type\"")
 
         // When: decoding it
         val result = RuleJsonCodec.decode(tampered)
@@ -164,7 +166,7 @@ class RuleJsonCodecTest {
         result.isSuccess shouldBe true
         val importResult = result.getOrThrow()
         importResult.rule.actions shouldBe emptyList()
-        importResult.skippedActions shouldBe listOf("send_webhook")
+        importResult.skippedActions shouldBe listOf("some_future_action_type")
     }
 
     @Test

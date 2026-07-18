@@ -10,6 +10,8 @@ import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
+import dev.gaferneira.notificapp.core.data.local.dao.WebhookDao
+import dev.gaferneira.notificapp.core.data.local.dao.WebhookDeliveryDao
 import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
 import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueFtsEntity
 import dev.gaferneira.notificapp.core.data.local.entity.NotificationEntity
@@ -21,6 +23,8 @@ import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleTargetAppEntity
 import dev.gaferneira.notificapp.core.data.local.entity.SelectedAppEntity
+import dev.gaferneira.notificapp.core.data.local.entity.WebhookDeliveryEntity
+import dev.gaferneira.notificapp.core.data.local.entity.WebhookEntity
 
 /**
  * Room database for Notificapp.
@@ -38,6 +42,8 @@ import dev.gaferneira.notificapp.core.data.local.entity.SelectedAppEntity
         ExtractedFieldValueEntity::class,
         NotificationFtsEntity::class,
         ExtractedFieldValueFtsEntity::class,
+        WebhookEntity::class,
+        WebhookDeliveryEntity::class,
     ],
     version = AppDatabase.CURRENT_VERSION,
     exportSchema = true,
@@ -50,9 +56,13 @@ internal abstract class AppDatabase : RoomDatabase() {
     abstract fun ruleExecutionDao(): RuleExecutionDao
     abstract fun extractedFieldValueDao(): ExtractedFieldValueDao
     abstract fun dataBrowserDao(): DataBrowserDao
+    abstract fun webhookDao(): WebhookDao
+    abstract fun webhookDeliveryDao(): WebhookDeliveryDao
 
     companion object {
-        /** Single source of truth for the `@Database(version = ...)` above, for tests/tooling. */
+        /**
+         * Single source of truth for the `@Database(version = ...)` above, for tests/tooling.
+         */
         const val CURRENT_VERSION = 1
     }
 }

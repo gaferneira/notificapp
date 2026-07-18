@@ -12,8 +12,9 @@ import kotlinx.serialization.Transient
  *
  * Defines what to do when a rule matches a notification. Per-action-type config readers live in
  * sibling files as extension functions ([snoozeConfig] readers in `SnoozeActionConfig.kt`, alarm
- * readers in `AlarmActionConfig.kt`, flash readers in `FlashActionConfig.kt`) so this class stays
- * the shared model + constructors, not a growing surface of every action type's accessors.
+ * readers in `AlarmActionConfig.kt`, flash readers in `FlashActionConfig.kt`, webhook readers in
+ * `core/notification/action/WebhookActionConfig.kt`) so this class stays the shared model +
+ * constructors, not a growing surface of every action type's accessors.
  */
 @Immutable
 @Serializable
@@ -177,6 +178,34 @@ data class RuleAction(
                 FLASH_COOLDOWN_SECONDS_KEY to cooldownSeconds.toString(),
             ),
         )
+
+        /**
+         * Create a `SEND_WEBHOOK` action targeting [webhookId]. [payload] selects between a
+         * FIELDS-mode checklist (referencing built-in token names or `field.<fieldId>` per
+         * `WebhookActionConfig`) or a TEMPLATE-mode JSON body with `{{token}}` substitution -
+         * grouped into [WebhookPayloadConfig] to keep this factory under detekt's
+         * `LongParameterList` threshold (6), same tradeoff as [createAlarm]'s `options` param.
+         */
+        fun createSendWebhook(
+            id: String,
+            webhookId: String,
+            payload: WebhookPayloadConfig = WebhookPayloadConfig(),
+            isEnabled: Boolean = true,
+        ): RuleAction = RuleAction(
+            id = id,
+            type = ActionType.SEND_WEBHOOK,
+            isEnabled = isEnabled,
+            config = buildMap {
+                put(WEBHOOK_ID_KEY, webhookId)
+                put(WEBHOOK_PAYLOAD_MODE_KEY, payload.mode.name.lowercase())
+                if (payload.fields.isNotEmpty()) {
+                    put(WEBHOOK_SELECTED_FIELDS_KEY, payload.fields.joinToString(","))
+                }
+                if (payload.template.isNotEmpty()) {
+                    put(WEBHOOK_TEMPLATE_KEY, payload.template)
+                }
+            },
+        )
     }
 }
 
@@ -199,4 +228,7 @@ enum class ActionType {
 
     @SerialName("flash_alert")
     FLASH_ALERT,
+
+    @SerialName("send_webhook")
+    SEND_WEBHOOK,
 }

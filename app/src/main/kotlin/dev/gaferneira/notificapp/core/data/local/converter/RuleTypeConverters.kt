@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.data.local.converter
 
 import androidx.room.TypeConverter
+import dev.gaferneira.notificapp.domain.model.HttpMethod
 import dev.gaferneira.notificapp.domain.model.RuleField
 import kotlinx.serialization.json.Json
 
@@ -42,4 +43,11 @@ class RuleTypeConverters {
 
     @TypeConverter
     fun toFieldType(value: String): RuleField.FieldType = RuleField.FieldType.valueOf(value)
+
+    // ========== HttpMethod (for Webhook HTTP verb) ==========
+    @TypeConverter
+    fun fromHttpMethod(method: HttpMethod): String = method.name
+
+    @TypeConverter
+    fun toHttpMethod(value: String): HttpMethod = runCatching { HttpMethod.valueOf(value) }.getOrDefault(HttpMethod.POST)
 }

@@ -358,6 +358,13 @@ private fun RuleEditorBottomSheets(
                     onCommitted = { fields -> onEvent(UiEvent.OnExtractDataCommitted(fields)) },
                     onDismiss = { onEvent(UiEvent.OnDismissSheet) },
                 )
+            ActionType.SEND_WEBHOOK ->
+                WebhookConfigBottomSheet(
+                    initial = editing,
+                    ruleFields = uiState.rule.fields,
+                    onSave = onSave,
+                    onDismiss = onSheetDismiss,
+                )
             // Dismiss adds directly (no sheet) and Extract-data uses its own sheet.
             else -> Unit
         }

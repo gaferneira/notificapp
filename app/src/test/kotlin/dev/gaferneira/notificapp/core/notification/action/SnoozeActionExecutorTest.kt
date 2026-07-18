@@ -50,7 +50,7 @@ class SnoozeActionExecutorTest {
         val action = createTestAction(type = ActionType.SNOOZE_NOTIFICATION)
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the outcome is SKIPPED
         outcome shouldBe ActionOutcome.SKIPPED
@@ -65,7 +65,7 @@ class SnoozeActionExecutorTest {
         val action = createTestAction(type = ActionType.SNOOZE_NOTIFICATION)
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the outcome is SKIPPED and the controller is never invoked
         outcome shouldBe ActionOutcome.SKIPPED
@@ -84,7 +84,7 @@ class SnoozeActionExecutorTest {
         )
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the controller snoozes with duration converted to ms (20 * 60_000) and outcome is SUCCESS
         outcome shouldBe ActionOutcome.SUCCESS
@@ -100,7 +100,7 @@ class SnoozeActionExecutorTest {
         val action = RuleAction.createScheduledSnooze(id = "a", schedule = SnoozeSchedule(startHour = 10, startMinute = 0))
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it snoozes for exactly 30 minutes (until 10:00) and succeeds
         outcome shouldBe ActionOutcome.SUCCESS
@@ -114,10 +114,10 @@ class SnoozeActionExecutorTest {
         val executor = executor(controller, now = LocalDateTime.of(2026, 7, 11, 9, 30))
         val notification = createTestNotification(sbnKey = "sbn-key")
         val action = RuleAction.createScheduledSnooze(id = "a", schedule = SnoozeSchedule(startHour = 10, startMinute = 0))
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // When: the notification "reappears" (the same key is processed again)
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it is left visible - snooze() is called only once (from the first execution)
         outcome shouldBe ActionOutcome.SUCCESS
@@ -136,7 +136,7 @@ class SnoozeActionExecutorTest {
         )
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the notification passes through unsnoozed
         outcome shouldBe ActionOutcome.SUCCESS
@@ -155,7 +155,7 @@ class SnoozeActionExecutorTest {
         )
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the outcome is SKIPPED and the controller is never invoked
         outcome shouldBe ActionOutcome.SKIPPED
@@ -171,7 +171,7 @@ class SnoozeActionExecutorTest {
         val action = RuleAction.createThrottleSnooze(id = "a", windowMinutes = 10)
 
         // When: the first match arrives
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it delivers and is never cancelled
         outcome shouldBe ActionOutcome.SUCCESS
@@ -185,10 +185,10 @@ class SnoozeActionExecutorTest {
         val executor = executor(controller, nowEpochMillis = 0L)
         val notification = createTestNotification(sbnKey = "sbn-key", packageName = "com.test.app")
         val action = RuleAction.createThrottleSnooze(id = "a", windowMinutes = 10)
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // When: a second match arrives while still inside the window
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it is suppressed and cancelled
         outcome shouldBe ActionOutcome.SUPPRESSED
@@ -210,11 +210,11 @@ class SnoozeActionExecutorTest {
         )
         val notification = createTestNotification(sbnKey = "sbn-key", packageName = "com.test.app")
         val action = RuleAction.createThrottleSnooze(id = "a", windowMinutes = 10)
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // When: the window (10 minutes = 600_000ms) has fully elapsed
         timeProvider.fixedEpochMillis = 600_000L
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it delivers again
         outcome shouldBe ActionOutcome.SUCCESS

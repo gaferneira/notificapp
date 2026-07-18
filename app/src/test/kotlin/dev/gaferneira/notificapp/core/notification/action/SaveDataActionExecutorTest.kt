@@ -18,7 +18,7 @@ class SaveDataActionExecutorTest {
         val action = createTestAction(type = ActionType.SAVE_DATA)
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the outcome is always SUCCESS
         outcome shouldBe ActionOutcome.SUCCESS

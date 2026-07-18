@@ -24,6 +24,16 @@
         "fields": [
           { "id": "field-1", "name": "Tracking number", "fieldType": "string", "isRequired": false, "method": { "type": "regex", "pattern": "([A-Z0-9]{10,})", "captureGroup": 1 } }
         ]
+      },
+      {
+        "id": "action-2",
+        "type": "send_webhook",
+        "isEnabled": false,
+        "config": {
+          "webhook_payload_mode": "FIELDS",
+          "webhook_selected_fields": "title,field.field-1"
+        },
+        "fields": []
       }
     ],
     "createdAt": 0,

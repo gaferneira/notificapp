@@ -13,5 +13,11 @@ import dev.gaferneira.notificapp.domain.model.RuleAction
  * additive change: a new executor + one binding, no existing code changes.
  */
 interface ActionExecutor {
-    suspend fun execute(notification: Notification, action: RuleAction): ActionOutcome
+    /**
+     * @param extractedFields The matched rule's extracted field values, keyed by
+     * [dev.gaferneira.notificapp.domain.model.RuleField.name] (not id) - resolved by
+     * `ActionDispatcher.executeAll` from `RuleMatch.extractedData`. Empty for rules with no
+     * enabled `SAVE_DATA` action, or for executors that don't need it (most ignore this param).
+     */
+    suspend fun execute(notification: Notification, action: RuleAction, extractedFields: Map<String, String>): ActionOutcome
 }

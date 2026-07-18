@@ -38,7 +38,7 @@ class FlashAlertActionExecutorTest {
         val action = RuleAction.createFlashAlert(id = "action-1")
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the outcome is SKIPPED and the torch is never blinked
         outcome shouldBe ActionOutcome.SKIPPED
@@ -56,7 +56,7 @@ class FlashAlertActionExecutorTest {
         val action = RuleAction.createFlashAlert(id = "action-1")
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the outcome is SKIPPED and the torch is never blinked
         outcome shouldBe ActionOutcome.SKIPPED
@@ -74,7 +74,7 @@ class FlashAlertActionExecutorTest {
         val action = RuleAction.createFlashAlert(id = "action-1", flashCount = 5, flashDurationMs = 250)
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the torch blinks with the configured count/duration and the outcome is SUCCESS
         outcome shouldBe ActionOutcome.SUCCESS
@@ -92,11 +92,11 @@ class FlashAlertActionExecutorTest {
         val executor = FlashAlertActionExecutor(torchController, throttleTracker)
         val notification = createTestNotification(packageName = "com.test.app")
         val action = RuleAction.createFlashAlert(id = "action-1", cooldownSeconds = 60)
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // When: a second match arrives 30s later, still inside the window
         timeProvider.fixedEpochMillis = 30_000L
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it is suppressed and the torch is only blinked once
         outcome shouldBe ActionOutcome.SUPPRESSED
@@ -114,11 +114,11 @@ class FlashAlertActionExecutorTest {
         val executor = FlashAlertActionExecutor(torchController, throttleTracker)
         val notification = createTestNotification(packageName = "com.test.app")
         val action = RuleAction.createFlashAlert(id = "action-1", cooldownSeconds = 60)
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // When: the 60s window has fully elapsed
         timeProvider.fixedEpochMillis = 60_000L
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it blinks again
         outcome shouldBe ActionOutcome.SUCCESS
@@ -134,10 +134,10 @@ class FlashAlertActionExecutorTest {
         val executor = FlashAlertActionExecutor(torchController, noopThrottleTracker())
         val notification = createTestNotification(packageName = "com.test.app")
         val action = RuleAction.createFlashAlert(id = "action-1")
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // When: a second immediate match arrives
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it still blinks - no cooldown was configured
         outcome shouldBe ActionOutcome.SUCCESS

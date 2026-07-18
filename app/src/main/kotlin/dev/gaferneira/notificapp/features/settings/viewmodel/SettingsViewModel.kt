@@ -46,6 +46,9 @@ class SettingsViewModel @Inject constructor(
             is UiEvent.OnSelectAppsClicked -> {
                 sendEffect(UiEffect.NavigateToAppSelection)
             }
+            is UiEvent.OnWebhooksClicked -> {
+                sendEffect(UiEffect.NavigateToWebhookList)
+            }
             is UiEvent.OnCollectionToggled -> {
                 setState { copy(isCollectionEnabled = event.isEnabled) }
             }

@@ -18,10 +18,24 @@ Notificapp needs it for one purpose: reading the text of notifications **from th
 
 ## What we never do
 
-- No data transmission off your device
+- No data transmission off your device, except to webhook URLs you explicitly configure and trigger
 - No analytics, telemetry, crash reporting, or tracking of any kind
 - No advertising, no third-party SDKs that phone home
 - No accounts, no login, no cloud AI
+
+## Network access
+
+Starting with this version, Notificapp requests the **INTERNET** permission. This is used for exactly one thing: sending a webhook POST request to a URL *you* configure, and only when you explicitly trigger it — by tapping "Send test payload" in the webhook editor, or, once rule-action wiring ships, when a rule with a webhook action fires. No other network traffic happens: no analytics, no update checks, no background calls.
+
+The destination URL, any custom headers, and the authentication method/value are entirely user-configured — Notificapp never sends data to a URL you didn't enter yourself, and there is still no server of ours involved.
+
+## Retry queue for webhook deliveries
+
+When a rule with a "Send webhook" action fires, the delivery isn't sent inline — it's handed to a small on-device retry queue (`webhook_deliveries`) so a temporary network hiccup or a slow endpoint doesn't drop it silently. That queue is treated exactly like the webhook's own authentication value:
+
+- **Encrypted at rest.** The queued payload (which can carry extracted notification data) lives in the same SQLCipher-encrypted database as everything else in the app — there is no separate, unencrypted staging file or cache.
+- **Never logged.** The payload body, the destination URL, request headers, and the authentication value are never written to logs, exceptions, or crash output, in the queue or anywhere else in the delivery path. Log lines only ever reference the webhook's internal id, never its contents.
+- **Local only, drained automatically.** A queued row is deleted as soon as delivery succeeds. If it fails, it's retried on-device (WorkManager) up to a fixed schedule; anything still unresolved is retried again the next time you open the app. Nothing about the queue introduces a new network destination — deliveries only ever go to the URL you configured for that webhook.
 
 ## Your controls
 
@@ -33,16 +47,6 @@ Notificapp needs it for one purpose: reading the text of notifications **from th
 ## A note on sensitive notifications
 
 Be deliberate about which apps you monitor. If you enable an app that delivers OTPs or private messages, that text will be stored in Notificapp's local database like any other notification. If your threat model includes someone with physical access to your unlocked device, prefer monitoring only the apps you need, and delete captured data you no longer use.
-
-## Future changes
-
-The [roadmap](docs/roadmap.md) includes an optional **webhooks** feature. When that ships:
-
-- Network access will be used **exclusively** to deliver data to webhook URLs that *you* configure — there is still no server of ours involved
-- The change will be disclosed prominently in the release notes and this policy will be updated
-- Everything else above remains true
-
-This policy changes only via a public commit to this repository, so its history is fully auditable.
 
 ## Contact
 

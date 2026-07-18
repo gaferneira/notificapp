@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Webhook destinations are arbitrary user-entered URLs, commonly self-hosted LAN targets (e.g.
+  Home Assistant) reachable only over http://. Android blocks cleartext traffic by default via
+  Network Security Config since API 28, so this broadly allows it - see design.md's "Cleartext
+  HTTP" decision.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

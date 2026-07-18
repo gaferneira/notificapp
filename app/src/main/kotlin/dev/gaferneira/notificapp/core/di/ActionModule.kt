@@ -12,6 +12,7 @@ import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
 import dev.gaferneira.notificapp.core.notification.action.DismissActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.FlashAlertActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SaveDataActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.SendWebhookActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SnoozeActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SystemCurrentTimeProvider
 import dev.gaferneira.notificapp.core.notification.action.TorchController
@@ -123,4 +124,12 @@ internal abstract class ActionModule {
      */
     @Binds
     abstract fun bindRuleReEvaluator(impl: ProcessNotificationUseCase): RuleReEvaluator
+
+    /**
+     * Binds the executor for [ActionType.SEND_WEBHOOK].
+     */
+    @Binds
+    @IntoMap
+    @ActionTypeKey(ActionType.SEND_WEBHOOK)
+    abstract fun bindSendWebhook(impl: SendWebhookActionExecutor): ActionExecutor
 }

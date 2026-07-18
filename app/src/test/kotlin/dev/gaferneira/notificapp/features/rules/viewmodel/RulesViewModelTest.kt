@@ -106,13 +106,15 @@ class RulesViewModelTest {
         @Test
         fun `receiving rule text with an unrecognized action surfaces it as skipped`() {
             // Given: a rule encoded normally, then tampered to carry an action type this app
-            // version doesn't recognize (e.g. exported from a newer version)
+            // version doesn't recognize (e.g. exported from a newer version) - a placeholder
+            // token, not a real `ActionType` (see webhook-delivery's addition of `send_webhook`
+            // as a genuinely recognized type)
             val rule = createTestRule(
                 id = "rule-1",
                 name = "Bank payment",
                 actions = listOf(createTestAction(type = ActionType.SAVE_DATA)),
             )
-            val json = RuleJsonCodec.encode(rule).replace("\"save_data\"", "\"send_webhook\"")
+            val json = RuleJsonCodec.encode(rule).replace("\"save_data\"", "\"some_future_action_type\"")
 
             // When: the text is received
             viewModel.onEvent(RulesEvent.OnRuleTextReceived(json))
@@ -120,7 +122,7 @@ class RulesViewModelTest {
             // Then: the preview still succeeds and reports the skipped action
             val state = viewModel.uiState.value
             state.importPreview.shouldNotBeNull()
-            state.importSkippedActions shouldBe listOf("send_webhook")
+            state.importSkippedActions shouldBe listOf("some_future_action_type")
         }
 
         @Test

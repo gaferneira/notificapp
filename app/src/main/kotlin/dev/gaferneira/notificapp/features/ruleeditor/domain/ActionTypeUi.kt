@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.NotificationsPaused
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.ui.graphics.vector.ImageVector
 import dev.gaferneira.notificapp.domain.model.ActionType
 
@@ -51,6 +52,12 @@ fun ActionType.ui(): ActionTypeUi = when (this) {
         label = "Flash alert",
         description = "Blink the camera flash when this rule matches",
         icon = Icons.Default.FlashOn,
+    )
+    ActionType.SEND_WEBHOOK -> ActionTypeUi(
+        type = this,
+        label = "Send webhook",
+        description = "POST notification data to a configured webhook",
+        icon = Icons.Default.Send,
     )
 }
 

@@ -24,7 +24,7 @@ class FlashAlertActionExecutor @Inject constructor(
     private val throttleTracker: NotificationThrottleTracker,
 ) : ActionExecutor {
 
-    override suspend fun execute(notification: Notification, action: RuleAction): ActionOutcome = when {
+    override suspend fun execute(notification: Notification, action: RuleAction, extractedFields: Map<String, String>): ActionOutcome = when {
         !torchController.hasFlash() || torchController.isPowerSaveMode() -> ActionOutcome.SKIPPED
         isInCooldown(notification, action) -> ActionOutcome.SUPPRESSED
         else -> {
