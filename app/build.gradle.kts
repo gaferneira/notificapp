@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -9,6 +11,35 @@ plugins {
     alias(libs.plugins.detekt)
     id("architecture-check")
 }
+
+// Release signing credentials, in priority order:
+//   1. A gitignored `keystore.properties` file at the repo root (local release builds).
+//   2. UPLOAD_STORE_FILE / UPLOAD_STORE_PASSWORD / UPLOAD_KEY_ALIAS / UPLOAD_KEY_PASSWORD env vars (CI).
+//   3. Neither present: releaseSigningConfig is null and the release build type is left unsigned,
+//      so `assembleRelease` still configures and runs for contributors without the keystore.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties =
+    Properties().apply {
+        if (keystorePropertiesFile.exists()) {
+            keystorePropertiesFile.inputStream().use { load(it) }
+        }
+    }
+
+fun envOrProperty(
+    propertyKey: String,
+    envKey: String,
+): String? = keystoreProperties.getProperty(propertyKey) ?: System.getenv(envKey)
+
+val uploadStoreFile = envOrProperty("storeFile", "UPLOAD_STORE_FILE")
+val uploadStorePassword = envOrProperty("storePassword", "UPLOAD_STORE_PASSWORD")
+val uploadKeyAlias = envOrProperty("keyAlias", "UPLOAD_KEY_ALIAS")
+val uploadKeyPassword = envOrProperty("keyPassword", "UPLOAD_KEY_PASSWORD")
+
+val hasReleaseSigningCredentials =
+    uploadStoreFile != null &&
+        uploadStorePassword != null &&
+        uploadKeyAlias != null &&
+        uploadKeyPassword != null
 
 android {
     namespace = "dev.gaferneira.notificapp"
@@ -24,6 +55,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasReleaseSigningCredentials) {
+            create("release") {
+                storeFile = file(uploadStoreFile!!)
+                storePassword = uploadStorePassword
+                keyAlias = uploadKeyAlias
+                keyPassword = uploadKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -31,6 +73,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Only signed when release credentials are available (keystore.properties or CI env
+            // vars) — otherwise this stays unsigned so assembleRelease still configures locally.
+            if (hasReleaseSigningCredentials) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isMinifyEnabled = false

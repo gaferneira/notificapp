@@ -1,0 +1,5 @@
+package_name("dev.gaferneira.notificapp")
+
+# Path to the Play service-account JSON, provided via env var — never a committed path.
+# See docs/RELEASING.md — "Signing & secrets" for how to create and set this.
+json_key_file(ENV["PLAY_SERVICE_ACCOUNT_JSON"])
