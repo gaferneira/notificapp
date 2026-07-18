@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.NotificationsPaused
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -58,6 +59,12 @@ fun ActionType.ui(): ActionTypeUi = when (this) {
         label = "Send webhook",
         description = "POST notification data to a configured webhook",
         icon = Icons.Default.Send,
+    )
+    ActionType.READ_ALOUD -> ActionTypeUi(
+        type = this,
+        label = "Read aloud",
+        description = "Speak a short message built from the notification's data",
+        icon = Icons.Default.RecordVoiceOver,
     )
 }
 

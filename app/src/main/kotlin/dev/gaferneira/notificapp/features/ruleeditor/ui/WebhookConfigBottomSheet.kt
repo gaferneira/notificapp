@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -31,7 +29,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,7 +53,6 @@ import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.domain.model.WEBHOOK_ALL_BUILTINS
-import dev.gaferneira.notificapp.domain.model.WEBHOOK_FIELD_ID_PREFIX
 import dev.gaferneira.notificapp.domain.model.Webhook
 import dev.gaferneira.notificapp.domain.model.WebhookPayloadMode
 import dev.gaferneira.notificapp.features.ruleeditor.contract.WebhookConfigContract.UiEffect
@@ -66,11 +62,11 @@ import dev.gaferneira.notificapp.features.ruleeditor.domain.WebhookConfigUiModel
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.TemplateFieldChipRow
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.confirmLabelFor
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.WebhookConfigViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 
 /**
  * Type-scoped sheet for the Send Webhook action: pick (or inline-create) a target webhook, choose
@@ -326,7 +322,7 @@ private fun TemplateEditorSection(
         )
         Spacer(modifier = Modifier.height(4.dp))
 
-        InsertFieldChipRow(
+        TemplateFieldChipRow(
             ruleFields = uiState.ruleFields,
             onTokenSelected = { token ->
                 val insertion = "{{$token}}"
@@ -350,31 +346,6 @@ private fun TemplateEditorSection(
             modifier = Modifier.fillMaxWidth(),
             minLines = 4,
         )
-    }
-}
-
-/** Grouped "Notification" / "Extracted fields" chip row, per task 5.5. */
-@Composable
-private fun InsertFieldChipRow(
-    ruleFields: ImmutableList<RuleField>,
-    onTokenSelected: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val tokens = remember(ruleFields) {
-        (WEBHOOK_ALL_BUILTINS.map { it to it } + ruleFields.map { "$WEBHOOK_FIELD_ID_PREFIX${it.id}" to it.name })
-            .toImmutableList()
-    }
-
-    LazyRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(items = tokens, key = { it.first }) { (token, label) ->
-            SuggestionChip(
-                onClick = { onTokenSelected(token) },
-                label = { Text(label) },
-            )
-        }
     }
 }
 

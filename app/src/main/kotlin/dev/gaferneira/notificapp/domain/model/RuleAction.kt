@@ -206,6 +206,23 @@ data class RuleAction(
                 }
             },
         )
+
+        /**
+         * Create a `READ_ALOUD` action that speaks [template] via on-device text-to-speech when
+         * the rule matches. [template] uses the same `{{token}}` placeholder convention as
+         * [createSendWebhook]'s TEMPLATE mode (built-in tokens plus `field.<fieldId>`) so users
+         * learn one substitution syntax across action types.
+         */
+        fun createReadAloud(
+            id: String,
+            template: String,
+            isEnabled: Boolean = true,
+        ): RuleAction = RuleAction(
+            id = id,
+            type = ActionType.READ_ALOUD,
+            isEnabled = isEnabled,
+            config = mapOf(READ_ALOUD_TEMPLATE_KEY to template),
+        )
     }
 }
 
@@ -231,4 +248,7 @@ enum class ActionType {
 
     @SerialName("send_webhook")
     SEND_WEBHOOK,
+
+    @SerialName("read_aloud")
+    READ_ALOUD,
 }

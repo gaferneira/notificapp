@@ -75,25 +75,10 @@ class WebhookPayloadBuilder @Inject constructor() {
         val builtins = builtinTokenValues(notification)
         val template = action.getWebhookTemplate()
         return WEBHOOK_TOKEN_REGEX.replace(template) { match ->
-            val token = match.groupValues[1]
-            val rawValue = builtins[token]
-                ?: token.takeIf { it.startsWith(WEBHOOK_FIELD_ID_PREFIX) }
-                    ?.let { extractedFields[it.removePrefix(WEBHOOK_FIELD_ID_PREFIX)] }
-                    // Unknown token: substitutes to empty rather than dropping the notification - see
-                    // design.md ("strict at authoring, lenient at runtime").
-                    .orEmpty()
+            val rawValue = resolveTemplateToken(match.groupValues[1], builtins, extractedFields)
             escapeJsonStringValue(rawValue)
         }
     }
-
-    private fun builtinTokenValues(notification: Notification): Map<String, String> = mapOf(
-        WEBHOOK_BUILTIN_TITLE to notification.title.orEmpty(),
-        WEBHOOK_BUILTIN_CONTENT to notification.content.orEmpty(),
-        WEBHOOK_BUILTIN_APP_NAME to notification.appName,
-        WEBHOOK_BUILTIN_PACKAGE_NAME to notification.packageName,
-        WEBHOOK_BUILTIN_TIMESTAMP to notification.timestamp.toString(),
-        WEBHOOK_BUILTIN_RAW_CONTENT to notification.rawContent,
-    )
 
     /**
      * JSON-string-escapes [value] then strips the outer quotes added by

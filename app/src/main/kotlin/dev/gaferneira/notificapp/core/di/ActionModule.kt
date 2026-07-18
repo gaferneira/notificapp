@@ -8,14 +8,17 @@ import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
 import dev.gaferneira.notificapp.core.notification.ProcessNotificationUseCase
 import dev.gaferneira.notificapp.core.notification.action.AndroidTorchController
+import dev.gaferneira.notificapp.core.notification.action.AndroidTtsController
 import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
 import dev.gaferneira.notificapp.core.notification.action.DismissActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.FlashAlertActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.ReadAloudActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SaveDataActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SendWebhookActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SnoozeActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SystemCurrentTimeProvider
 import dev.gaferneira.notificapp.core.notification.action.TorchController
+import dev.gaferneira.notificapp.core.notification.action.TtsController
 import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmController
 import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmPlayer
@@ -132,4 +135,21 @@ internal abstract class ActionModule {
     @IntoMap
     @ActionTypeKey(ActionType.SEND_WEBHOOK)
     abstract fun bindSendWebhook(impl: SendWebhookActionExecutor): ActionExecutor
+
+    /**
+     * Binds the executor for [ActionType.READ_ALOUD].
+     */
+    @Binds
+    @IntoMap
+    @ActionTypeKey(ActionType.READ_ALOUD)
+    abstract fun bindReadAloud(impl: ReadAloudActionExecutor): ActionExecutor
+
+    /**
+     * Binds the real Android-backed [TtsController] used by [ReadAloudActionExecutor].
+     * [Singleton]-scoped so every call reuses the same underlying `TextToSpeech` instance instead
+     * of re-initializing it (async, non-trivial cost) on every rule match.
+     */
+    @Binds
+    @Singleton
+    abstract fun bindTtsController(impl: AndroidTtsController): TtsController
 }

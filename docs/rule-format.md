@@ -69,9 +69,11 @@ A `group` condition nests its own `children` array (any mix of `content_match`, 
 { "id": "...", "type": "save_data", "isEnabled": true, "config": {}, "fields": [] }
 ```
 
-`type` is one of: `save_data`, `dismiss_notification`, `snooze_notification`, `create_alarm`, `flash_alert`. Unlike `conditions[].condition`/`.operator` and `fields[].method.type`, an unrecognized `type` here does not fail the import — that one action (and any `fields` it nests) is dropped and reported to the user, and the rest of the rule still imports. This lets a rule exported from a newer app version (with an action type this version doesn't have yet) still import in a degraded but usable form.
+`type` is one of: `save_data`, `dismiss_notification`, `snooze_notification`, `create_alarm`, `flash_alert`, `send_webhook`, `read_aloud`. Unlike `conditions[].condition`/`.operator` and `fields[].method.type`, an unrecognized `type` here does not fail the import — that one action (and any `fields` it nests) is dropped and reported to the user, and the rest of the rule still imports. This lets a rule exported from a newer app version (with an action type this version doesn't have yet) still import in a degraded but usable form.
 
-`config` is a free-form `Map<String, String>` whose keys depend on `type` (e.g. `snooze_duration_minutes` for `snooze_notification`, `flash_count`/`flash_duration_ms` for `flash_alert`) — see the constants in `domain/model/RuleAction.kt`.
+`config` is a free-form `Map<String, String>` whose keys depend on `type` (e.g. `snooze_duration_minutes` for `snooze_notification`, `flash_count`/`flash_duration_ms` for `flash_alert`, `read_aloud_template` for `read_aloud`) — see the constants in `domain/model/RuleAction.kt`.
+
+`read_aloud`'s `read_aloud_template` config value is a plain-text string spoken via on-device text-to-speech, using the same `{{token}}` placeholder syntax as `send_webhook`'s TEMPLATE-mode `webhook_template` (built-in notification tokens, e.g. `{{title}}`/`{{app_name}}`, plus `{{field.<fieldId>}}` for an extracted field) — see `WEBHOOK_TOKEN_REGEX`/`WEBHOOK_FIELD_ID_PREFIX` in `domain/model/WebhookActionConfig.kt`. Unlike the webhook template, the resolved value is spoken as-is, with no JSON escaping.
 
 `fields` is only ever non-empty on the `save_data` action - it carries that action's extraction fields (see below). Every other action type has an empty `fields` array.
 

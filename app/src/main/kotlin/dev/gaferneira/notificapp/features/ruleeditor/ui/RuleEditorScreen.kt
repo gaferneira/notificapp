@@ -335,39 +335,7 @@ private fun RuleEditorBottomSheets(
     }
 
     if (uiState.isActionSheetVisible) {
-        val editing = uiState.editingAction
-        val onSave: (RuleAction) -> Unit = { action -> onEvent(UiEvent.OnActionSaved(action)) }
-        val onSheetDismiss: () -> Unit = { onEvent(UiEvent.OnDismissSheet) }
-        when (editing?.type ?: uiState.pendingActionType) {
-            ActionType.SNOOZE_NOTIFICATION ->
-                SnoozeBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
-            ActionType.CREATE_ALARM ->
-                AlarmBottomSheet(
-                    initial = editing,
-                    onSave = onSave,
-                    onDismiss = onSheetDismiss,
-                )
-            ActionType.FLASH_ALERT ->
-                FlashBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
-            ActionType.SAVE_DATA ->
-                ExtractDataBottomSheet(
-                    initialFields = uiState.rule.fields,
-                    isEditingAction = editing?.type == ActionType.SAVE_DATA,
-                    notification = uiState.sampleNotification,
-                    targetPackages = uiState.rule.targetApps.map { it.packageName }.takeIf { it.isNotEmpty() },
-                    onCommitted = { fields -> onEvent(UiEvent.OnExtractDataCommitted(fields)) },
-                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-                )
-            ActionType.SEND_WEBHOOK ->
-                WebhookConfigBottomSheet(
-                    initial = editing,
-                    ruleFields = uiState.rule.fields,
-                    onSave = onSave,
-                    onDismiss = onSheetDismiss,
-                )
-            // Dismiss adds directly (no sheet) and Extract-data uses its own sheet.
-            else -> Unit
-        }
+        ActionSheetForType(uiState = uiState, onEvent = onEvent)
     }
 
     if (uiState.pendingExtractDataRemovalId != null) {
@@ -381,6 +349,54 @@ private fun RuleEditorBottomSheets(
             fields = uiState.rule.fields,
             onDismiss = { onEvent(UiEvent.OnDismissBacktestResults) },
         )
+    }
+}
+
+/** Routes to the type-scoped sheet for the action being added (`pendingActionType`) or edited (`editingAction`). */
+@Composable
+private fun ActionSheetForType(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+) {
+    val editing = uiState.editingAction
+    val onSave: (RuleAction) -> Unit = { action -> onEvent(UiEvent.OnActionSaved(action)) }
+    val onSheetDismiss: () -> Unit = { onEvent(UiEvent.OnDismissSheet) }
+    when (editing?.type ?: uiState.pendingActionType) {
+        ActionType.SNOOZE_NOTIFICATION ->
+            SnoozeBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
+        ActionType.CREATE_ALARM ->
+            AlarmBottomSheet(
+                initial = editing,
+                onSave = onSave,
+                onDismiss = onSheetDismiss,
+            )
+        ActionType.FLASH_ALERT ->
+            FlashBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
+        ActionType.SAVE_DATA ->
+            ExtractDataBottomSheet(
+                initialFields = uiState.rule.fields,
+                isEditingAction = editing?.type == ActionType.SAVE_DATA,
+                notification = uiState.sampleNotification,
+                targetPackages = uiState.rule.targetApps.map { it.packageName }.takeIf { it.isNotEmpty() },
+                onCommitted = { fields -> onEvent(UiEvent.OnExtractDataCommitted(fields)) },
+                onDismiss = { onEvent(UiEvent.OnDismissSheet) },
+            )
+        ActionType.SEND_WEBHOOK ->
+            WebhookConfigBottomSheet(
+                initial = editing,
+                ruleFields = uiState.rule.fields,
+                onSave = onSave,
+                onDismiss = onSheetDismiss,
+            )
+        ActionType.READ_ALOUD ->
+            ReadAloudBottomSheet(
+                initial = editing,
+                ruleFields = uiState.rule.fields,
+                onSave = onSave,
+                onDismiss = onSheetDismiss,
+            )
+        // Dismiss adds directly (no sheet) and Extract-data uses its own sheet.
+        else -> Unit
     }
 }
 

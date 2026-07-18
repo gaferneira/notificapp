@@ -199,6 +199,30 @@ class RuleJsonCodecTest {
     }
 
     @Test
+    fun `export re-import round-trips a rule with a READ_ALOUD action`() {
+        // Given: a rule whose only action is a READ_ALOUD action with a placeholder template
+        val readAloudRule = rule.copy(
+            actions = persistentListOf(
+                createTestAction(
+                    id = "a1",
+                    type = ActionType.READ_ALOUD,
+                    config = mapOf("read_aloud_template" to "Received {{field.amount}} from {{field.sender}}"),
+                ),
+            ),
+        )
+
+        // When: exporting then re-importing
+        val encoded = RuleJsonCodec.encode(readAloudRule)
+        val decoded = RuleJsonCodec.decode(encoded)
+
+        // Then: the action, its type, and its config survive the round trip unchanged
+        decoded.isSuccess shouldBe true
+        val decodedRule = decoded.getOrThrow().rule
+        decodedRule.actions shouldBe readAloudRule.actions
+        encoded shouldContain "\"read_aloud\""
+    }
+
+    @Test
     fun `decode fails on an unrecognized condition operator`() {
         // Given: a rule whose JSON has an operator this app version doesn't recognize
         val encoded = RuleJsonCodec.encode(rule)
