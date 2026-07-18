@@ -1,6 +1,6 @@
 ## What does this PR do?
 
-<!-- Short description. Link the related issue: Fixes #123 -->
+<!-- Short description. Link any related issues: Fixes #123, Closes #456 -->
 
 ## Type of change
 
@@ -8,12 +8,18 @@
 - [ ] New feature
 - [ ] Refactor / tech debt
 - [ ] Documentation
-- [ ] Extraction rule contribution
+- [ ] New extraction method or condition operator
 
-## Checklist
+## Testing
 
-- [ ] `./gradlew spotlessApply` has been run
-- [ ] `./gradlew test` passes
-- [ ] Unit tests added/updated for new logic
-- [ ] No new permissions and no network access introduced (see ADR 012) — or explicitly discussed in an issue first
-- [ ] Docs/ADRs updated if this changes architecture or user-facing behavior
+- [ ] Unit tests added or updated for new logic
+- [ ] Tested manually in the app (if UI or behavior change)
+
+## Docs
+
+- [ ] Updated `docs/capabilities.md` if this changes what the app can do (new actions, extraction methods, conditions, or screens)
+- [ ] Updated `docs/ARCHITECTURE.md` or added an ADR if this changes how things work under the hood
+
+---
+
+**Before submitting:** run `./gradlew spotlessApply test detekt` to format, test, and check complexity. Thanks for contributing! 🚀

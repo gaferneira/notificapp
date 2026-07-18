@@ -6,6 +6,19 @@ body:
     attributes:
       value: |
         Check the [roadmap](../../blob/main/docs/roadmap.md) first — your idea may already be planned, or on the explicit out-of-scope list (cloud sync, accounts, cloud AI).
+  - type: dropdown
+    id: area
+    attributes:
+      label: What area is this about?
+      options:
+        - New extraction method (turn notification data into structured fields)
+        - New condition operator (new ways to match notifications)
+        - New action type (new things a rule can do)
+        - New screen or UI improvement
+        - Performance or developer experience
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: problem
     attributes:

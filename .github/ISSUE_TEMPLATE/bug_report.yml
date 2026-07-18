@@ -7,6 +7,20 @@ body:
       value: |
         Thanks for the report! **Do not report security vulnerabilities here** — see [SECURITY.md](../../blob/main/SECURITY.md).
         **Redact personal data** (message contents, OTPs, account numbers) from any notification text you paste.
+  - type: dropdown
+    id: screen
+    attributes:
+      label: Where did the bug happen?
+      options:
+        - Inbox
+        - Rules list
+        - Rule editor
+        - Data browser
+        - Settings
+        - Notifications / Rule execution
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: description
     attributes:
