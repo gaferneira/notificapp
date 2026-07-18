@@ -37,7 +37,7 @@ The MVI pattern is ideal for Notificapp's screens:
 - **Rule Editor**: Complex form state for extraction rule creation
 - **Rules**: Manage user-defined extraction rules
 - **Settings**: Configure app permissions and preferences
-- **Data Browser** (planned, Roadmap Phase 3): Filterable, sortable list of extracted data
+- **Data Browser**: Filterable, sortable, searchable list of extracted data with stats and CSV/JSON export
 
 ### Implementation Guidelines
 
@@ -262,7 +262,7 @@ flowchart LR
 - **MockK**: Mocking framework
 - **Turbine**: Flow testing
 
-*Note: 88 tests currently run against these frameworks, covering the extraction engine, `ProcessNotificationUseCase`, and action executors; ViewModel and repository tests are still pending.*
+*Note: 722 unit tests (76 files) run against these frameworks, covering the extraction engine, `ProcessNotificationUseCase`, action executors, webhook delivery, CSV/JSON export, repositories, mappers, and ~18 ViewModels (one per feature screen); remaining gaps are mostly instrumented/UI tests.*
 
 ### Other
 
@@ -376,8 +376,8 @@ data class ExtractedFieldValue(
 
 **Components:**
 
-- Repositories (NotificationRepository, RuleRepository, SelectedAppRepository, UserPreferencesRepository, RuleExecutionRepository — the last one wraps `RuleExecutionDao`/`ExtractedFieldValueDao`/`NotificationDao` writes in a single transaction)
-- Room database with 9 entities (NotificationEntity, RuleEntity, RuleConditionEntity, RuleFieldEntity, RuleActionEntity, RuleTargetAppEntity, RuleExecutionEntity, ExtractedFieldValueEntity, SelectedAppEntity)
+- Repositories (NotificationRepository, RuleRepository, SelectedAppRepository, UserPreferencesRepository, WebhookRepository, DataBrowserRepository, RuleExecutionRepository — the last one wraps `RuleExecutionDao`/`ExtractedFieldValueDao`/`NotificationDao` writes in a single transaction)
+- Room database with 13 entities (NotificationEntity, RuleEntity, RuleConditionEntity, RuleFieldEntity, RuleActionEntity, RuleTargetAppEntity, RuleExecutionEntity, ExtractedFieldValueEntity, SelectedAppEntity, WebhookEntity, WebhookDeliveryEntity, plus NotificationFtsEntity and ExtractedFieldValueFtsEntity backing full-text search)
 - DAOs for each entity
 - Mappers from entities to domain models
 - DataStore for user preferences (notification access settings, selected apps)

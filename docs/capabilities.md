@@ -9,7 +9,7 @@ Notificapp lets users create automation rules that act on the notifications thei
 ### Rule Creation & Editing
 * **User Experience:** The user builds a rule in a two-step wizard: first defining conditions (when a notification's title, text, app, or package matches something) and one or more actions to run when it matches, then naming the rule and optionally marking it as "dry-run" (log matches without ever acting) for safe trialing. Rules can also be started pre-filled from a real captured notification, or built from scratch.
 * **System Trigger:** User taps "+" on the Rules screen, or taps "Create rule" from a notification's detail view.
-* **Technical Spec Reference:** Pending link to deep technical spec
+* **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`, `openspec/specs/rule-storage/`
 
 ### Matching Conditions
 * **User Experience:** The user specifies what a notification must look like to match a rule by adding one or more conditions, drawn from three families. Multiple conditions on the same rule are combined with a per-rule combinator (`ALL` = every condition must match, `ANY` = at least one condition must match). The three condition families are:
@@ -36,7 +36,7 @@ Notificapp lets users create automation rules that act on the notifications thei
     * Smart date detection — automatically finds a date, no configuration needed
   * Each extracted field also has a data type: String, Number, Date, Currency, or Boolean.
 * **System Trigger:** User adds an "Extract data" action while building or editing a rule; the extraction itself runs automatically in the background whenever a matching notification arrives.
-* **Technical Spec Reference:** Pending link to deep technical spec
+* **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`
 
 ### Notification Actions
 * **User Experience:** For a matching notification, the user picks one or more actions to run. Each action can be turned on or off independently within a rule.
@@ -55,19 +55,17 @@ Notificapp lets users create automation rules that act on the notifications thei
   * **Flash alert** — blinks the camera flash/torch a configurable number of times as a visual alert; automatically skipped on devices with no flash or when battery saver is on, and safety-clamped to avoid photosensitivity risk. Also supports an optional cooldown (in seconds, 0 = disabled), same suppression behavior as the alarm's.
   * **Extract data** — see "Data Extraction" above.
 * **System Trigger:** Runs automatically in the background the moment a monitored notification matches an enabled (non dry-run) rule.
-* **Technical Spec Reference:** Pending link to deep technical spec
+* **Technical Spec Reference:** `openspec/specs/action-execution/`, `openspec/specs/snooze-scheduling/`, `openspec/specs/alarm-playback/`, `openspec/specs/alarm-fullscreen-ui/`
 
 ### Rule Testing & Safety
 * **User Experience:** Before trusting a new rule, the user has two safety nets:
   * **Test against history** — preview which previously captured notifications would have matched and what data would have been extracted, without anything actually running or saving.
   * **Dry-run mode** — flag the whole rule so it logs matches without ever performing its actions, letting the user validate it safely before turning it fully on.
 * **System Trigger:** User taps "Test against history" in the Rule Editor, or toggles the Dry-run switch when saving a rule.
-* **Technical Spec Reference:** Pending link to deep technical spec
 
 ### Rule Sharing (Import/Export)
 * **User Experience:** The user can export any rule as a shareable file (via the standard Android share sheet) and import a rule shared by someone else, previewing and confirming it before it's added. Imported rules always start disabled from acting until reviewed.
 * **System Trigger:** User taps "Export" on a rule in the Rules list, or "Import" and selects a shared file/clipboard text.
-* **Technical Spec Reference:** Pending link to deep technical spec
 
 ---
 
@@ -76,12 +74,10 @@ Notificapp lets users create automation rules that act on the notifications thei
 ### Onboarding
 * **User Experience:** On first launch, the user sees a short explanation of what the app does, then is guided to grant notification access via the system settings screen, returning automatically once permission is granted.
 * **System Trigger:** App opened for the first time; permission status is re-checked when the user returns from system settings.
-* **Technical Spec Reference:** Pending link to deep technical spec
 
 ### App Selection
 * **User Experience:** The user picks which installed apps Notificapp should monitor, searching and toggling apps in a list. Only notifications from selected apps are captured and can be used in rules.
 * **System Trigger:** Shown right after onboarding, or reopened anytime from Settings.
-* **Technical Spec Reference:** Pending link to deep technical spec
 
 ### Notification Inbox & Detail
 * **User Experience:** The user browses a time-grouped list of every captured notification, with:
@@ -92,7 +88,6 @@ Notificapp lets users create automation rules that act on the notifications thei
   * Tapping an item opens its full content plus a history of which rules matched it, what data was extracted, and what actions ran (with outcome: Success, Failed, Skipped, or Suppressed)
   * From detail view: "Create rule" from this notification, or "Re-run rules" to manually recompute matches
 * **System Trigger:** User opens the app to the Inbox (its home screen); taps a notification to see details; taps "Re-run rules" to recompute matches manually.
-* **Technical Spec Reference:** Pending link to deep technical spec
 
 ### Rules Management
 * **User Experience:** The user views all their rules in one list, with:
@@ -106,12 +101,11 @@ Notificapp lets users create automation rules that act on the notifications thei
   * Include-list — rule fires only for the listed apps
   * Exclude-list — rule fires for every app except the listed ones
 * **System Trigger:** User navigates to the Rules tab.
-* **Technical Spec Reference:** Pending link to deep technical spec
+* **Technical Spec Reference:** `openspec/specs/rule-app-scope/`
 
 ### Settings
 * **User Experience:** The user reviews and manages which apps are monitored, checks whether notification access is still granted (re-enabling it if revoked), toggles data collection and app-icon display preferences, sets a notification retention period (30 days / 90 days / Never, auto-deleting older notifications on app start), and views a storage usage summary (database size, row counts per data type).
 * **System Trigger:** User navigates to the Settings tab.
-* **Technical Spec Reference:** Pending link to deep technical spec
 
 ### Data Browser
 * **User Experience:** The user browses every piece of data their rules have extracted (field name, value, source app, rule, timestamp), in a paginated list newest-first by default. They can:
@@ -133,17 +127,15 @@ Notificapp lets users create automation rules that act on the notifications thei
 ### Automatic Notification Capture
 * **User Experience:** The user does nothing — notifications from monitored apps are captured automatically the moment they arrive, ready to browse in the Inbox.
 * **System Trigger:** Android system notification broadcast, received continuously while notification access is granted.
-* **Technical Spec Reference:** Pending link to deep technical spec
 
 ### Automatic Rule Evaluation & Execution
 * **User Experience:** The user experiences the outcome directly — a notification is dismissed, snoozed, or triggers an alarm/flash — without taking any action themselves, because a rule they set up matched it and ran automatically.
 * **System Trigger:** A new notification is captured from a monitored app; it is deduplicated, checked against every active rule, and each matching rule's enabled actions are executed and logged.
-* **Technical Spec Reference:** Pending link to deep technical spec
+* **Technical Spec Reference:** `openspec/specs/action-execution/`
 
 ### Local Secure Storage
 * **User Experience:** All captured notifications, rules, and extracted data remain on the user's device and are available offline; nothing is uploaded anywhere.
 * **System Trigger:** Runs continuously as part of every capture, rule match, and extraction.
-* **Technical Spec Reference:** Pending link to deep technical spec
 
 ---
 
@@ -160,7 +152,7 @@ Notificapp lets users create automation rules that act on the notifications thei
   * **Connection Testing:** Send a test payload to validate the URL, auth, headers, and connectivity before using it in a rule
   * **Delivery Status Indicator:** At-a-glance status of the most recent delivery attempt (Never attempted, Delivered, Configuration error, or Unreachable)
 * **System Trigger:** User navigates to Settings → Webhooks, or clicks to add/edit a webhook while configuring a rule action.
-* **Technical Spec Reference:** Pending link to deep technical spec
+* **Technical Spec Reference:** `openspec/specs/webhook-management/`
 
 ### Send Webhook Action
 * **User Experience:** As one of a rule's actions, the user can configure it to send a JSON payload to a pre-configured webhook whenever the rule matches. The author chooses one of two payload modes:
@@ -171,7 +163,7 @@ Notificapp lets users create automation rules that act on the notifications thei
   * **Delivery Tracking:** Each delivery is queued, retried on transient failures (network errors, 5xx responses), and logged with outcome (Success, Configuration error, Unreachable after retries). The webhook's "Delivery Status Indicator" surface shows the most recent result.
   * **Multi-Webhook Rule:** A single rule can include multiple "Send webhook" actions, targeting different endpoints.
 * **System Trigger:** Runs automatically in the background the moment a monitored notification matches an enabled (non dry-run) rule, for every enabled "Send webhook" action in that rule.
-* **Technical Spec Reference:** Pending link to deep technical spec
+* **Technical Spec Reference:** `openspec/specs/webhook-delivery/`, `openspec/specs/rule-action-authoring/`
 
 ---
 
@@ -179,7 +171,7 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 * **Planned, not yet built:**
   * Trend chart rendering for the Data Browser's computed trend series (bar/line chart, last 7/30 days) — the Data Browser itself (browse/filter/search/stats/export/delete) is done, see "Data Browser" above
-  * Data retention/backup settings
+  * Local backup/restore of rules and extracted data (retention settings + storage usage are already shipped — see "Settings" above)
   * Optional on-device AI extraction (separate build flavor)
   * Community rule gallery
   * F-Droid distribution

@@ -39,11 +39,11 @@ Notification access is one of Android's most sensitive permissions — it can se
 - No analytics, no telemetry, no third-party SDKs
 - Fully open source under GPL-3.0, so all of the above is auditable
 
-Details in [PRIVACY.md](PRIVACY.md). Planned webhook delivery (to *your* servers) will be opt-in — see [ADR 012](docs/adr/012-local-first-network-policy.md).
+Details in [PRIVACY.md](PRIVACY.md). Webhook delivery (to *your* servers) is opt-in and per-rule — nothing is sent anywhere unless you configure it — see [ADR 012](docs/adr/012-local-first-network-policy.md).
 
 ## Status
 
-Pre-release and under active development. Working today: notification capture, inbox with search/filters, the rule engine (conditions + extraction), rule editor, and dismiss/snooze actions. On the way: flash alerts and alarms, rule sharing and backtesting, a data browser with export, webhooks, and optional on-device AI extraction. See the full [roadmap](docs/roadmap.md).
+Pre-release and under active development. Working today: notification capture, inbox with search/filters, the rule engine (conditions + extraction), rule editor, dismiss/snooze/alarm/flash actions, rule sharing (import/export) and backtesting, a data browser with CSV/JSON export, and webhooks. On the way: starter-template-first rule creation, a read-aloud action, full internationalization, an F-Droid release, and optional on-device AI extraction. See the full [roadmap](docs/roadmap.md).
 
 **Installation:** build from source for now (below). F-Droid is the planned primary distribution channel.
 
@@ -74,7 +74,8 @@ Contributions are welcome — **including from non-programmers**:
 |-----|----------|
 | [Roadmap](docs/roadmap.md) | Product positioning, phases, what's in/out of scope |
 | [Architecture](docs/ARCHITECTURE.md) | MVI + feature-first structure, rule pipeline, coding standards |
-| [ADRs](docs/adr/) | 12 architecture decision records |
+| [ADRs](docs/adr/) | 13 architecture decision records |
+| [Capabilities](docs/capabilities.md) | Present-tense map of every shipped feature |
 | [Privacy](PRIVACY.md) | What the app can see, stores, and (never) sends |
 
 ## Tech stack
