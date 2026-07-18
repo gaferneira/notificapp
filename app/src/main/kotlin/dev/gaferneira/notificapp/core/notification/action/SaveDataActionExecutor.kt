@@ -17,5 +17,5 @@ import javax.inject.Inject
  */
 class SaveDataActionExecutor @Inject constructor() : ActionExecutor {
 
-    override suspend fun execute(notification: Notification, action: RuleAction): ActionOutcome = ActionOutcome.SUCCESS
+    override suspend fun execute(notification: Notification, action: RuleAction, extractedFields: Map<String, String>): ActionOutcome = ActionOutcome.SUCCESS
 }

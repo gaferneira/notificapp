@@ -20,11 +20,19 @@ class ActionDispatcherTest {
     private fun providerOf(executor: ActionExecutor): Provider<ActionExecutor> = Provider { executor }
 
     private class FixedOutcomeExecutor(private val outcome: ActionOutcome) : ActionExecutor {
-        override suspend fun execute(notification: Notification, action: RuleAction): ActionOutcome = outcome
+        override suspend fun execute(
+            notification: Notification,
+            action: RuleAction,
+            extractedFields: Map<String, String>,
+        ): ActionOutcome = outcome
     }
 
     private class ThrowingExecutor : ActionExecutor {
-        override suspend fun execute(notification: Notification, action: RuleAction): ActionOutcome = throw IllegalStateException("boom")
+        override suspend fun execute(
+            notification: Notification,
+            action: RuleAction,
+            extractedFields: Map<String, String>,
+        ): ActionOutcome = throw IllegalStateException("boom")
     }
 
     @Test

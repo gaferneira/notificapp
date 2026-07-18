@@ -118,7 +118,7 @@ class ProcessNotificationUseCase @Inject constructor(
                 val outcomes = if (match.rule.isDryRun || !executeActions) {
                     emptyMap()
                 } else {
-                    actionDispatcher.executeAll(notification, match.rule.actions)
+                    actionDispatcher.executeAll(notification, match.rule.actions, match.extractedFieldsByName())
                 }
                 val execution = match.toExecution(notification.id, outcomes)
                 // Extraction persistence is gated by the Extract-data (SAVE_DATA) action: without an
@@ -142,6 +142,20 @@ class ProcessNotificationUseCase @Inject constructor(
             Timber.e(e, "Error processing rules for notification ${notification.id}")
             Result.failure(e)
         }
+    }
+
+    /**
+     * Resolves this match's id-keyed [RuleMatch.extractedData] to a **name**-keyed map, per
+     * [ActionDispatcher.executeAll]'s `extractedFields` contract - `RuleEngine` keys extraction
+     * results by [dev.gaferneira.notificapp.domain.model.RuleField.id], but an executor building a
+     * payload (`SendWebhookActionExecutor`) needs the user-facing field **name**. A field id with
+     * no matching definition in `rule.saveDataFields()` (deleted since extraction ran) is dropped.
+     */
+    private fun RuleMatch.extractedFieldsByName(): Map<String, String> {
+        val fieldsById = rule.saveDataFields().associateBy { it.id }
+        return extractedData.mapNotNull { (fieldId, value) ->
+            fieldsById[fieldId]?.name?.let { name -> name to value }
+        }.toMap()
     }
 
     /**

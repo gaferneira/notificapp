@@ -67,4 +67,16 @@ sealed class Screen : NavKey {
      */
     @Serializable
     data object Onboarding : Screen()
+
+    /**
+     * Webhook list screen - view, edit, and delete user-defined webhooks.
+     */
+    @Serializable
+    data object WebhookList : Screen()
+
+    /**
+     * Webhook editor screen - create or edit a webhook.
+     */
+    @Serializable
+    data class WebhookEditor(val webhookId: String? = null) : Screen()
 }

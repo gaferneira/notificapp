@@ -147,12 +147,39 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ---
 
+## Network Actions
+
+### Webhook Management
+* **User Experience:** The user builds a library of webhooks (external service endpoints) in the app, then targets them from rule actions. Each webhook includes:
+  * **Name:** User-friendly label
+  * **URL:** The HTTPS or HTTP endpoint
+  * **HTTP Method:** GET, POST, PUT, PATCH, or DELETE
+  * **Custom Headers:** Optional header key-value pairs (e.g. `X-Custom-Header: value`)
+  * **Authentication:** None, API Key Header (with customizable header name, default `X-API-Key`), or Bearer Token
+  * **Query Parameters:** Optional URL query parameters (key-value pairs)
+  * **Connection Testing:** Send a test payload to validate the URL, auth, headers, and connectivity before using it in a rule
+  * **Delivery Status Indicator:** At-a-glance status of the most recent delivery attempt (Never attempted, Delivered, Configuration error, or Unreachable)
+* **System Trigger:** User navigates to Settings → Webhooks, or clicks to add/edit a webhook while configuring a rule action.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+### Send Webhook Action
+* **User Experience:** As one of a rule's actions, the user can configure it to send a JSON payload to a pre-configured webhook whenever the rule matches. The author chooses one of two payload modes:
+  * **Fields Mode:** A fixed-schema JSON object built from a checklist of tokens (predefined notification fields plus any extracted data fields defined by the rule's "Extract data" action). Available tokens include:
+    * Built-in notification fields: `title`, `content`, `app_name`, `package_name`, `timestamp`, `raw_content`
+    * Any extracted fields (by field name) defined in the same rule
+  * **Template Mode:** Author writes a custom JSON structure with `{{token}}` placeholders, substituted at delivery time. Same tokens available as in Fields Mode.
+  * **Delivery Tracking:** Each delivery is queued, retried on transient failures (network errors, 5xx responses), and logged with outcome (Success, Configuration error, Unreachable after retries). The webhook's "Delivery Status Indicator" surface shows the most recent result.
+  * **Multi-Webhook Rule:** A single rule can include multiple "Send webhook" actions, targeting different endpoints.
+* **System Trigger:** Runs automatically in the background the moment a monitored notification matches an enabled (non dry-run) rule, for every enabled "Send webhook" action in that rule.
+* **Technical Spec Reference:** Pending link to deep technical spec
+
+---
+
 ## Status Reference (for planning what to build next)
 
 * **Planned, not yet built:**
   * Trend chart rendering for the Data Browser's computed trend series (bar/line chart, last 7/30 days) — the Data Browser itself (browse/filter/search/stats/export/delete) is done, see "Data Browser" above
   * Data retention/backup settings
-  * Webhooks — a "Send webhook" action to push extracted data to external services (the app's first network access)
   * Optional on-device AI extraction (separate build flavor)
   * Community rule gallery
   * F-Droid distribution

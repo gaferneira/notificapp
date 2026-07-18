@@ -32,23 +32,23 @@ class SnoozeActionExecutor @Inject constructor(
     private val throttleTracker: NotificationThrottleTracker,
 ) : ActionExecutor {
 
-    override suspend fun execute(notification: Notification, action: RuleAction): ActionOutcome {
+    override suspend fun execute(notification: Notification, action: RuleAction, extractedFields: Map<String, String>): ActionOutcome {
         val controller = controllerHolder.get()
-        if (controller == null) {
-            Timber.w("Cannot snooze notification ${notification.id}: listener not connected")
-            return ActionOutcome.SKIPPED
-        }
-
         val sbnKey = notification.sbnKey
-        if (sbnKey == null) {
-            Timber.w("Cannot snooze notification ${notification.id}: no SBN key")
-            return ActionOutcome.SKIPPED
-        }
-
-        return when (action.getSnoozeMode()) {
-            SnoozeMode.DURATION -> executeDuration(controller, sbnKey, notification, action)
-            SnoozeMode.SCHEDULED -> executeScheduled(controller, sbnKey, notification, action)
-            SnoozeMode.THROTTLE -> executeThrottle(controller, sbnKey, notification, action)
+        return when {
+            controller == null -> {
+                Timber.w("Cannot snooze notification ${notification.id}: listener not connected")
+                ActionOutcome.SKIPPED
+            }
+            sbnKey == null -> {
+                Timber.w("Cannot snooze notification ${notification.id}: no SBN key")
+                ActionOutcome.SKIPPED
+            }
+            else -> when (action.getSnoozeMode()) {
+                SnoozeMode.DURATION -> executeDuration(controller, sbnKey, notification, action)
+                SnoozeMode.SCHEDULED -> executeScheduled(controller, sbnKey, notification, action)
+                SnoozeMode.THROTTLE -> executeThrottle(controller, sbnKey, notification, action)
+            }
         }
     }
 

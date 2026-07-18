@@ -48,7 +48,7 @@ class AlarmActionExecutorTest {
         val action = RuleAction.createAlarm(id = "action-1")
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the alarm is started with defaults and the triggering notification's content
         outcome shouldBe ActionOutcome.SUCCESS
@@ -93,7 +93,7 @@ class AlarmActionExecutorTest {
         val action = RuleAction.createAlarm(id = "action-1")
 
         // When: executing the action
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // Then: the app name is used as the title and the text is blank
         verify(exactly = 1) {
@@ -111,7 +111,7 @@ class AlarmActionExecutorTest {
         val action = RuleAction.createAlarm(id = "action-1", soundUri = "content://media/custom-alarm")
 
         // When: executing the action
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // Then: the custom sound URI is passed through to the controller
         verify(exactly = 1) {
@@ -129,7 +129,7 @@ class AlarmActionExecutorTest {
         val action = RuleAction.createAlarm(id = "action-1", vibrationEnabled = false)
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the alarm is started with vibration off
         outcome shouldBe ActionOutcome.SUCCESS
@@ -148,7 +148,7 @@ class AlarmActionExecutorTest {
         val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(fullScreenEnabled = false))
 
         // When: executing the action
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // Then: the request carries fullScreenEnabled = false
         verify(exactly = 1) {
@@ -166,7 +166,7 @@ class AlarmActionExecutorTest {
         val action = RuleAction.createAlarm(id = "action-1")
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the outcome is SKIPPED, not SUCCESS
         outcome shouldBe ActionOutcome.SKIPPED
@@ -191,7 +191,7 @@ class AlarmActionExecutorTest {
         val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(soundEnabled = false))
 
         // When: executing the action
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // Then: the request carries soundEnabled = false
         verify(exactly = 1) {
@@ -209,7 +209,7 @@ class AlarmActionExecutorTest {
         val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(vibrationPattern = VibrationPattern.PULSE))
 
         // When: executing the action
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // Then: the request carries the selected pattern
         verify(exactly = 1) {
@@ -230,7 +230,7 @@ class AlarmActionExecutorTest {
         )
 
         // When: executing the action
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // Then: the request carries every snooze field
         verify(exactly = 1) {
@@ -257,7 +257,7 @@ class AlarmActionExecutorTest {
         )
 
         // When: executing the action
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // Then: the request carries the background type and preset id
         verify(exactly = 1) {
@@ -284,7 +284,7 @@ class AlarmActionExecutorTest {
         )
 
         // When: executing the action
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // Then: the request carries the background type and image uri
         verify(exactly = 1) {
@@ -306,11 +306,11 @@ class AlarmActionExecutorTest {
         val executor = AlarmActionExecutor(alarmController, throttleTracker)
         val notification = createTestNotification(packageName = "com.test.app")
         val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(cooldownSeconds = 60))
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // When: a second match arrives 30s later, still inside the window
         timeProvider.fixedEpochMillis = 30_000L
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it is suppressed and the controller is never started again
         outcome shouldBe ActionOutcome.SUPPRESSED
@@ -327,11 +327,11 @@ class AlarmActionExecutorTest {
         val executor = AlarmActionExecutor(alarmController, throttleTracker)
         val notification = createTestNotification(packageName = "com.test.app")
         val action = RuleAction.createAlarm(id = "action-1", options = AlarmOptionsConfig(cooldownSeconds = 60))
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // When: the 60s window has fully elapsed
         timeProvider.fixedEpochMillis = 60_000L
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it delivers again
         outcome shouldBe ActionOutcome.SUCCESS
@@ -346,10 +346,10 @@ class AlarmActionExecutorTest {
         val executor = AlarmActionExecutor(alarmController, noopThrottleTracker())
         val notification = createTestNotification(packageName = "com.test.app")
         val action = RuleAction.createAlarm(id = "action-1")
-        executor.execute(notification, action)
+        executor.execute(notification, action, emptyMap())
 
         // When: a second immediate match arrives
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: it still delivers - no cooldown was configured
         outcome shouldBe ActionOutcome.SUCCESS

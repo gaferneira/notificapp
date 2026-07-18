@@ -172,27 +172,27 @@ With Alarm and Flash Alert live, a chatty app matching an alarm rule every 30 se
 
 #### Webhook Management
 
-- [ ] Domain model: `Webhook` (id, name, url, headers, auth config)
-- [ ] Room entity + DAO + `WebhookRepository` interface and implementation
-- [ ] Webhook form screen: name, URL, custom headers (key/value pairs), optional auth (API key header, bearer token)
-- [ ] Webhook list screen accessible from Settings
-- [ ] Edit and delete existing webhooks
-- [ ] "Send test payload" button on the webhook form
+- [x] Domain model: `Webhook` (id, name, url, headers, auth config)
+- [x] Room entity + DAO + `WebhookRepository` interface and implementation
+- [x] Webhook form screen: name, URL, custom headers (key/value pairs), optional auth (API key header, bearer token)
+- [x] Webhook list screen accessible from Settings
+- [x] Edit and delete existing webhooks
+- [x] "Send test payload" button on the webhook form
 
 #### Webhook as Rule Action
 
-- [ ] Add `SEND_WEBHOOK` action type, implemented as an `ActionExecutor`
-- [ ] In Rule Editor action step: "Send Webhook" option opens a picker to select from saved webhooks **or** create a new one inline
-- [ ] Payload customization: checkbox list to select included fields (title, content, app name, package name, timestamp, raw content, each extracted field)
-- [ ] Store selected payload fields in action config
+- [x] Add `SEND_WEBHOOK` action type, implemented as an `ActionExecutor`
+- [x] In Rule Editor action step: "Send Webhook" option opens a picker to select from saved webhooks **or** create a new one inline
+- [x] Payload customization: checkbox list to select included fields (title, content, app name, package name, timestamp, raw content, each extracted field)
+- [x] Store selected payload fields in action config
 
 #### Webhook Delivery
 
-- [ ] Fire webhook POST on rule match with selected payload as JSON
-- [ ] Retry policy: 3 attempts with exponential backoff (1min, 5min, 30min) using WorkManager
-- [ ] After 3 failures: persist the failed event in a local queue; retry queued events on app open until delivered
-- [ ] **Delivery visibility**: per-webhook last-delivery status indicator (✓/✗ + timestamp) on the webhook list — silent failure is the most trust-destroying behavior an automation tool can have; the user's Home Assistant stops updating and they must be able to see why
-- [ ] Unit tests for delivery, retry, and queue logic
+- [x] Fire webhook POST on rule match with selected payload as JSON
+- [x] Retry policy: 3 attempts with exponential backoff (1min, 5min, 30min) using WorkManager
+- [x] After 3 failures: persist the failed event in a local queue; retry queued events on app open until delivered
+- [x] **Delivery visibility**: per-webhook last-delivery status indicator (✓/✗ + timestamp) on the webhook list — silent failure is the most trust-destroying behavior an automation tool can have; the user's Home Assistant stops updating and they must be able to see why
+- [x] Unit tests for delivery, retry, and queue logic
 
 *Note: webhooks introduce the app's first network access.*
 

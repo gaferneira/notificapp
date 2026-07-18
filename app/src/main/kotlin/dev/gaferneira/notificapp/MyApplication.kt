@@ -4,9 +4,16 @@ import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.os.StrictMode
 import android.os.StrictMode.ThreadPolicy.Builder
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import dagger.hilt.android.HiltAndroidApp
+import dev.gaferneira.notificapp.core.notification.action.WebhookRetrySweepWorker
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 /**
@@ -15,15 +22,35 @@ import javax.inject.Inject
 @HiltAndroidApp
 class MyApplication :
     Application(),
-    ImageLoaderFactory {
+    ImageLoaderFactory,
+    Configuration.Provider {
 
     @Inject
     lateinit var imageLoader: dagger.Lazy<ImageLoader>
+
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    /**
+     * On-demand WorkManager init (see the manifest's removed default `WorkManagerInitializer`),
+     * wired with [HiltWorkerFactory] so `@HiltWorker` workers (webhook delivery, Phase 4 PR2)
+     * get constructor injection.
+     */
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     override fun onCreate() {
         super.onCreate()
 
         setStrictModePolicy()
+
+        if (hasEnqueuedRetrySweepThisProcess.compareAndSet(false, true)) {
+            WorkManager.getInstance(this).enqueueUniqueWork(
+                WebhookRetrySweepWorker.UNIQUE_WORK_NAME,
+                ExistingWorkPolicy.KEEP,
+                OneTimeWorkRequestBuilder<WebhookRetrySweepWorker>().build(),
+            )
+        }
     }
 
     override fun newImageLoader(): ImageLoader = imageLoader.get()
@@ -45,5 +72,9 @@ class MyApplication :
                 Builder().detectAll().penaltyLog().build(),
             )
         }
+    }
+
+    private companion object {
+        val hasEnqueuedRetrySweepThisProcess = AtomicBoolean(false)
     }
 }

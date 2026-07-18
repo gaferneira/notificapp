@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Storage
@@ -98,6 +100,8 @@ fun SettingsScreen(
         when (effect) {
             is UiEffect.NavigateToAppSelection ->
                 navigateTo(Routes.appSelection(isInitialSetup = false), null)
+            is UiEffect.NavigateToWebhookList ->
+                navigateTo(Routes.webhookList(), null)
             else -> {}
         }
     }
@@ -177,6 +181,38 @@ private fun SettingsScreenContent(
     }
 }
 
+/** Monitored Apps + Webhooks sections, split out of [SettingsList] to keep it within the LongMethod budget. */
+private fun LazyListScope.monitoredAppsAndWebhooksSections(uiState: UiState, onEvent: (UiEvent) -> Unit) {
+    item {
+        SectionHeader(title = "Monitored Apps")
+    }
+
+    item {
+        MonitoredAppsCard(
+            appsCount = uiState.monitoredAppsCount,
+            onSelectApps = {
+                onEvent(UiEvent.OnSelectAppsClicked)
+            },
+        )
+    }
+
+    item {
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+
+    item {
+        SectionHeader(title = "Webhooks")
+    }
+
+    item {
+        WebhooksCard(onClick = { onEvent(UiEvent.OnWebhooksClicked) })
+    }
+
+    item {
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
 @Composable
 private fun SettingsList(
     uiState: UiState,
@@ -202,23 +238,7 @@ private fun SettingsList(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // Monitored Apps Section - Simplified
-        item {
-            SectionHeader(title = "Monitored Apps")
-        }
-
-        item {
-            MonitoredAppsCard(
-                appsCount = uiState.monitoredAppsCount,
-                onSelectApps = {
-                    onEvent(UiEvent.OnSelectAppsClicked)
-                },
-            )
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
+        monitoredAppsAndWebhooksSections(uiState = uiState, onEvent = onEvent)
 
         // General Settings Section
         item {
@@ -469,6 +489,70 @@ private fun MonitoredAppsCard(
             }
 
             // Chevron and Add button
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+    }
+}
+
+/** Entry point to the webhook list, styled like [MonitoredAppsCard]. */
+@Composable
+private fun WebhooksCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                    modifier = Modifier.size(44.dp),
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Language,
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                }
+
+                Column {
+                    Text(
+                        text = "Manage webhooks",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = "Send extracted data to your own services",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,

@@ -15,7 +15,9 @@ Implement the Repository pattern with strict separation of concerns:
 4. **Hilt Binding**: Interfaces bound to implementations in `core/di/RepositoryModule` using `@Binds` annotation
 5. **Result Wrapping**: Repository methods return `Result<T>` for explicit error handling
 
-This pattern is applied across all data domains: notifications (`NotificationRepository`), rules (`RuleRepository`), monitored apps (`SelectedAppRepository`), and user preferences (`UserPreferencesRepository`).
+This pattern is applied across all data domains: notifications (`NotificationRepository`), rules (`RuleRepository`), monitored apps (`SelectedAppRepository`), user preferences (`UserPreferencesRepository`), and webhooks (`WebhookRepository`).
+
+**Amendment (webhook-management, Phase 4 PR1):** point 3's "the app is local-first with no remote sources" is now stale. As of this change, `WebhookRepositoryImpl` coordinates a remote sink (`core/network/WebhookTestClient`) in addition to local sources (`WebhookDao`) - the local-first default still holds, since egress is user-initiated only (see ADR 012's status update).
 
 ## Consequences
 

@@ -113,6 +113,11 @@ dependencies {
     implementation(libs.sqlcipher.android)
     implementation(libs.androidx.sqlite)
 
+    // WorkManager - webhook delivery retry/queue (Phase 4 PR2), first use of WorkManager in the app
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
     // DataStore
     implementation(libs.bundles.datastore)
 
@@ -130,6 +135,10 @@ dependencies {
     // Image Loading
     implementation(libs.bundles.coil)
 
+    // Network - plain OkHttp Call for the webhook test-payload egress (no Retrofit; URLs are
+    // fully user-entered/dynamic)
+    implementation(libs.okhttp)
+
     // Debug/Preview
     debugImplementation(libs.bundles.compose.debug)
 
@@ -138,6 +147,7 @@ dependencies {
     testRuntimeOnly(libs.bundles.test.runtime)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.work.testing)
 
     // Android Testing
     androidTestImplementation(libs.bundles.android.test)
@@ -145,6 +155,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.room.testing)
+    androidTestImplementation(libs.androidx.work.testing)
     kspAndroidTest(libs.hilt.compiler)
 }
 

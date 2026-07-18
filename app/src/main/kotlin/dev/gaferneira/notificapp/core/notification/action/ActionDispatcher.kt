@@ -24,10 +24,18 @@ class ActionDispatcher @Inject constructor(
 
     /**
      * Execute all enabled [actions] against [notification], returning the outcome per action id.
+     *
+     * @param extractedFields The matched rule's extracted field values, keyed by field **name**
+     * (resolved by the caller from the id-keyed `RuleMatch.extractedData` via `rule.saveDataFields()`)
+     * - threaded through to every executor so `SendWebhookActionExecutor` can build a payload.
      */
-    suspend fun executeAll(notification: Notification, actions: List<RuleAction>): Map<String, ActionOutcome> = actions.filter { it.isEnabled }.associate { action ->
+    suspend fun executeAll(
+        notification: Notification,
+        actions: List<RuleAction>,
+        extractedFields: Map<String, String> = emptyMap(),
+    ): Map<String, ActionOutcome> = actions.filter { it.isEnabled }.associate { action ->
         val outcome = executors[action.type]?.get()?.let { executor ->
-            runCatching { executor.execute(notification, action) }
+            runCatching { executor.execute(notification, action, extractedFields) }
                 .getOrElse { e ->
                     if (e is CancellationException) throw e
                     Timber.e(e, "Action ${action.type} failed")

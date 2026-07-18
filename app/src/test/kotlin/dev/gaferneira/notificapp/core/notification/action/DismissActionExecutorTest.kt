@@ -21,7 +21,7 @@ class DismissActionExecutorTest {
         val action = createTestAction(type = ActionType.DISMISS_NOTIFICATION)
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the outcome is SKIPPED
         outcome shouldBe ActionOutcome.SKIPPED
@@ -37,7 +37,7 @@ class DismissActionExecutorTest {
         val action = createTestAction(type = ActionType.DISMISS_NOTIFICATION)
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the outcome is SKIPPED and the controller is never invoked
         outcome shouldBe ActionOutcome.SKIPPED
@@ -54,7 +54,7 @@ class DismissActionExecutorTest {
         val action = createTestAction(type = ActionType.DISMISS_NOTIFICATION)
 
         // When: executing the action
-        val outcome = executor.execute(notification, action)
+        val outcome = executor.execute(notification, action, emptyMap())
 
         // Then: the controller cancels the notification and the outcome is SUCCESS
         outcome shouldBe ActionOutcome.SUCCESS

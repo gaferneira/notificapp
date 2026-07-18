@@ -71,6 +71,18 @@ object Routes {
      * Onboarding screen - initial setup for notification permission.
      */
     fun onboarding(): Screen = Screen.Onboarding
+
+    /**
+     * Webhook list screen - view, edit, and delete user-defined webhooks.
+     */
+    fun webhookList(): Screen = Screen.WebhookList
+
+    /**
+     * Webhook editor screen - create or edit a webhook.
+     *
+     * @param webhookId The id of the webhook to edit (null for a new webhook)
+     */
+    fun webhookEditor(webhookId: String? = null): Screen = Screen.WebhookEditor(webhookId)
 }
 
 /**

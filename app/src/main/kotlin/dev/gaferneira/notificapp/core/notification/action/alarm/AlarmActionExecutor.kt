@@ -41,7 +41,7 @@ class AlarmActionExecutor @Inject constructor(
     private val throttleTracker: NotificationThrottleTracker,
 ) : ActionExecutor {
 
-    override suspend fun execute(notification: Notification, action: RuleAction): ActionOutcome {
+    override suspend fun execute(notification: Notification, action: RuleAction, extractedFields: Map<String, String>): ActionOutcome {
         val cooldownSeconds = action.getAlarmCooldownSeconds()
         if (cooldownSeconds > 0) {
             val deliver = throttleTracker.shouldDeliver(
