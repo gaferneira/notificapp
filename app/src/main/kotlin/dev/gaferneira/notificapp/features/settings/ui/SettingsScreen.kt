@@ -51,13 +51,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.BuildConfig
+import dev.gaferneira.notificapp.core.ui.AppLinks
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
 import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
@@ -857,6 +860,18 @@ private fun AboutCard() {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val uriHandler = LocalUriHandler.current
+            Text(
+                text = "Privacy Policy",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium,
+                textDecoration = TextDecoration.Underline,
+                modifier = Modifier.clickable { uriHandler.openUri(AppLinks.PRIVACY_POLICY_URL) },
             )
         }
     }
