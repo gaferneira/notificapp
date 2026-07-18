@@ -8,7 +8,7 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ### Rule Creation & Editing
 * **User Experience:** The user builds a rule in a two-step wizard: first defining conditions (when a notification's title, text, app, or package matches something) and one or more actions to run when it matches, then naming the rule and optionally marking it as "dry-run" (log matches without ever acting) for safe trialing. Rules can also be started pre-filled from a real captured notification, or built from scratch.
-* **System Trigger:** User taps "+" on the Rules screen, or taps "Create rule" from a notification's detail view.
+* **System Trigger:** User taps "New rule" on the Rules screen, which opens a template picker offering curated starter templates first and "Start from scratch" as a secondary option; or taps "Create rule" from a notification's detail view (goes straight to a pre-filled blank editor).
 * **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`, `openspec/specs/rule-storage/`
 
 ### Matching Conditions

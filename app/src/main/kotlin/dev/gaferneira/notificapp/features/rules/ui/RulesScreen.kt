@@ -338,7 +338,7 @@ internal fun RulesScreenContent(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { onEvent(RulesEvent.OnAddRuleClick) },
+                onClick = { showTemplatePicker = true },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text("New rule") },
             )
@@ -400,9 +400,10 @@ private fun rememberRuleFilePickerLauncher(
 }
 
 /**
- * Hosts the "Browse templates" [RuleTemplatePickerSheet]: reads the selected template's asset
- * JSON off the main thread and feeds it into the same [RulesEvent.OnRuleTextReceived] path used
- * by file/clipboard import, then closes the sheet.
+ * Hosts the create-rule entry point [RuleTemplatePickerSheet]: reads the selected template's
+ * asset JSON off the main thread and feeds it into the same [RulesEvent.OnRuleTextReceived] path
+ * used by file/clipboard import, then closes the sheet. The "start from scratch" affordance takes
+ * the existing blank-editor path ([RulesEvent.OnAddRuleClick]) instead.
  */
 @Composable
 private fun RulesTemplatePickerHost(
@@ -425,6 +426,10 @@ private fun RulesTemplatePickerHost(
                 }
                 onEvent(RulesEvent.OnRuleTextReceived(text.orEmpty()))
             }
+        },
+        onStartFromScratch = {
+            onDismiss()
+            onEvent(RulesEvent.OnAddRuleClick)
         },
         onDismiss = onDismiss,
     )
