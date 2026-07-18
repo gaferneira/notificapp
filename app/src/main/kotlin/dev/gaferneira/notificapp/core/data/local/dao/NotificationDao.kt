@@ -170,6 +170,14 @@ internal interface NotificationDao {
     suspend fun markAsProcessed(ids: List<String>)
 
     /**
+     * Scrub a notification's free-text fields for privacy (`deleteRawContentAfterExtraction`),
+     * keeping the row itself - and therefore its rule executions and extracted field values,
+     * which cascade-delete on notification removal - intact.
+     */
+    @Query("UPDATE notifications SET raw_content = '', content = NULL, title = NULL WHERE id = :id")
+    suspend fun redactContent(id: String)
+
+    /**
      * Delete a notification.
      */
     @Delete

@@ -86,6 +86,22 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
         return Result.success(Unit)
     }
 
+    /** Number of times [redactContent] has been called, for interaction assertions. */
+    var redactContentCallCount: Int = 0
+        private set
+
+    /** IDs passed to [redactContent], in call order. */
+    val redactedNotificationIds: MutableList<String> = mutableListOf()
+
+    override suspend fun redactContent(notificationId: String): Result<Unit> {
+        redactContentCallCount++
+        redactedNotificationIds += notificationId
+        notifications.update { list ->
+            list.map { if (it.id == notificationId) it.copy(rawContent = "", content = null, title = null) else it }
+        }
+        return Result.success(Unit)
+    }
+
     override suspend fun deleteNotification(id: String): Result<Unit> {
         notifications.update { list -> list.filterNot { it.id == id } }
         return Result.success(Unit)

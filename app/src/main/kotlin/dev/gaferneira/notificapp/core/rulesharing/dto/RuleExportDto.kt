@@ -33,6 +33,7 @@ data class RuleDto(
     @SerialName("category") val category: String? = null,
     @SerialName("isActive") val isActive: Boolean = true,
     @SerialName("isDryRun") val isDryRun: Boolean = false,
+    @SerialName("deleteRawContentAfterExtraction") val deleteRawContentAfterExtraction: Boolean = false,
     @SerialName("targetApps") val targetApps: List<AppInfoDto>? = null,
     @SerialName("isIncludeMode") val isIncludeMode: Boolean = true,
     @SerialName("conditionLogic") val conditionLogic: String = "ALL",

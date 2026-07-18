@@ -63,6 +63,6 @@ internal abstract class AppDatabase : RoomDatabase() {
         /**
          * Single source of truth for the `@Database(version = ...)` above, for tests/tooling.
          */
-        const val CURRENT_VERSION = 1
+        const val CURRENT_VERSION = 2
     }
 }

@@ -169,6 +169,16 @@ internal class NotificationRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun redactContent(notificationId: String): Result<Unit> = withContext(ioDispatcher) {
+        try {
+            dao.redactContent(notificationId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to redact content for notification: $notificationId")
+            e.toFailureResult()
+        }
+    }
+
     override suspend fun deleteNotification(id: String): Result<Unit> = withContext(ioDispatcher) {
         try {
             dao.deleteById(id)

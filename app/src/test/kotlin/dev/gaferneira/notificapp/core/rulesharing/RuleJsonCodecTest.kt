@@ -118,6 +118,34 @@ class RuleJsonCodecTest {
     }
 
     @Test
+    fun `deleteRawContentAfterExtraction round-trips through encode-decode`() {
+        // Given: a rule with the privacy flag enabled
+        val flaggedRule = rule.copy(deleteRawContentAfterExtraction = true)
+
+        // When: exporting then re-importing
+        val encoded = RuleJsonCodec.encode(flaggedRule)
+        val decoded = RuleJsonCodec.decode(encoded)
+
+        // Then: the flag survives the round trip
+        decoded.isSuccess shouldBe true
+        decoded.getOrThrow().rule.deleteRawContentAfterExtraction shouldBe true
+    }
+
+    @Test
+    fun `decoding JSON without deleteRawContentAfterExtraction defaults it to false`() {
+        // Given: a hand-crafted export JSON from before this field existed
+        val encoded = RuleJsonCodec.encode(rule)
+        val legacyJson = encoded.replace(Regex(""",?\s*"deleteRawContentAfterExtraction"\s*:\s*(true|false)"""), "")
+
+        // When: decoding it
+        val result = RuleJsonCodec.decode(legacyJson)
+
+        // Then: decoding still succeeds and the field defaults to false (backward-tolerant)
+        result.isSuccess shouldBe true
+        result.getOrThrow().rule.deleteRawContentAfterExtraction shouldBe false
+    }
+
+    @Test
     fun `decode rejects a schema version newer than this app understands`() {
         // Given: an envelope claiming a future schema version
         val futureExport = RuleExportDto(schemaVersion = RULE_EXPORT_SCHEMA_VERSION + 1, rule = rule.toDto().rule)

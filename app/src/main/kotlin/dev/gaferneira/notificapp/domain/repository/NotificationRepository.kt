@@ -88,6 +88,13 @@ interface NotificationRepository {
     suspend fun markAsProcessed(id: String): Result<Unit>
 
     /**
+     * Scrub a notification's free-text fields (rawContent/content/title) for privacy, keeping the
+     * row, its rule executions, and any extracted field values intact. Used when a rule matches
+     * with `deleteRawContentAfterExtraction` enabled and actually extracted data.
+     */
+    suspend fun redactContent(notificationId: String): Result<Unit>
+
+    /**
      * Delete a notification.
      */
     suspend fun deleteNotification(id: String): Result<Unit>

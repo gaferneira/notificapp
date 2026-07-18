@@ -135,6 +135,10 @@ class ProcessNotificationUseCase @Inject constructor(
                     )
             }
 
+            if (executeActions && matches.qualifiesForRedaction()) {
+                redactNotificationContent(notification.id)
+            }
+
             Timber.d("Processed ${executions.size} rule matches for notification ${notification.id}")
             Result.success(executions)
         } catch (e: Exception) {
@@ -142,6 +146,27 @@ class ProcessNotificationUseCase @Inject constructor(
             Timber.e(e, "Error processing rules for notification ${notification.id}")
             Result.failure(e)
         }
+    }
+
+    /**
+     * Whether any of these matches earns a raw-content scrub: the rule must not be dry-run, must
+     * have `deleteRawContentAfterExtraction` enabled, and must have actually extracted data - a
+     * rule with the flag on but nothing extracted never qualifies, since there'd be nothing to
+     * replace the raw text with.
+     */
+    private fun List<RuleMatch>.qualifiesForRedaction(): Boolean = any { match ->
+        !match.rule.isDryRun && match.rule.deleteRawContentAfterExtraction && match.extractedData.isNotEmpty()
+    }
+
+    /**
+     * Scrubs the notification's raw text via [NotificationRepository.redactContent]. Best-effort:
+     * the rule executions and extracted fields are already saved, so a failure here is logged but
+     * must not fail the whole pipeline.
+     */
+    private suspend fun redactNotificationContent(notificationId: String) {
+        notificationRepository.redactContent(notificationId)
+            .onSuccess { Timber.d("Redacted raw content for notification $notificationId") }
+            .onFailure { e -> Timber.e(e, "Failed to redact content for notification $notificationId") }
     }
 
     /**

@@ -97,6 +97,20 @@ class RuleMapperTest {
     }
 
     @Test
+    fun `deleteRawContentAfterExtraction round-trips through entity mapping`() {
+        // Given: a rule with the privacy flag enabled
+        val rule = createTestRule(id = "rule-1", deleteRawContentAfterExtraction = true)
+
+        // When: mapping to entity and back
+        val entity = RuleMapper.toEntity(rule)
+        val domain = RuleMapper.toDomain(entity, emptyList(), emptyList(), emptyList())
+
+        // Then: the flag survives the round trip
+        entity.deleteRawContentAfterExtraction shouldBe true
+        domain.deleteRawContentAfterExtraction shouldBe true
+    }
+
+    @Test
     fun `unknown conditionLogic string maps to ALL`() {
         // Given: an entity with a garbage condition_logic value
         val rule = createTestRule(id = "rule-1")

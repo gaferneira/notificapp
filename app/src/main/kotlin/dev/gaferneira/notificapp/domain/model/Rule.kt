@@ -27,6 +27,12 @@ data class Rule(
     val isActive: Boolean = true,
     /** When true, matches are logged but no actions execute - a safe way to trial a rule */
     val isDryRun: Boolean = false,
+    /**
+     * When true, after this rule matches and extracts data the source notification's raw text
+     * (rawContent/content/title) is scrubbed for privacy, keeping only the extracted fields. The
+     * notification row and its extracted values are retained; only the free text is removed.
+     */
+    val deleteRawContentAfterExtraction: Boolean = false,
     /** App scope: null means all apps, or list of specific package names */
     val targetApps: ImmutableList<AppInfo>? = null,
     /**

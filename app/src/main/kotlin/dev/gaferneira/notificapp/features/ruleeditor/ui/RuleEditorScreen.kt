@@ -640,6 +640,11 @@ private fun MetadataStep(
             onToggle = { onEvent(UiEvent.OnDryRunToggle(it)) },
         )
 
+        DeleteRawContentToggle(
+            enabled = uiState.rule.deleteRawContentAfterExtraction,
+            onToggle = { onEvent(UiEvent.OnDeleteRawContentToggle(it)) },
+        )
+
         Spacer(modifier = Modifier.weight(1f))
 
         // Back is the only bottom action now - Save moved to the top bar (Material
@@ -685,6 +690,44 @@ private fun DryRunToggle(
             )
             Text(
                 text = "Matches are recorded but no actions run - test this rule safely before turning it loose",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = onToggle)
+    }
+}
+
+/**
+ * Toggle for post-extraction privacy: when enabled, the source notification's original text is
+ * scrubbed once this rule matches and extracts data, keeping only the extracted fields.
+ */
+@Composable
+private fun DeleteRawContentToggle(
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(16.dp),
+            )
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Delete raw content after extraction",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Removes the notification's original text once fields are extracted - keeps only the extracted data.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

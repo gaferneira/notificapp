@@ -39,6 +39,11 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **System Trigger:** User adds an "Extract data" action while building or editing a rule; the extraction itself runs automatically in the background whenever a matching notification arrives.
 * **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`
 
+### Post-Extraction Privacy (Delete Raw Content)
+* **User Experience:** A per-rule "Delete raw content after extraction" toggle in the Rule Editor's options section. When enabled, once the rule matches and actually extracts data, the source notification's original text (raw content, main text, and title) is scrubbed - only the extracted fields remain. The notification row itself and its rule executions are kept, so history and extracted data stay intact; only the free-text OTP/message content is removed.
+* **System Trigger:** Runs automatically, right after a matching rule's executions are persisted, but only when the rule is non dry-run, the toggle is enabled, and at least one field was actually extracted (a match that extracted nothing never scrubs, since there'd be nothing left to explain the notification).
+* **Technical Spec Reference:** `domain/model/Rule.kt`, `core/notification/ProcessNotificationUseCase.kt`, `domain/repository/NotificationRepository.kt`
+
 ### Notification Actions
 * **User Experience:** For a matching notification, the user picks one or more actions to run. Each action can be turned on or off independently within a rule.
   * **Dismiss notification** — silently removes it from the system tray (good for noise like OTP codes or spam).

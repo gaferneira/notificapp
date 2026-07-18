@@ -113,6 +113,9 @@ object RuleEditorContract {
         /** Toggle dry-run mode for this rule */
         data class OnDryRunToggle(val enabled: Boolean) : UiEvent()
 
+        /** Toggle whether the source notification's raw text is scrubbed after extraction */
+        data class OnDeleteRawContentToggle(val enabled: Boolean) : UiEvent()
+
         /** Show category field */
         data object OnAddCategoryClicked : UiEvent()
 
