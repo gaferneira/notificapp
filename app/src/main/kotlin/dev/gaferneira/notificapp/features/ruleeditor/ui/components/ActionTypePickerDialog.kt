@@ -25,8 +25,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.core.ui.components.BetaBadge
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.isBeta
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionTypeUi
 import dev.gaferneira.notificapp.features.ruleeditor.domain.availableActionTypes
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
@@ -94,11 +96,17 @@ private fun ActionTypeRow(
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = meta.label,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = meta.label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (meta.type.isBeta) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    BetaBadge()
+                }
+            }
             Text(
                 text = meta.description,
                 style = MaterialTheme.typography.bodySmall,

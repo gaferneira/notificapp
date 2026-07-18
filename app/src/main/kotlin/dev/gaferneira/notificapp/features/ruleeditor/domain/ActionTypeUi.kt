@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.domain
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FlashOn
@@ -65,6 +66,12 @@ fun ActionType.ui(): ActionTypeUi = when (this) {
         label = "Read aloud",
         description = "Speak a short message built from the notification's data",
         icon = Icons.Default.RecordVoiceOver,
+    )
+    ActionType.SEND_REPLY -> ActionTypeUi(
+        type = this,
+        label = "Send reply",
+        description = "Reply to the notification directly - best-effort, only works on apps that support it",
+        icon = Icons.AutoMirrored.Filled.Reply,
     )
 }
 

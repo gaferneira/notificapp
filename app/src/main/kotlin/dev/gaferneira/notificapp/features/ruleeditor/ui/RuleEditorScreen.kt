@@ -395,6 +395,13 @@ private fun ActionSheetForType(
                 onSave = onSave,
                 onDismiss = onSheetDismiss,
             )
+        ActionType.SEND_REPLY ->
+            SendReplyBottomSheet(
+                initial = editing,
+                ruleFields = uiState.rule.fields,
+                onSave = onSave,
+                onDismiss = onSheetDismiss,
+            )
         // Dismiss adds directly (no sheet) and Extract-data uses its own sheet.
         else -> Unit
     }

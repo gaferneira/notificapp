@@ -29,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.core.ui.components.BetaBadge
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleAction
@@ -37,6 +38,7 @@ import dev.gaferneira.notificapp.domain.model.getSnoozeDurationMinutes
 import dev.gaferneira.notificapp.domain.model.getSnoozeMode
 import dev.gaferneira.notificapp.domain.model.getSnoozeSchedule
 import dev.gaferneira.notificapp.domain.model.getThrottleWindowMinutes
+import dev.gaferneira.notificapp.domain.model.isBeta
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.util.formatDurationMinutes
 import kotlinx.collections.immutable.ImmutableList
@@ -183,11 +185,17 @@ private fun ActionCardLabel(
         Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = meta.label,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = meta.label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+                if (action.type.isBeta) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    BetaBadge()
+                }
+            }
             subtitle?.let {
                 Text(
                     text = it,

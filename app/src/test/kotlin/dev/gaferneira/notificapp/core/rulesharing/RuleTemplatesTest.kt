@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.rulesharing
 
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.BETA_ACTION_TYPES
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
@@ -41,7 +42,10 @@ class RuleTemplatesTest {
             .map { it.type }
             .toSet()
 
-        ActionType.entries.forEach { actionType ->
+        // BETA action types (e.g. SEND_REPLY) are exempt: they're inherently fragile/best-effort
+        // and don't get a curated starter template, so requiring coverage here would force one
+        // into existence just to satisfy this test rather than because it makes a good template.
+        ActionType.entries.filterNot { it in BETA_ACTION_TYPES }.forEach { actionType ->
             actionTypesInTemplates shouldContain actionType
         }
     }

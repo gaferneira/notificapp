@@ -12,6 +12,7 @@ import dev.gaferneira.notificapp.core.notification.action.AndroidTtsController
 import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
 import dev.gaferneira.notificapp.core.notification.action.DismissActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.FlashAlertActionExecutor
+import dev.gaferneira.notificapp.core.notification.action.NotificationReplyActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.ReadAloudActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SaveDataActionExecutor
 import dev.gaferneira.notificapp.core.notification.action.SendWebhookActionExecutor
@@ -152,4 +153,12 @@ internal abstract class ActionModule {
     @Binds
     @Singleton
     abstract fun bindTtsController(impl: AndroidTtsController): TtsController
+
+    /**
+     * Binds the executor for [ActionType.SEND_REPLY] (BETA).
+     */
+    @Binds
+    @IntoMap
+    @ActionTypeKey(ActionType.SEND_REPLY)
+    abstract fun bindSendReply(impl: NotificationReplyActionExecutor): ActionExecutor
 }

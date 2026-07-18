@@ -223,6 +223,23 @@ data class RuleAction(
             isEnabled = isEnabled,
             config = mapOf(READ_ALOUD_TEMPLATE_KEY to template),
         )
+
+        /**
+         * Create a `SEND_REPLY` (BETA) action that replies to the source notification via its
+         * Android direct-reply (`RemoteInput`) action, with [template] resolved the same
+         * `{{token}}` way as [createReadAloud]. Inherently fragile - only apps that expose a
+         * RemoteInput reply action support this - see [BETA_ACTION_TYPES].
+         */
+        fun createSendReply(
+            id: String,
+            template: String,
+            isEnabled: Boolean = true,
+        ): RuleAction = RuleAction(
+            id = id,
+            type = ActionType.SEND_REPLY,
+            isEnabled = isEnabled,
+            config = mapOf(SEND_REPLY_TEMPLATE_KEY to template),
+        )
     }
 }
 
@@ -251,4 +268,20 @@ enum class ActionType {
 
     @SerialName("read_aloud")
     READ_ALOUD,
+
+    @SerialName("send_reply")
+    SEND_REPLY,
 }
+
+/**
+ * Action types shipped as BETA: inherently fragile, best-effort features that only work under
+ * narrow conditions (e.g. [ActionType.SEND_REPLY] only works on apps exposing a RemoteInput reply
+ * action). Single source of truth for both the UI's Beta badge (`ActionTypeUi`/rule editor) and
+ * the starter-template curation exemption (`RuleTemplatesTest`) - a beta action type never forces
+ * a curated starter template just to satisfy "every action type is covered somewhere".
+ */
+val BETA_ACTION_TYPES: Set<ActionType> = setOf(ActionType.SEND_REPLY)
+
+/** True if this action type is marked BETA - see [BETA_ACTION_TYPES]. */
+val ActionType.isBeta: Boolean
+    get() = this in BETA_ACTION_TYPES

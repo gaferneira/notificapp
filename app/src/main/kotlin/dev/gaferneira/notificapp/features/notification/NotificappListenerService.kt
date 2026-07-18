@@ -1,5 +1,8 @@
 package dev.gaferneira.notificapp.features.notification
 
+import android.app.RemoteInput
+import android.content.Intent
+import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.NotificationListenerService.RankingMap
 import android.service.notification.StatusBarNotification
@@ -96,6 +99,44 @@ class NotificappListenerService :
     override fun cancel(sbnKey: String) = cancelNotification(sbnKey)
 
     override fun snooze(sbnKey: String, durationMs: Long) = snoozeNotification(sbnKey, durationMs)
+
+    override fun reply(sbnKey: String, text: String): Boolean {
+        val (action, remoteInput) = findReplyAction(sbnKey) ?: return false
+
+        return runCatching {
+            val resultIntent = Intent()
+            val results = Bundle().apply { putCharSequence(remoteInput.resultKey, text) }
+            RemoteInput.addResultsToIntent(arrayOf(remoteInput), resultIntent, results)
+            action.actionIntent.send(this, 0, resultIntent)
+            Timber.d("Sent reply to notification $sbnKey")
+        }.fold(
+            onSuccess = { true },
+            onFailure = { e ->
+                Timber.e(e, "Failed to send reply to notification $sbnKey")
+                false
+            },
+        )
+    }
+
+    /**
+     * Look up the live [StatusBarNotification] for [sbnKey] and its first `Notification.Action`
+     * with a non-empty `RemoteInput` - the pair [reply] needs to build and send the reply intent.
+     * Returns null (logged) if the notification is no longer live or has no such action.
+     */
+    private fun findReplyAction(sbnKey: String): Pair<android.app.Notification.Action, RemoteInput>? {
+        val sbn = activeNotifications?.firstOrNull { it.key == sbnKey }
+        if (sbn == null) {
+            Timber.d("Cannot reply to notification $sbnKey: no longer live")
+            return null
+        }
+
+        val replyAction = sbn.notification.actions.orEmpty()
+            .firstNotNullOfOrNull { action -> action.remoteInputs?.firstOrNull()?.let { action to it } }
+        if (replyAction == null) {
+            Timber.d("Cannot reply to notification $sbnKey: no RemoteInput reply action")
+        }
+        return replyAction
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
