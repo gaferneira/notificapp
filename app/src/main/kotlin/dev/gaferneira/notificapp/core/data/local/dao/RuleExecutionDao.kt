@@ -120,4 +120,43 @@ internal interface RuleExecutionDao {
      */
     @Query("SELECT COUNT(*) FROM rule_executions WHERE notification_id = :notificationId")
     suspend fun getCountForNotification(notificationId: String): Int
+
+    /**
+     * Count executions recorded at or after [since] (epoch millis), excluding dry-run rules -
+     * Home's "This Week" stats row only counts rules that actually acted.
+     */
+    @Query("SELECT COUNT(*) FROM rule_executions WHERE created_at >= :since AND was_dry_run = 0")
+    fun observeExecutionCountSince(since: Long): Flow<Int>
+
+    /**
+     * The most recent non-dry-run executions, joined with their source notification and rule name,
+     * for Home's "Recent Activity" feed.
+     */
+    @Query(
+        """
+        SELECT re.id AS executionId, re.rule_id AS ruleId, r.name AS ruleName,
+               n.id AS notificationId, n.title AS notificationTitle, n.content AS notificationContent,
+               n.package_name AS packageName, n.app_name AS appName, re.created_at AS executedAt
+        FROM rule_executions re
+        INNER JOIN notifications n ON re.notification_id = n.id
+        INNER JOIN rules r ON re.rule_id = r.id
+        WHERE re.was_dry_run = 0
+        ORDER BY re.created_at DESC
+        LIMIT :limit
+        """,
+    )
+    fun observeRecentActivity(limit: Int): Flow<List<RecentActivityRow>>
 }
+
+/** Projection for [RuleExecutionDao.observeRecentActivity]. */
+internal data class RecentActivityRow(
+    val executionId: String,
+    val ruleId: String,
+    val ruleName: String,
+    val notificationId: String,
+    val notificationTitle: String?,
+    val notificationContent: String?,
+    val packageName: String,
+    val appName: String,
+    val executedAt: Long,
+)

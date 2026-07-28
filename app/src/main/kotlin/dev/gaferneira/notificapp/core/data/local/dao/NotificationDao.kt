@@ -253,6 +253,20 @@ internal interface NotificationDao {
      */
     @Query("UPDATE notifications SET applied_rules_count = 0, is_processed = 0 WHERE id = :id")
     suspend fun resetAppliedRulesCount(id: String)
+
+    /**
+     * Count distinct apps with at least one notification at or after [since] (epoch millis), as a
+     * Flow - Home's "apps active this week" stat.
+     */
+    @Query("SELECT COUNT(DISTINCT package_name) FROM notifications WHERE timestamp >= :since")
+    fun observeActiveAppCountSince(since: Long): Flow<Int>
+
+    /**
+     * The most recent notifications at or after [since] (epoch millis), bounded by [limit], as a
+     * Flow - feeds Home's recurring-notification suggester with a bounded, reactive candidate set.
+     */
+    @Query("SELECT * FROM notifications WHERE timestamp >= :since ORDER BY timestamp DESC LIMIT :limit")
+    fun observeRecentSince(since: Long, limit: Int): Flow<List<NotificationEntity>>
 }
 
 /** Projection for [NotificationDao.observeAppsWithLatestName]. */
