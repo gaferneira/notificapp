@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.testutil.fakes
 
+import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
@@ -40,4 +41,28 @@ class FakeRuleExecutionRepository(
     }
 
     override suspend fun lastThrottleDeliveryAt(actionId: String, packageName: String, sinceMs: Long): Result<Long?> = Result.success(null)
+
+    override fun observeExecutionCountSince(since: Long): Flow<Int> = executionsByNotification.map { map ->
+        map.values.flatten().count { it.createdAt >= since && !it.wasDryRun }
+    }
+
+    override fun observeRecentActivity(limit: Int): Flow<List<RecentActivity>> = executionsByNotification.map { map ->
+        map.values.flatten()
+            .filter { !it.wasDryRun }
+            .sortedByDescending { it.createdAt }
+            .take(limit)
+            .map { execution ->
+                RecentActivity(
+                    executionId = execution.id,
+                    ruleId = execution.ruleId,
+                    ruleName = "",
+                    notificationId = execution.notificationId,
+                    notificationTitle = null,
+                    notificationContent = null,
+                    packageName = "",
+                    appName = "",
+                    executedAt = execution.createdAt,
+                )
+            }
+    }
 }

@@ -10,6 +10,7 @@ import dev.gaferneira.notificapp.core.data.repository.RuleExecutionRepositoryImp
 import dev.gaferneira.notificapp.core.data.repository.RuleRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.SelectedAppRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.StorageStatsRepositoryImpl
+import dev.gaferneira.notificapp.core.data.repository.SuggestionDismissalRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.UserPreferencesRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.WebhookDeliveryRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.WebhookRepositoryImpl
@@ -19,6 +20,7 @@ import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.domain.repository.StorageStatsRepository
+import dev.gaferneira.notificapp.domain.repository.SuggestionDismissalRepository
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.domain.repository.WebhookDeliveryRepository
 import dev.gaferneira.notificapp.domain.repository.WebhookRepository
@@ -71,6 +73,12 @@ internal abstract class RepositoryModule {
      */
     @Binds
     abstract fun bindStorageStatsRepository(impl: StorageStatsRepositoryImpl): StorageStatsRepository
+
+    /**
+     * Binds SuggestionDismissalRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindSuggestionDismissalRepository(impl: SuggestionDismissalRepositoryImpl): SuggestionDismissalRepository
 
     /**
      * Binds WebhookRepository interface to its implementation.

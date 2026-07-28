@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 /**
@@ -134,4 +135,14 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
     override fun observeAppsWithNotifications(): Flow<List<AppInfo>> = MutableStateFlow(
         notifications.value.map { AppInfo(packageName = it.packageName, name = it.appName) }.distinctBy { it.packageName },
     ).asStateFlow()
+
+    override fun observeActiveAppCountSince(since: Long): Flow<Int> = notifications.map { list ->
+        list.filter { it.timestamp >= since }.map { it.packageName }.toSet().size
+    }
+
+    override fun observeRecentSince(since: Long, limit: Int): Flow<List<Notification>> = notifications.map { list ->
+        list.filter { it.timestamp >= since }
+            .sortedByDescending { it.timestamp }
+            .take(limit)
+    }
 }
