@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.domain.repository
 
+import dev.gaferneira.notificapp.domain.model.preferences.AppLanguage
 import dev.gaferneira.notificapp.domain.model.preferences.InboxFilterSettings
 import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.domain.model.preferences.RulesFilterSettings
@@ -77,6 +78,16 @@ interface UserPreferencesRepository {
      * Update the global monitoring pause flag.
      */
     suspend fun setMonitoringPaused(paused: Boolean): Result<Unit>
+
+    /**
+     * Observe the app language preference as a Flow.
+     */
+    fun observeLanguage(): Flow<AppLanguage>
+
+    /**
+     * Update the app language preference.
+     */
+    suspend fun setLanguage(language: AppLanguage): Result<Unit>
 
     /**
      * Reset all preferences to default values.

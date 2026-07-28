@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -60,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.BuildConfig
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.AppLinks
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
@@ -71,6 +73,7 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.OnResumeEffect
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.model.StorageStats
+import dev.gaferneira.notificapp.domain.model.preferences.AppLanguage
 import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEffect
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEvent
@@ -167,7 +170,7 @@ private fun SettingsScreenContent(
                 }
                 uiState.error != null -> {
                     ErrorState(
-                        message = uiState.error!!,
+                        message = uiState.error,
                         onRetry = { onEvent(UiEvent.OnRefresh) },
                         modifier = Modifier.align(Alignment.Center),
                     )
@@ -319,8 +322,26 @@ private fun GeneralSettingsCard(
             title = "Notification Retention",
             subtitle = "Auto-delete notifications after",
             selectedValueLabel = uiState.retentionPeriod.label(),
-            onValueSelected = { onEvent(UiEvent.RetentionPeriodChanged(it)) },
             currentValue = uiState.retentionPeriod,
+            onValueSelected = { onEvent(UiEvent.RetentionPeriodChanged(it)) },
+            dialog = { current, onSelected, onDismiss ->
+                RetentionPeriodDialog(currentValue = current, onValueSelected = onSelected, onDismiss = onDismiss)
+            },
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+        SelectableSettingItem(
+            icon = Icons.Default.Language,
+            iconTint = MaterialTheme.colorScheme.secondary,
+            title = stringResource(R.string.settings_language_title),
+            subtitle = "Choose your preferred language",
+            selectedValueLabel = uiState.appLanguage.label(),
+            currentValue = uiState.appLanguage,
+            onValueSelected = { onEvent(UiEvent.AppLanguageChanged(it)) },
+            dialog = { current, onSelected, onDismiss ->
+                AppLanguageDialog(currentValue = current, onValueSelected = onSelected, onDismiss = onDismiss)
+            },
         )
     }
 }
@@ -330,6 +351,14 @@ private fun RetentionPeriod.label(): String = when (this) {
     RetentionPeriod.DAYS_30 -> "30 days"
     RetentionPeriod.DAYS_90 -> "90 days"
     RetentionPeriod.NEVER -> "Never"
+}
+
+/** Human-readable label for an [AppLanguage], used both in the row and the dialog. */
+@Composable
+private fun AppLanguage.label(): String = when (this) {
+    AppLanguage.SYSTEM -> stringResource(R.string.settings_language_system)
+    AppLanguage.EN -> stringResource(R.string.settings_language_english)
+    AppLanguage.ES -> stringResource(R.string.settings_language_spanish)
 }
 
 @Composable
@@ -618,18 +647,20 @@ private fun ToggleSettingItem(
 
 /**
  * Row styled like [ToggleSettingItem] (icon + title/subtitle) but clickable instead of a toggle,
- * showing the currently selected value and opening a 3-option [AlertDialog] with [RadioButton]
- * rows to pick a new one.
+ * showing the currently selected value and opening [dialog] - an [AlertDialog] with a
+ * [RadioButton] row per option - to pick a new one. Generic over the option type [T] so it's
+ * shared between e.g. [RetentionPeriod] and [AppLanguage].
  */
 @Composable
-private fun SelectableSettingItem(
+private fun <T> SelectableSettingItem(
     icon: ImageVector,
     iconTint: Color,
     title: String,
     subtitle: String,
     selectedValueLabel: String,
-    currentValue: RetentionPeriod,
-    onValueSelected: (RetentionPeriod) -> Unit,
+    currentValue: T,
+    onValueSelected: (T) -> Unit,
+    dialog: @Composable (currentValue: T, onValueSelected: (T) -> Unit, onDismiss: () -> Unit) -> Unit,
 ) {
     var isDialogVisible by remember { mutableStateOf(false) }
 
@@ -668,14 +699,15 @@ private fun SelectableSettingItem(
     }
 
     if (isDialogVisible) {
-        RetentionPeriodDialog(
-            currentValue = currentValue,
-            onValueSelected = {
-                onValueSelected(it)
-                isDialogVisible = false
-            },
-            onDismiss = { isDialogVisible = false },
-        )
+        // Kotlin prohibits named arguments when invoking a function-type value, so the two
+        // callbacks are named here instead to keep the call site readable.
+        val onDialogValueSelected: (T) -> Unit = { selectedValue ->
+            onValueSelected(selectedValue)
+            isDialogVisible = false
+        }
+        val onDialogDismiss: () -> Unit = { isDialogVisible = false }
+
+        dialog(currentValue, onDialogValueSelected, onDialogDismiss)
     }
 }
 
@@ -726,6 +758,46 @@ private fun RetentionPeriodDialog(
                         )
                         Text(
                             text = period.label(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        },
+    )
+}
+
+@Composable
+private fun AppLanguageDialog(
+    currentValue: AppLanguage,
+    onValueSelected: (AppLanguage) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_language_title)) },
+        text = {
+            Column {
+                AppLanguage.entries.forEach { language ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onValueSelected(language) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = language == currentValue,
+                            onClick = { onValueSelected(language) },
+                        )
+                        Text(
+                            text = language.label(),
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(start = 8.dp),
                         )

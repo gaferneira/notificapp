@@ -5,9 +5,9 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,7 +67,7 @@ import javax.inject.Inject
  * service (ADR 013), never by this Activity.
  */
 @AndroidEntryPoint
-class AlarmActivity : ComponentActivity() {
+class AlarmActivity : AppCompatActivity() {
 
     @Inject
     lateinit var alarmStateHolder: AlarmStateHolder

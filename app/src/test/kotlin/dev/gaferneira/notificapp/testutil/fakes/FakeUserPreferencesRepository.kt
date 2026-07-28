@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.testutil.fakes
 
+import dev.gaferneira.notificapp.domain.model.preferences.AppLanguage
 import dev.gaferneira.notificapp.domain.model.preferences.InboxFilterSettings
 import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.domain.model.preferences.RulesFilterSettings
@@ -61,6 +62,13 @@ class FakeUserPreferencesRepository(initial: UserPreferences = UserPreferences()
 
     override suspend fun setMonitoringPaused(paused: Boolean): Result<Unit> {
         preferences.value = preferences.value.copy(monitoringPaused = paused)
+        return Result.success(Unit)
+    }
+
+    override fun observeLanguage(): Flow<AppLanguage> = preferences.map { it.appLanguage }
+
+    override suspend fun setLanguage(language: AppLanguage): Result<Unit> {
+        preferences.value = preferences.value.copy(appLanguage = language)
         return Result.success(Unit)
     }
 

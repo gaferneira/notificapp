@@ -124,6 +124,12 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-opt-in=androidx.compose.foundation.style.ExperimentalFoundationStyleApi")
+    }
+}
+
 dependencies {
     // Core AndroidX
     implementation(libs.androidx.core.ktx)

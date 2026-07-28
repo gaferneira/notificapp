@@ -16,6 +16,7 @@ import kotlinx.serialization.Serializable
  * until the user explicitly opts into a retention window.
  * @property monitoringPaused Global kill switch for notification capture. When `true`, freshly
  * posted notifications are neither captured nor processed. Defaults to `false` (monitoring active).
+ * @property appLanguage Preferred app language (system, English, Spanish).
  * @property version Version for migration handling
  */
 @Serializable
@@ -25,6 +26,7 @@ data class UserPreferences(
     val themePreference: ThemePreference = ThemePreference.SYSTEM,
     val retentionPeriod: RetentionPeriod = RetentionPeriod.NEVER,
     val monitoringPaused: Boolean = false,
+    val appLanguage: AppLanguage = AppLanguage.SYSTEM,
     val version: Int = CURRENT_VERSION,
 ) {
     companion object {

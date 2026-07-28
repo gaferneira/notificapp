@@ -147,6 +147,23 @@ fun findArchViolations(srcDir: File): List<ArchViolation> {
             }
         }
 
+    // Rule 8: design-system-styling — core/ui/components/* are the shared design-system
+    // primitives (see docs/guides/common-patterns.md, "Adding a New core/ui Component"); they
+    // must source visuals from NotificappStyles/NotificappTokens (Styles API) instead of
+    // reintroducing the ad-hoc `.copy(alpha = ...)` tonal-color hack. This check matches only
+    // the alpha-copy pattern; hardcoded shapes/dimensions remain a convention enforced by review.
+    val adHocAlphaRegex = Regex("""\.copy\(\s*alpha\s*=""")
+    val componentsDir = File(srcDir, "dev/gaferneira/notificapp/core/ui/components")
+    if (componentsDir.exists()) {
+        ktFiles(componentsDir).forEach { f ->
+            f.readLines().forEachIndexed { idx, line ->
+                if (adHocAlphaRegex.containsMatchIn(line)) {
+                    violations += ArchViolation("design-system-styling", relPath(f), idx + 1)
+                }
+            }
+        }
+    }
+
     return violations.distinct().sortedBy { it.toString() }
 }
 
@@ -156,7 +173,8 @@ val architectureCheck =
         description = "Fails on NEW violations of Notificapp architecture rules not covered by Detekt " +
             "(data-layer visibility, dispatcher injection, MVI effect collection, platform statics in " +
             "ViewModels/domain, domain/features dependency direction, unmapped repository exceptions, " +
-            "contract purity). Pre-existing violations are grandfathered in config/architecture/baseline.txt."
+            "contract purity, design-system styling). Pre-existing violations are grandfathered in " +
+            "config/architecture/baseline.txt."
 
         val srcDir = file("src/main/kotlin")
         val baselineFile = file("$rootDir/config/architecture/baseline.txt")

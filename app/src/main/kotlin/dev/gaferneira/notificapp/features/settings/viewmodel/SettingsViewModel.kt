@@ -6,6 +6,7 @@ import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
+import dev.gaferneira.notificapp.domain.model.preferences.AppLanguage
 import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.domain.repository.StorageStatsRepository
@@ -38,6 +39,7 @@ class SettingsViewModel @Inject constructor(
     init {
         observeSettings()
         observeRetentionPeriod()
+        observeAppLanguage()
         loadStorageStats()
     }
 
@@ -56,6 +58,7 @@ class SettingsViewModel @Inject constructor(
                 setState { copy(showAppIcons = event.isEnabled) }
             }
             is UiEvent.RetentionPeriodChanged -> setRetentionPeriod(event.period)
+            is UiEvent.AppLanguageChanged -> setAppLanguage(event.language)
             is UiEvent.OnRefresh -> {
                 // Data is already observed, refresh just clears errors
                 setState { copy(error = null) }
@@ -90,6 +93,32 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             userPreferencesRepository.setRetentionPeriod(period)
                 .onFailure { e -> Timber.e(e, "Failed to set retention period") }
+        }
+    }
+
+    /**
+     * Observe the app language preference continuously, mirroring [observeRetentionPeriod]'s
+     * pattern for [userPreferencesRepository].
+     */
+    private fun observeAppLanguage() {
+        viewModelScope.launch {
+            userPreferencesRepository.observeLanguage()
+                .flowOn(ioDispatcher)
+                .catch { e -> Timber.e(e, "Error observing app language") }
+                .collect { language ->
+                    setState { copy(appLanguage = language) }
+                }
+        }
+    }
+
+    /**
+     * Persist the new app language on the IO dispatcher; state updates via
+     * [observeAppLanguage]'s ongoing collection once the write succeeds.
+     */
+    private fun setAppLanguage(language: AppLanguage) {
+        viewModelScope.launch(ioDispatcher) {
+            userPreferencesRepository.setLanguage(language)
+                .onFailure { e -> Timber.e(e, "Failed to set app language") }
         }
     }
 

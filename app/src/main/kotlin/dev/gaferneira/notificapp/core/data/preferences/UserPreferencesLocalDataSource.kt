@@ -38,13 +38,7 @@ class UserPreferencesLocalDataSource @Inject constructor(
      * @return Flow emitting UserPreferences, starting with defaults if not set
      */
     fun observeUserPreferences(): Flow<UserPreferences> = dataStore.data.map { preferences ->
-        preferences[PreferenceKeys.USER_PREFERENCES]?.let { jsonString ->
-            try {
-                json.decodeFromString<UserPreferences>(jsonString)
-            } catch (e: Exception) {
-                UserPreferences() // Return defaults on parsing error
-            }
-        } ?: UserPreferences() // Return defaults if not set
+        decodeOrDefault(preferences[PreferenceKeys.USER_PREFERENCES])
     }
 
     /**
@@ -54,13 +48,7 @@ class UserPreferencesLocalDataSource @Inject constructor(
      */
     suspend fun getUserPreferences(): Result<UserPreferences> = try {
         val preferences = dataStore.data.map { prefs ->
-            prefs[PreferenceKeys.USER_PREFERENCES]?.let { jsonString ->
-                try {
-                    json.decodeFromString<UserPreferences>(jsonString)
-                } catch (e: Exception) {
-                    UserPreferences()
-                }
-            } ?: UserPreferences()
+            decodeOrDefault(prefs[PreferenceKeys.USER_PREFERENCES])
         }.map { Result.success(it) }
         preferences.first()
     } catch (e: Exception) {
@@ -68,17 +56,33 @@ class UserPreferencesLocalDataSource @Inject constructor(
     }
 
     /**
-     * Update user preferences.
+     * Atomically update user preferences by applying [transform] to the current snapshot.
      *
-     * @param preferences The new preferences to store
-     * @return Result indicating success or failure
+     * The read and write happen inside a single [DataStore.updateData] transaction (via
+     * [androidx.datastore.preferences.core.edit]), which DataStore itself serializes across
+     * concurrent callers. This closes the lost-update race that a separate read-then-write
+     * would otherwise have: two concurrent updates touching different fields will both be
+     * applied, because each transform runs against the latest committed snapshot rather than
+     * a snapshot captured before the other writer committed.
+     *
+     * @param transform Pure function computing the new preferences from the current ones.
+     * @return Result indicating success or failure.
      */
-    suspend fun updateUserPreferences(preferences: UserPreferences): Result<Unit> = try {
+    suspend fun updateUserPreferences(transform: (UserPreferences) -> UserPreferences): Result<Unit> = try {
         dataStore.edit { prefs ->
-            prefs[PreferenceKeys.USER_PREFERENCES] = json.encodeToString(preferences)
+            val current = decodeOrDefault(prefs[PreferenceKeys.USER_PREFERENCES])
+            prefs[PreferenceKeys.USER_PREFERENCES] = json.encodeToString(transform(current))
         }
         Result.success(Unit)
     } catch (e: Exception) {
         e.toFailureResult()
     }
+
+    private fun decodeOrDefault(jsonString: String?): UserPreferences = jsonString?.let {
+        try {
+            json.decodeFromString<UserPreferences>(it)
+        } catch (e: Exception) {
+            UserPreferences() // Return defaults on parsing error
+        }
+    } ?: UserPreferences() // Return defaults if not set
 }

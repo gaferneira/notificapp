@@ -1,6 +1,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Night theme for Compose app - uses Material3 -->
-    <style name="Theme.Notificapp" parent="android:Theme.Material.NoActionBar">
+    <!-- Night theme for Compose app - uses Material3.
+         Parent is an AppCompat theme for the same reason as values/themes.xml - see that
+         file's comment and ADR 014, decision #2. -->
+    <style name="Theme.Notificapp" parent="Theme.AppCompat.NoActionBar">
         <!-- Window attributes for edge-to-edge -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

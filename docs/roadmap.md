@@ -68,7 +68,7 @@ Everything committed to the first public (F-Droid) release ships together here. 
 ### UI, design system & i18n
 
 - [ ] **Design System & UI consistency pass** — centralize spacing/typography/color-role tokens in the theme, extract repeated composables (cards, badges, list rows, bottom sheets) into one component set, standardize empty/loading/error states across all four tabs, finish edge-to-edge + Material 3 dynamic color, one accessibility/touch-target + light-dark parity pass. Touches no schema.
-- [ ] **Full internationalization** — extract every hardcoded UI string into `strings.xml` (enforce "no literal UI strings" during the design-system pass, since it already visits every screen), make layouts locale-safe (RTL readiness, no fixed-width truncation), and ship at least one complete translation (**Spanish**) alongside English at launch.
+- [ ] **Full internationalization** — infra, `AppLanguage` preference + in-app switch (`AppCompatDelegate.setApplicationLocales`, ADR 014), and the first translated locale (**Spanish**, `values-es/`) are done, with `OnboardingScreen` fully migrated as the reference implementation. Remaining: extract-and-translate the other screens (Rule Editor, Settings, Notification Detail, App Selection, Rules, Inbox) one at a time per `docs/guides/common-patterns.md`'s checklist, and a locale-safe layout pass (RTL readiness, no fixed-width truncation) once more screens carry real translated strings to test against.
 
 ### Privacy & safety
 

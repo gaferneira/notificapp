@@ -40,7 +40,7 @@ fun ActionType.ui(): ActionTypeUi = when (this) {
     ActionType.DISMISS_NOTIFICATION -> ActionTypeUi(
         type = this,
         label = "Dismiss notification",
-        description = "Dismiss the notification after processing",
+        description = "Avoid spamming",
         icon = Icons.Default.Delete,
     )
     ActionType.SNOOZE_NOTIFICATION -> ActionTypeUi(

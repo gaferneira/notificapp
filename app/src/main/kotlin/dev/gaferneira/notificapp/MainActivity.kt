@@ -2,10 +2,10 @@ package dev.gaferneira.notificapp
 
 import android.content.Context
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +38,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import dagger.hilt.android.AndroidEntryPoint
 import dev.gaferneira.notificapp.core.notification.EnforceRetentionUseCase
+import dev.gaferneira.notificapp.core.ui.locale.LocaleController
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationCommand
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Navigator
@@ -45,6 +46,7 @@ import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.navigation.rememberNavigationState
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.appselection.ui.AppSelectionScreen
 import dev.gaferneira.notificapp.features.databrowser.ui.DataBrowserScreen
 import dev.gaferneira.notificapp.features.inbox.ui.InboxScreen
@@ -61,12 +63,15 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var navigationHandler: NavigationHandler
 
     @Inject
     lateinit var enforceRetentionUseCase: EnforceRetentionUseCase
+
+    @Inject
+    lateinit var userPreferencesRepository: UserPreferencesRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,6 +84,15 @@ class MainActivity : ComponentActivity() {
         if (!hasEnforcedRetentionThisProcess) {
             hasEnforcedRetentionThisProcess = true
             lifecycleScope.launch { enforceRetentionUseCase() }
+        }
+
+        // Apply the stored language preference and keep reacting to changes made from Settings
+        // while the app is running. Collected on lifecycleScope's default Main dispatcher since
+        // AppCompatDelegate.setApplicationLocales must run on the main thread.
+        lifecycleScope.launch {
+            userPreferencesRepository.observeLanguage().collect { language ->
+                LocaleController.applyLanguage(language)
+            }
         }
 
         setContent {
