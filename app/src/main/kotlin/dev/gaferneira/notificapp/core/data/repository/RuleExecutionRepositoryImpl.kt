@@ -7,10 +7,12 @@ import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.mapper.ExtractedFieldValueMapper
+import dev.gaferneira.notificapp.core.data.local.mapper.RecentActivityMapper
 import dev.gaferneira.notificapp.core.data.local.mapper.RuleExecutionMapper
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
+import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
@@ -107,4 +109,11 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
             e.toFailureResult()
         }
     }
+
+    override fun observeExecutionCountSince(since: Long): Flow<Int> = ruleExecutionDao.observeExecutionCountSince(since)
+        .flowOn(ioDispatcher)
+
+    override fun observeRecentActivity(limit: Int): Flow<List<RecentActivity>> = ruleExecutionDao.observeRecentActivity(limit)
+        .map { rows -> rows.map { RecentActivityMapper.toDomain(it) } }
+        .flowOn(ioDispatcher)
 }

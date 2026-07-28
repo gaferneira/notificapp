@@ -130,4 +130,15 @@ interface NotificationRepository {
      * Get all unique apps that have notifications, sorted by name.
      */
     fun observeAppsWithNotifications(): Flow<List<AppInfo>>
+
+    /**
+     * Count distinct apps with at least one notification at or after [since] (epoch millis).
+     */
+    fun observeActiveAppCountSince(since: Long): Flow<Int>
+
+    /**
+     * The most recent notifications at or after [since] (epoch millis), bounded by [limit], most
+     * recent first.
+     */
+    fun observeRecentSince(since: Long, limit: Int): Flow<List<Notification>>
 }

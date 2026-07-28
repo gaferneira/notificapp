@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "94026edd1786f0e76fdc2fbd2830a075",
+    "identityHash": "45716f9f3cbfd6d63cc3c3281ddefc6f",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -944,11 +944,53 @@
             "id"
           ]
         }
+      },
+      {
+        "tableName": "suggestion_dismissals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`package_name` TEXT NOT NULL, `normalized_title_key` TEXT NOT NULL, `dismissed_at` INTEGER NOT NULL, PRIMARY KEY(`package_name`, `normalized_title_key`))",
+        "fields": [
+          {
+            "fieldPath": "packageName",
+            "columnName": "package_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "normalizedTitleKey",
+            "columnName": "normalized_title_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dismissedAt",
+            "columnName": "dismissed_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "package_name",
+            "normalized_title_key"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_suggestion_dismissals_dismissed_at",
+            "unique": false,
+            "columnNames": [
+              "dismissed_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_suggestion_dismissals_dismissed_at` ON `${TABLE_NAME}` (`dismissed_at`)"
+          }
+        ]
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '94026edd1786f0e76fdc2fbd2830a075')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '45716f9f3cbfd6d63cc3c3281ddefc6f')"
     ]
   }
 }
