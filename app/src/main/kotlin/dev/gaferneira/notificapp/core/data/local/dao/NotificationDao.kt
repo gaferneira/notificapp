@@ -267,6 +267,13 @@ internal interface NotificationDao {
      */
     @Query("SELECT * FROM notifications WHERE timestamp >= :since ORDER BY timestamp DESC LIMIT :limit")
     fun observeRecentSince(since: Long, limit: Int): Flow<List<NotificationEntity>>
+
+    /**
+     * Count notifications logged at or after [since] (epoch millis), as a Flow - Home's "records
+     * this week" stat.
+     */
+    @Query("SELECT COUNT(*) FROM notifications WHERE timestamp >= :since")
+    fun observeCountSince(since: Long): Flow<Int>
 }
 
 /** Projection for [NotificationDao.observeAppsWithLatestName]. */

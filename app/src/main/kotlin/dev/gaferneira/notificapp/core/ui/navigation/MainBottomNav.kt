@@ -1,9 +1,9 @@
 package dev.gaferneira.notificapp.core.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.DataObject
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -19,9 +19,9 @@ enum class AppDestinations(
     val label: String,
     val icon: ImageVector,
 ) {
-    INBOX("Inbox", Icons.Default.Notifications),
+    HOME("Home", Icons.Default.Home),
     DATA("Data", Icons.Default.DataObject),
-    RULES("Rules", Icons.Default.Home),
+    RULES("Rules", Icons.AutoMirrored.Filled.Assignment),
     SETTINGS("Settings", Icons.Default.Settings),
 }
 
@@ -35,19 +35,20 @@ enum class AppDestinations(
  * Usage:
  * ```kotlin
  * MainBottomNav(
- *     selectedDestination = AppDestinations.INBOX,
+ *     selectedDestination = AppDestinations.HOME,
  *     navigateTo = { route, navOptions ->
  *         navigator.navigate(route, navOptions)
  *     }
  * )
  * ```
  *
- * @param selectedDestination The currently selected destination
+ * @param selectedDestination The currently selected destination, or null when the current screen
+ * (e.g. Inbox) isn't one of the bottom-nav tabs and none should be highlighted
  * @param navigateTo Navigation callback that accepts a route and optional NavOptions
  */
 @Composable
 fun MainBottomNav(
-    selectedDestination: AppDestinations,
+    selectedDestination: AppDestinations?,
     navigateTo: (Screen, NavOptions?) -> Unit,
 ) {
     NavigationBar {
@@ -67,8 +68,8 @@ fun MainBottomNav(
                         return@NavigationBarItem
                     }
                     when (destination) {
-                        AppDestinations.INBOX -> navigateTo(
-                            Screen.Inbox,
+                        AppDestinations.HOME -> navigateTo(
+                            Screen.Home,
                             navOptions { clearStack() },
                         )
                         AppDestinations.RULES -> navigateTo(

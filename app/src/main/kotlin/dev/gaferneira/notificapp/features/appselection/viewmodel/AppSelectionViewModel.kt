@@ -79,11 +79,11 @@ class AppSelectionViewModel @Inject constructor(
     }
 
     /**
-     * Navigate to main app (inbox).
+     * Navigate to main app (Home dashboard).
      */
     private fun navigateToMainApp() {
         viewModelScope.launch {
-            navigationHandler.clearAndNavigate(Routes.inbox())
+            navigationHandler.clearAndNavigate(Routes.home())
         }
     }
 

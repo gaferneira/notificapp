@@ -233,4 +233,31 @@
     <string name="settings_language_system">System default</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_spanish">Spanish</string>
+
+    <!-- Home - Monitoring Banner -->
+    <string name="home_banner_active">%1$d apps monitored · %2$d rules</string>
+    <string name="home_banner_inactive">Notification access is disabled</string>
+
+    <!-- Home - Starter Rules -->
+    <string name="home_starter_rules_title">Starter Rules</string>
+    <string name="home_create_rule_from_this">Create rule from this</string>
+    <string name="home_see_more_templates">See more templates</string>
+
+    <!-- Home - Recurring Notifications -->
+    <string name="home_recurring_title">Recurring Notifications</string>
+    <string name="home_skip_similar">Skip similar</string>
+
+    <!-- Home - This Week Stats -->
+    <string name="home_stat_records">Records</string>
+    <string name="home_stat_rules_fired">Rules fired</string>
+    <string name="home_stat_apps_active">Apps active</string>
+
+    <!-- Home - Recent Activity -->
+    <string name="home_recent_activity_title">Recent Activity</string>
+    <string name="home_recent_activity_empty">No activity yet</string>
+    <string name="home_see_all">See all</string>
+
+    <!-- Home - Errors -->
+    <string name="home_error_dismiss_suggestion">Failed to dismiss suggestion</string>
+    <string name="home_error_create_rule_from_template">Failed to create rule from template</string>
 </resources>

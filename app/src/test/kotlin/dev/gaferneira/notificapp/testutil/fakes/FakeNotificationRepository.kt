@@ -145,4 +145,8 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
             .sortedByDescending { it.timestamp }
             .take(limit)
     }
+
+    override fun observeCountSince(since: Long): Flow<Int> = notifications.map { list ->
+        list.count { it.timestamp >= since }
+    }
 }

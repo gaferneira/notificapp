@@ -18,6 +18,14 @@ sealed class Screen : NavKey {
     data object Inbox : Screen()
 
     /**
+     * Home dashboard - launch summary: monitoring status, starter rules or recurring-notification
+     * suggestions, weekly stats, and recent activity. Occupies the first bottom-nav slot Inbox
+     * previously held.
+     */
+    @Serializable
+    data object Home : Screen()
+
+    /**
      * Rules screen - list of extraction rules.
      */
     @Serializable

@@ -49,6 +49,7 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.appselection.ui.AppSelectionScreen
 import dev.gaferneira.notificapp.features.databrowser.ui.DataBrowserScreen
+import dev.gaferneira.notificapp.features.home.ui.HomeScreen
 import dev.gaferneira.notificapp.features.inbox.ui.InboxScreen
 import dev.gaferneira.notificapp.features.notificationdetail.ui.NotificationDetailScreen
 import dev.gaferneira.notificapp.features.onboarding.ui.OnboardingScreen
@@ -155,7 +156,7 @@ fun Notificapp(
     val startRoute: Screen = when (currentFlowState) {
         AppFlowState.ONBOARDING -> Routes.onboarding()
         AppFlowState.APP_SELECTION -> Routes.appSelection(isInitialSetup = true)
-        AppFlowState.MAIN_APP -> Routes.inbox()
+        AppFlowState.MAIN_APP -> Routes.home()
     }
 
     val navigationState = rememberNavigationState(startRoute = startRoute)
@@ -215,9 +216,16 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
         AppSelectionScreen()
     }
 
+    entry<Screen.Home> {
+        HomeScreen(
+            navigateTo = navigator::navigate,
+        )
+    }
+
     entry<Screen.Inbox> {
         InboxScreen(
             navigateTo = navigator::navigate,
+            navigateBack = navigator::goBack,
         )
     }
 

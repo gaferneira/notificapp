@@ -48,9 +48,6 @@ object NotificationTitleNormalizer {
 
         result = punctuationAndWhitespacePattern.replace(result, " ").trim()
 
-        val alphaCount = result.count { it.isLetter() }
-        if (alphaCount < MIN_ALPHA_CHARS) return null
-
-        return result
+        return if (result.count { it.isLetter() } >= MIN_ALPHA_CHARS) result else null
     }
 }

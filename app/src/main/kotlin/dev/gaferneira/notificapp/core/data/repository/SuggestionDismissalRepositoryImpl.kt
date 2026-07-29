@@ -38,10 +38,11 @@ internal class SuggestionDismissalRepositoryImpl @Inject constructor(
             val entity: SuggestionDismissalEntity = SuggestionDismissalMapper.toEntity(key, System.currentTimeMillis())
             dao.dismiss(entity)
             Result.success(Unit)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Timber.e(e, "Failed to dismiss suggestion: $packageName / $normalizedTitleKey")
-            e.toFailureResult()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (expected: Exception) {
+            Timber.e(expected, "Failed to dismiss suggestion: $packageName / $normalizedTitleKey")
+            expected.toFailureResult()
         }
     }
 }

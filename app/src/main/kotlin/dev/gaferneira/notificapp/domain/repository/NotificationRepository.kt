@@ -141,4 +141,9 @@ interface NotificationRepository {
      * recent first.
      */
     fun observeRecentSince(since: Long, limit: Int): Flow<List<Notification>>
+
+    /**
+     * Count notifications logged at or after [since] (epoch millis).
+     */
+    fun observeCountSince(since: Long): Flow<Int>
 }

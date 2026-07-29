@@ -87,6 +87,26 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **User Experience:** The user picks which installed apps Notificapp should monitor, searching and toggling apps in a list. Only notifications from selected apps are captured and can be used in rules.
 * **System Trigger:** Shown right after onboarding, or reopened anytime from Settings.
 
+### Home Dashboard
+* **User Experience:** The user opens the app to a launch summary: a monitoring status banner
+  (listener active/inactive, monitored-app count, rule count); for zero-rule users, a "Starter
+  Rules" section with curated templates ("Create rule from this" / "Create from scratch" / "See
+  more templates"); for users with rules, a "Recurring Notifications" section suggesting rules for
+  repeated, un-automated notification patterns ("Create rule from this" / "Skip similar"); a "This
+  Week" stats row (records / rules fired / apps active); and a "Recent Activity" feed of recent
+  rule executions, each opening notification detail, with a "See all" action that pushes Inbox as a
+  stacked screen.
+* **System Trigger:** User opens the app.
+* **Technical Spec Reference:** `openspec/changes/home-screen-nav-replacement/specs/home-dashboard/`
+
+### Recurring Notification Suggestions
+* **User Experience:** When the same kind of notification arrives at least 4 times over 2 weeks on
+  at least 2 different days from an app no rule covers, Home offers to turn it into a rule;
+  tapping "Skip similar" hides that pattern permanently.
+* **System Trigger:** User opens the app (Home dashboard); the suggestion is recomputed on each
+  app launch/resume.
+* **Technical Spec Reference:** `openspec/changes/home-screen-nav-replacement/specs/recurring-notification-suggestions/`
+
 ### Notification Inbox & Detail
 * **User Experience:** The user browses a time-grouped list of every captured notification, with:
   * Search by text
@@ -95,7 +115,7 @@ Notificapp lets users create automation rules that act on the notifications thei
   * A warning banner if notification access has been revoked
   * Tapping an item opens its full content plus a history of which rules matched it, what data was extracted, and what actions ran (with outcome: Success, Failed, Skipped, or Suppressed)
   * From detail view: "Create rule" from this notification, or "Re-run rules" to manually recompute matches
-* **System Trigger:** User opens the app to the Inbox (its home screen); taps a notification to see details; taps "Re-run rules" to recompute matches manually.
+* **System Trigger:** User opens the app to the Home dashboard; the Inbox opens from Home's "See all" or from a recent-activity row; taps a notification to see details; taps "Re-run rules" to recompute matches manually.
 
 ### Rules Management
 * **User Experience:** The user views all their rules in one list, with:
@@ -125,7 +145,7 @@ Notificapp lets users create automation rules that act on the notifications thei
   * Bulk-delete everything matching the current filters, after a confirmation dialog showing the exact affected count — the delete always targets the previewed ID set, so data arriving between preview and confirmation is never swept in
   * Export the currently filtered set as CSV or JSON via the Android share sheet; export streams in fixed-size batches so it never materializes the full result set in memory, even for tens of thousands of rows
   * Dry-run rule executions (test/preview matches) are excluded from every Data Browser view by default: browsing, search, statistics, export, and deletion
-* **System Trigger:** User navigates to the Data tab (bottom navigation, between Inbox and Rules).
+* **System Trigger:** User navigates to the Data tab (bottom navigation, between Home and Rules).
 * **Technical Spec Reference:** `openspec/changes/data-browser/specs/data-browsing/spec.md`, `data-statistics/spec.md`, `data-export/spec.md`, `data-deletion/spec.md`
 
 ---

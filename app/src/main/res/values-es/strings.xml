@@ -48,4 +48,31 @@
     <string name="settings_language_system">Predeterminado del sistema</string>
     <string name="settings_language_english">Inglés</string>
     <string name="settings_language_spanish">Español</string>
+
+    <!-- Home - Monitoring Banner -->
+    <string name="home_banner_active">%1$d aplicaciones monitoreadas · %2$d reglas</string>
+    <string name="home_banner_inactive">El acceso a notificaciones está desactivado</string>
+
+    <!-- Home - Starter Rules -->
+    <string name="home_starter_rules_title">Reglas iniciales</string>
+    <string name="home_create_rule_from_this">Crear regla a partir de esto</string>
+    <string name="home_see_more_templates">Ver más plantillas</string>
+
+    <!-- Home - Recurring Notifications -->
+    <string name="home_recurring_title">Notificaciones recurrentes</string>
+    <string name="home_skip_similar">Omitir similares</string>
+
+    <!-- Home - This Week Stats -->
+    <string name="home_stat_records">Registros</string>
+    <string name="home_stat_rules_fired">Reglas activadas</string>
+    <string name="home_stat_apps_active">Apps activas</string>
+
+    <!-- Home - Recent Activity -->
+    <string name="home_recent_activity_title">Actividad reciente</string>
+    <string name="home_recent_activity_empty">Sin actividad todavía</string>
+    <string name="home_see_all">Ver todo</string>
+
+    <!-- Home - Errors -->
+    <string name="home_error_dismiss_suggestion">No se pudo descartar la sugerencia</string>
+    <string name="home_error_create_rule_from_template">No se pudo crear la regla a partir de la plantilla</string>
 </resources>

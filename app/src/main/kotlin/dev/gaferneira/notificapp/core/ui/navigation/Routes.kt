@@ -26,6 +26,11 @@ object Routes {
     fun inbox(): Screen = Screen.Inbox
 
     /**
+     * Home dashboard - the app's first bottom-nav destination.
+     */
+    fun home(): Screen = Screen.Home
+
+    /**
      * Rules screen - list of extraction rules.
      */
     fun rules(): Screen = Screen.Rules

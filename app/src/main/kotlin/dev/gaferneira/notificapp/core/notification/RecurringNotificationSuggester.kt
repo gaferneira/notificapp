@@ -41,21 +41,19 @@ class RecurringNotificationSuggester @Inject constructor() {
             }
             .groupBy(keySelector = { it.first }, valueTransform = { it.second })
 
-        val candidates = groups.filter { (groupKey, members) ->
+        val suggestions = groups.mapNotNull { (groupKey, members) ->
             val (packageName, normalizedTitleKey) = groupKey
             val dismissalKey = SuggestionDismissalKey(packageName, normalizedTitleKey)
             val distinctDays = members.map { LocalDate.ofInstant(Instant.ofEpochMilli(it.timestamp), zoneId) }.toSet().size
 
-            members.size >= config.minOccurrences &&
-                distinctDays >= config.minDistinctDays &&
-                dismissalKey !in dismissals
-        }
+            if (members.size < config.minOccurrences ||
+                distinctDays < config.minDistinctDays ||
+                dismissalKey in dismissals
+            ) {
+                return@mapNotNull null
+            }
 
-        val suggestions = candidates.mapNotNull { (groupKey, members) ->
-            val (packageName, normalizedTitleKey) = groupKey
             val representative = members.maxBy { it.timestamp }
-            val distinctDays = members.map { LocalDate.ofInstant(Instant.ofEpochMilli(it.timestamp), zoneId) }.toSet().size
-
             val applicableRules = activeRules.filter { it.appliesToPackage(packageName) }
             val representativeNow = Instant.ofEpochMilli(representative.timestamp).atZone(zoneId).toLocalDateTime()
             val coverage = when {
@@ -88,17 +86,15 @@ class RecurringNotificationSuggester @Inject constructor() {
             .take(config.maxSuggestions)
     }
 
-    /** Threshold defaults for candidacy and result-count capping. */
+    /** Threshold defaults for candidacy and result-count capping. Windowing is the caller's responsibility. */
     data class Config(
         val minOccurrences: Int = DEFAULT_MIN_OCCURRENCES,
-        val windowDays: Int = DEFAULT_WINDOW_DAYS,
         val minDistinctDays: Int = DEFAULT_MIN_DISTINCT_DAYS,
         val maxSuggestions: Int = DEFAULT_MAX_SUGGESTIONS,
     )
 
     companion object {
         internal const val DEFAULT_MIN_OCCURRENCES = 4
-        internal const val DEFAULT_WINDOW_DAYS = 14
         internal const val DEFAULT_MIN_DISTINCT_DAYS = 2
         internal const val DEFAULT_MAX_SUGGESTIONS = 3
     }

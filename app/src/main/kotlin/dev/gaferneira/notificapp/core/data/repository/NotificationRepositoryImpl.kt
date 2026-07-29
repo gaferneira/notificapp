@@ -249,6 +249,9 @@ internal class NotificationRepositoryImpl @Inject constructor(
     override fun observeRecentSince(since: Long, limit: Int): Flow<List<Notification>> = dao.observeRecentSince(since, limit)
         .map { entities -> entities.map { it.toModel() } }
         .flowOn(ioDispatcher)
+
+    override fun observeCountSince(since: Long): Flow<Int> = dao.observeCountSince(since)
+        .flowOn(ioDispatcher)
 }
 
 /**
