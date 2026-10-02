@@ -167,25 +167,15 @@ internal fun HomeScreenContent(
             }
 
             item {
-                when (val section = uiState.section) {
-                    is HomeSection.StarterRules -> GetStartedSection(
-                        monitoring = uiState.monitoring,
-                        templates = section.templates,
-                        onEnableAccess = onEnableAccess,
-                        onManageApps = { navigateTo(Routes.appSelection(), null) },
-                        onCreateFromTemplate = onCreateFromTemplate,
-                        onCreateFromScratch = onCreateFromScratch,
-                        onSeeMoreTemplates = onBrowseTemplates,
-                    )
-
-                    is HomeSection.Recurring -> RecurringSuggestionsSection(
-                        suggestions = section.suggestions,
-                        onCreateFromSuggestion = { onEvent(HomeEvent.OnCreateRuleFromSuggestion(it)) },
-                        onSkipSimilar = { onEvent(HomeEvent.OnSkipSimilar(it)) },
-                    )
-
-                    HomeSection.None -> Unit
-                }
+                HomeSectionContent(
+                    uiState = uiState,
+                    onEvent = onEvent,
+                    navigateTo = navigateTo,
+                    onBrowseTemplates = onBrowseTemplates,
+                    onCreateFromTemplate = onCreateFromTemplate,
+                    onCreateFromScratch = onCreateFromScratch,
+                    onEnableAccess = onEnableAccess,
+                )
             }
 
             if (!isFirstRun) {
@@ -200,6 +190,38 @@ internal fun HomeScreenContent(
                 }
             }
         }
+    }
+}
+
+/** The state-dependent section: first-run checklist, recurring suggestions, or nothing. */
+@Composable
+private fun HomeSectionContent(
+    uiState: HomeUiState,
+    onEvent: (HomeEvent) -> Unit,
+    navigateTo: (Screen, NavOptions?) -> Unit,
+    onBrowseTemplates: () -> Unit,
+    onCreateFromTemplate: (RuleTemplateInfo) -> Unit,
+    onCreateFromScratch: () -> Unit,
+    onEnableAccess: () -> Unit,
+) {
+    when (val section = uiState.section) {
+        is HomeSection.StarterRules -> GetStartedSection(
+            monitoring = uiState.monitoring,
+            templates = section.templates,
+            onEnableAccess = onEnableAccess,
+            onManageApps = { navigateTo(Routes.appSelection(), null) },
+            onCreateFromTemplate = onCreateFromTemplate,
+            onCreateFromScratch = onCreateFromScratch,
+            onSeeMoreTemplates = onBrowseTemplates,
+        )
+
+        is HomeSection.Recurring -> RecurringSuggestionsSection(
+            suggestions = section.suggestions,
+            onCreateFromSuggestion = { onEvent(HomeEvent.OnCreateRuleFromSuggestion(it)) },
+            onSkipSimilar = { onEvent(HomeEvent.OnSkipSimilar(it)) },
+        )
+
+        HomeSection.None -> Unit
     }
 }
 

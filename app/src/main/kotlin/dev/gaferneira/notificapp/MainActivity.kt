@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -217,36 +218,7 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
         AppSelectionScreen()
     }
 
-    entry<Screen.Home> {
-        HomeScreen(
-            navigateTo = navigator::navigate,
-        )
-    }
-
-    entry<Screen.Inbox> {
-        InboxScreen(
-            navigateTo = navigator::navigate,
-            navigateBack = navigator::goBack,
-        )
-    }
-
-    entry<Screen.Data> {
-        DataBrowserScreen(
-            navigateTo = navigator::navigate,
-        )
-    }
-
-    entry<Screen.Rules> {
-        RulesScreen(
-            navigateTo = navigator::navigate,
-        )
-    }
-
-    entry<Screen.Settings> {
-        SettingsScreen(
-            navigateTo = navigator::navigate,
-        )
-    }
+    mainTabEntries(navigator)
 
     // Detail screens with slide transitions
     entry<Screen.NotificationDetails> { screen ->
@@ -280,6 +252,40 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
         WebhookEditorScreen(
             webhookId = screen.webhookId,
             onBackClick = navigator::goBack,
+        )
+    }
+}
+
+/** Entries for the destinations reachable from the bottom navigation bar. */
+private fun EntryProviderScope<NavKey>.mainTabEntries(navigator: Navigator) {
+    entry<Screen.Home> {
+        HomeScreen(
+            navigateTo = navigator::navigate,
+        )
+    }
+
+    entry<Screen.Inbox> {
+        InboxScreen(
+            navigateTo = navigator::navigate,
+            navigateBack = navigator::goBack,
+        )
+    }
+
+    entry<Screen.Data> {
+        DataBrowserScreen(
+            navigateTo = navigator::navigate,
+        )
+    }
+
+    entry<Screen.Rules> {
+        RulesScreen(
+            navigateTo = navigator::navigate,
+        )
+    }
+
+    entry<Screen.Settings> {
+        SettingsScreen(
+            navigateTo = navigator::navigate,
         )
     }
 }
