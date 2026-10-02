@@ -103,7 +103,7 @@ class AppSelectionViewModel @Inject constructor(
                 val existingApps = selectedAppRepository.getAllApps().getOrNull() ?: emptyList()
 
                 // Determine if this is initial setup (no apps selected yet)
-                val isInitialSetup = existingApps.isEmpty()
+                val isInitialSetup = uiState.value.isInitialSetup ?: existingApps.isEmpty()
 
                 // On initial setup, default to every app selected (opt-out UX) and persist
                 // immediately so Continue works even if the user never touches an individual app.
