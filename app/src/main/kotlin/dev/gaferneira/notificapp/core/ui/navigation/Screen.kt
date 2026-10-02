@@ -68,7 +68,14 @@ sealed class Screen : NavKey {
     data class RuleEditor(
         val ruleId: String? = null,
         val notificationId: String? = null,
+        val templateAssetFileName: String? = null,
     ) : Screen()
+
+    /**
+     * Starter rule template gallery with category filters; the create-rule entry point.
+     */
+    @Serializable
+    data object RuleTemplates : Screen()
 
     /**
      * Onboarding screen - initial setup for notification permission.

@@ -8,8 +8,12 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ### Rule Creation & Editing
 * **User Experience:** The user builds a rule in a two-step wizard: first defining conditions (when a notification's title, text, app, or package matches something) and one or more actions to run when it matches, then naming the rule and optionally marking it as "dry-run" (log matches without ever acting) for safe trialing. Rules can also be started pre-filled from a real captured notification, or built from scratch.
-* **System Trigger:** User taps "New rule" on the Rules screen, which opens a template picker offering curated starter templates first and "Start from scratch" as a secondary option; or taps "Create rule" from a notification's detail view (goes straight to a pre-filled blank editor).
+* **System Trigger:** User taps "New rule" on the Rules screen, which opens the Rule Templates screen (curated starter templates first, "Start from scratch" as a pinned secondary action); or taps "Create rule" from a notification's detail view (goes straight to a pre-filled blank editor).
 * **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`, `openspec/specs/rule-storage/`
+
+### Rule Templates
+* **User Experience:** A full-screen gallery of curated starter rules with single-select category filter chips (All plus each category) and each template's full description. Tapping a template opens the rule editor pre-populated and unsaved (nothing persists until Save; imported rules start in dry-run); "Start from scratch" is pinned at the bottom. The gallery is removed from the back stack on selection, so saving or backing out of the editor returns to the originating screen.
+* **System Trigger:** "See more templates" on Home, or "New rule" / "Import from templates" on the Rules screen.
 
 ### Matching Conditions
 * **User Experience:** The user specifies what a notification must look like to match a rule by adding one or more conditions, drawn from three editable families. Multiple conditions on the same rule are combined with a per-rule combinator (`ALL` = every condition must match, `ANY` = at least one condition must match). The three condition families are:
@@ -89,9 +93,10 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ### Home Dashboard
 * **User Experience:** The user opens the app to a launch summary: a monitoring status banner
-  (listener active/inactive, monitored-app count, rule count); for zero-rule users, a "Starter
-  Rules" section with curated templates ("Create rule from this" / "Create from scratch" / "See
-  more templates"); for users with rules, a "Recurring Notifications" section suggesting rules for
+  (listener active/inactive, monitored-app count, rule count); for zero-rule users, a "Get started"
+  checklist (notification access, monitored apps, first rule) whose active step hosts curated
+  templates ("Create rule from this" / "Create from scratch" / "See more templates") and replaces
+  the banner; for users with rules, a "Recurring Notifications" section suggesting rules for
   repeated, un-automated notification patterns ("Create rule from this" / "Skip similar"); a "This
   Week" stats row (records / rules fired / apps active); and a "Recent Activity" feed of recent
   rule executions, each opening notification detail, with a "See all" action that pushes Inbox as a

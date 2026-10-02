@@ -5,6 +5,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
+import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec
+import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec.withFreshIdentityForImport
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.domain.model.ActionType
@@ -72,6 +74,7 @@ class RuleEditorViewModel @Inject constructor(
     override fun onEvent(event: UiEvent) {
         when (event) {
             is UiEvent.LoadRule -> loadRule(event.ruleId)
+            is UiEvent.LoadTemplate -> loadTemplate(event.text)
             is UiEvent.LoadSampleNotification -> loadSampleNotification(event.notificationId)
             is UiEvent.OnContinueClicked -> navigateToStep(2)
             is UiEvent.OnBackToLogicClicked -> navigateToStep(1)
@@ -156,6 +159,28 @@ class RuleEditorViewModel @Inject constructor(
                     }
                 }
         }
+    }
+
+    /**
+     * Populates the form from a template without persisting anything: `id = null` keeps the
+     * editor in "create" mode, so the rule is only saved when the user taps Save.
+     */
+    private fun loadTemplate(text: String) {
+        RuleJsonCodec.decode(text)
+            .onSuccess { result ->
+                val uiModel = RuleUiModel.fromDomain(result.rule.withFreshIdentityForImport()).copy(id = null)
+                setState {
+                    copy(
+                        rule = uiModel,
+                        showCategory = uiModel.category.isNotBlank(),
+                        showDescription = uiModel.description.isNotBlank(),
+                    )
+                }
+            }
+            .onFailure { e ->
+                Timber.w(e, "Failed to decode rule template")
+                sendEffect(UiEffect.ShowError("Couldn't load the template"))
+            }
     }
 
     private fun loadSampleNotification(notificationId: String) {

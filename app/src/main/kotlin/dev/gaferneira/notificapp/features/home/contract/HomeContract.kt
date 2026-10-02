@@ -51,6 +51,7 @@ data class RecurringSuggestionUi(
     val appName: String,
     val normalizedTitleKey: String,
     val sampleTitle: String,
+    val sampleContent: String?,
     val sampleNotificationId: String,
     val occurrences: Int,
     val coverage: RuleCoverage,
@@ -58,9 +59,7 @@ data class RecurringSuggestionUi(
 
 sealed interface HomeEvent {
     data object OnResume : HomeEvent
-    data class OnRuleTemplateTextReceived(val text: String) : HomeEvent
     data object OnCreateRuleFromScratch : HomeEvent
-    data object OnSeeMoreTemplates : HomeEvent
     data class OnCreateRuleFromSuggestion(val suggestion: RecurringSuggestionUi) : HomeEvent
     data class OnSkipSimilar(val suggestion: RecurringSuggestionUi) : HomeEvent
     data class OnRecentActivityClick(val notificationId: String) : HomeEvent

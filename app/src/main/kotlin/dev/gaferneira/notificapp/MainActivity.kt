@@ -55,6 +55,7 @@ import dev.gaferneira.notificapp.features.notificationdetail.ui.NotificationDeta
 import dev.gaferneira.notificapp.features.onboarding.ui.OnboardingScreen
 import dev.gaferneira.notificapp.features.ruleeditor.ui.RuleEditorScreen
 import dev.gaferneira.notificapp.features.rules.ui.RulesScreen
+import dev.gaferneira.notificapp.features.ruletemplates.ui.RuleTemplatesScreen
 import dev.gaferneira.notificapp.features.settings.ui.SettingsScreen
 import dev.gaferneira.notificapp.features.webhook.ui.WebhookEditorScreen
 import dev.gaferneira.notificapp.features.webhook.ui.WebhookListScreen
@@ -258,6 +259,14 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
         RuleEditorScreen(
             ruleId = screen.ruleId,
             notificationId = screen.notificationId,
+            templateAssetFileName = screen.templateAssetFileName,
+        )
+    }
+
+    entry<Screen.RuleTemplates> {
+        RuleTemplatesScreen(
+            navigateTo = navigator::navigate,
+            navigateBack = navigator::goBack,
         )
     }
 
@@ -282,9 +291,9 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
  * @param navigator The navigator to observe
  */
 @Composable
-private fun DebugNavOverlay(navigator: Navigator) {
+private fun DebugNavOverlay(navigator: Navigator, showDebugOverlay: Boolean = false) {
     // Show only in debug builds
-    if (BuildConfig.DEBUG) {
+    if (BuildConfig.DEBUG && showDebugOverlay) {
         Column(
             modifier = Modifier
                 .padding(8.dp)

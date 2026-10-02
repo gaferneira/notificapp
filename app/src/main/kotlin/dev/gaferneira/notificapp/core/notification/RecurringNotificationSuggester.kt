@@ -71,6 +71,7 @@ class RecurringNotificationSuggester @Inject constructor() {
                 appName = representative.appName,
                 normalizedTitleKey = normalizedTitleKey,
                 sampleTitle = representative.title.orEmpty(),
+                sampleContent = representative.content,
                 sampleNotificationId = representative.id,
                 occurrences = members.size,
                 distinctDays = distinctDays,

@@ -11,6 +11,7 @@ package dev.gaferneira.notificapp.domain.model
  * @property normalizedTitleKey The stable grouping key produced by
  *   [dev.gaferneira.notificapp.core.notification.NotificationTitleNormalizer]; also the dismissal key.
  * @property sampleTitle Raw title of the group's most recent member, for display.
+ * @property sampleContent Raw content/body of the group's most recent member, for display.
  * @property sampleNotificationId Notification id of the group's most recent member; seeds
  *   `Screen.RuleEditor(notificationId = ...)` when the user taps "Create rule from this".
  * @property occurrences How many notifications in the window belong to this group.
@@ -22,6 +23,7 @@ data class RecurringSuggestion(
     val appName: String,
     val normalizedTitleKey: String,
     val sampleTitle: String,
+    val sampleContent: String? = null,
     val sampleNotificationId: String,
     val occurrences: Int,
     val distinctDays: Int,

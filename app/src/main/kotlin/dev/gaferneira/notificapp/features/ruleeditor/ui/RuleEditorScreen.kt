@@ -49,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.core.ui.utils.LocalIoDispatcher
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
@@ -82,22 +84,34 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.RuleEditorViewMod
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun RuleEditorScreen(
     modifier: Modifier = Modifier,
     ruleId: String? = null,
     notificationId: String? = null,
+    templateAssetFileName: String? = null,
     viewModel: RuleEditorViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val ioDispatcher = LocalIoDispatcher.current
 
     // Load initial data
-    LaunchedEffect(ruleId, notificationId) {
+    LaunchedEffect(ruleId, notificationId, templateAssetFileName) {
         viewModel.onEvent(UiEvent.LoadRule(ruleId))
         notificationId?.let { viewModel.onEvent(UiEvent.LoadSampleNotification(it)) }
+        templateAssetFileName?.let { fileName ->
+            val text = withContext(ioDispatcher) {
+                runCatching {
+                    context.assets.open("rules/$fileName").bufferedReader().use { it.readText() }
+                }.getOrNull()
+            }
+            viewModel.onEvent(UiEvent.LoadTemplate(text.orEmpty()))
+        }
     }
 
     // Collect effects

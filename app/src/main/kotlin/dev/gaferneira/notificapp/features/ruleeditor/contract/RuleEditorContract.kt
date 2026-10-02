@@ -89,6 +89,9 @@ object RuleEditorContract {
         /** Load existing rule by ID */
         data class LoadRule(val ruleId: String?) : UiEvent()
 
+        /** Pre-populate an unsaved new rule from a starter template's JSON text */
+        data class LoadTemplate(val text: String) : UiEvent()
+
         /** Load sample notification by ID */
         data class LoadSampleNotification(val notificationId: String) : UiEvent()
 

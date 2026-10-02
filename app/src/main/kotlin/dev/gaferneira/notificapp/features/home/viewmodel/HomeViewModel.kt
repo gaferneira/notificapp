@@ -7,8 +7,6 @@ import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.di.HomeDataSources
 import dev.gaferneira.notificapp.core.notification.RecurringNotificationSuggester
-import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec
-import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec.withFreshIdentityForImport
 import dev.gaferneira.notificapp.core.rulesharing.RuleTemplates
 import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
@@ -61,11 +59,7 @@ class HomeViewModel @Inject constructor(
     override fun onEvent(event: HomeEvent) {
         when (event) {
             HomeEvent.OnResume -> checkListenerStatus()
-            is HomeEvent.OnRuleTemplateTextReceived -> onRuleTemplateTextReceived(event.text)
             HomeEvent.OnCreateRuleFromScratch -> sendEffect(HomeEffect.NavigateToRuleEditor())
-            // No dedicated "all templates" screen exists yet; RuleTemplatePickerSheet already
-            // surfaces every template, so there's nowhere else to navigate to.
-            HomeEvent.OnSeeMoreTemplates -> Unit
             is HomeEvent.OnCreateRuleFromSuggestion -> sendEffect(
                 HomeEffect.NavigateToRuleEditor(notificationId = event.suggestion.sampleNotificationId),
             )
@@ -115,7 +109,7 @@ class HomeViewModel @Inject constructor(
                     (rules, enabledApps, listenerEnabled),
                     stats,
                     suggestions,
-                 ->
+                ->
                 buildState(
                     HomeStateParams(
                         ruleCount = rules.size,
@@ -135,27 +129,6 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun buildState(params: HomeStateParams): HomeUiState = buildHomeUiState(params)
-
-    private fun onRuleTemplateTextReceived(text: String) {
-        viewModelScope.launch {
-            RuleJsonCodec.decode(text)
-                .onSuccess { result ->
-                    val rule = result.rule.withFreshIdentityForImport()
-                    ruleRepository.saveRule(rule)
-                        .onSuccess {
-                            sendEffect(HomeEffect.NavigateToRuleEditor(ruleId = rule.id))
-                        }
-                        .onFailure { e ->
-                            Timber.e(e, "Failed to save rule from template")
-                            sendEffect(HomeEffect.ShowError(UiText.StringResource(R.string.home_error_create_rule_from_template)))
-                        }
-                }
-                .onFailure { e ->
-                    Timber.w(e, "Failed to decode rule template")
-                    sendEffect(HomeEffect.ShowError(UiText.StringResource(R.string.home_error_create_rule_from_template)))
-                }
-        }
-    }
 
     private fun onSkipSimilar(suggestion: RecurringSuggestionUi) {
         viewModelScope.launch {
@@ -200,6 +173,7 @@ private fun RecurringSuggestion.toUi(): RecurringSuggestionUi = RecurringSuggest
     appName = appName,
     normalizedTitleKey = normalizedTitleKey,
     sampleTitle = sampleTitle,
+    sampleContent = sampleContent,
     sampleNotificationId = sampleNotificationId,
     occurrences = occurrences,
     coverage = coverage,

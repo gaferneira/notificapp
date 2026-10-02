@@ -235,19 +235,43 @@
     <string name="settings_language_spanish">Spanish</string>
 
     <!-- Home - Monitoring Banner -->
-    <string name="home_banner_active">%1$d apps monitored · %2$d rules</string>
+    <plurals name="home_banner_apps_monitored">
+        <item quantity="one">%d app monitored</item>
+        <item quantity="other">%d apps monitored</item>
+    </plurals>
+    <plurals name="home_banner_rules">
+        <item quantity="one">%d rule</item>
+        <item quantity="other">%d rules</item>
+    </plurals>
+    <string name="home_banner_manage_apps">Manage monitored apps</string>
+    <string name="home_banner_enable_access">Enable notification access</string>
     <string name="home_banner_inactive">Notification access is disabled</string>
 
     <!-- Home - Starter Rules -->
-    <string name="home_starter_rules_title">Starter Rules</string>
+    <string name="rule_template_card_click_label">Create rule from this</string>
+    <string name="templates_title">Rule templates</string>
+    <string name="templates_subtitle">Start from a ready-made rule and tweak it to fit your apps. Nothing is saved until you tap Save.</string>
+    <string name="templates_filter_all">All</string>
+    <string name="home_checklist_title">Get started</string>
+    <string name="home_checklist_progress">%1$d of %2$d done</string>
+    <string name="home_checklist_access_done">Notification access enabled</string>
+    <string name="home_checklist_access_todo">Allow notification access</string>
+    <string name="home_checklist_access_action">Enable</string>
+    <string name="home_checklist_apps_todo">Choose apps to monitor</string>
+    <string name="home_checklist_apps_action">Choose</string>
+    <string name="home_checklist_rule_title">Create your first rule</string>
+    <string name="home_starter_rules_subtitle">Start with a template or build your own from scratch.</string>
     <string name="home_create_rule_from_this">Create rule from this</string>
+    <string name="home_create_rule_from_scratch">Create rule from scratch</string>
     <string name="home_see_more_templates">See more templates</string>
 
     <!-- Home - Recurring Notifications -->
     <string name="home_recurring_title">Recurring Notifications</string>
+    <string name="home_recurring_subtitle">Automate or skip.</string>
     <string name="home_skip_similar">Skip similar</string>
 
     <!-- Home - This Week Stats -->
+    <string name="home_this_week_title">This Week</string>
     <string name="home_stat_records">Records</string>
     <string name="home_stat_rules_fired">Rules fired</string>
     <string name="home_stat_apps_active">Apps active</string>
@@ -259,5 +283,4 @@
 
     <!-- Home - Errors -->
     <string name="home_error_dismiss_suggestion">Failed to dismiss suggestion</string>
-    <string name="home_error_create_rule_from_template">Failed to create rule from template</string>
 </resources>
