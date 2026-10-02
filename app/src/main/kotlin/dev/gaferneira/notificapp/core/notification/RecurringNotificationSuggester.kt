@@ -8,7 +8,6 @@ import dev.gaferneira.notificapp.domain.model.RuleCoverage
 import dev.gaferneira.notificapp.domain.model.SuggestionDismissalKey
 import dev.gaferneira.notificapp.domain.model.appliesToPackage
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
@@ -44,7 +43,7 @@ class RecurringNotificationSuggester @Inject constructor() {
         val suggestions = groups.mapNotNull { (groupKey, members) ->
             val (packageName, normalizedTitleKey) = groupKey
             val dismissalKey = SuggestionDismissalKey(packageName, normalizedTitleKey)
-            val distinctDays = members.map { LocalDate.ofInstant(Instant.ofEpochMilli(it.timestamp), zoneId) }.toSet().size
+            val distinctDays = members.map { Instant.ofEpochMilli(it.timestamp).atZone(zoneId).toLocalDate() }.toSet().size
 
             if (members.size < config.minOccurrences ||
                 distinctDays < config.minDistinctDays ||

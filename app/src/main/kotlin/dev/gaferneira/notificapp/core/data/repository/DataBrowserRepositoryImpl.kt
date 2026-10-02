@@ -27,7 +27,6 @@ import kotlinx.coroutines.withContext
 import java.io.OutputStream
 import java.time.DayOfWeek
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
@@ -228,7 +227,7 @@ internal class DataBrowserRepositoryImpl @Inject constructor(
      */
     private suspend fun buildTrend(params: DataBrowserQueryParams): List<TrendPoint> {
         val zone = ZoneId.systemDefault()
-        val today = LocalDate.ofInstant(Instant.ofEpochMilli(currentTimeProvider.nowEpochMillis()), zone)
+        val today = Instant.ofEpochMilli(currentTimeProvider.nowEpochMillis()).atZone(zone).toLocalDate()
         val windowStart = today.minusDays((TREND_WINDOW_DAYS - 1).toLong())
         val sinceMillis = windowStart.atStartOfDay(zone).toInstant().toEpochMilli()
         val buckets = dataBrowserDao.getTrend(
@@ -249,7 +248,7 @@ internal class DataBrowserRepositoryImpl @Inject constructor(
 
     private fun startOfCurrentLocalWeekMillis(): Long {
         val zone = ZoneId.systemDefault()
-        val today = LocalDate.ofInstant(Instant.ofEpochMilli(currentTimeProvider.nowEpochMillis()), zone)
+        val today = Instant.ofEpochMilli(currentTimeProvider.nowEpochMillis()).atZone(zone).toLocalDate()
         val weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         return weekStart.atStartOfDay(zone).toInstant().toEpochMilli()
     }
