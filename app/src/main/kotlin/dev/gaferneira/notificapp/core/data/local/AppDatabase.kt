@@ -10,6 +10,7 @@ import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
+import dev.gaferneira.notificapp.core.data.local.dao.SuggestionDismissalDao
 import dev.gaferneira.notificapp.core.data.local.dao.WebhookDao
 import dev.gaferneira.notificapp.core.data.local.dao.WebhookDeliveryDao
 import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
@@ -23,6 +24,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleTargetAppEntity
 import dev.gaferneira.notificapp.core.data.local.entity.SelectedAppEntity
+import dev.gaferneira.notificapp.core.data.local.entity.SuggestionDismissalEntity
 import dev.gaferneira.notificapp.core.data.local.entity.WebhookDeliveryEntity
 import dev.gaferneira.notificapp.core.data.local.entity.WebhookEntity
 
@@ -44,6 +46,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.WebhookEntity
         ExtractedFieldValueFtsEntity::class,
         WebhookEntity::class,
         WebhookDeliveryEntity::class,
+        SuggestionDismissalEntity::class,
     ],
     version = AppDatabase.CURRENT_VERSION,
     exportSchema = true,
@@ -58,6 +61,7 @@ internal abstract class AppDatabase : RoomDatabase() {
     abstract fun dataBrowserDao(): DataBrowserDao
     abstract fun webhookDao(): WebhookDao
     abstract fun webhookDeliveryDao(): WebhookDeliveryDao
+    abstract fun suggestionDismissalDao(): SuggestionDismissalDao
 
     companion object {
         /**

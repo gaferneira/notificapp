@@ -32,6 +32,11 @@ data class RuleUiModel(
      * notifications - matches the default already used for imported rules.
      */
     val isDryRun: Boolean = true,
+    /**
+     * When true, after this rule matches and extracts data the source notification's raw text is
+     * scrubbed for privacy, keeping only the extracted fields.
+     */
+    val deleteRawContentAfterExtraction: Boolean = false,
     /** Target app package names (empty = all apps) */
     val targetApps: PersistentList<AppInfo> = persistentListOf(),
     /** When true, [targetApps] is an include-list; when false, an exclude-list. Ignored when empty. */
@@ -55,6 +60,7 @@ data class RuleUiModel(
         actions = actionsWithFieldsAttached(),
         isActive = true,
         isDryRun = isDryRun,
+        deleteRawContentAfterExtraction = deleteRawContentAfterExtraction,
         targetApps = targetApps,
         isIncludeMode = isIncludeMode,
     )
@@ -82,6 +88,7 @@ data class RuleUiModel(
             description = rule.description ?: "",
             category = rule.category.orEmpty(),
             isDryRun = rule.isDryRun,
+            deleteRawContentAfterExtraction = rule.deleteRawContentAfterExtraction,
             targetApps = rule.targetApps?.toPersistentList() ?: persistentListOf(),
             isIncludeMode = rule.isIncludeMode,
             conditionLogic = rule.conditionLogic,

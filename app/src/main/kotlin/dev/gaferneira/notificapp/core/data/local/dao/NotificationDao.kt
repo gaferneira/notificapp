@@ -170,6 +170,14 @@ internal interface NotificationDao {
     suspend fun markAsProcessed(ids: List<String>)
 
     /**
+     * Scrub a notification's free-text fields for privacy (`deleteRawContentAfterExtraction`),
+     * keeping the row itself - and therefore its rule executions and extracted field values,
+     * which cascade-delete on notification removal - intact.
+     */
+    @Query("UPDATE notifications SET raw_content = '', content = NULL, title = NULL WHERE id = :id")
+    suspend fun redactContent(id: String)
+
+    /**
      * Delete a notification.
      */
     @Delete
@@ -245,6 +253,27 @@ internal interface NotificationDao {
      */
     @Query("UPDATE notifications SET applied_rules_count = 0, is_processed = 0 WHERE id = :id")
     suspend fun resetAppliedRulesCount(id: String)
+
+    /**
+     * Count distinct apps with at least one notification at or after [since] (epoch millis), as a
+     * Flow - Home's "apps active this week" stat.
+     */
+    @Query("SELECT COUNT(DISTINCT package_name) FROM notifications WHERE timestamp >= :since")
+    fun observeActiveAppCountSince(since: Long): Flow<Int>
+
+    /**
+     * The most recent notifications at or after [since] (epoch millis), bounded by [limit], as a
+     * Flow - feeds Home's recurring-notification suggester with a bounded, reactive candidate set.
+     */
+    @Query("SELECT * FROM notifications WHERE timestamp >= :since ORDER BY timestamp DESC LIMIT :limit")
+    fun observeRecentSince(since: Long, limit: Int): Flow<List<NotificationEntity>>
+
+    /**
+     * Count notifications logged at or after [since] (epoch millis), as a Flow - Home's "records
+     * this week" stat.
+     */
+    @Query("SELECT COUNT(*) FROM notifications WHERE timestamp >= :since")
+    fun observeCountSince(since: Long): Flow<Int>
 }
 
 /** Projection for [NotificationDao.observeAppsWithLatestName]. */

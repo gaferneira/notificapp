@@ -3,33 +3,58 @@ package dev.gaferneira.notificapp.core.ui.theme
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
+    primary = DeepTechPrimaryDark,
+    onPrimary = DeepTechOnPrimaryDark,
+    primaryContainer = DeepTechPrimaryContainerDark,
+    onPrimaryContainer = DeepTechOnPrimaryContainerDark,
+    secondary = DeepTechSecondaryDark,
+    onSecondary = DeepTechOnSecondaryDark,
+    secondaryContainer = DeepTechSecondaryContainerDark,
+    onSecondaryContainer = DeepTechOnSecondaryContainerDark,
+    tertiary = DeepTechTertiaryDark,
+    onTertiary = DeepTechOnTertiaryDark,
+    tertiaryContainer = DeepTechTertiaryContainerDark,
+    onTertiaryContainer = DeepTechOnTertiaryContainerDark,
+    background = DeepTechBackgroundDark,
+    onBackground = DeepTechOnBackgroundDark,
+    surface = DeepTechSurfaceDark,
+    onSurface = DeepTechOnSurfaceDark,
+    surfaceVariant = DeepTechSurfaceVariantDark,
+    onSurfaceVariant = DeepTechOnSurfaceVariantDark,
+    outline = DeepTechOutlineDark,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-     */
+    primary = DeepTechPrimaryLight,
+    onPrimary = DeepTechOnPrimaryLight,
+    primaryContainer = DeepTechPrimaryContainerLight,
+    onPrimaryContainer = DeepTechOnPrimaryContainerLight,
+    secondary = DeepTechSecondaryLight,
+    onSecondary = DeepTechOnSecondaryLight,
+    secondaryContainer = DeepTechSecondaryContainerLight,
+    onSecondaryContainer = DeepTechOnSecondaryContainerLight,
+    tertiary = DeepTechTertiaryLight,
+    onTertiary = DeepTechOnTertiaryLight,
+    tertiaryContainer = DeepTechTertiaryContainerLight,
+    onTertiaryContainer = DeepTechOnTertiaryContainerLight,
+    background = DeepTechBackgroundLight,
+    onBackground = DeepTechOnBackgroundLight,
+    surface = DeepTechSurfaceLight,
+    onSurface = DeepTechOnSurfaceLight,
+    surfaceVariant = DeepTechSurfaceVariantLight,
+    onSurfaceVariant = DeepTechOnSurfaceVariantLight,
+    outline = DeepTechOutlineLight,
 )
 
 @Composable
@@ -49,9 +74,22 @@ fun NotificappTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content,
-    )
+    val shapes = remember { Shapes() }
+    val tokens = remember(colorScheme) {
+        AppTokens(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = shapes,
+            spacing = AppSpacing(),
+        )
+    }
+
+    CompositionLocalProvider(LocalAppTokens provides tokens) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = shapes,
+            content = content,
+        )
+    }
 }

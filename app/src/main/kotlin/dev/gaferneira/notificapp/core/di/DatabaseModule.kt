@@ -16,6 +16,7 @@ import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.dao.SelectedAppDao
+import dev.gaferneira.notificapp.core.data.local.dao.SuggestionDismissalDao
 import dev.gaferneira.notificapp.core.data.local.dao.WebhookDao
 import dev.gaferneira.notificapp.core.data.local.dao.WebhookDeliveryDao
 import dev.gaferneira.notificapp.core.data.local.migration.APP_DATABASE_MIGRATIONS
@@ -138,4 +139,13 @@ internal object DatabaseModule {
      */
     @Provides
     fun provideWebhookDeliveryDao(database: AppDatabase): WebhookDeliveryDao = database.webhookDeliveryDao()
+
+    /**
+     * Provides the SuggestionDismissalDao.
+     *
+     * @param database AppDatabase instance
+     * @return SuggestionDismissalDao
+     */
+    @Provides
+    fun provideSuggestionDismissalDao(database: AppDatabase): SuggestionDismissalDao = database.suggestionDismissalDao()
 }

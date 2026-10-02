@@ -119,16 +119,57 @@ internal object ExtractedFieldValueMapper {
     }
 
     /**
-     * Attempt to extract numeric value from currency string.
-     * Handles formats like "153.50 kr", "$1,234.56", "1.234,56 EUR"
+     * Attempt to extract a numeric value from a currency string, locale-tolerantly.
+     *
+     * Handles both separator conventions so the expense-tracking use case works on real bank
+     * notifications: US/UK `"$1,234.56"` and European/Spanish `"1.234,56 EUR"` both yield
+     * `1234.56`, and `"153,50 kr"` yields `153.5`. Returns null when there is no parseable number.
+     *
+     * Disambiguation heuristic within the first number run:
+     * - Both `.` and `,` present: the one that appears *last* is the decimal separator (thousands
+     *   separators always precede the decimal); the other groups thousands and is removed.
+     * - Only one separator type, appearing more than once (`"1.234.567"`): thousands grouping.
+     * - Only one separator, appearing once: a decimal point, unless it leaves exactly 3 trailing
+     *   digits (`"1,234"` → 1234), which reads as thousands grouping — the standard convention for
+     *   currency, where 3-decimal amounts are vanishingly rare.
      */
     private fun extractCurrencyValue(value: String): Double? {
-        // Remove common currency symbols and whitespace
-        val cleaned = value.replace(Regex("[\\p{Sc}\\s]"), "")
-            .replace(",", ".")
-        // Extract the first number sequence
-        val matchResult = Regex("[\\d.]+").find(cleaned)
-        return matchResult?.value?.toDoubleOrNull()
+        // First contiguous run of digits and separators, e.g. "1.234,56" out of "€1.234,56 EUR".
+        // The run never captures a trailing separator, so it always ends on a digit.
+        val numberRun = Regex("""\d(?:[\d.,]*\d)?""").find(value)?.value ?: return null
+        return normalizeSeparators(numberRun).toDoubleOrNull()
+    }
+
+    /**
+     * Collapse locale-specific thousands/decimal separators in [numberRun] into a plain
+     * `.`-decimal string parseable by [String.toDoubleOrNull]. See [extractCurrencyValue] for the
+     * heuristic.
+     */
+    private fun normalizeSeparators(numberRun: String): String {
+        val lastDot = numberRun.lastIndexOf('.')
+        val lastComma = numberRun.lastIndexOf(',')
+        return when {
+            lastDot >= 0 && lastComma >= 0 -> {
+                val decimalSep = if (lastDot > lastComma) '.' else ','
+                val thousandsSep = if (decimalSep == '.') ',' else '.'
+                numberRun.replace(thousandsSep.toString(), "").replace(decimalSep, '.')
+            }
+            lastComma >= 0 -> disambiguateSingleSeparator(numberRun, ',')
+            lastDot >= 0 -> disambiguateSingleSeparator(numberRun, '.')
+            else -> numberRun
+        }
+    }
+
+    private fun disambiguateSingleSeparator(numberRun: String, separator: Char): String {
+        val occurrences = numberRun.count { it == separator }
+        // A repeated single separator can only be thousands grouping ("1.234.567").
+        if (occurrences > 1) return numberRun.replace(separator.toString(), "")
+        val digitsAfter = numberRun.substringAfterLast(separator).length
+        return if (digitsAfter == 3) {
+            numberRun.replace(separator.toString(), "")
+        } else {
+            numberRun.replace(separator, '.')
+        }
     }
 
     /**

@@ -1,9 +1,11 @@
 package dev.gaferneira.notificapp.core.data.local.mapper
 
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import io.kotest.matchers.shouldBe
+import kotlinx.collections.immutable.persistentListOf
 import org.junit.jupiter.api.Test
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -80,5 +82,38 @@ class RuleConditionMapperTest {
 
         // Then: all three conditions are present after loading, with their original types, values, and order preserved
         loaded shouldBe conditions
+    }
+
+    @Test
+    fun `nested group round-trips through storage unchanged`() {
+        // Given: a Group with nested children, including a group nested inside the group
+        val innerGroup = RuleCondition.Group(
+            id = "g2",
+            combinator = ConditionCombinator.ANY,
+            children = persistentListOf(
+                RuleCondition.DayOfWeekCondition(id = "c-day", days = setOf(DayOfWeek.SATURDAY)),
+                RuleCondition.TimeRangeCondition(id = "c-time", start = LocalTime.of(22, 0), end = LocalTime.of(6, 0)),
+            ),
+        )
+        val outerGroup = RuleCondition.Group(
+            id = "g1",
+            combinator = ConditionCombinator.ALL,
+            children = persistentListOf(
+                RuleCondition.ContentMatchCondition(
+                    id = "c-content",
+                    condition = MatchingCondition.TEXT_CONTENT,
+                    operator = MatchingOperator.CONTAINS,
+                    value = "Total",
+                ),
+                innerGroup,
+            ),
+        )
+
+        // When: mapping to entity and back
+        val entity = RuleConditionMapper.toEntity(outerGroup, ruleId)
+        val loaded = RuleConditionMapper.toDomain(entity)
+
+        // Then: the loaded condition tree is identical to the original, at every nesting level
+        loaded shouldBe outerGroup
     }
 }

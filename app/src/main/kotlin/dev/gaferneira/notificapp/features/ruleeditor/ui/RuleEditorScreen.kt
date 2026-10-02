@@ -49,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.core.ui.utils.LocalIoDispatcher
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
@@ -82,22 +84,34 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.RuleEditorViewMod
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun RuleEditorScreen(
     modifier: Modifier = Modifier,
     ruleId: String? = null,
     notificationId: String? = null,
+    templateAssetFileName: String? = null,
     viewModel: RuleEditorViewModel = hiltViewModel(),
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val ioDispatcher = LocalIoDispatcher.current
 
     // Load initial data
-    LaunchedEffect(ruleId, notificationId) {
+    LaunchedEffect(ruleId, notificationId, templateAssetFileName) {
         viewModel.onEvent(UiEvent.LoadRule(ruleId))
         notificationId?.let { viewModel.onEvent(UiEvent.LoadSampleNotification(it)) }
+        templateAssetFileName?.let { fileName ->
+            val text = withContext(ioDispatcher) {
+                runCatching {
+                    context.assets.open("rules/$fileName").bufferedReader().use { it.readText() }
+                }.getOrNull()
+            }
+            viewModel.onEvent(UiEvent.LoadTemplate(text.orEmpty()))
+        }
     }
 
     // Collect effects
@@ -335,39 +349,7 @@ private fun RuleEditorBottomSheets(
     }
 
     if (uiState.isActionSheetVisible) {
-        val editing = uiState.editingAction
-        val onSave: (RuleAction) -> Unit = { action -> onEvent(UiEvent.OnActionSaved(action)) }
-        val onSheetDismiss: () -> Unit = { onEvent(UiEvent.OnDismissSheet) }
-        when (editing?.type ?: uiState.pendingActionType) {
-            ActionType.SNOOZE_NOTIFICATION ->
-                SnoozeBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
-            ActionType.CREATE_ALARM ->
-                AlarmBottomSheet(
-                    initial = editing,
-                    onSave = onSave,
-                    onDismiss = onSheetDismiss,
-                )
-            ActionType.FLASH_ALERT ->
-                FlashBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
-            ActionType.SAVE_DATA ->
-                ExtractDataBottomSheet(
-                    initialFields = uiState.rule.fields,
-                    isEditingAction = editing?.type == ActionType.SAVE_DATA,
-                    notification = uiState.sampleNotification,
-                    targetPackages = uiState.rule.targetApps.map { it.packageName }.takeIf { it.isNotEmpty() },
-                    onCommitted = { fields -> onEvent(UiEvent.OnExtractDataCommitted(fields)) },
-                    onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-                )
-            ActionType.SEND_WEBHOOK ->
-                WebhookConfigBottomSheet(
-                    initial = editing,
-                    ruleFields = uiState.rule.fields,
-                    onSave = onSave,
-                    onDismiss = onSheetDismiss,
-                )
-            // Dismiss adds directly (no sheet) and Extract-data uses its own sheet.
-            else -> Unit
-        }
+        ActionSheetForType(uiState = uiState, onEvent = onEvent)
     }
 
     if (uiState.pendingExtractDataRemovalId != null) {
@@ -381,6 +363,61 @@ private fun RuleEditorBottomSheets(
             fields = uiState.rule.fields,
             onDismiss = { onEvent(UiEvent.OnDismissBacktestResults) },
         )
+    }
+}
+
+/** Routes to the type-scoped sheet for the action being added (`pendingActionType`) or edited (`editingAction`). */
+@Composable
+private fun ActionSheetForType(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+) {
+    val editing = uiState.editingAction
+    val onSave: (RuleAction) -> Unit = { action -> onEvent(UiEvent.OnActionSaved(action)) }
+    val onSheetDismiss: () -> Unit = { onEvent(UiEvent.OnDismissSheet) }
+    when (editing?.type ?: uiState.pendingActionType) {
+        ActionType.SNOOZE_NOTIFICATION ->
+            SnoozeBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
+        ActionType.CREATE_ALARM ->
+            AlarmBottomSheet(
+                initial = editing,
+                onSave = onSave,
+                onDismiss = onSheetDismiss,
+            )
+        ActionType.FLASH_ALERT ->
+            FlashBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
+        ActionType.SAVE_DATA ->
+            ExtractDataBottomSheet(
+                initialFields = uiState.rule.fields,
+                isEditingAction = editing?.type == ActionType.SAVE_DATA,
+                notification = uiState.sampleNotification,
+                targetPackages = uiState.rule.targetApps.map { it.packageName }.takeIf { it.isNotEmpty() },
+                onCommitted = { fields -> onEvent(UiEvent.OnExtractDataCommitted(fields)) },
+                onDismiss = { onEvent(UiEvent.OnDismissSheet) },
+            )
+        ActionType.SEND_WEBHOOK ->
+            WebhookConfigBottomSheet(
+                initial = editing,
+                ruleFields = uiState.rule.fields,
+                onSave = onSave,
+                onDismiss = onSheetDismiss,
+            )
+        ActionType.READ_ALOUD ->
+            ReadAloudBottomSheet(
+                initial = editing,
+                ruleFields = uiState.rule.fields,
+                onSave = onSave,
+                onDismiss = onSheetDismiss,
+            )
+        ActionType.SEND_REPLY ->
+            SendReplyBottomSheet(
+                initial = editing,
+                ruleFields = uiState.rule.fields,
+                onSave = onSave,
+                onDismiss = onSheetDismiss,
+            )
+        // Dismiss adds directly (no sheet) and Extract-data uses its own sheet.
+        else -> Unit
     }
 }
 
@@ -640,6 +677,11 @@ private fun MetadataStep(
             onToggle = { onEvent(UiEvent.OnDryRunToggle(it)) },
         )
 
+        DeleteRawContentToggle(
+            enabled = uiState.rule.deleteRawContentAfterExtraction,
+            onToggle = { onEvent(UiEvent.OnDeleteRawContentToggle(it)) },
+        )
+
         Spacer(modifier = Modifier.weight(1f))
 
         // Back is the only bottom action now - Save moved to the top bar (Material
@@ -685,6 +727,44 @@ private fun DryRunToggle(
             )
             Text(
                 text = "Matches are recorded but no actions run - test this rule safely before turning it loose",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = onToggle)
+    }
+}
+
+/**
+ * Toggle for post-extraction privacy: when enabled, the source notification's original text is
+ * scrubbed once this rule matches and extracts data, keeping only the extracted fields.
+ */
+@Composable
+private fun DeleteRawContentToggle(
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(16.dp),
+            )
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Delete raw content after extraction",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = "Removes the notification's original text once fields are extracted - keeps only the extracted data.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

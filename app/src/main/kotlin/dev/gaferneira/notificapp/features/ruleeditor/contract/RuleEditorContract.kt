@@ -89,6 +89,9 @@ object RuleEditorContract {
         /** Load existing rule by ID */
         data class LoadRule(val ruleId: String?) : UiEvent()
 
+        /** Pre-populate an unsaved new rule from a starter template's JSON text */
+        data class LoadTemplate(val text: String) : UiEvent()
+
         /** Load sample notification by ID */
         data class LoadSampleNotification(val notificationId: String) : UiEvent()
 
@@ -112,6 +115,9 @@ object RuleEditorContract {
 
         /** Toggle dry-run mode for this rule */
         data class OnDryRunToggle(val enabled: Boolean) : UiEvent()
+
+        /** Toggle whether the source notification's raw text is scrubbed after extraction */
+        data class OnDeleteRawContentToggle(val enabled: Boolean) : UiEvent()
 
         /** Show category field */
         data object OnAddCategoryClicked : UiEvent()
@@ -217,4 +223,5 @@ val RuleCondition.displayText: String
             days.sortedBy { it.value }.joinToString(", ") { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }
         }
         is RuleCondition.TimeRangeCondition -> "%02d:%02d–%02d:%02d".format(start.hour, start.minute, end.hour, end.minute)
+        is RuleCondition.Group -> "Group: ${children.size} conditions (${combinator.name})"
     }

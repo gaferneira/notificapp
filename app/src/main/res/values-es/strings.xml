@@ -1,0 +1,101 @@
+<resources>
+    <!-- Onboarding -->
+    <string name="onboarding_privacy_first">Privacidad ante todo</string>
+    <string name="onboarding_headline">Convierte tus notificaciones en acciones automáticas.</string>
+    <string name="onboarding_description">Tus reglas, ejecutándose localmente. Privacidad total</string>
+    <string name="onboarding_get_started">Comenzar</string>
+    <string name="onboarding_processed_locally">Procesado localmente en tu dispositivo.</string>
+    <string name="onboarding_read_privacy_policy">Lee nuestra Política de Privacidad</string>
+    <string name="onboarding_highlight_1_title">Rastrea lo que importa</string>
+    <string name="onboarding_highlight_1_description">Extrae montos, fechas o códigos de cualquier notificación, sin copiar y pegar.</string>
+    <string name="onboarding_highlight_1_trigger_label">com.bank.app</string>
+    <string name="onboarding_highlight_1_action_label">Monto extraído</string>
+    <string name="onboarding_highlight_2_title">Acciones inteligentes</string>
+    <string name="onboarding_highlight_2_description">Toma el control. Descarta spam, pospón recordatorios o activa una alarma, automáticamente.</string>
+    <string name="onboarding_highlight_2_trigger_label">Código OTP</string>
+    <string name="onboarding_highlight_2_action_label">Descarte automático</string>
+    <string name="onboarding_highlight_3_title">Condiciones flexibles</string>
+    <string name="onboarding_highlight_3_description">Ajusta exactamente lo que necesitas. Combina reglas de app, texto, hora y día con lógica Y/O.</string>
+    <string name="onboarding_highlight_3_trigger_label">9am–6pm, lun–vie</string>
+    <string name="onboarding_highlight_3_action_label">Regla activa</string>
+    <string name="onboarding_highlight_4_title">Webhooks</string>
+    <string name="onboarding_highlight_4_description">Conecta tus herramientas. Envía datos extraídos a Sheets, Slack o cualquier endpoint que elijas.</string>
+    <string name="onboarding_highlight_4_trigger_label">Regla coincidió</string>
+    <string name="onboarding_highlight_4_action_label">POST → webhook</string>
+    <string name="onboarding_highlight_5_title">Funciona en todas partes</string>
+    <string name="onboarding_highlight_5_description">Un motor de reglas para banca, entregas, chats de trabajo, cualquier app que envíe una notificación.</string>
+    <string name="onboarding_highlight_5_trigger_label">Cualquier app</string>
+    <string name="onboarding_highlight_5_action_label">Motor de reglas</string>
+    <string name="onboarding_highlight_trigger_label">DISPARADOR</string>
+    <string name="onboarding_highlight_action_label">ACCIÓN</string>
+    <string name="onboarding_permission_back_cd">Volver</string>
+    <string name="onboarding_permission_title">Permisos</string>
+    <string name="onboarding_permission_headline">Habilitar acceso a notificaciones</string>
+    <string name="onboarding_permission_detail_1_title">Leer el texto de las notificaciones para extraer datos</string>
+    <string name="onboarding_permission_detail_1_description">Analiza información específica como números de pedido o fechas.</string>
+    <string name="onboarding_permission_detail_2_title">Solo procesa las apps que selecciones</string>
+    <string name="onboarding_permission_detail_2_description">Mantienes el control total sobre qué apps se monitorean.</string>
+    <string name="onboarding_permission_detail_3_title">Nada sale de tu dispositivo a menos que tú lo decidas</string>
+    <string name="onboarding_permission_detail_3_description">Procesamiento local; los webhooks solo se activan si configuras uno.</string>
+    <string name="onboarding_permission_toggle_title">Acceso a notificaciones</string>
+    <string name="onboarding_permission_toggle_subtitle">Permitir que la app lea las alertas</string>
+    <string name="onboarding_permission_toggle_status">Habilitado en la configuración del sistema</string>
+    <string name="onboarding_permission_denied_hint">Aún no está habilitado — toca Conceder acceso para volver a intentarlo.</string>
+    <string name="onboarding_permission_grant_access">Conceder acceso</string>
+
+    <!-- Settings - Language -->
+    <string name="settings_language_title">Idioma</string>
+    <string name="settings_language_system">Predeterminado del sistema</string>
+    <string name="settings_language_english">Inglés</string>
+    <string name="settings_language_spanish">Español</string>
+
+    <!-- Home - Monitoring Banner -->
+    <plurals name="home_banner_apps_monitored">
+        <item quantity="one">%d aplicación monitoreada</item>
+        <item quantity="other">%d aplicaciones monitoreadas</item>
+    </plurals>
+    <plurals name="home_banner_rules">
+        <item quantity="one">%d regla</item>
+        <item quantity="other">%d reglas</item>
+    </plurals>
+    <string name="home_banner_manage_apps">Administrar apps monitoreadas</string>
+    <string name="home_banner_enable_access">Activar el acceso a notificaciones</string>
+    <string name="home_banner_inactive">El acceso a notificaciones está desactivado</string>
+
+    <!-- Home - Starter Rules -->
+    <string name="rule_template_card_click_label">Crear regla a partir de esto</string>
+    <string name="templates_title">Plantillas de reglas</string>
+    <string name="templates_subtitle">Empezá con una regla lista y ajustala a tus apps. No se guarda nada hasta que toques Guardar.</string>
+    <string name="templates_filter_all">Todas</string>
+    <string name="home_checklist_title">Primeros pasos</string>
+    <string name="home_checklist_progress">%1$d de %2$d completos</string>
+    <string name="home_checklist_access_done">Acceso a notificaciones activado</string>
+    <string name="home_checklist_access_todo">Permitir el acceso a notificaciones</string>
+    <string name="home_checklist_access_action">Activar</string>
+    <string name="home_checklist_apps_todo">Elegí las apps a monitorear</string>
+    <string name="home_checklist_apps_action">Elegir</string>
+    <string name="home_checklist_rule_title">Creá tu primera regla</string>
+    <string name="home_starter_rules_subtitle">Empezá con una plantilla o armá la tuya desde cero.</string>
+    <string name="home_create_rule_from_this">Crear regla a partir de esto</string>
+    <string name="home_create_rule_from_scratch">Crear regla desde cero</string>
+    <string name="home_see_more_templates">Ver más plantillas</string>
+
+    <!-- Home - Recurring Notifications -->
+    <string name="home_recurring_title">Notificaciones recurrentes</string>
+    <string name="home_recurring_subtitle">Automatizá u omití.</string>
+    <string name="home_skip_similar">Omitir similares</string>
+
+    <!-- Home - This Week Stats -->
+    <string name="home_this_week_title">Esta semana</string>
+    <string name="home_stat_records">Registros</string>
+    <string name="home_stat_rules_fired">Reglas activadas</string>
+    <string name="home_stat_apps_active">Apps activas</string>
+
+    <!-- Home - Recent Activity -->
+    <string name="home_recent_activity_title">Actividad reciente</string>
+    <string name="home_recent_activity_empty">Sin actividad todavía</string>
+    <string name="home_see_all">Ver todo</string>
+
+    <!-- Home - Errors -->
+    <string name="home_error_dismiss_suggestion">No se pudo descartar la sugerencia</string>
+</resources>

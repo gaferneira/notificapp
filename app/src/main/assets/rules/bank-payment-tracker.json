@@ -23,6 +23,13 @@
           { "id": "field-1", "name": "Amount", "fieldType": "currency", "isRequired": false, "method": { "type": "smart_amount" } },
           { "id": "field-2", "name": "Date", "fieldType": "date", "isRequired": false, "method": { "type": "smart_date" } }
         ]
+      },
+      {
+        "id": "action-2",
+        "type": "read_aloud",
+        "isEnabled": true,
+        "config": { "read_aloud_template": "Payment received: {{field.field-1}}" },
+        "fields": []
       }
     ],
     "createdAt": 0,

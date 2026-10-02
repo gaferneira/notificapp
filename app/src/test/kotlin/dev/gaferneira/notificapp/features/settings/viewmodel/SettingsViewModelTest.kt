@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.model.StorageStats
+import dev.gaferneira.notificapp.domain.model.preferences.AppLanguage
 import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.domain.repository.StorageStatsRepository
@@ -209,6 +210,34 @@ class SettingsViewModelTest {
 
             viewModel.uiState.value.retentionPeriod shouldBe RetentionPeriod.DAYS_30
             userPreferencesRepository.current().retentionPeriod shouldBe RetentionPeriod.DAYS_30
+        }
+    }
+
+    @Nested
+    inner class AppLanguageTests {
+
+        @Test
+        fun `initial app language reflects the stored preference`() = runTest(testDispatcher) {
+            every { selectedAppRepository.observeEnabledApps() } returns MutableSharedFlow()
+            userPreferencesRepository.setLanguage(AppLanguage.ES)
+
+            val viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.appLanguage shouldBe AppLanguage.ES
+        }
+
+        @Test
+        fun `AppLanguageChanged persists the new language and updates state`() = runTest(testDispatcher) {
+            every { selectedAppRepository.observeEnabledApps() } returns MutableSharedFlow()
+            val viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(UiEvent.AppLanguageChanged(AppLanguage.EN))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.appLanguage shouldBe AppLanguage.EN
+            userPreferencesRepository.current().appLanguage shouldBe AppLanguage.EN
         }
     }
 

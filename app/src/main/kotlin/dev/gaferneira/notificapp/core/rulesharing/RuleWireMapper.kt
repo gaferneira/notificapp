@@ -32,6 +32,15 @@ import java.time.LocalTime
 
 private val wireEnumJson = Json { ignoreUnknownKeys = true }
 
+/**
+ * Maximum nesting depth allowed for a [RuleCondition.Group] tree on import. The top-level
+ * `conditions` list is depth 1; a group's `children` are depth+1. The wire/storage format is
+ * recursive by design (a group can nest groups), which makes a hand-crafted import file with
+ * thousands of nested groups a stack-overflow DoS on decode - this bound turns that into a clean,
+ * user-visible import failure instead.
+ */
+internal const val MAX_CONDITION_DEPTH = 5
+
 private fun <T> T.toWireString(serializer: KSerializer<T>): String = wireEnumJson.encodeToJsonElement(serializer, this).jsonPrimitive.content
 
 private fun <T> String.fromWireStringOrNull(serializer: KSerializer<T>): T? = try {
@@ -56,6 +65,7 @@ fun Rule.toDto(): RuleExportDto = RuleExportDto(
         category = category,
         isActive = isActive,
         isDryRun = isDryRun,
+        deleteRawContentAfterExtraction = deleteRawContentAfterExtraction,
         targetApps = targetApps?.map { it.toDto() },
         isIncludeMode = isIncludeMode,
         conditionLogic = conditionLogic.name,
@@ -83,10 +93,11 @@ fun RuleExportDto.toDomain(): RuleImportResult {
         category = rule.category,
         isActive = rule.isActive,
         isDryRun = rule.isDryRun,
+        deleteRawContentAfterExtraction = rule.deleteRawContentAfterExtraction,
         targetApps = rule.targetApps?.map { it.toDomain() }?.toImmutableList(),
         isIncludeMode = rule.isIncludeMode,
         conditionLogic = ConditionCombinator.fromStorageValue(rule.conditionLogic),
-        conditions = rule.conditions.map { it.toDomain() }.toImmutableList(),
+        conditions = rule.conditions.map { it.toDomain(depth = 1) }.toImmutableList(),
         actions = mappedActions.mapNotNull { (_, action) -> action }.toImmutableList(),
         createdAt = rule.createdAt,
         updatedAt = rule.updatedAt,
@@ -114,24 +125,44 @@ private fun RuleCondition.toDto(): ConditionDto = when (this) {
         start = start.toString(),
         end = end.toString(),
     )
+    is RuleCondition.Group -> ConditionDto.Group(
+        id = id,
+        combinator = combinator.name,
+        children = children.map { it.toDto() },
+    )
 }
 
-private fun ConditionDto.toDomain(): RuleCondition = when (this) {
-    is ConditionDto.ContentMatch -> RuleCondition.ContentMatchCondition(
-        id = id,
-        condition = condition.fromWireStringStrict(MatchingCondition.serializer(), "condition type"),
-        operator = operator.fromWireStringStrict(MatchingOperator.serializer(), "operator"),
-        value = value,
-    )
-    is ConditionDto.DayOfWeek -> RuleCondition.DayOfWeekCondition(
-        id = id,
-        days = days.map { DayOfWeek.valueOf(it) }.toSet(),
-    )
-    is ConditionDto.TimeRange -> RuleCondition.TimeRangeCondition(
-        id = id,
-        start = LocalTime.parse(start),
-        end = LocalTime.parse(end),
-    )
+/**
+ * Maps a wire [ConditionDto] to its domain [RuleCondition], enforcing [MAX_CONDITION_DEPTH] along
+ * the way. [depth] is the nesting level of `this` node: 1 for a top-level condition, depth+1 for
+ * every level of [ConditionDto.Group.children].
+ */
+private fun ConditionDto.toDomain(depth: Int): RuleCondition {
+    require(depth <= MAX_CONDITION_DEPTH) {
+        "This rule's conditions are nested too deeply (max $MAX_CONDITION_DEPTH levels) and can't be imported."
+    }
+    return when (this) {
+        is ConditionDto.ContentMatch -> RuleCondition.ContentMatchCondition(
+            id = id,
+            condition = condition.fromWireStringStrict(MatchingCondition.serializer(), "condition type"),
+            operator = operator.fromWireStringStrict(MatchingOperator.serializer(), "operator"),
+            value = value,
+        )
+        is ConditionDto.DayOfWeek -> RuleCondition.DayOfWeekCondition(
+            id = id,
+            days = days.map { DayOfWeek.valueOf(it) }.toSet(),
+        )
+        is ConditionDto.TimeRange -> RuleCondition.TimeRangeCondition(
+            id = id,
+            start = LocalTime.parse(start),
+            end = LocalTime.parse(end),
+        )
+        is ConditionDto.Group -> RuleCondition.Group(
+            id = id,
+            combinator = ConditionCombinator.fromStorageValue(combinator),
+            children = children.map { it.toDomain(depth = depth + 1) }.toImmutableList(),
+        )
+    }
 }
 
 private fun RuleField.toDto(): FieldDto = FieldDto(

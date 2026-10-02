@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 /**
@@ -86,6 +87,22 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
         return Result.success(Unit)
     }
 
+    /** Number of times [redactContent] has been called, for interaction assertions. */
+    var redactContentCallCount: Int = 0
+        private set
+
+    /** IDs passed to [redactContent], in call order. */
+    val redactedNotificationIds: MutableList<String> = mutableListOf()
+
+    override suspend fun redactContent(notificationId: String): Result<Unit> {
+        redactContentCallCount++
+        redactedNotificationIds += notificationId
+        notifications.update { list ->
+            list.map { if (it.id == notificationId) it.copy(rawContent = "", content = null, title = null) else it }
+        }
+        return Result.success(Unit)
+    }
+
     override suspend fun deleteNotification(id: String): Result<Unit> {
         notifications.update { list -> list.filterNot { it.id == id } }
         return Result.success(Unit)
@@ -118,4 +135,18 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
     override fun observeAppsWithNotifications(): Flow<List<AppInfo>> = MutableStateFlow(
         notifications.value.map { AppInfo(packageName = it.packageName, name = it.appName) }.distinctBy { it.packageName },
     ).asStateFlow()
+
+    override fun observeActiveAppCountSince(since: Long): Flow<Int> = notifications.map { list ->
+        list.filter { it.timestamp >= since }.map { it.packageName }.toSet().size
+    }
+
+    override fun observeRecentSince(since: Long, limit: Int): Flow<List<Notification>> = notifications.map { list ->
+        list.filter { it.timestamp >= since }
+            .sortedByDescending { it.timestamp }
+            .take(limit)
+    }
+
+    override fun observeCountSince(since: Long): Flow<Int> = notifications.map { list ->
+        list.count { it.timestamp >= since }
+    }
 }

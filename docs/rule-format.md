@@ -28,6 +28,7 @@ Every exported file is a single JSON object:
 | `category`                | string?                                  | Optional.                                                                                                                                                                                                                                                                                                                                                                |
 | `isActive`                | boolean                                  | Ignored on import — imported rules are always activated.                                                                                                                                                                                                                                                                                                                 |
 | `isDryRun`                | boolean                                  | Ignored on import — **imported rules always start in dry-run mode**, regardless of what's in the file. This is a deliberate safety rule: you review what an imported rule would have done (via "Test against history" and its dry-run execution log) before trusting it to act on real notifications. See `docs/adr/` and the roadmap's Backtesting and Dry-Run section. |
+| `deleteRawContentAfterExtraction` | boolean                          | Optional, defaults to `false` if absent (older exports without this field decode fine). When `true`, once this rule matches and extracts data, the source notification's raw text (rawContent/content/title) is scrubbed - the notification row, its rule executions, and its extracted field values are all kept.                                                     |
 | `targetApps`              | array of `{packageName, name}` \| `null` | `null` or an empty array means "all apps".                                                                                                                                                                                                                                                                                                                               |
 | `isIncludeMode`           | boolean                                  | `true` = [targetApps] is an include-list (rule fires only for listed apps). `false` = exclude-list (rule fires for every app NOT listed). Ignored when `targetApps` is `null` or empty.                                                                                                                                                                                  |
 | `conditionLogic`          | string                                   | `ALL` (default) = every condition must match (AND). `ANY` = at least one condition must match (OR). Unknown values on import default to `ALL`.                                                                                                                                                                                                                           |
@@ -38,11 +39,29 @@ Every exported file is a single JSON object:
 ## `conditions[]` — `RuleCondition`
 
 ```json
-{ "id": "...", "condition": "text_content", "operator": "contains", "value": "Total" }
+{ "type": "content_match", "id": "...", "condition": "text_content", "operator": "contains", "value": "Total" }
 ```
 
 `condition` is one of: `text_content`, `title`, `app_name`, `package_name`, `raw_content`.
 `operator` is one of: `contains`, `starts_with`, `ends_with`, `equals`, `regex_match`, `not_contains`.
+
+### `group` — nested condition groups
+
+```json
+{
+  "type": "group",
+  "id": "...",
+  "combinator": "ANY",
+  "children": [
+    { "type": "content_match", "id": "...", "condition": "text_content", "operator": "contains", "value": "Total" },
+    { "type": "day_of_week", "id": "...", "days": ["SATURDAY", "SUNDAY"] }
+  ]
+}
+```
+
+A `group` condition nests its own `children` array (any mix of `content_match`, `day_of_week`, `time_range`, or another `group`), combined by its own `combinator` (`ALL`/`ANY`, same semantics as the rule-level `conditionLogic`; unknown values default to `ALL`). This is additive to the wire format - it did not require a `schemaVersion` bump - but this app version's editor treats an imported group as **read-only**: it survives being loaded and re-saved untouched, is shown as a summary row ("Group: N conditions (ALL/ANY)"), and can be removed but not edited or created from the UI.
+
+**Depth limit:** nesting deeper than **5 levels** (the top-level `conditions` array is level 1, each `children` array is one level deeper) is rejected on import with a clear error. This bounds what would otherwise be an unbounded-recursion import file - a hand-crafted rule with thousands of nested groups - from becoming a stack-overflow denial of service on decode.
 
 ## `actions[]` — `RuleAction`
 
@@ -50,9 +69,13 @@ Every exported file is a single JSON object:
 { "id": "...", "type": "save_data", "isEnabled": true, "config": {}, "fields": [] }
 ```
 
-`type` is one of: `save_data`, `dismiss_notification`, `snooze_notification`, `create_alarm`, `flash_alert`. Unlike `conditions[].condition`/`.operator` and `fields[].method.type`, an unrecognized `type` here does not fail the import — that one action (and any `fields` it nests) is dropped and reported to the user, and the rest of the rule still imports. This lets a rule exported from a newer app version (with an action type this version doesn't have yet) still import in a degraded but usable form.
+`type` is one of: `save_data`, `dismiss_notification`, `snooze_notification`, `create_alarm`, `flash_alert`, `send_webhook`, `read_aloud`, `send_reply`. Unlike `conditions[].condition`/`.operator` and `fields[].method.type`, an unrecognized `type` here does not fail the import — that one action (and any `fields` it nests) is dropped and reported to the user, and the rest of the rule still imports. This lets a rule exported from a newer app version (with an action type this version doesn't have yet) still import in a degraded but usable form.
 
-`config` is a free-form `Map<String, String>` whose keys depend on `type` (e.g. `snooze_duration_minutes` for `snooze_notification`, `flash_count`/`flash_duration_ms` for `flash_alert`) — see the constants in `domain/model/RuleAction.kt`.
+`config` is a free-form `Map<String, String>` whose keys depend on `type` (e.g. `snooze_duration_minutes` for `snooze_notification`, `flash_count`/`flash_duration_ms` for `flash_alert`, `read_aloud_template` for `read_aloud`, `send_reply_template` for `send_reply`) — see the constants in `domain/model/RuleAction.kt`.
+
+`read_aloud`'s `read_aloud_template` config value is a plain-text string spoken via on-device text-to-speech, using the same `{{token}}` placeholder syntax as `send_webhook`'s TEMPLATE-mode `webhook_template` (built-in notification tokens, e.g. `{{title}}`/`{{app_name}}`, plus `{{field.<fieldId>}}` for an extracted field) — see `WEBHOOK_TOKEN_REGEX`/`WEBHOOK_FIELD_ID_PREFIX` in `domain/model/WebhookActionConfig.kt`. Unlike the webhook template, the resolved value is spoken as-is, with no JSON escaping.
+
+`send_reply` is **BETA**: it replies to the source notification via its Android direct-reply (`RemoteInput`) action, with `send_reply_template` resolved through the same `{{token}}` placeholder syntax as `read_aloud`. It only works on apps that expose a RemoteInput reply action on their notification — on any other app it silently does nothing (an `ActionOutcome.SKIPPED`, visible in the notification detail's per-action outcomes, never a crash). Beta action types are excluded from the "every action type has a curated starter template" guarantee (see `domain/model/BETA_ACTION_TYPES`).
 
 `fields` is only ever non-empty on the `save_data` action - it carries that action's extraction fields (see below). Every other action type has an empty `fields` array.
 
@@ -99,6 +122,7 @@ A rule that extracts a payment amount from bank notifications and saves it, expo
     "category": "Finance",
     "isActive": true,
     "isDryRun": false,
+    "deleteRawContentAfterExtraction": false,
     "isIncludeMode": true,
     "conditionLogic": "ALL",
     "targetApps": [

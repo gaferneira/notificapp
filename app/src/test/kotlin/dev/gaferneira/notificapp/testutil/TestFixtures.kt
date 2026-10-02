@@ -68,6 +68,12 @@ fun createTestTimeRangeCondition(
     end: LocalTime = LocalTime.of(17, 0),
 ): RuleCondition.TimeRangeCondition = RuleCondition.TimeRangeCondition(id = id, start = start, end = end)
 
+fun createTestGroupCondition(
+    id: String = "test-group-condition-id",
+    combinator: ConditionCombinator = ConditionCombinator.ALL,
+    children: List<RuleCondition> = listOf(createTestCondition()),
+): RuleCondition.Group = RuleCondition.Group(id = id, combinator = combinator, children = children.toImmutableList())
+
 fun createTestField(
     id: String = "test-field-id",
     name: String = "Test Field",
@@ -104,6 +110,7 @@ fun createTestRule(
     category: String? = null,
     isActive: Boolean = true,
     isDryRun: Boolean = false,
+    deleteRawContentAfterExtraction: Boolean = false,
     isIncludeMode: Boolean = true,
     conditionLogic: ConditionCombinator = ConditionCombinator.ALL,
     targetApps: List<AppInfo>? = null,
@@ -118,6 +125,7 @@ fun createTestRule(
     category = category,
     isActive = isActive,
     isDryRun = isDryRun,
+    deleteRawContentAfterExtraction = deleteRawContentAfterExtraction,
     isIncludeMode = isIncludeMode,
     conditionLogic = conditionLogic,
     targetApps = targetApps?.toImmutableList(),

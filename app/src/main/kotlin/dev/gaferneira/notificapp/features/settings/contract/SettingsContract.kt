@@ -2,6 +2,7 @@ package dev.gaferneira.notificapp.features.settings.contract
 
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.model.StorageStats
+import dev.gaferneira.notificapp.domain.model.preferences.AppLanguage
 import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
 
 /**
@@ -26,6 +27,8 @@ object SettingsContract {
         val showAppIcons: Boolean = true,
         /** Notification retention period (auto-delete window) */
         val retentionPeriod: RetentionPeriod = RetentionPeriod.NEVER,
+        /** Preferred app language (system, English, Spanish) */
+        val appLanguage: AppLanguage = AppLanguage.SYSTEM,
         /** One-shot storage usage snapshot; null until loaded */
         val storageStats: StorageStats? = null,
         /** Whether the screen is loading */
@@ -60,6 +63,9 @@ object SettingsContract {
 
         /** User picked a new retention period from the selection dialog */
         data class RetentionPeriodChanged(val period: RetentionPeriod) : UiEvent()
+
+        /** User picked a new app language from the selection dialog */
+        data class AppLanguageChanged(val language: AppLanguage) : UiEvent()
 
         /** User refreshed the settings */
         data object OnRefresh : UiEvent()

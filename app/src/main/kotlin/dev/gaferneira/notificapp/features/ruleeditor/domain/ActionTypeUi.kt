@@ -1,10 +1,12 @@
 package dev.gaferneira.notificapp.features.ruleeditor.domain
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.NotificationsPaused
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -38,7 +40,7 @@ fun ActionType.ui(): ActionTypeUi = when (this) {
     ActionType.DISMISS_NOTIFICATION -> ActionTypeUi(
         type = this,
         label = "Dismiss notification",
-        description = "Dismiss the notification after processing",
+        description = "Avoid spamming",
         icon = Icons.Default.Delete,
     )
     ActionType.SNOOZE_NOTIFICATION -> ActionTypeUi(
@@ -58,6 +60,18 @@ fun ActionType.ui(): ActionTypeUi = when (this) {
         label = "Send webhook",
         description = "POST notification data to a configured webhook",
         icon = Icons.Default.Send,
+    )
+    ActionType.READ_ALOUD -> ActionTypeUi(
+        type = this,
+        label = "Read aloud",
+        description = "Speak a short message built from the notification's data",
+        icon = Icons.Default.RecordVoiceOver,
+    )
+    ActionType.SEND_REPLY -> ActionTypeUi(
+        type = this,
+        label = "Send reply",
+        description = "Reply to the notification directly - best-effort, only works on apps that support it",
+        icon = Icons.AutoMirrored.Filled.Reply,
     )
 }
 

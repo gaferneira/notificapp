@@ -5,6 +5,7 @@ import dev.gaferneira.notificapp.core.rulesharing.dto.RULE_EXPORT_SCHEMA_VERSION
 import dev.gaferneira.notificapp.core.rulesharing.dto.RuleExportDto
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
@@ -117,6 +118,34 @@ class RuleJsonCodecTest {
     }
 
     @Test
+    fun `deleteRawContentAfterExtraction round-trips through encode-decode`() {
+        // Given: a rule with the privacy flag enabled
+        val flaggedRule = rule.copy(deleteRawContentAfterExtraction = true)
+
+        // When: exporting then re-importing
+        val encoded = RuleJsonCodec.encode(flaggedRule)
+        val decoded = RuleJsonCodec.decode(encoded)
+
+        // Then: the flag survives the round trip
+        decoded.isSuccess shouldBe true
+        decoded.getOrThrow().rule.deleteRawContentAfterExtraction shouldBe true
+    }
+
+    @Test
+    fun `decoding JSON without deleteRawContentAfterExtraction defaults it to false`() {
+        // Given: a hand-crafted export JSON from before this field existed
+        val encoded = RuleJsonCodec.encode(rule)
+        val legacyJson = encoded.replace(Regex(""",?\s*"deleteRawContentAfterExtraction"\s*:\s*(true|false)"""), "")
+
+        // When: decoding it
+        val result = RuleJsonCodec.decode(legacyJson)
+
+        // Then: decoding still succeeds and the field defaults to false (backward-tolerant)
+        result.isSuccess shouldBe true
+        result.getOrThrow().rule.deleteRawContentAfterExtraction shouldBe false
+    }
+
+    @Test
     fun `decode rejects a schema version newer than this app understands`() {
         // Given: an envelope claiming a future schema version
         val futureExport = RuleExportDto(schemaVersion = RULE_EXPORT_SCHEMA_VERSION + 1, rule = rule.toDto().rule)
@@ -170,6 +199,54 @@ class RuleJsonCodecTest {
     }
 
     @Test
+    fun `export re-import round-trips a rule with a READ_ALOUD action`() {
+        // Given: a rule whose only action is a READ_ALOUD action with a placeholder template
+        val readAloudRule = rule.copy(
+            actions = persistentListOf(
+                createTestAction(
+                    id = "a1",
+                    type = ActionType.READ_ALOUD,
+                    config = mapOf("read_aloud_template" to "Received {{field.amount}} from {{field.sender}}"),
+                ),
+            ),
+        )
+
+        // When: exporting then re-importing
+        val encoded = RuleJsonCodec.encode(readAloudRule)
+        val decoded = RuleJsonCodec.decode(encoded)
+
+        // Then: the action, its type, and its config survive the round trip unchanged
+        decoded.isSuccess shouldBe true
+        val decodedRule = decoded.getOrThrow().rule
+        decodedRule.actions shouldBe readAloudRule.actions
+        encoded shouldContain "\"read_aloud\""
+    }
+
+    @Test
+    fun `export re-import round-trips a rule with a SEND_REPLY action`() {
+        // Given: a rule whose only action is a SEND_REPLY (BETA) action with a placeholder template
+        val sendReplyRule = rule.copy(
+            actions = persistentListOf(
+                createTestAction(
+                    id = "a1",
+                    type = ActionType.SEND_REPLY,
+                    config = mapOf("send_reply_template" to "Got it, thanks {{field.sender}}"),
+                ),
+            ),
+        )
+
+        // When: exporting then re-importing
+        val encoded = RuleJsonCodec.encode(sendReplyRule)
+        val decoded = RuleJsonCodec.decode(encoded)
+
+        // Then: the action, its type, and its config survive the round trip unchanged
+        decoded.isSuccess shouldBe true
+        val decodedRule = decoded.getOrThrow().rule
+        decodedRule.actions shouldBe sendReplyRule.actions
+        encoded shouldContain "\"send_reply\""
+    }
+
+    @Test
     fun `decode fails on an unrecognized condition operator`() {
         // Given: a rule whose JSON has an operator this app version doesn't recognize
         val encoded = RuleJsonCodec.encode(rule)
@@ -180,6 +257,80 @@ class RuleJsonCodecTest {
 
         // Then: decoding fails rather than silently dropping or misinterpreting the condition
         result.isFailure shouldBe true
+    }
+
+    @Test
+    fun `export re-import round-trips a rule with a nested condition group`() {
+        // Given: a rule with one top-level Group whose children are a leaf condition and another,
+        // nested Group - exercising the recursive shape end to end
+        val innerGroup = RuleCondition.Group(
+            id = "g2",
+            combinator = ConditionCombinator.ANY,
+            children = persistentListOf(
+                createTestCondition(id = "c2", condition = MatchingCondition.TEXT_CONTENT, operator = MatchingOperator.CONTAINS, value = "Payment"),
+                createTestDayOfWeekCondition(id = "c3", days = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)),
+            ),
+        )
+        val groupedRule = rule.copy(
+            conditions = persistentListOf(
+                RuleCondition.Group(
+                    id = "g1",
+                    combinator = ConditionCombinator.ALL,
+                    children = persistentListOf(
+                        createTestCondition(id = "c1", condition = MatchingCondition.TITLE, operator = MatchingOperator.STARTS_WITH, value = "Payment"),
+                        innerGroup,
+                    ),
+                ),
+            ),
+        )
+
+        // When: exporting then re-importing
+        val encoded = RuleJsonCodec.encode(groupedRule)
+        val decoded = RuleJsonCodec.decode(encoded)
+
+        // Then: the group tree survives the round trip exactly, at every nesting level
+        decoded.isSuccess shouldBe true
+        decoded.getOrThrow().rule.conditions shouldBe groupedRule.conditions
+    }
+
+    @Test
+    fun `decode accepts a condition tree exactly at MAX_CONDITION_DEPTH`() {
+        // Given: nested groups whose deepest node (the leaf) sits exactly at MAX_CONDITION_DEPTH
+        // (the boundary is inclusive) - one fewer group level than the leaf's depth
+        val tree = nestedGroupTree(depth = MAX_CONDITION_DEPTH - 1)
+        val encoded = RuleJsonCodec.encode(rule.copy(conditions = persistentListOf(tree)))
+
+        // When: decoding it
+        val result = RuleJsonCodec.decode(encoded)
+
+        // Then: decoding succeeds - the boundary itself is not rejected
+        result.isSuccess shouldBe true
+    }
+
+    @Test
+    fun `decode rejects a condition tree nested deeper than MAX_CONDITION_DEPTH`() {
+        // Given: nested groups whose deepest node (the leaf) sits one level past MAX_CONDITION_DEPTH
+        val tooDeepTree = nestedGroupTree(depth = MAX_CONDITION_DEPTH)
+        val encoded = RuleJsonCodec.encode(rule.copy(conditions = persistentListOf(tooDeepTree)))
+
+        // When: decoding it
+        val result = RuleJsonCodec.decode(encoded)
+
+        // Then: decoding fails cleanly instead of risking a stack overflow evaluating the rule
+        result.isFailure shouldBe true
+    }
+
+    /**
+     * Builds a chain of [depth] nested [RuleCondition.Group]s around a single leaf condition, e.g.
+     * `depth = 2` produces `Group(children = [Group(children = [leaf])])`. The outermost group sits
+     * at nesting level 1 (same convention as [MAX_CONDITION_DEPTH]); the leaf sits at level `depth + 1`.
+     */
+    private fun nestedGroupTree(depth: Int): RuleCondition {
+        var current: RuleCondition = createTestCondition(id = "leaf")
+        for (level in depth downTo 1) {
+            current = RuleCondition.Group(id = "g$level", combinator = ConditionCombinator.ALL, children = persistentListOf(current))
+        }
+        return current
     }
 
     @Test

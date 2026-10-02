@@ -178,4 +178,109 @@
     <string name="extract_history_open_cd">Browse notification history</string>
     <string name="extract_history_clear_override_cd">Clear selected notification</string>
     <string name="extract_history_empty">No notification history available</string>
+
+    <!-- Monitoring Quick Settings tile -->
+    <string name="monitoring_tile_label">Notificapp</string>
+    <string name="monitoring_tile_subtitle_active">Monitoring on</string>
+    <string name="monitoring_tile_subtitle_paused">Paused</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_privacy_first">Privacy First</string>
+    <string name="onboarding_headline">Turn your notifications into automated action.</string>
+    <string name="onboarding_description">Your rules, running locally. Total privacy</string>
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_processed_locally">Processed locally on your device.</string>
+    <string name="onboarding_read_privacy_policy">Read our Privacy Policy</string>
+    <string name="onboarding_highlight_1_title">Track What Matters</string>
+    <string name="onboarding_highlight_1_description">Extract amounts, dates, or codes from any notification — no copy-pasting.</string>
+    <string name="onboarding_highlight_1_trigger_label">com.bank.app</string>
+    <string name="onboarding_highlight_1_action_label">Amount extracted</string>
+    <string name="onboarding_highlight_2_title">Smart Actions</string>
+    <string name="onboarding_highlight_2_description">Take control. Dismiss spam, snooze reminders, or trigger an alarm — automatically.</string>
+    <string name="onboarding_highlight_2_trigger_label">OTP code</string>
+    <string name="onboarding_highlight_2_action_label">Auto-dismiss</string>
+    <string name="onboarding_highlight_3_title">Flexible Conditions</string>
+    <string name="onboarding_highlight_3_description">Match exactly what you need. Combine app, text, time, and day rules with AND/OR logic.</string>
+    <string name="onboarding_highlight_3_trigger_label">9am–6pm, Mon–Fri</string>
+    <string name="onboarding_highlight_3_action_label">Rule active</string>
+    <string name="onboarding_highlight_4_title">Webhooks</string>
+    <string name="onboarding_highlight_4_description">Connect your tools. Send extracted data to Sheets, Slack, or any endpoint you choose.</string>
+    <string name="onboarding_highlight_4_trigger_label">Rule matched</string>
+    <string name="onboarding_highlight_4_action_label">POST → webhook</string>
+    <string name="onboarding_highlight_5_title">Works Everywhere</string>
+    <string name="onboarding_highlight_5_description">One rule engine for banking, delivery, work chat — any app that sends a notification.</string>
+    <string name="onboarding_highlight_5_trigger_label">Any app</string>
+    <string name="onboarding_highlight_5_action_label">Rule engine</string>
+    <string name="onboarding_highlight_trigger_label">TRIGGER</string>
+    <string name="onboarding_highlight_action_label">ACTION</string>
+    <string name="onboarding_permission_back_cd">Go back</string>
+    <string name="onboarding_permission_title">Permissions</string>
+    <string name="onboarding_permission_headline">Enable Notification Access</string>
+    <string name="onboarding_permission_detail_1_title">Read notification text to extract data</string>
+    <string name="onboarding_permission_detail_1_description">Parses specific information like order numbers or dates.</string>
+    <string name="onboarding_permission_detail_2_title">Only process apps you select</string>
+    <string name="onboarding_permission_detail_2_description">You maintain full control over which apps are monitored.</string>
+    <string name="onboarding_permission_detail_3_title">Nothing leaves your device unless you say so</string>
+    <string name="onboarding_permission_detail_3_description">Local-first processing; webhooks only fire if you set one up.</string>
+    <string name="onboarding_permission_toggle_title">Notification Access</string>
+    <string name="onboarding_permission_toggle_subtitle">Allow app to read alerts</string>
+    <string name="onboarding_permission_toggle_status">Enabled in system settings</string>
+    <string name="onboarding_permission_denied_hint">Access not enabled yet — tap Grant Access to try again.</string>
+    <string name="onboarding_permission_grant_access">Grant Access</string>
+
+    <!-- Settings - Language -->
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_system">System default</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_spanish">Spanish</string>
+
+    <!-- Home - Monitoring Banner -->
+    <plurals name="home_banner_apps_monitored">
+        <item quantity="one">%d app monitored</item>
+        <item quantity="other">%d apps monitored</item>
+    </plurals>
+    <plurals name="home_banner_rules">
+        <item quantity="one">%d rule</item>
+        <item quantity="other">%d rules</item>
+    </plurals>
+    <string name="home_banner_manage_apps">Manage monitored apps</string>
+    <string name="home_banner_enable_access">Enable notification access</string>
+    <string name="home_banner_inactive">Notification access is disabled</string>
+
+    <!-- Home - Starter Rules -->
+    <string name="rule_template_card_click_label">Create rule from this</string>
+    <string name="templates_title">Rule templates</string>
+    <string name="templates_subtitle">Start from a ready-made rule and tweak it to fit your apps. Nothing is saved until you tap Save.</string>
+    <string name="templates_filter_all">All</string>
+    <string name="home_checklist_title">Get started</string>
+    <string name="home_checklist_progress">%1$d of %2$d done</string>
+    <string name="home_checklist_access_done">Notification access enabled</string>
+    <string name="home_checklist_access_todo">Allow notification access</string>
+    <string name="home_checklist_access_action">Enable</string>
+    <string name="home_checklist_apps_todo">Choose apps to monitor</string>
+    <string name="home_checklist_apps_action">Choose</string>
+    <string name="home_checklist_rule_title">Create your first rule</string>
+    <string name="home_starter_rules_subtitle">Start with a template or build your own from scratch.</string>
+    <string name="home_create_rule_from_this">Create rule from this</string>
+    <string name="home_create_rule_from_scratch">Create rule from scratch</string>
+    <string name="home_see_more_templates">See more templates</string>
+
+    <!-- Home - Recurring Notifications -->
+    <string name="home_recurring_title">Recurring Notifications</string>
+    <string name="home_recurring_subtitle">Automate or skip.</string>
+    <string name="home_skip_similar">Skip similar</string>
+
+    <!-- Home - This Week Stats -->
+    <string name="home_this_week_title">This Week</string>
+    <string name="home_stat_records">Records</string>
+    <string name="home_stat_rules_fired">Rules fired</string>
+    <string name="home_stat_apps_active">Apps active</string>
+
+    <!-- Home - Recent Activity -->
+    <string name="home_recent_activity_title">Recent Activity</string>
+    <string name="home_recent_activity_empty">No activity yet</string>
+    <string name="home_see_all">See all</string>
+
+    <!-- Home - Errors -->
+    <string name="home_error_dismiss_suggestion">Failed to dismiss suggestion</string>
 </resources>

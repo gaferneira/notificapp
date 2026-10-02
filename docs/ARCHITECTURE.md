@@ -570,7 +570,7 @@ class MyViewModel @Inject constructor(
 
 ### Resources
 
-- No hardcoded strings - use string resources
+- **No hardcoded strings — use `stringResource(R.string.x)`.** Every user-facing string goes through `strings.xml` (+ `values-es/strings.xml` for the Spanish translation), never a literal `Text("...")`/`contentDescription = "..."`. Exceptions: brand wordmarks and values meant to look like literal identifiers (e.g. an illustrative package name). See ADR 014 and `docs/guides/common-patterns.md` — "Adding/Translating a User-Facing String" for the full checklist and the `OnboardingScreen` feature as the reference implementation.
 - No hardcoded dimensions - use theme spacing
 - Support dark theme
 - Use vector drawables

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Declares the locales Notificapp ships translations for, so Android 13+ lists the app in
+     Settings > Apps > App languages (ADR 014). Keep in sync with app/src/main/res/values-*/. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="es" />
+</locale-config>

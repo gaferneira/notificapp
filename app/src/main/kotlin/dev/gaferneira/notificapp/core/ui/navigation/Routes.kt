@@ -26,6 +26,11 @@ object Routes {
     fun inbox(): Screen = Screen.Inbox
 
     /**
+     * Home dashboard - the app's first bottom-nav destination.
+     */
+    fun home(): Screen = Screen.Home
+
+    /**
      * Rules screen - list of extraction rules.
      */
     fun rules(): Screen = Screen.Rules
@@ -61,11 +66,18 @@ object Routes {
      *
      * @param ruleId The ID of the rule to edit (null for new rule)
      * @param notificationId Optional notification ID to pre-populate the rule
+     * @param templateAssetFileName Optional starter template asset to pre-populate an unsaved new rule
      */
     fun ruleEditor(
         ruleId: String? = null,
         notificationId: String? = null,
-    ): Screen = Screen.RuleEditor(ruleId, notificationId)
+        templateAssetFileName: String? = null,
+    ): Screen = Screen.RuleEditor(ruleId, notificationId, templateAssetFileName)
+
+    /**
+     * Starter rule template gallery - browse and filter templates, or start from scratch.
+     */
+    fun ruleTemplates(): Screen = Screen.RuleTemplates
 
     /**
      * Onboarding screen - initial setup for notification permission.

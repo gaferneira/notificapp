@@ -88,6 +88,13 @@ interface NotificationRepository {
     suspend fun markAsProcessed(id: String): Result<Unit>
 
     /**
+     * Scrub a notification's free-text fields (rawContent/content/title) for privacy, keeping the
+     * row, its rule executions, and any extracted field values intact. Used when a rule matches
+     * with `deleteRawContentAfterExtraction` enabled and actually extracted data.
+     */
+    suspend fun redactContent(notificationId: String): Result<Unit>
+
+    /**
      * Delete a notification.
      */
     suspend fun deleteNotification(id: String): Result<Unit>
@@ -123,4 +130,20 @@ interface NotificationRepository {
      * Get all unique apps that have notifications, sorted by name.
      */
     fun observeAppsWithNotifications(): Flow<List<AppInfo>>
+
+    /**
+     * Count distinct apps with at least one notification at or after [since] (epoch millis).
+     */
+    fun observeActiveAppCountSince(since: Long): Flow<Int>
+
+    /**
+     * The most recent notifications at or after [since] (epoch millis), bounded by [limit], most
+     * recent first.
+     */
+    fun observeRecentSince(since: Long, limit: Int): Flow<List<Notification>>
+
+    /**
+     * Count notifications logged at or after [since] (epoch millis).
+     */
+    fun observeCountSince(since: Long): Flow<Int>
 }

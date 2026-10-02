@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Search
@@ -68,7 +69,6 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
-import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
 import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
@@ -97,6 +97,7 @@ import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilt
 @Composable
 fun InboxScreen(
     navigateTo: (Screen, NavOptions?) -> Unit,
+    navigateBack: () -> Unit,
     viewModel: InboxViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -121,6 +122,7 @@ fun InboxScreen(
         notifications = notifications,
         onEvent = viewModel::onEvent,
         navigateTo = navigateTo,
+        navigateBack = navigateBack,
         snackbarHostState = snackbarHostState,
     )
 }
@@ -132,6 +134,7 @@ private fun InboxScreenContent(
     notifications: LazyPagingItems<InboxListItem>,
     onEvent: (InboxEvent) -> Unit,
     navigateTo: (Screen, NavOptions?) -> Unit,
+    navigateBack: () -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -145,11 +148,12 @@ private fun InboxScreenContent(
             InboxTopBar(
                 hasActiveFilters = hasActiveFilters,
                 onFilterClick = { showFilterSheet = true },
+                onBackClick = navigateBack,
             )
         },
         bottomBar = {
             MainBottomNav(
-                selectedDestination = AppDestinations.INBOX,
+                selectedDestination = null,
                 navigateTo = navigateTo,
             )
         },
@@ -199,7 +203,7 @@ private fun InboxScreenContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun InboxTopBar(hasActiveFilters: Boolean, onFilterClick: () -> Unit) {
+private fun InboxTopBar(hasActiveFilters: Boolean, onFilterClick: () -> Unit, onBackClick: () -> Unit) {
     TopAppBar(
         title = {
             Column {
@@ -213,6 +217,11 @@ private fun InboxTopBar(hasActiveFilters: Boolean, onFilterClick: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go back")
             }
         },
         actions = {
@@ -740,6 +749,7 @@ fun PreviewInboxScreen() {
             notifications = lazyPagingItems,
             onEvent = {},
             navigateTo = { _, _ -> },
+            navigateBack = {},
         )
     }
 }
@@ -800,6 +810,7 @@ fun PreviewInboxScreenDark() {
             notifications = lazyPagingItems,
             onEvent = {},
             navigateTo = { _, _ -> },
+            navigateBack = {},
         )
     }
 }

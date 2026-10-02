@@ -8,16 +8,21 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ### Rule Creation & Editing
 * **User Experience:** The user builds a rule in a two-step wizard: first defining conditions (when a notification's title, text, app, or package matches something) and one or more actions to run when it matches, then naming the rule and optionally marking it as "dry-run" (log matches without ever acting) for safe trialing. Rules can also be started pre-filled from a real captured notification, or built from scratch.
-* **System Trigger:** User taps "+" on the Rules screen, or taps "Create rule" from a notification's detail view.
+* **System Trigger:** User taps "New rule" on the Rules screen, which opens the Rule Templates screen (curated starter templates first, "Start from scratch" as a pinned secondary action); or taps "Create rule" from a notification's detail view (goes straight to a pre-filled blank editor).
 * **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`, `openspec/specs/rule-storage/`
 
+### Rule Templates
+* **User Experience:** A full-screen gallery of curated starter rules with single-select category filter chips (All plus each category) and each template's full description. Tapping a template opens the rule editor pre-populated and unsaved (nothing persists until Save; imported rules start in dry-run); "Start from scratch" is pinned at the bottom. The gallery is removed from the back stack on selection, so saving or backing out of the editor returns to the originating screen.
+* **System Trigger:** "See more templates" on Home, or "New rule" / "Import from templates" on the Rules screen.
+
 ### Matching Conditions
-* **User Experience:** The user specifies what a notification must look like to match a rule by adding one or more conditions, drawn from three families. Multiple conditions on the same rule are combined with a per-rule combinator (`ALL` = every condition must match, `ANY` = at least one condition must match). The three condition families are:
+* **User Experience:** The user specifies what a notification must look like to match a rule by adding one or more conditions, drawn from three editable families. Multiple conditions on the same rule are combined with a per-rule combinator (`ALL` = every condition must match, `ANY` = at least one condition must match). The three condition families are:
   * **Content match** — a notification property compared against a value with an operator:
     * Properties that can be checked: Title, Main text/content, Raw content (the full raw notification text), App name, Package name
     * Operators available: Contains, Does not contain, Starts with, Ends with, Equals (exact match), Matches regex (pattern match)
   * **Day of week** — matches when the current day is one of a chosen set of weekdays. Choosing zero days matches no day (fail-closed), not every day.
   * **Time range** — matches when the current time falls within a start/end time, inclusive. A range where the end is earlier than the start wraps across midnight (e.g. 22:00–06:00); a range where start equals end matches only that exact instant.
+  * **Group** (`RuleCondition.Group`) — a nested, recursively-structured set of conditions combined by its own ALL/ANY combinator, letting a rule express `(A AND B) OR C`-style trees. Not creatable or editable in this app version's editor — it exists so a rule imported from a shared file (or a future version's group editor) round-trips without silently losing conditions. The rule editor shows it as a read-only summary row ("Group: N conditions (ALL/ANY)") that can be removed like any other condition but not opened for editing. Nesting is capped at 5 levels deep on import (`RuleWireMapper.MAX_CONDITION_DEPTH`) to prevent a hand-crafted file from being a stack-overflow DoS.
 * **System Trigger:** User adds/edits a condition inside the Rule Editor's "Matching Logic" step.
 * **Technical Spec Reference:** `openspec/specs/rule-conditions/`
 
@@ -38,6 +43,11 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **System Trigger:** User adds an "Extract data" action while building or editing a rule; the extraction itself runs automatically in the background whenever a matching notification arrives.
 * **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`
 
+### Post-Extraction Privacy (Delete Raw Content)
+* **User Experience:** A per-rule "Delete raw content after extraction" toggle in the Rule Editor's options section. When enabled, once the rule matches and actually extracts data, the source notification's original text (raw content, main text, and title) is scrubbed - only the extracted fields remain. The notification row itself and its rule executions are kept, so history and extracted data stay intact; only the free-text OTP/message content is removed.
+* **System Trigger:** Runs automatically, right after a matching rule's executions are persisted, but only when the rule is non dry-run, the toggle is enabled, and at least one field was actually extracted (a match that extracted nothing never scrubs, since there'd be nothing left to explain the notification).
+* **Technical Spec Reference:** `domain/model/Rule.kt`, `core/notification/ProcessNotificationUseCase.kt`, `domain/repository/NotificationRepository.kt`
+
 ### Notification Actions
 * **User Experience:** For a matching notification, the user picks one or more actions to run. Each action can be turned on or off independently within a rule.
   * **Dismiss notification** — silently removes it from the system tray (good for noise like OTP codes or spam).
@@ -53,6 +63,8 @@ Notificapp lets users create automation rules that act on the notifications thei
     * Optional cooldown (in seconds, 0 = disabled): a chatty source app re-matching this rule within the window is suppressed instead of re-ringing
     * Automatically stops if the user dismisses the source notification (swipe, clear-all, or tap-to-open) — but not if a rule's own Dismiss action removes it, so a rule can pair Dismiss + Create Alarm without the alarm instantly silencing itself
   * **Flash alert** — blinks the camera flash/torch a configurable number of times as a visual alert; automatically skipped on devices with no flash or when battery saver is on, and safety-clamped to avoid photosensitivity risk. Also supports an optional cooldown (in seconds, 0 = disabled), same suppression behavior as the alarm's.
+  * **Read aloud** — speaks a short, user-authored text template out loud via on-device text-to-speech (no cloud, no network) when the rule matches. The template uses the same `{{token}}` placeholder syntax as the Send Webhook TEMPLATE mode (built-in notification fields plus any extracted data fields), e.g. `Received {{field.amount}} from {{field.sender}}`. A blank template, or one whose placeholders all resolve to nothing, is skipped rather than speaking silence.
+  * **Send reply (BETA)** — replies to the source notification via its Android direct-reply (`RemoteInput`) action, with a user-authored text template using the same `{{token}}` placeholder syntax as Read Aloud/Send Webhook. Marked BETA and shown with a Beta badge in the UI because it only works on apps that expose a RemoteInput reply action on their notification (many don't); on any other app it silently does nothing rather than failing — a `SKIPPED` outcome visible in the notification detail's per-action outcomes. Exempt from the starter-template coverage guarantee (`domain/model/BETA_ACTION_TYPES`).
   * **Extract data** — see "Data Extraction" above.
 * **System Trigger:** Runs automatically in the background the moment a monitored notification matches an enabled (non dry-run) rule.
 * **Technical Spec Reference:** `openspec/specs/action-execution/`, `openspec/specs/snooze-scheduling/`, `openspec/specs/alarm-playback/`, `openspec/specs/alarm-fullscreen-ui/`
@@ -79,6 +91,27 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **User Experience:** The user picks which installed apps Notificapp should monitor, searching and toggling apps in a list. Only notifications from selected apps are captured and can be used in rules.
 * **System Trigger:** Shown right after onboarding, or reopened anytime from Settings.
 
+### Home Dashboard
+* **User Experience:** The user opens the app to a launch summary: a monitoring status banner
+  (listener active/inactive, monitored-app count, rule count); for zero-rule users, a "Get started"
+  checklist (notification access, monitored apps, first rule) whose active step hosts curated
+  templates ("Create rule from this" / "Create from scratch" / "See more templates") and replaces
+  the banner; for users with rules, a "Recurring Notifications" section suggesting rules for
+  repeated, un-automated notification patterns ("Create rule from this" / "Skip similar"); a "This
+  Week" stats row (records / rules fired / apps active); and a "Recent Activity" feed of recent
+  rule executions, each opening notification detail, with a "See all" action that pushes Inbox as a
+  stacked screen.
+* **System Trigger:** User opens the app.
+* **Technical Spec Reference:** `openspec/changes/home-screen-nav-replacement/specs/home-dashboard/`
+
+### Recurring Notification Suggestions
+* **User Experience:** When the same kind of notification arrives at least 4 times over 2 weeks on
+  at least 2 different days from an app no rule covers, Home offers to turn it into a rule;
+  tapping "Skip similar" hides that pattern permanently.
+* **System Trigger:** User opens the app (Home dashboard); the suggestion is recomputed on each
+  app launch/resume.
+* **Technical Spec Reference:** `openspec/changes/home-screen-nav-replacement/specs/recurring-notification-suggestions/`
+
 ### Notification Inbox & Detail
 * **User Experience:** The user browses a time-grouped list of every captured notification, with:
   * Search by text
@@ -87,7 +120,7 @@ Notificapp lets users create automation rules that act on the notifications thei
   * A warning banner if notification access has been revoked
   * Tapping an item opens its full content plus a history of which rules matched it, what data was extracted, and what actions ran (with outcome: Success, Failed, Skipped, or Suppressed)
   * From detail view: "Create rule" from this notification, or "Re-run rules" to manually recompute matches
-* **System Trigger:** User opens the app to the Inbox (its home screen); taps a notification to see details; taps "Re-run rules" to recompute matches manually.
+* **System Trigger:** User opens the app to the Home dashboard; the Inbox opens from Home's "See all" or from a recent-activity row; taps a notification to see details; taps "Re-run rules" to recompute matches manually.
 
 ### Rules Management
 * **User Experience:** The user views all their rules in one list, with:
@@ -117,12 +150,17 @@ Notificapp lets users create automation rules that act on the notifications thei
   * Bulk-delete everything matching the current filters, after a confirmation dialog showing the exact affected count — the delete always targets the previewed ID set, so data arriving between preview and confirmation is never swept in
   * Export the currently filtered set as CSV or JSON via the Android share sheet; export streams in fixed-size batches so it never materializes the full result set in memory, even for tens of thousands of rows
   * Dry-run rule executions (test/preview matches) are excluded from every Data Browser view by default: browsing, search, statistics, export, and deletion
-* **System Trigger:** User navigates to the Data tab (bottom navigation, between Inbox and Rules).
+* **System Trigger:** User navigates to the Data tab (bottom navigation, between Home and Rules).
 * **Technical Spec Reference:** `openspec/changes/data-browser/specs/data-browsing/spec.md`, `data-statistics/spec.md`, `data-export/spec.md`, `data-deletion/spec.md`
 
 ---
 
 ## Background Data Handling
+
+### Global Monitoring Pause (Quick Settings Tile)
+* **User Experience:** The user adds a Notificapp tile to their Android Quick Settings panel and taps it to instantly pause or resume all notification monitoring — a privacy kill switch reachable without opening the app. While paused, the tile shows "Paused" and freshly posted notifications are not captured, processed, or acted on at all (existing rules stay configured; they simply see nothing new until monitoring resumes).
+* **System Trigger:** User taps the Quick Settings tile, or the tile is displayed (it reads the current state on `onStartListening`).
+* **Technical Spec Reference:** `features/notification/MonitoringTileService.kt`, gated in `core/notification/ProcessNotificationUseCase.kt`.
 
 ### Automatic Notification Capture
 * **User Experience:** The user does nothing — notifications from monitored apps are captured automatically the moment they arrive, ready to browse in the Inbox.

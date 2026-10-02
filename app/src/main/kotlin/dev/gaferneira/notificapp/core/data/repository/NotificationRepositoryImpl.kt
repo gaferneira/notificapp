@@ -169,6 +169,16 @@ internal class NotificationRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun redactContent(notificationId: String): Result<Unit> = withContext(ioDispatcher) {
+        try {
+            dao.redactContent(notificationId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to redact content for notification: $notificationId")
+            e.toFailureResult()
+        }
+    }
+
     override suspend fun deleteNotification(id: String): Result<Unit> = withContext(ioDispatcher) {
         try {
             dao.deleteById(id)
@@ -231,6 +241,16 @@ internal class NotificationRepositoryImpl @Inject constructor(
 
     override fun observeAppsWithNotifications(): Flow<List<AppInfo>> = dao.observeAppsWithLatestName()
         .map { rows -> rows.map { AppInfo(packageName = it.packageName, name = it.appName) } }
+        .flowOn(ioDispatcher)
+
+    override fun observeActiveAppCountSince(since: Long): Flow<Int> = dao.observeActiveAppCountSince(since)
+        .flowOn(ioDispatcher)
+
+    override fun observeRecentSince(since: Long, limit: Int): Flow<List<Notification>> = dao.observeRecentSince(since, limit)
+        .map { entities -> entities.map { it.toModel() } }
+        .flowOn(ioDispatcher)
+
+    override fun observeCountSince(since: Long): Flow<Int> = dao.observeCountSince(since)
         .flowOn(ioDispatcher)
 }
 

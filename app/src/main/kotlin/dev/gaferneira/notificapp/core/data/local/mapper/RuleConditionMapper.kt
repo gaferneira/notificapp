@@ -2,9 +2,11 @@ package dev.gaferneira.notificapp.core.data.local.mapper
 
 import dev.gaferneira.notificapp.core.data.local.entity.RuleConditionEntity
 import dev.gaferneira.notificapp.core.rulesharing.dto.ConditionDto
+import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.json.Json
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -76,6 +78,11 @@ internal object RuleConditionMapper {
             start = start.toString(),
             end = end.toString(),
         )
+        is RuleCondition.Group -> ConditionDto.Group(
+            id = id,
+            combinator = combinator.name,
+            children = children.map { it.toDto() },
+        )
     }
 
     private fun ConditionDto.toDomain(): RuleCondition = when (this) {
@@ -93,6 +100,11 @@ internal object RuleConditionMapper {
             id = id,
             start = LocalTime.parse(start),
             end = LocalTime.parse(end),
+        )
+        is ConditionDto.Group -> RuleCondition.Group(
+            id = id,
+            combinator = ConditionCombinator.fromStorageValue(combinator),
+            children = children.map { it.toDomain() }.toImmutableList(),
         )
     }
 }

@@ -244,7 +244,7 @@ class AppSelectionViewModelTest {
             viewModel.onEvent(UiEvent.OnContinueClicked)
             testDispatcher.scheduler.advanceUntilIdle()
 
-            coVerify(exactly = 1) { navigationHandler.clearAndNavigate(Routes.inbox()) }
+            coVerify(exactly = 1) { navigationHandler.clearAndNavigate(Routes.home()) }
         }
 
         @Test

@@ -30,11 +30,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.outlined.AccountBalance
-import androidx.compose.material.icons.outlined.LocalShipping
-import androidx.compose.material.icons.outlined.Payments
-import androidx.compose.material.icons.outlined.Receipt
-import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -71,7 +66,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -94,6 +88,7 @@ import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.LocalIoDispatcher
+import dev.gaferneira.notificapp.core.ui.utils.getCategoryIcon
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
@@ -310,7 +305,6 @@ internal fun RulesScreenContent(
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
     val ioDispatcher = LocalIoDispatcher.current
-    var showTemplatePicker by remember { mutableStateOf(false) }
     val filePickerLauncher = rememberRuleFilePickerLauncher(onEvent, coroutineScope, ioDispatcher)
 
     Scaffold(
@@ -325,9 +319,7 @@ internal fun RulesScreenContent(
                     val text = clipboardManager.getText()?.text.orEmpty()
                     onEvent(RulesEvent.OnRuleTextReceived(text))
                 },
-                onImportFromTemplates = {
-                    showTemplatePicker = true
-                },
+                onImportFromTemplates = { navigateTo(Routes.ruleTemplates(), null) },
             )
         },
         bottomBar = {
@@ -338,7 +330,7 @@ internal fun RulesScreenContent(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { onEvent(RulesEvent.OnAddRuleClick) },
+                onClick = { navigateTo(Routes.ruleTemplates(), null) },
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text("New rule") },
             )
@@ -347,7 +339,7 @@ internal fun RulesScreenContent(
         RulesBody(
             uiState = uiState,
             onEvent = onEvent,
-            onBrowseTemplates = { showTemplatePicker = true },
+            onBrowseTemplates = { navigateTo(Routes.ruleTemplates(), null) },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
@@ -356,16 +348,6 @@ internal fun RulesScreenContent(
     }
 
     RulesImportDialogs(uiState = uiState, onEvent = onEvent)
-
-    if (showTemplatePicker) {
-        RulesTemplatePickerHost(
-            onEvent = onEvent,
-            coroutineScope = coroutineScope,
-            ioDispatcher = ioDispatcher,
-            context = context,
-            onDismiss = { showTemplatePicker = false },
-        )
-    }
 }
 
 /**
@@ -397,37 +379,6 @@ private fun rememberRuleFilePickerLauncher(
             onEvent(RulesEvent.OnRuleTextReceived(text.orEmpty()))
         }
     }
-}
-
-/**
- * Hosts the "Browse templates" [RuleTemplatePickerSheet]: reads the selected template's asset
- * JSON off the main thread and feeds it into the same [RulesEvent.OnRuleTextReceived] path used
- * by file/clipboard import, then closes the sheet.
- */
-@Composable
-private fun RulesTemplatePickerHost(
-    onEvent: (RulesEvent) -> Unit,
-    coroutineScope: CoroutineScope,
-    ioDispatcher: CoroutineDispatcher,
-    context: Context,
-    onDismiss: () -> Unit,
-) {
-    RuleTemplatePickerSheet(
-        onTemplateSelected = { template ->
-            onDismiss()
-            coroutineScope.launch {
-                val text = withContext(ioDispatcher) {
-                    runCatching {
-                        context.assets.open("rules/${template.assetFileName}")
-                            .bufferedReader()
-                            .use { it.readText() }
-                    }.getOrNull()
-                }
-                onEvent(RulesEvent.OnRuleTextReceived(text.orEmpty()))
-            }
-        },
-        onDismiss = onDismiss,
-    )
 }
 
 @Composable
@@ -819,16 +770,6 @@ private fun StatusHeader(
             )
         }
     }
-}
-
-@Composable
-internal fun getCategoryIcon(category: String): ImageVector = when (category.lowercase()) {
-    "finance", "financial", "banking", "payments" -> Icons.Outlined.AccountBalance
-    "deliveries", "delivery", "shipping", "logistics" -> Icons.Outlined.LocalShipping
-    "shopping", "e-commerce", "retail" -> Icons.Outlined.ShoppingCart
-    "receipts", "transactions", "purchases" -> Icons.Outlined.Receipt
-    "payments", "invoices" -> Icons.Outlined.Payments
-    else -> Icons.Outlined.Receipt
 }
 
 @Composable

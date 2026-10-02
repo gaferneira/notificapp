@@ -18,10 +18,18 @@ local.properties
 # Signing — never commit keystores or release credentials
 *.jks
 *.keystore
+keystore.properties
 
 # Built artifacts outside build/ (e.g., copied for release)
 *.apk
 *.aab
+
+# Fastlane — service account secrets and runtime junk (fastlane/metadata/ stays tracked)
+**/play-service-account*.json
+fastlane/*.json
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/test_output
 
 # Personal agent config — never commit (machine-specific permissions/overrides)
 .claude/settings.local.json

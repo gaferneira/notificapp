@@ -18,6 +18,14 @@ sealed class Screen : NavKey {
     data object Inbox : Screen()
 
     /**
+     * Home dashboard - launch summary: monitoring status, starter rules or recurring-notification
+     * suggestions, weekly stats, and recent activity. Occupies the first bottom-nav slot Inbox
+     * previously held.
+     */
+    @Serializable
+    data object Home : Screen()
+
+    /**
      * Rules screen - list of extraction rules.
      */
     @Serializable
@@ -60,7 +68,14 @@ sealed class Screen : NavKey {
     data class RuleEditor(
         val ruleId: String? = null,
         val notificationId: String? = null,
+        val templateAssetFileName: String? = null,
     ) : Screen()
+
+    /**
+     * Starter rule template gallery with category filters; the create-rule entry point.
+     */
+    @Serializable
+    data object RuleTemplates : Screen()
 
     /**
      * Onboarding screen - initial setup for notification permission.

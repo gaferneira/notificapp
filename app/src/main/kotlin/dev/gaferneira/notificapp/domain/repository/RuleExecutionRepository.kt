@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.domain.repository
 
+import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
 import kotlinx.coroutines.flow.Flow
@@ -40,4 +41,15 @@ interface RuleExecutionRepository {
      * fallback - callers should treat [Result.failure] as fail-open (no known prior delivery).
      */
     suspend fun lastThrottleDeliveryAt(actionId: String, packageName: String, sinceMs: Long): Result<Long?>
+
+    /**
+     * Count executions recorded at or after [since] (epoch millis), excluding dry-run rules.
+     */
+    fun observeExecutionCountSince(since: Long): Flow<Int>
+
+    /**
+     * The most recent non-dry-run executions, joined with source notification + rule name,
+     * bounded by [limit], most recent first.
+     */
+    fun observeRecentActivity(limit: Int): Flow<List<RecentActivity>>
 }

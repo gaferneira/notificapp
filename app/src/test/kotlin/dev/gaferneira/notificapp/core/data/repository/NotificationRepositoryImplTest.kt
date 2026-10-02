@@ -133,6 +133,25 @@ class NotificationRepositoryImplTest {
     }
 
     @Test
+    fun `redactContent delegates to the dao`() = runTest(testDispatcher) {
+        coEvery { dao.redactContent("n1") } returns Unit
+
+        val result = repository.redactContent("n1")
+
+        result.isSuccess shouldBe true
+        coVerify(exactly = 1) { dao.redactContent("n1") }
+    }
+
+    @Test
+    fun `redactContent maps a dao exception to Result_failure without throwing`() = runTest(testDispatcher) {
+        coEvery { dao.redactContent("n1") } throws SQLException("db locked")
+
+        val result = repository.redactContent("n1")
+
+        result.isFailure shouldBe true
+    }
+
+    @Test
     fun `observeAppsWithNotifications maps dao rows to AppInfo`() = runTest(testDispatcher) {
         every { dao.observeAppsWithLatestName() } returns flowOf(listOf(AppWithLatestName("com.bank", "Bank")))
 

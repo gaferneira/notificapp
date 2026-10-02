@@ -2,10 +2,10 @@ package dev.gaferneira.notificapp
 
 import android.content.Context
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -38,6 +39,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import dagger.hilt.android.AndroidEntryPoint
 import dev.gaferneira.notificapp.core.notification.EnforceRetentionUseCase
+import dev.gaferneira.notificapp.core.ui.locale.LocaleController
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationCommand
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Navigator
@@ -45,13 +47,16 @@ import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.navigation.rememberNavigationState
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.appselection.ui.AppSelectionScreen
 import dev.gaferneira.notificapp.features.databrowser.ui.DataBrowserScreen
+import dev.gaferneira.notificapp.features.home.ui.HomeScreen
 import dev.gaferneira.notificapp.features.inbox.ui.InboxScreen
 import dev.gaferneira.notificapp.features.notificationdetail.ui.NotificationDetailScreen
 import dev.gaferneira.notificapp.features.onboarding.ui.OnboardingScreen
 import dev.gaferneira.notificapp.features.ruleeditor.ui.RuleEditorScreen
 import dev.gaferneira.notificapp.features.rules.ui.RulesScreen
+import dev.gaferneira.notificapp.features.ruletemplates.ui.RuleTemplatesScreen
 import dev.gaferneira.notificapp.features.settings.ui.SettingsScreen
 import dev.gaferneira.notificapp.features.webhook.ui.WebhookEditorScreen
 import dev.gaferneira.notificapp.features.webhook.ui.WebhookListScreen
@@ -61,12 +66,15 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var navigationHandler: NavigationHandler
 
     @Inject
     lateinit var enforceRetentionUseCase: EnforceRetentionUseCase
+
+    @Inject
+    lateinit var userPreferencesRepository: UserPreferencesRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,6 +87,15 @@ class MainActivity : ComponentActivity() {
         if (!hasEnforcedRetentionThisProcess) {
             hasEnforcedRetentionThisProcess = true
             lifecycleScope.launch { enforceRetentionUseCase() }
+        }
+
+        // Apply the stored language preference and keep reacting to changes made from Settings
+        // while the app is running. Collected on lifecycleScope's default Main dispatcher since
+        // AppCompatDelegate.setApplicationLocales must run on the main thread.
+        lifecycleScope.launch {
+            userPreferencesRepository.observeLanguage().collect { language ->
+                LocaleController.applyLanguage(language)
+            }
         }
 
         setContent {
@@ -141,7 +158,7 @@ fun Notificapp(
     val startRoute: Screen = when (currentFlowState) {
         AppFlowState.ONBOARDING -> Routes.onboarding()
         AppFlowState.APP_SELECTION -> Routes.appSelection(isInitialSetup = true)
-        AppFlowState.MAIN_APP -> Routes.inbox()
+        AppFlowState.MAIN_APP -> Routes.home()
     }
 
     val navigationState = rememberNavigationState(startRoute = startRoute)
@@ -201,9 +218,56 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
         AppSelectionScreen()
     }
 
+    mainTabEntries(navigator)
+
+    // Detail screens with slide transitions
+    entry<Screen.NotificationDetails> { screen ->
+        NotificationDetailScreen(
+            notificationId = screen.notificationId,
+        )
+    }
+
+    entry<Screen.RuleEditor> { screen ->
+        RuleEditorScreen(
+            ruleId = screen.ruleId,
+            notificationId = screen.notificationId,
+            templateAssetFileName = screen.templateAssetFileName,
+        )
+    }
+
+    entry<Screen.RuleTemplates> {
+        RuleTemplatesScreen(
+            navigateTo = navigator::navigate,
+            navigateBack = navigator::goBack,
+        )
+    }
+
+    entry<Screen.WebhookList> {
+        WebhookListScreen(
+            onBackClick = navigator::goBack,
+        )
+    }
+
+    entry<Screen.WebhookEditor> { screen ->
+        WebhookEditorScreen(
+            webhookId = screen.webhookId,
+            onBackClick = navigator::goBack,
+        )
+    }
+}
+
+/** Entries for the destinations reachable from the bottom navigation bar. */
+private fun EntryProviderScope<NavKey>.mainTabEntries(navigator: Navigator) {
+    entry<Screen.Home> {
+        HomeScreen(
+            navigateTo = navigator::navigate,
+        )
+    }
+
     entry<Screen.Inbox> {
         InboxScreen(
             navigateTo = navigator::navigate,
+            navigateBack = navigator::goBack,
         )
     }
 
@@ -224,33 +288,6 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
             navigateTo = navigator::navigate,
         )
     }
-
-    // Detail screens with slide transitions
-    entry<Screen.NotificationDetails> { screen ->
-        NotificationDetailScreen(
-            notificationId = screen.notificationId,
-        )
-    }
-
-    entry<Screen.RuleEditor> { screen ->
-        RuleEditorScreen(
-            ruleId = screen.ruleId,
-            notificationId = screen.notificationId,
-        )
-    }
-
-    entry<Screen.WebhookList> {
-        WebhookListScreen(
-            onBackClick = navigator::goBack,
-        )
-    }
-
-    entry<Screen.WebhookEditor> { screen ->
-        WebhookEditorScreen(
-            webhookId = screen.webhookId,
-            onBackClick = navigator::goBack,
-        )
-    }
 }
 
 /**
@@ -260,9 +297,9 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
  * @param navigator The navigator to observe
  */
 @Composable
-private fun DebugNavOverlay(navigator: Navigator) {
+private fun DebugNavOverlay(navigator: Navigator, showDebugOverlay: Boolean = false) {
     // Show only in debug builds
-    if (BuildConfig.DEBUG) {
+    if (BuildConfig.DEBUG && showDebugOverlay) {
         Column(
             modifier = Modifier
                 .padding(8.dp)
