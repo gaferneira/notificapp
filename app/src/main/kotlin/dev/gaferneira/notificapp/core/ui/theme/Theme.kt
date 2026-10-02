@@ -14,25 +14,47 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
+    primary = DeepTechPrimaryDark,
+    onPrimary = DeepTechOnPrimaryDark,
+    primaryContainer = DeepTechPrimaryContainerDark,
+    onPrimaryContainer = DeepTechOnPrimaryContainerDark,
+    secondary = DeepTechSecondaryDark,
+    onSecondary = DeepTechOnSecondaryDark,
+    secondaryContainer = DeepTechSecondaryContainerDark,
+    onSecondaryContainer = DeepTechOnSecondaryContainerDark,
+    tertiary = DeepTechTertiaryDark,
+    onTertiary = DeepTechOnTertiaryDark,
+    tertiaryContainer = DeepTechTertiaryContainerDark,
+    onTertiaryContainer = DeepTechOnTertiaryContainerDark,
+    background = DeepTechBackgroundDark,
+    onBackground = DeepTechOnBackgroundDark,
+    surface = DeepTechSurfaceDark,
+    onSurface = DeepTechOnSurfaceDark,
+    surfaceVariant = DeepTechSurfaceVariantDark,
+    onSurfaceVariant = DeepTechOnSurfaceVariantDark,
+    outline = DeepTechOutlineDark,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-     */
+    primary = DeepTechPrimaryLight,
+    onPrimary = DeepTechOnPrimaryLight,
+    primaryContainer = DeepTechPrimaryContainerLight,
+    onPrimaryContainer = DeepTechOnPrimaryContainerLight,
+    secondary = DeepTechSecondaryLight,
+    onSecondary = DeepTechOnSecondaryLight,
+    secondaryContainer = DeepTechSecondaryContainerLight,
+    onSecondaryContainer = DeepTechOnSecondaryContainerLight,
+    tertiary = DeepTechTertiaryLight,
+    onTertiary = DeepTechOnTertiaryLight,
+    tertiaryContainer = DeepTechTertiaryContainerLight,
+    onTertiaryContainer = DeepTechOnTertiaryContainerLight,
+    background = DeepTechBackgroundLight,
+    onBackground = DeepTechOnBackgroundLight,
+    surface = DeepTechSurfaceLight,
+    onSurface = DeepTechOnSurfaceLight,
+    surfaceVariant = DeepTechSurfaceVariantLight,
+    onSurfaceVariant = DeepTechOnSurfaceVariantLight,
+    outline = DeepTechOutlineLight,
 )
 
 @Composable

@@ -178,58 +178,65 @@ private fun FirstStepHero() {
 /** Bottom section: CTA button, security footer, and privacy policy link. */
 @Composable
 private fun FirstStepFooter(onEvent: (UiEvent) -> Unit) {
-    Button(
-        onClick = { onEvent(UiEvent.OnGetStartedClicked) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-        ),
-    ) {
-        Text(
-            text = stringResource(R.string.onboarding_get_started),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    // Security footer
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Bottom,
     ) {
-        Icon(
-            imageVector = Icons.Default.Lock,
-            contentDescription = null,
-            modifier = Modifier.size(12.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Button(
+            onClick = { onEvent(UiEvent.OnGetStartedClicked) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+            ),
+        ) {
+            Text(
+                text = stringResource(R.string.onboarding_get_started),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Security footer
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(12.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.onboarding_processed_locally),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        val uriHandler = LocalUriHandler.current
         Text(
-            text = stringResource(R.string.onboarding_processed_locally),
+            text = stringResource(R.string.onboarding_read_privacy_policy),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp),
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+                .clickable { uriHandler.openUri(AppLinks.PRIVACY_POLICY_URL) },
         )
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    val uriHandler = LocalUriHandler.current
-    Text(
-        text = stringResource(R.string.onboarding_read_privacy_policy),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
-        textDecoration = TextDecoration.Underline,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().clickable { uriHandler.openUri(AppLinks.PRIVACY_POLICY_URL) },
-    )
-
-    Spacer(modifier = Modifier.height(32.dp))
 }
 
 /**
