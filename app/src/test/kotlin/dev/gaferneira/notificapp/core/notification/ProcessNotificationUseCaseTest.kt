@@ -133,6 +133,35 @@ class ProcessNotificationUseCaseTest {
     }
 
     @Test
+    fun `disabled rule never runs actions or persists an execution even when it matches`() = runTest(testDispatcher) {
+        // Given: a saved notification and a matching rule that the user has disabled
+        val notification = createTestNotification(title = "ICA Kvantum")
+        val condition = createTestCondition(
+            condition = MatchingCondition.TITLE,
+            operator = MatchingOperator.CONTAINS,
+            value = "ICA",
+        )
+        val rule = createTestRule(
+            id = "rule-1",
+            conditions = listOf(condition),
+            actions = listOf(createTestAction(id = "action-1")),
+            isActive = false,
+        )
+
+        coEvery { deduplicator.isDuplicate(notification) } returns false
+        coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
+        coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
+
+        // When: invoking the use case
+        val result = useCase.invoke(notification)
+
+        // Then: nothing matches, no action is dispatched and no execution is saved
+        result shouldBe Result.success(emptyList())
+        coVerify(exactly = 0) { actionDispatcher.executeAll(any(), any()) }
+        coVerify(exactly = 0) { ruleExecutionRepository.saveExecution(any(), any()) }
+    }
+
+    @Test
     fun `matching rule executes actions and persists a rule execution with the reported outcomes`() = runTest(testDispatcher) {
         // Given: a saved notification, one matching rule with one enabled action, and a dispatcher
         // that reports SUCCESS for that action

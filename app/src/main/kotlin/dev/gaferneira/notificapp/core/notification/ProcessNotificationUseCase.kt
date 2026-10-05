@@ -104,7 +104,8 @@ class ProcessNotificationUseCase @Inject constructor(
                 return@withContext Result.failure(rulesResult.exceptionOrNull()!!)
             }
 
-            val rules = rulesResult.getOrNull() ?: emptyList()
+            // getRulesForApp returns rules regardless of their enabled state; disabled rules must never run.
+            val rules = rulesResult.getOrNull().orEmpty().filter { it.isActive }
             if (rules.isEmpty()) {
                 Timber.d("No active rules for ${notification.packageName}")
                 return@withContext Result.success(emptyList())
