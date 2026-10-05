@@ -32,11 +32,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
+import dev.gaferneira.notificapp.core.ui.mapping.availableActionTypes
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorStep
 import dev.gaferneira.notificapp.features.ruleeditor.domain.NameNextField
-import dev.gaferneira.notificapp.features.ruleeditor.domain.availableActionTypes
 import dev.gaferneira.notificapp.features.ruleeditor.domain.nameNextField
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionCardCallbacks
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton

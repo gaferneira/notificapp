@@ -25,10 +25,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.mapping.ui
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleAction
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import kotlinx.collections.immutable.persistentListOf
 
 /**

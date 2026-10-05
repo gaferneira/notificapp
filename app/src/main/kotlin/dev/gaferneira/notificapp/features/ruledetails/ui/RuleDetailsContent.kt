@@ -38,6 +38,8 @@ import dev.gaferneira.notificapp.core.ui.components.ExpandableHeader
 import dev.gaferneira.notificapp.core.ui.components.RuleSummaryText
 import dev.gaferneira.notificapp.core.ui.components.StatusPill
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
+import dev.gaferneira.notificapp.core.ui.mapping.ui
+import dev.gaferneira.notificapp.core.ui.text.displayText
 import dev.gaferneira.notificapp.core.ui.utils.getCategoryIcon
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
@@ -51,8 +53,6 @@ import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleStats
 import dev.gaferneira.notificapp.domain.model.toSummary
 import dev.gaferneira.notificapp.features.ruledetails.domain.sectionCollapseDefaults
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.displayText
 import kotlinx.collections.immutable.persistentListOf
 import java.text.DateFormat
 import java.util.Date

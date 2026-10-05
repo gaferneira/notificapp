@@ -8,11 +8,11 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.mapping.ui
+import dev.gaferneira.notificapp.core.ui.text.displayText
 import dev.gaferneira.notificapp.domain.model.RuleSummary
 import dev.gaferneira.notificapp.domain.model.RuleSummary.AppScope
 import dev.gaferneira.notificapp.domain.model.RuleSummary.ConditionMatch
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.displayText
 
 /** Apps listed by name in the sentence; longer lists collapse to a count. */
 private const val MAX_NAMED_APPS = 3

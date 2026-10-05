@@ -44,6 +44,7 @@ import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmRequest
 import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmRingOptions
 import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmService
 import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmSnoozeSettings
+import dev.gaferneira.notificapp.core.ui.mapping.ui
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
@@ -54,7 +55,6 @@ import dev.gaferneira.notificapp.domain.model.VibrationPattern
 import dev.gaferneira.notificapp.features.alarm.ui.AlarmActivity
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AlarmContract
 import dev.gaferneira.notificapp.features.ruleeditor.domain.AlarmOptions
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AdvancedSettingsSection

@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.mapping.ui
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COOLDOWN_SECONDS
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COUNT
@@ -16,7 +17,6 @@ import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.getFlashCooldownSeconds
 import dev.gaferneira.notificapp.domain.model.getFlashCount
 import dev.gaferneira.notificapp.domain.model.getFlashDurationMs
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.FlashOptionsSelector

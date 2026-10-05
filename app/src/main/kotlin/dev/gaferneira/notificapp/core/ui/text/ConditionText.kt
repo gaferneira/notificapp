@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.ruleeditor.ui.components
+package dev.gaferneira.notificapp.core.ui.text
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
@@ -9,7 +9,6 @@ import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
-import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
 import java.time.format.TextStyle
 
 /**
@@ -36,15 +35,6 @@ internal fun MatchingOperator.displayName(): String = stringResource(
         MatchingOperator.EQUALS -> R.string.condition_operator_equals
         MatchingOperator.REGEX_MATCH -> R.string.condition_operator_regex_match
         MatchingOperator.NOT_CONTAINS -> R.string.condition_operator_not_contains
-    },
-)
-
-@Composable
-internal fun MatchingLogicContract.ConditionType.displayName(): String = stringResource(
-    when (this) {
-        MatchingLogicContract.ConditionType.CONTENT -> R.string.condition_type_content
-        MatchingLogicContract.ConditionType.DAY_OF_WEEK -> R.string.condition_type_day_of_week
-        MatchingLogicContract.ConditionType.TIME_RANGE -> R.string.condition_type_time_range
     },
 )
 

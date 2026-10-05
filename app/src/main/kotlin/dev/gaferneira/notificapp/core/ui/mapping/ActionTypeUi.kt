@@ -1,4 +1,4 @@
-package dev.gaferneira.notificapp.features.ruleeditor.domain
+package dev.gaferneira.notificapp.core.ui.mapping
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons

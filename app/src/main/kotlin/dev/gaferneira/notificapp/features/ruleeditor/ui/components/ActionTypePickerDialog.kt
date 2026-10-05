@@ -34,12 +34,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.components.BetaBadge
+import dev.gaferneira.notificapp.core.ui.mapping.ActionTypeUi
+import dev.gaferneira.notificapp.core.ui.mapping.availableActionTypes
+import dev.gaferneira.notificapp.core.ui.mapping.ui
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.isBeta
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ActionTypeUi
-import dev.gaferneira.notificapp.features.ruleeditor.domain.availableActionTypes
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 
 /**
  * Dialog that lets the user pick which action type to add. Only the [availableTypes] (types not yet

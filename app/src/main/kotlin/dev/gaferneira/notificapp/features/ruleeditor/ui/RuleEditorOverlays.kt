@@ -7,11 +7,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.mapping.availableActionTypes
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
-import dev.gaferneira.notificapp.features.ruleeditor.domain.availableActionTypes
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionTypePickerDialog
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AppSelectionPicker
 import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.ExtractDataBottomSheet

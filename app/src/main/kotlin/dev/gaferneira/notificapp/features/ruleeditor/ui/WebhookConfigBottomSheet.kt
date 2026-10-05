@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.mapping.ui
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
@@ -64,7 +65,6 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.WebhookConfigContr
 import dev.gaferneira.notificapp.features.ruleeditor.contract.WebhookConfigContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.WebhookConfigContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.domain.WebhookConfigUiModel
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.TemplateFieldChipRow

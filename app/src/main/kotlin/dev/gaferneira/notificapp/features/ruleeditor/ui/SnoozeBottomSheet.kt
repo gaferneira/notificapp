@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.mapping.ui
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_DURATION_MINUTES
 import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_THROTTLE_RESET_AT
@@ -26,7 +27,6 @@ import dev.gaferneira.notificapp.domain.model.getSnoozeMode
 import dev.gaferneira.notificapp.domain.model.getSnoozeSchedule
 import dev.gaferneira.notificapp.domain.model.getThrottleResetAt
 import dev.gaferneira.notificapp.domain.model.getThrottleWindowMinutes
-import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionConfigSheet
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionSheetDescription
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.BatchAtTimeConfig
