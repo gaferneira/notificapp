@@ -114,7 +114,7 @@
     <!-- Filter Bottom Sheet -->
     <string name="filter_rules_title">Filter &amp; Sort</string>
     <string name="filter_inbox_title">Filter Notifications</string>
-    <string name="sort_by">Sort By</string>
+    <string name="sort_by">Sort by</string>
     <string name="filter_by_status">By Status</string>
     <string name="filter_by_category">By Category</string>
     <string name="filter_by_app">By Target App</string>
@@ -126,13 +126,40 @@
     <string name="sort_category">Category</string>
     <string name="sort_name_asc">Name A-Z</string>
     <string name="sort_name_desc">Name Z-A</string>
-    <string name="sort_created_newest">Newest First</string>
-    <string name="sort_created_oldest">Oldest First</string>
+    <string name="sort_created_newest">Newest first</string>
+    <string name="sort_created_oldest">Oldest first</string>
     <string name="sort_updated_recent">Recently Updated</string>
-    <string name="sort_status">By Status</string>
+    <string name="sort_status">Enabled first</string>
     <string name="clear_all">Clear All</string>
     <string name="apply">Apply</string>
     <string name="no_filters_available">No filter options available. Create more rules with different categories or target apps.</string>
+
+    <!-- Rules filter & sort sheet -->
+    <string name="rules_filter_section_status">Status</string>
+    <string name="rules_filter_section_categories">Categories</string>
+    <string name="rules_filter_section_apps">Apps</string>
+    <string name="rules_filter_apps_any">Any app</string>
+    <string name="rules_filter_include_global">Also show rules that apply to all apps</string>
+    <string name="rules_filter_include_global_hint">Adds rules with no app restriction, and rules that exclude other apps but not the selected ones.</string>
+    <string name="rules_filter_apps_group_used">Used by rules</string>
+    <string name="rules_filter_apps_group_other">Other monitored apps</string>
+    <string name="rules_filter_sort_current_cd">%1$s, %2$s</string>
+    <string name="rules_filter_chip_all_apps">+ rules for all apps</string>
+    <string name="rules_filter_chip_remove_cd">Remove filter %1$s</string>
+    <plurals name="rules_filter_rule_count">
+        <item quantity="one">%d rule</item>
+        <item quantity="other">%d rules</item>
+    </plurals>
+    <plurals name="rules_filter_show_rules">
+        <item quantity="one">Show %d rule</item>
+        <item quantity="other">Show %d rules</item>
+    </plurals>
+    <plurals name="rules_filter_active_state">
+        <item quantity="one">%d filter active</item>
+        <item quantity="other">%d filters active</item>
+    </plurals>
+
+    <!-- Shared app picker (core/ui) -->
     <string name="app_picker_choose">Choose apps</string>
     <string name="app_picker_title">Choose apps</string>
     <string name="app_picker_search">Search apps</string>

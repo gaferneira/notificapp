@@ -8,7 +8,6 @@
     <ID>CyclomaticComplexMethod:AddFieldViewModel.kt$AddFieldViewModel$private fun saveField()</ID>
     <ID>CyclomaticComplexMethod:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$override suspend fun getMonitorableApps(): List&lt;AppInfo&gt;</ID>
     <ID>CyclomaticComplexMethod:RuleEditorViewModel.kt$RuleEditorViewModel$override fun onEvent(event: UiEvent)</ID>
-    <ID>CyclomaticComplexMethod:RulesViewModel.kt$RulesViewModel$private fun applyFilters(rules: ImmutableList&lt;Rule&gt;, query: String, currentFilter: RuleFilter): ImmutableList&lt;Rule&gt;</ID>
     <ID>CyclomaticComplexMethod:SnoozeScheduleCalculator.kt$SnoozeScheduleCalculator$fun nextCheckpoint(now: LocalDateTime, schedule: SnoozeSchedule): LocalDateTime?</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d", day, month)</ID>
     <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d/%d", day, month, year)</ID>
@@ -33,7 +32,6 @@
     <ID>LongMethod:OnboardingScreen.kt$@Composable private fun ValueStatementContent( onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$override suspend fun getMonitorableApps(): List&lt;AppInfo&gt;</ID>
     <ID>LongMethod:RuleEditorScreen.kt$@Composable private fun MetadataStep( uiState: UiState, onEvent: (UiEvent) -&gt; Unit, scrollState: androidx.compose.foundation.ScrollState, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:RulesFilterBottomSheet.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun FilterBottomSheetContent( uiState: RulesFilterContract.UiState, onEvent: (RulesFilterContract.UiEvent) -&gt; Unit, )</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun AboutCard()</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun MonitoredAppsCard( appsCount: Int, onSelectApps: () -&gt; Unit, )</ID>
     <ID>LongMethod:SnoozeConfig.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun SnoozeDurationSelector( selectedMinutes: Int, onDurationChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>

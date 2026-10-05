@@ -8,13 +8,19 @@ import dev.gaferneira.notificapp.core.ui.Resource
 import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.preferences.RulesFilterSettings
+import dev.gaferneira.notificapp.domain.model.preferences.RulesSort
+import dev.gaferneira.notificapp.domain.model.preferences.RulesStatusFilter
+import dev.gaferneira.notificapp.domain.model.preferences.UserPreferences
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
+import dev.gaferneira.notificapp.features.rules.contract.RuleFilterChip
 import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestRule
 import dev.gaferneira.notificapp.testutil.fakes.FakeRuleRepository
+import dev.gaferneira.notificapp.testutil.fakes.FakeUserPreferencesRepository
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -40,13 +46,15 @@ class RulesViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var ruleRepository: FakeRuleRepository
+    private lateinit var preferences: FakeUserPreferencesRepository
     private lateinit var viewModel: RulesViewModel
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         ruleRepository = FakeRuleRepository()
-        viewModel = RulesViewModel(ruleRepository)
+        preferences = FakeUserPreferencesRepository()
+        viewModel = RulesViewModel(ruleRepository, preferences)
         testDispatcher.scheduler.advanceUntilIdle()
     }
 
@@ -214,50 +222,168 @@ class RulesViewModelTest {
     @Nested
     inner class AppFilterTests {
 
+        private val excludeRule = createTestRule(
+            id = "rule-1",
+            isIncludeMode = false,
+            targetApps = listOf(AppInfo("com.b", "App B")),
+        )
+
         @Test
-        fun `filtering by an unlisted app surfaces an exclude-mode rule`() = runTest(testDispatcher) {
-            // Given: an exclude-mode rule that omits com.a, and a filter for com.a
-            val excludeRule = createTestRule(
-                id = "rule-1",
-                isIncludeMode = false,
-                targetApps = listOf(AppInfo("com.b", "App B")),
-            )
+        fun `an exclude-mode rule that omits the app is hidden by default`() = runTest(testDispatcher) {
+            // Given: an exclude-mode rule that omits com.a (it would run for com.a but never mentions it)
             ruleRepository.saveRule(excludeRule)
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // When: filtering by the unlisted app
+            // When: filtering by com.a without the global-rules toggle
+            viewModel.onEvent(RulesEvent.OnFilterChange(RuleFilter(selectedApps = setOf("com.a"))))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then
+            viewModel.uiState.value.rules.getDataOrThrow() shouldBe persistentListOf()
+        }
+
+        @Test
+        fun `an exclude-mode rule that omits the app is surfaced when include-global is on`() = runTest(testDispatcher) {
+            ruleRepository.saveRule(excludeRule)
+            testDispatcher.scheduler.advanceUntilIdle()
+
             viewModel.onEvent(
-                RulesEvent.OnFilterChange(
-                    RuleFilter(selectedApps = setOf("com.a")),
-                ),
+                RulesEvent.OnFilterChange(RuleFilter(selectedApps = setOf("com.a"), includeGlobalRules = true)),
             )
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // Then: the exclude-mode rule is surfaced because it fires for com.a
             viewModel.uiState.value.rules.getDataOrThrow() shouldBe persistentListOf(excludeRule)
         }
 
         @Test
-        fun `filtering by a listed app excludes an exclude-mode rule`() = runTest(testDispatcher) {
-            // Given: an exclude-mode rule that omits com.a, and a filter for com.b (the listed app)
-            val excludeRule = createTestRule(
-                id = "rule-1",
-                isIncludeMode = false,
-                targetApps = listOf(AppInfo("com.b", "App B")),
-            )
+        fun `an exclude-mode rule that lists the app is surfaced because it mentions it`() = runTest(testDispatcher) {
             ruleRepository.saveRule(excludeRule)
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // When: filtering by the listed app
+            viewModel.onEvent(RulesEvent.OnFilterChange(RuleFilter(selectedApps = setOf("com.b"))))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.rules.getDataOrThrow() shouldBe persistentListOf(excludeRule)
+        }
+    }
+
+    @Nested
+    inner class ActiveFilterChipTests {
+
+        @Test
+        fun `removing a chip removes only that filter and keeps the rest and the sort`() = runTest(testDispatcher) {
+            // Given
+            val filter = RuleFilter(
+                status = RuleFilter.Status.ENABLED,
+                selectedCategories = setOf("Finance"),
+                selectedApps = setOf("com.a"),
+                sortBy = RuleFilter.SortBy.NAME_ASC,
+            )
+            viewModel.onEvent(RulesEvent.OnFilterChange(filter))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // When
+            viewModel.onEvent(RulesEvent.OnRemoveFilter(RuleFilterChip.Category("Finance")))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then
+            viewModel.uiState.value.filter shouldBe filter.copy(selectedCategories = emptySet())
+        }
+
+        @Test
+        fun `removing the last app chip also turns include-global off`() = runTest(testDispatcher) {
+            viewModel.onEvent(
+                RulesEvent.OnFilterChange(RuleFilter(selectedApps = setOf("com.a"), includeGlobalRules = true)),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(RulesEvent.OnRemoveFilter(RuleFilterChip.App("com.a")))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe RuleFilter()
+        }
+
+        @Test
+        fun `clearing filters keeps the sort order`() = runTest(testDispatcher) {
             viewModel.onEvent(
                 RulesEvent.OnFilterChange(
-                    RuleFilter(selectedApps = setOf("com.b")),
+                    RuleFilter(status = RuleFilter.Status.DISABLED, sortBy = RuleFilter.SortBy.STATUS),
                 ),
             )
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // Then: the exclude-mode rule is hidden because it does not fire for com.b
-            viewModel.uiState.value.rules.getDataOrThrow() shouldBe persistentListOf()
+            viewModel.onEvent(RulesEvent.OnClearFilters)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe RuleFilter(sortBy = RuleFilter.SortBy.STATUS)
+        }
+    }
+
+    @Nested
+    inner class FilterPersistenceTests {
+
+        @Test
+        fun `the applied filter is saved to preferences`() = runTest(testDispatcher) {
+            // When
+            viewModel.onEvent(
+                RulesEvent.OnFilterChange(
+                    RuleFilter(
+                        status = RuleFilter.Status.ENABLED,
+                        selectedCategories = setOf("Finance"),
+                        includeUncategorized = true,
+                        selectedApps = setOf("com.a"),
+                        includeGlobalRules = true,
+                        sortBy = RuleFilter.SortBy.NAME_DESC,
+                    ),
+                ),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then
+            preferences.rulesFilters() shouldBe RulesFilterSettings(
+                status = RulesStatusFilter.ENABLED,
+                selectedCategories = listOf("Finance"),
+                includeUncategorized = true,
+                selectedApps = listOf("com.a"),
+                includeGlobalRules = true,
+                sortBy = RulesSort.NAME_DESC,
+            )
+        }
+
+        @Test
+        fun `removing a chip saves the new filter`() = runTest(testDispatcher) {
+            viewModel.onEvent(RulesEvent.OnFilterChange(RuleFilter(status = RuleFilter.Status.DISABLED)))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(RulesEvent.OnRemoveFilter(RuleFilterChip.Status(RuleFilter.Status.DISABLED)))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            preferences.rulesFilters() shouldBe RulesFilterSettings()
+        }
+
+        @Test
+        fun `a saved filter is restored on start`() = runTest(testDispatcher) {
+            // Given: preferences from a previous process
+            val saved = RulesFilterSettings(
+                status = RulesStatusFilter.DISABLED,
+                selectedCategories = listOf("Finance"),
+                selectedApps = listOf("com.a"),
+                includeGlobalRules = true,
+                sortBy = RulesSort.UPDATED_RECENT,
+            )
+
+            // When: a new ViewModel starts
+            val restored = RulesViewModel(ruleRepository, FakeUserPreferencesRepository(UserPreferences(rulesFilterSettings = saved)))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then
+            restored.uiState.value.filter shouldBe RuleFilter(
+                status = RuleFilter.Status.DISABLED,
+                selectedCategories = setOf("Finance"),
+                selectedApps = setOf("com.a"),
+                includeGlobalRules = true,
+                sortBy = RuleFilter.SortBy.UPDATED_RECENT,
+            )
         }
     }
 
@@ -314,7 +440,7 @@ class RulesViewModelTest {
             // Given: a repository whose stream fails
             val repository = mockk<RuleRepository>()
             every { repository.observeAllRules() } returns flow { throw IllegalStateException("boom") }
-            val vm = RulesViewModel(repository)
+            val vm = RulesViewModel(repository, FakeUserPreferencesRepository())
             testDispatcher.scheduler.advanceUntilIdle()
             vm.uiState.value.rules.shouldBeInstanceOf<Resource.Error<*>>()
 

@@ -257,10 +257,40 @@
     <string name="sort_created_newest">Más recientes primero</string>
     <string name="sort_created_oldest">Más antiguas primero</string>
     <string name="sort_updated_recent">Actualizadas recientemente</string>
-    <string name="sort_status">Por estado</string>
+    <string name="sort_status">Activadas primero</string>
     <string name="clear_all">Borrar todo</string>
     <string name="apply">Aplicar</string>
     <string name="no_filters_available">No hay opciones de filtro. Crea más reglas con distintas categorías o apps de destino.</string>
+
+    <!-- Rules filter & sort sheet -->
+    <string name="rules_filter_section_status">Estado</string>
+    <string name="rules_filter_section_categories">Categorías</string>
+    <string name="rules_filter_section_apps">Apps</string>
+    <string name="rules_filter_apps_any">Cualquier app</string>
+    <string name="rules_filter_include_global">Mostrar también las reglas que se aplican a todas las apps</string>
+    <string name="rules_filter_include_global_hint">Añade las reglas sin restricción de apps y las que excluyen otras apps pero no las seleccionadas.</string>
+    <string name="rules_filter_apps_group_used">Usadas por reglas</string>
+    <string name="rules_filter_apps_group_other">Otras apps monitorizadas</string>
+    <string name="rules_filter_sort_current_cd">%1$s, %2$s</string>
+    <string name="rules_filter_chip_all_apps">+ reglas para todas las apps</string>
+    <string name="rules_filter_chip_remove_cd">Quitar filtro %1$s</string>
+    <plurals name="rules_filter_rule_count">
+        <item quantity="one">%d regla</item>
+        <item quantity="many">%d de reglas</item>
+        <item quantity="other">%d reglas</item>
+    </plurals>
+    <plurals name="rules_filter_show_rules">
+        <item quantity="one">Mostrar %d regla</item>
+        <item quantity="many">Mostrar %d de reglas</item>
+        <item quantity="other">Mostrar %d reglas</item>
+    </plurals>
+    <plurals name="rules_filter_active_state">
+        <item quantity="one">%d filtro activo</item>
+        <item quantity="many">%d de filtros activos</item>
+        <item quantity="other">%d filtros activos</item>
+    </plurals>
+
+    <!-- Shared app picker (core/ui) -->
     <string name="app_picker_choose">Elegir apps</string>
     <string name="app_picker_title">Elegir apps</string>
     <string name="app_picker_search">Buscar apps</string>

@@ -12,7 +12,7 @@ import kotlinx.collections.immutable.persistentListOf
  * @property rules The list of filtered rules based on search query and filter
  * @property allRules The complete list of unfiltered rules from the repository
  * @property searchQuery Current search query string
- * @property filter Current filter selection (All/Enabled/Disabled)
+ * @property filter Current applied filter and sort
  */
 data class RulesUiState(
     val rules: Resource<ImmutableList<Rule>> = Resource.Loading(),
@@ -39,7 +39,13 @@ sealed interface RulesEvent {
     data class OnSearchQueryChange(val query: String) : RulesEvent
     data class OnFilterChange(val filter: RuleFilter) : RulesEvent
 
-    /** Resets the search query and the filter/sort selection ("no results" empty state action). */
+    /** Removes a single active filter (tap on a dismissible chip under the search bar). */
+    data class OnRemoveFilter(val chip: RuleFilterChip) : RulesEvent
+
+    /**
+     * Resets the search query and every filter dimension ("no results" empty state action).
+     * The sort order is not a filter and is kept.
+     */
     data object OnClearFilters : RulesEvent
     data class OnRuleTextReceived(val text: String) : RulesEvent
     data object OnImportConfirmed : RulesEvent
@@ -58,13 +64,27 @@ sealed interface RulesEffect {
 }
 
 /**
- * Filter configuration for rules.
- * Supports filtering by status, category, and target app, plus sorting.
+ * Filter and sort configuration for rules.
+ *
+ * Filters (status, categories, apps) narrow the list; [sortBy] only orders it. Sort is therefore
+ * NOT an "active filter": it never counts in [isActive] / [activeFilterCount] (badge, "Clear
+ * filters" empty-state action) and [withoutFilters] keeps it. Matching lives in
+ * [RuleFilter.matches] (see `RuleFiltering.kt`).
+ *
+ * @property status Enabled/disabled filter
+ * @property selectedCategories Selected category names (OR)
+ * @property includeUncategorized Also match rules whose category is null (part of the category dimension)
+ * @property selectedApps Selected package names (OR). A rule matches when it MENTIONS the app in
+ * its target list, in include or exclude mode. Global rules do not match by default.
+ * @property includeGlobalRules Only meaningful when [selectedApps] is not empty: additionally match
+ * every rule that would run for a selected app (global rules and exclude-mode rules not excluding it)
  */
 data class RuleFilter(
     val status: Status = Status.ALL,
     val selectedCategories: Set<String> = emptySet(),
+    val includeUncategorized: Boolean = false,
     val selectedApps: Set<String> = emptySet(),
+    val includeGlobalRules: Boolean = false,
     val sortBy: SortBy = SortBy.CATEGORY_ASC,
 ) {
     enum class Status {
@@ -83,23 +103,51 @@ data class RuleFilter(
         STATUS, // Group by status (Active first)
     }
 
-    /**
-     * Returns true if any filter or sort is active (not default).
-     */
-    fun isActive(): Boolean = status != Status.ALL ||
-        selectedCategories.isNotEmpty() ||
-        selectedApps.isNotEmpty() ||
-        sortBy != SortBy.CATEGORY_ASC
+    /** True when the category dimension has any selection (named categories or uncategorized). */
+    val hasCategoryFilter: Boolean get() = selectedCategories.isNotEmpty() || includeUncategorized
 
-    /**
-     * Returns the count of active filter/sort dimensions.
-     */
+    /** Returns true if any filter dimension is active. Sort is ignored by design. */
+    fun isActive(): Boolean = activeFilterCount() > 0
+
+    /** Count of active filter dimensions (status, categories, apps), each counted once. */
     fun activeFilterCount(): Int {
         var count = 0
         if (status != Status.ALL) count++
-        if (selectedCategories.isNotEmpty()) count++
+        if (hasCategoryFilter) count++
         if (selectedApps.isNotEmpty()) count++
-        if (sortBy != SortBy.CATEGORY_ASC) count++
         return count
     }
+
+    /** Same sort, every filter dimension reset. */
+    fun withoutFilters(): RuleFilter = RuleFilter(sortBy = sortBy)
+
+    /** The individual active filters, in display order, for the dismissible chips row. */
+    fun activeChips(): List<RuleFilterChip> = buildList {
+        if (status != Status.ALL) add(RuleFilterChip.Status(status))
+        selectedCategories.sortedBy { it.lowercase() }.forEach { add(RuleFilterChip.Category(it)) }
+        if (includeUncategorized) add(RuleFilterChip.Uncategorized)
+        selectedApps.sorted().forEach { add(RuleFilterChip.App(it)) }
+        if (selectedApps.isNotEmpty() && includeGlobalRules) add(RuleFilterChip.GlobalRules)
+    }
+
+    /** Returns this filter with the single filter represented by [chip] removed. */
+    fun without(chip: RuleFilterChip): RuleFilter = when (chip) {
+        is RuleFilterChip.Status -> copy(status = Status.ALL)
+        is RuleFilterChip.Category -> copy(selectedCategories = selectedCategories - chip.name)
+        RuleFilterChip.Uncategorized -> copy(includeUncategorized = false)
+        is RuleFilterChip.App -> (selectedApps - chip.packageName).let { apps ->
+            // The global-rules toggle is meaningless without apps; never leave it dangling.
+            copy(selectedApps = apps, includeGlobalRules = includeGlobalRules && apps.isNotEmpty())
+        }
+        RuleFilterChip.GlobalRules -> copy(includeGlobalRules = false)
+    }
+}
+
+/** One removable entry of the active-filters chips row. */
+sealed interface RuleFilterChip {
+    data class Status(val status: RuleFilter.Status) : RuleFilterChip
+    data class Category(val name: String) : RuleFilterChip
+    data object Uncategorized : RuleFilterChip
+    data class App(val packageName: String) : RuleFilterChip
+    data object GlobalRules : RuleFilterChip
 }

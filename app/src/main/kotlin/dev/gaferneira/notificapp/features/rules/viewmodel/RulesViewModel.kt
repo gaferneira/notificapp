@@ -11,12 +11,13 @@ import dev.gaferneira.notificapp.core.ui.Resource
 import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Rule
-import dev.gaferneira.notificapp.domain.model.appliesToPackage
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
+import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
 import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
 import dev.gaferneira.notificapp.features.rules.contract.RulesUiState
+import dev.gaferneira.notificapp.features.rules.contract.filterAndSort
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -36,10 +38,13 @@ import javax.inject.Inject
  * - StateFlow for UI state using Resource pattern
  * - Channel for effects
  * - Centralized event handling via onEvent()
+ * - The applied filter and sort are persisted in [UserPreferencesRepository] (restored on start,
+ *   saved whenever they change); the search query is not.
  */
 @HiltViewModel
 class RulesViewModel @Inject constructor(
     private val ruleRepository: RuleRepository,
+    private val userPreferencesRepository: UserPreferencesRepository,
 ) : MviViewModel<RulesUiState, RulesEvent, RulesEffect>(RulesUiState()) {
 
     private val allRules = MutableStateFlow<ImmutableList<Rule>>(persistentListOf())
@@ -48,6 +53,7 @@ class RulesViewModel @Inject constructor(
     private var observeRulesJob: Job? = null
 
     init {
+        restoreSavedFilter()
         loadRules()
 
         // Combine all state flows to produce filtered rules
@@ -64,7 +70,7 @@ class RulesViewModel @Inject constructor(
         val rules = allRules.value
         val query = searchQuery.value
         val currentFilter = filter.value
-        val filteredRules = applyFilters(rules, query, currentFilter)
+        val filteredRules = currentFilter.filterAndSort(rules, query).toImmutableList()
         setState {
             copy(
                 rules = Resource.Success(filteredRules),
@@ -84,6 +90,7 @@ class RulesViewModel @Inject constructor(
             is RulesEvent.OnAddRuleClick -> onAddRuleClick()
             is RulesEvent.OnSearchQueryChange -> onSearchQueryChange(event.query)
             is RulesEvent.OnFilterChange -> onFilterChange(event.filter)
+            is RulesEvent.OnRemoveFilter -> onFilterChange(filter.value.without(event.chip))
             RulesEvent.OnClearFilters -> onClearFilters()
             is RulesEvent.OnRuleTextReceived -> onRuleTextReceived(event.text)
             RulesEvent.OnImportConfirmed -> onImportConfirmed()
@@ -128,89 +135,37 @@ class RulesViewModel @Inject constructor(
         }
     }
 
-    private fun applyFilters(rules: ImmutableList<Rule>, query: String, currentFilter: RuleFilter): ImmutableList<Rule> {
-        // First apply all filters
-        val filteredRules = rules.filter { rule ->
-            // Apply search filter
-            val matchesSearch = if (query.isBlank()) {
-                true
-            } else {
-                rule.name.contains(query, ignoreCase = true) ||
-                    rule.description?.contains(query, ignoreCase = true) == true ||
-                    rule.category?.contains(query, ignoreCase = true) == true
-            }
-
-            // Apply status filter
-            val matchesStatusFilter = when (currentFilter.status) {
-                RuleFilter.Status.ALL -> true
-                RuleFilter.Status.ENABLED -> rule.isActive
-                RuleFilter.Status.DISABLED -> !rule.isActive
-            }
-
-            // Apply category filter
-            val matchesCategoryFilter = if (currentFilter.selectedCategories.isEmpty()) {
-                true
-            } else {
-                rule.category in currentFilter.selectedCategories
-            }
-
-            // Apply app filter using effective scope, not literal list membership.
-            // An exclude-mode rule that omits a selected app still fires for it, so it matches.
-            val matchesAppFilter = if (currentFilter.selectedApps.isEmpty()) {
-                true
-            } else {
-                currentFilter.selectedApps.any { rule.appliesToPackage(it) }
-            }
-
-            matchesSearch && matchesStatusFilter && matchesCategoryFilter && matchesAppFilter
-        }
-
-        // Then apply sorting
-        val sortedRules = when (currentFilter.sortBy) {
-            RuleFilter.SortBy.CATEGORY_ASC -> {
-                // Sort by category first, then by name within each category
-                filteredRules.sortedWith(
-                    compareBy<Rule> { it.category ?: "Uncategorized" }
-                        .thenBy { it.name.lowercase() },
-                )
-            }
-            RuleFilter.SortBy.NAME_ASC -> {
-                filteredRules.sortedBy { it.name.lowercase() }
-            }
-            RuleFilter.SortBy.NAME_DESC -> {
-                filteredRules.sortedByDescending { it.name.lowercase() }
-            }
-            RuleFilter.SortBy.CREATED_NEWEST -> {
-                filteredRules.sortedByDescending { it.createdAt }
-            }
-            RuleFilter.SortBy.CREATED_OLDEST -> {
-                filteredRules.sortedBy { it.createdAt }
-            }
-            RuleFilter.SortBy.UPDATED_RECENT -> {
-                filteredRules.sortedByDescending { it.updatedAt }
-            }
-            RuleFilter.SortBy.STATUS -> {
-                // Sort by status (active first), then by name
-                filteredRules.sortedWith(
-                    compareByDescending<Rule> { it.isActive }
-                        .thenBy { it.name.lowercase() },
-                )
-            }
-        }
-        return sortedRules.toImmutableList()
-    }
-
     private fun onSearchQueryChange(query: String) {
         searchQuery.value = query
     }
 
     private fun onFilterChange(newFilter: RuleFilter) {
         filter.value = newFilter
+        saveFilter(newFilter)
     }
 
+    /** Clears search and every filter dimension; the sort order is not a filter and is kept. */
     private fun onClearFilters() {
         searchQuery.value = ""
-        filter.value = RuleFilter()
+        onFilterChange(filter.value.withoutFilters())
+    }
+
+    private fun restoreSavedFilter() {
+        viewModelScope.launch {
+            runCatching { userPreferencesRepository.observeRulesFilters().first() }
+                .onSuccess { saved ->
+                    // A filter the user changed before the restore finished wins over the saved one.
+                    if (filter.value == RuleFilter()) filter.value = saved.toRuleFilter()
+                }
+                .onFailure { e -> Timber.e(e, "Failed to restore rules filter") }
+        }
+    }
+
+    private fun saveFilter(newFilter: RuleFilter) {
+        viewModelScope.launch {
+            userPreferencesRepository.setRulesFilters(newFilter.toSettings())
+                .onFailure { e -> Timber.e(e, "Failed to save rules filter") }
+        }
     }
 
     private fun onRuleClick(ruleId: String) {

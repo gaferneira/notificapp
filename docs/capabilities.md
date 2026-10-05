@@ -130,8 +130,13 @@ Notificapp lets users create automation rules that act on the notifications thei
 ### Rules Management
 * **User Experience:** The user views all their rules in one list, with:
   * Search by name, description, or category (with a clear button)
-  * Filter by category, target app, or status (bottom sheet)
-  * Sort by: category, name A-Z/Z-A, newest/oldest created, recently updated, or status-first
+  * "Filter & sort" bottom sheet (scrollable, with a pinned footer: Clear all + "Show N rules" live match count):
+    * Status: single-select All / Enabled / Disabled
+    * Categories: multi-select chips with rule counts, plus an "Uncategorized" option for rules without a category
+    * Apps: selected apps shown as removable chips; "Choose apps" opens a searchable list (icon, name, rule count) grouped into "Used by rules" and "Other monitored apps". An app filter matches rules that **mention** the app in their target list (include or exclude mode); several apps combine with OR. Global rules do not match by default. The toggle "Also show rules that apply to all apps" (shown once an app is selected) additionally includes every rule that would run for the app: global rules and exclude-mode rules that do not exclude it
+    * Sort by: category (default; uncategorized last), name A-Z/Z-A, newest/oldest created, recently updated, or enabled-first. Sort is not a filter: it is not counted in the filter badge and "Clear all" / "Clear filters" keep it
+  * Active filters appear as dismissible chips under the search bar (tap one to remove just that filter); the toolbar badge shows the number of active filter dimensions
+  * The applied filter and sort are remembered across app restarts
   * Compact rows: icon, name (with a dry-run badge when applicable), one-line description, and app scope plus category; the inline enable/disable toggle works without deleting the rule
   * Distinct empty states: "No rules yet" (with a link to templates) versus "No matching rules" when a search or filter hides everything (with "Clear filters")
   * Tapping a rule opens its read-only Rule Details screen (see "Rule Details" below); Import is available from the top bar (see "Rule Sharing" below)

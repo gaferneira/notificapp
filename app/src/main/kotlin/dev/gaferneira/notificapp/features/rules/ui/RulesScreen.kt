@@ -58,6 +58,8 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -121,6 +123,7 @@ fun RulesScreen(
         RulesFilterBottomSheet(
             allRules = uiState.allRules,
             currentFilter = uiState.filter,
+            searchQuery = uiState.searchQuery,
             onFilterApplied = { filter ->
                 viewModel.onEvent(RulesEvent.OnFilterChange(filter))
                 showFilterSheet = false
@@ -192,7 +195,18 @@ private fun RulesTopBar(
                     }
                 },
             ) {
-                IconButton(onClick = onShowFilterSheet) {
+                val activeCount = filter.activeFilterCount()
+                val activeDescription = if (activeCount > 0) {
+                    pluralStringResource(R.plurals.rules_filter_active_state, activeCount, activeCount)
+                } else {
+                    null
+                }
+                IconButton(
+                    onClick = onShowFilterSheet,
+                    modifier = Modifier.semantics {
+                        activeDescription?.let { stateDescription = it }
+                    },
+                ) {
                     Icon(
                         imageVector = Icons.Default.Tune,
                         contentDescription = stringResource(R.string.rules_filter_cd),
@@ -347,6 +361,11 @@ private fun RulesBody(
     onBrowseTemplates: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appNames = remember(uiState.allRules) {
+        uiState.allRules
+            .flatMap { it.targetApps.orEmpty() }
+            .associate { it.packageName to it.name }
+    }
     Column(modifier = modifier) {
         when (val rulesResource = uiState.rules) {
             is Resource.Loading -> {
@@ -363,6 +382,7 @@ private fun RulesBody(
                     hasAnyRules = uiState.allRules.isNotEmpty(),
                     searchQuery = uiState.searchQuery,
                     filter = uiState.filter,
+                    appNames = appNames,
                     onEvent = onEvent,
                     onBrowseTemplates = onBrowseTemplates,
                 )
@@ -522,6 +542,7 @@ private fun SuccessState(
     hasAnyRules: Boolean,
     searchQuery: String,
     filter: RuleFilter,
+    appNames: Map<String, String>,
     onEvent: (RulesEvent) -> Unit,
     onBrowseTemplates: () -> Unit,
 ) {
@@ -531,6 +552,11 @@ private fun SuccessState(
             RulesSearchBar(
                 searchQuery = searchQuery,
                 onSearchChange = { onEvent(RulesEvent.OnSearchQueryChange(it)) },
+            )
+            ActiveFilterChips(
+                filter = filter,
+                appNames = appNames,
+                onRemove = { onEvent(RulesEvent.OnRemoveFilter(it)) },
             )
             Spacer(modifier = Modifier.height(8.dp))
         }

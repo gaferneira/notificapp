@@ -2,9 +2,12 @@ package dev.gaferneira.notificapp.features.rules.viewmodel
 
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
+import dev.gaferneira.notificapp.features.rules.contract.RulesFilterContract.AppOption
+import dev.gaferneira.notificapp.features.rules.contract.RulesFilterContract.CategoryOption
 import dev.gaferneira.notificapp.features.rules.contract.RulesFilterContract.UiEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesFilterContract.UiEvent
 import dev.gaferneira.notificapp.testutil.createTestRule
@@ -12,7 +15,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,19 +31,19 @@ import org.junit.jupiter.api.Test
 class FilterBottomSheetViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private lateinit var selectedAppRepository: SelectedAppRepository
     private lateinit var monitoredAppsFlow: MutableStateFlow<List<SelectedApp>>
     private lateinit var viewModel: FilterBottomSheetViewModel
+
+    private val bank = AppInfo("com.b", "bank")
+    private val alpha = AppInfo("com.a", "Alpha")
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-
         monitoredAppsFlow = MutableStateFlow(emptyList())
-        selectedAppRepository = mockk {
+        val selectedAppRepository = mockk<SelectedAppRepository> {
             every { observeEnabledApps() } returns monitoredAppsFlow
         }
-
         viewModel = FilterBottomSheetViewModel(selectedAppRepository)
         testDispatcher.scheduler.advanceUntilIdle()
     }
@@ -50,110 +53,225 @@ class FilterBottomSheetViewModelTest {
         Dispatchers.resetMain()
     }
 
+    private fun init(rules: List<Rule>, filter: RuleFilter = RuleFilter(), searchQuery: String = "") {
+        viewModel.onEvent(UiEvent.Init(rules.toImmutableList(), filter, searchQuery))
+        testDispatcher.scheduler.advanceUntilIdle()
+    }
+
+    private val state get() = viewModel.uiState.value
+
     @Test
-    fun `init derives sorted distinct categories and apps from the given rules`() = runTest(testDispatcher) {
-        viewModel.onEvent(
-            UiEvent.Init(
-                allRules = persistentListOf(
-                    createTestRule(category = "Finance", targetApps = listOf(AppInfo("com.b", "Bank"))),
-                    createTestRule(category = "Finance", targetApps = listOf(AppInfo("com.a", "Alpha"))),
-                    createTestRule(category = "Deliveries", targetApps = null),
-                ),
-                currentFilter = RuleFilter(),
+    fun `categories are sorted case-insensitively with rule counts`() {
+        init(
+            listOf(
+                createTestRule(id = "1", category = "finance"),
+                createTestRule(id = "2", category = "Finance"),
+                createTestRule(id = "3", category = "Deliveries"),
+                createTestRule(id = "4", category = "Deliveries"),
+                createTestRule(id = "5", category = null),
             ),
         )
-        testDispatcher.scheduler.advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        state.availableCategories shouldBe listOf("Deliveries", "Finance")
-        state.availableApps.map { it.name } shouldBe listOf("Alpha", "Bank")
+        state.categories shouldBe listOf(
+            CategoryOption("Deliveries", 2),
+            CategoryOption("finance", 1),
+            CategoryOption("Finance", 1),
+        )
+        state.uncategorizedCount shouldBe 1
     }
 
     @Test
-    fun `availableApps includes monitored apps not referenced by any rule`() = runTest(testDispatcher) {
-        // Given: a rule referencing App A, and App B monitored but not referenced by any rule
-        monitoredAppsFlow.value = listOf(
-            SelectedApp("com.a", "App A"),
-            SelectedApp("com.b", "App B"),
-        )
-
-        viewModel.onEvent(
-            UiEvent.Init(
-                allRules = persistentListOf(
-                    createTestRule(targetApps = listOf(AppInfo("com.a", "App A"))),
-                ),
-                currentFilter = RuleFilter(),
+    fun `used apps count the rules that mention them in include or exclude mode`() {
+        init(
+            listOf(
+                createTestRule(id = "1", targetApps = listOf(alpha, bank)),
+                createTestRule(id = "2", isIncludeMode = false, targetApps = listOf(alpha)),
+                createTestRule(id = "3", targetApps = null),
             ),
         )
-        testDispatcher.scheduler.advanceUntilIdle()
 
-        // Then: both apps are available as filter facets
-        viewModel.uiState.value.availableApps shouldBe listOf(
-            AppInfo("com.a", "App A"),
-            AppInfo("com.b", "App B"),
-        )
+        state.usedApps shouldBe listOf(AppOption("com.a", "Alpha", 2), AppOption("com.b", "bank", 1))
+        state.otherApps shouldBe emptyList()
     }
 
     @Test
-    fun `init hydrates the selected filter fields and hasActiveFilters from the given filter`() = runTest(testDispatcher) {
+    fun `monitored apps without rules go to the other group with zero rules`() {
+        monitoredAppsFlow.value = listOf(SelectedApp("com.a", "Alpha"), SelectedApp("com.c", "Chat"))
+        init(listOf(createTestRule(targetApps = listOf(alpha))))
+
+        state.usedApps shouldBe listOf(AppOption("com.a", "Alpha", 1))
+        state.otherApps shouldBe listOf(AppOption("com.c", "Chat", 0))
+    }
+
+    @Test
+    fun `app lists are sorted case-insensitively`() {
+        monitoredAppsFlow.value = listOf(SelectedApp("com.z", "zeta"), SelectedApp("com.y", "Yankee"), SelectedApp("com.x", "xray"))
+        init(emptyList())
+
+        state.otherApps.map { it.name } shouldBe listOf("xray", "Yankee", "zeta")
+    }
+
+    @Test
+    fun `app search is case-insensitive over the name and keeps selected apps visible`() {
+        monitoredAppsFlow.value = listOf(SelectedApp("com.c", "Chat"))
+        init(
+            listOf(createTestRule(targetApps = listOf(alpha, bank))),
+            filter = RuleFilter(selectedApps = setOf("com.b")),
+        )
+
+        viewModel.onEvent(UiEvent.OnAppSearchChange("ALP"))
+
+        state.usedApps.map { it.name } shouldBe listOf("Alpha")
+        state.otherApps shouldBe emptyList()
+        state.selectedApps.map { it.name } shouldBe listOf("bank")
+    }
+
+    @Test
+    fun `init hydrates the draft from the applied filter`() {
         val filter = RuleFilter(
             status = RuleFilter.Status.ENABLED,
             selectedCategories = setOf("Finance"),
             selectedApps = setOf("com.a"),
+            includeGlobalRules = true,
             sortBy = RuleFilter.SortBy.STATUS,
         )
+        init(listOf(createTestRule(category = "Finance", targetApps = listOf(alpha))), filter)
 
-        viewModel.onEvent(UiEvent.Init(allRules = persistentListOf(), currentFilter = filter))
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        state.statusFilter shouldBe RuleFilter.Status.ENABLED
-        state.selectedCategories shouldBe setOf("Finance")
-        state.selectedApps shouldBe setOf("com.a")
-        state.sortBy shouldBe RuleFilter.SortBy.STATUS
+        state.draft shouldBe filter
         state.hasActiveFilters shouldBe true
     }
 
     @Test
-    fun `toggling a category flips hasActiveFilters on and back off`() {
-        viewModel.onEvent(UiEvent.OnCategoryToggle("Finance"))
-        viewModel.uiState.value.hasActiveFilters shouldBe true
-        viewModel.uiState.value.selectedCategories shouldBe setOf("Finance")
+    fun `sort alone does not make the draft an active filter`() {
+        init(emptyList())
 
-        viewModel.onEvent(UiEvent.OnCategoryToggle("Finance"))
-        viewModel.uiState.value.hasActiveFilters shouldBe false
-        viewModel.uiState.value.selectedCategories shouldBe emptySet()
+        viewModel.onEvent(UiEvent.OnSortChange(RuleFilter.SortBy.NAME_ASC))
+
+        state.draft.sortBy shouldBe RuleFilter.SortBy.NAME_ASC
+        state.hasActiveFilters shouldBe false
     }
 
     @Test
-    fun `toggling an app flips hasActiveFilters on and back off`() {
-        viewModel.onEvent(UiEvent.OnAppToggle("com.a"))
-        viewModel.uiState.value.hasActiveFilters shouldBe true
+    fun `hasActiveFilters is derived from the draft`() {
+        init(emptyList())
 
-        viewModel.onEvent(UiEvent.OnAppToggle("com.a"))
-        viewModel.uiState.value.hasActiveFilters shouldBe false
-    }
+        viewModel.onEvent(UiEvent.OnCategoryToggle("Finance"))
+        state.hasActiveFilters shouldBe true
+        viewModel.onEvent(UiEvent.OnCategoryToggle("Finance"))
+        state.hasActiveFilters shouldBe false
 
-    @Test
-    fun `changing status away from ALL sets hasActiveFilters`() {
-        viewModel.onEvent(UiEvent.OnStatusChange(RuleFilter.Status.ENABLED))
-        viewModel.uiState.value.hasActiveFilters shouldBe true
+        viewModel.onEvent(UiEvent.OnUncategorizedToggle)
+        state.hasActiveFilters shouldBe true
+        viewModel.onEvent(UiEvent.OnUncategorizedToggle)
 
+        viewModel.onEvent(UiEvent.OnStatusChange(RuleFilter.Status.DISABLED))
+        state.hasActiveFilters shouldBe true
         viewModel.onEvent(UiEvent.OnStatusChange(RuleFilter.Status.ALL))
-        viewModel.uiState.value.hasActiveFilters shouldBe false
+
+        viewModel.onEvent(UiEvent.OnAppToggle("com.a"))
+        state.hasActiveFilters shouldBe true
+        viewModel.onEvent(UiEvent.OnAppToggle("com.a"))
+        state.hasActiveFilters shouldBe false
     }
 
     @Test
-    fun `changing sort away from the default sets hasActiveFilters`() {
-        viewModel.onEvent(UiEvent.OnSortChange(RuleFilter.SortBy.STATUS))
-        viewModel.uiState.value.hasActiveFilters shouldBe true
+    fun `stale categories are dropped on hydration but stale apps stay selected and visible`() {
+        init(
+            rules = listOf(createTestRule(category = "Finance")),
+            filter = RuleFilter(
+                selectedCategories = setOf("Finance", "Gone"),
+                includeUncategorized = true,
+                selectedApps = setOf("com.gone"),
+                includeGlobalRules = true,
+            ),
+        )
 
-        viewModel.onEvent(UiEvent.OnSortChange(RuleFilter.SortBy.CATEGORY_ASC))
-        viewModel.uiState.value.hasActiveFilters shouldBe false
+        state.draft.selectedCategories shouldBe setOf("Finance")
+        // No rule is uncategorized any more
+        state.draft.includeUncategorized shouldBe false
+        state.draft.selectedApps shouldBe setOf("com.gone")
+        state.selectedApps shouldBe listOf(AppOption("com.gone", "com.gone", 0))
+        state.otherApps shouldBe listOf(AppOption("com.gone", "com.gone", 0))
     }
 
     @Test
-    fun `clear all resets every filter field and hasActiveFilters`() {
+    fun `re-init with refreshed rules does not wipe unapplied edits`() {
+        val rule = createTestRule(id = "1", category = "Finance", targetApps = listOf(alpha))
+        init(listOf(rule))
+        viewModel.onEvent(UiEvent.OnCategoryToggle("Finance"))
+        viewModel.onEvent(UiEvent.OnStatusChange(RuleFilter.Status.ENABLED))
+
+        // Rules refresh while the sheet is open (same applied filter is re-sent)
+        init(listOf(rule, createTestRule(id = "2", category = "Finance")), RuleFilter())
+
+        state.draft.selectedCategories shouldBe setOf("Finance")
+        state.draft.status shouldBe RuleFilter.Status.ENABLED
+        state.categories shouldBe listOf(CategoryOption("Finance", 2))
+    }
+
+    @Test
+    fun `a new sheet opening after dismiss hydrates the draft again`() = runTest(testDispatcher) {
+        init(emptyList())
+        viewModel.onEvent(UiEvent.OnStatusChange(RuleFilter.Status.ENABLED))
+        viewModel.onEvent(UiEvent.OnDismiss)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        init(emptyList(), RuleFilter(status = RuleFilter.Status.DISABLED))
+
+        state.draft.status shouldBe RuleFilter.Status.DISABLED
+    }
+
+    @Test
+    fun `match count follows the draft and the screen search query`() {
+        val rules = listOf(
+            createTestRule(id = "1", name = "Bank one", category = "Finance", targetApps = listOf(alpha)),
+            createTestRule(id = "2", name = "Bank two", category = "Finance", targetApps = null),
+            createTestRule(id = "3", name = "Other", category = null, isActive = false),
+        )
+        init(rules)
+        state.matchCount shouldBe 3
+
+        viewModel.onEvent(UiEvent.OnCategoryToggle("Finance"))
+        state.matchCount shouldBe 2
+
+        viewModel.onEvent(UiEvent.OnAppToggle("com.a"))
+        state.matchCount shouldBe 1
+
+        viewModel.onEvent(UiEvent.OnIncludeGlobalRulesChange(true))
+        state.matchCount shouldBe 2
+
+        viewModel.onEvent(UiEvent.OnStatusChange(RuleFilter.Status.DISABLED))
+        state.matchCount shouldBe 0
+
+        init(rules, searchQuery = "two")
+        viewModel.onEvent(UiEvent.OnClearAll)
+        state.matchCount shouldBe 1
+    }
+
+    @Test
+    fun `include-global is switched off when the last app is deselected`() {
+        init(emptyList())
+        viewModel.onEvent(UiEvent.OnAppToggle("com.a"))
+        viewModel.onEvent(UiEvent.OnIncludeGlobalRulesChange(true))
+        state.draft.includeGlobalRules shouldBe true
+
+        viewModel.onEvent(UiEvent.OnAppToggle("com.a"))
+
+        state.draft.includeGlobalRules shouldBe false
+    }
+
+    @Test
+    fun `include-global is ignored while no app is selected`() {
+        init(emptyList())
+
+        viewModel.onEvent(UiEvent.OnIncludeGlobalRulesChange(true))
+
+        state.draft.includeGlobalRules shouldBe false
+    }
+
+    @Test
+    fun `clear all resets filters but keeps the sort`() {
+        init(emptyList())
         viewModel.onEvent(UiEvent.OnCategoryToggle("Finance"))
         viewModel.onEvent(UiEvent.OnAppToggle("com.a"))
         viewModel.onEvent(UiEvent.OnStatusChange(RuleFilter.Status.ENABLED))
@@ -161,26 +279,27 @@ class FilterBottomSheetViewModelTest {
 
         viewModel.onEvent(UiEvent.OnClearAll)
 
-        val state = viewModel.uiState.value
-        state.selectedCategories shouldBe emptySet()
-        state.selectedApps shouldBe emptySet()
-        state.statusFilter shouldBe RuleFilter.Status.ALL
-        state.sortBy shouldBe RuleFilter.SortBy.CATEGORY_ASC
+        state.draft shouldBe RuleFilter(sortBy = RuleFilter.SortBy.STATUS)
         state.hasActiveFilters shouldBe false
     }
 
     @Test
-    fun `apply emits ApplyFilter carrying the current selection`() = runTest(testDispatcher) {
+    fun `apply emits ApplyFilter carrying the draft`() = runTest(testDispatcher) {
+        init(emptyList())
         viewModel.onEvent(UiEvent.OnStatusChange(RuleFilter.Status.ENABLED))
         viewModel.onEvent(UiEvent.OnCategoryToggle("Finance"))
+        viewModel.onEvent(UiEvent.OnUncategorizedToggle)
 
         viewModel.effect.test {
             viewModel.onEvent(UiEvent.OnApply)
             testDispatcher.scheduler.advanceUntilIdle()
 
             val effect = awaitItem().shouldBeInstanceOf<UiEffect.ApplyFilter>()
-            effect.filter.status shouldBe RuleFilter.Status.ENABLED
-            effect.filter.selectedCategories shouldBe setOf("Finance")
+            effect.filter shouldBe RuleFilter(
+                status = RuleFilter.Status.ENABLED,
+                selectedCategories = setOf("Finance"),
+                includeUncategorized = true,
+            )
             cancelAndIgnoreRemainingEvents()
         }
     }
