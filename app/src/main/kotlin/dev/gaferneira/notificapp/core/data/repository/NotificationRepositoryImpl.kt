@@ -5,6 +5,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import dev.gaferneira.notificapp.core.common.ContentHasher
+import dev.gaferneira.notificapp.core.common.Failure
 import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.local.dao.FtsQuerySanitizer
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
@@ -16,6 +17,7 @@ import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -118,6 +120,14 @@ internal class NotificationRepositoryImpl @Inject constructor(
             e.toFailureResult()
         }
     }
+
+    override fun observeNotification(id: String): Flow<Notification?> = dao.observeById(id)
+        .map { entity -> entity?.toModel() }
+        .catch { e ->
+            Timber.e(e, "Failed to observe notification: $id")
+            throw Failure.analyzeCause(e)
+        }
+        .flowOn(ioDispatcher)
 
     override suspend fun getNotification(id: String): Result<Notification?> = withContext(ioDispatcher) {
         try {

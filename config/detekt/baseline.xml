@@ -9,9 +9,6 @@
     <ID>CyclomaticComplexMethod:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$override suspend fun getMonitorableApps(): List&lt;AppInfo&gt;</ID>
     <ID>CyclomaticComplexMethod:RuleEditorViewModel.kt$RuleEditorViewModel$override fun onEvent(event: UiEvent)</ID>
     <ID>CyclomaticComplexMethod:SnoozeScheduleCalculator.kt$SnoozeScheduleCalculator$fun nextCheckpoint(now: LocalDateTime, schedule: SnoozeSchedule): LocalDateTime?</ID>
-    <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d", day, month)</ID>
-    <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d/%02d/%d", day, month, year)</ID>
-    <ID>ImplicitDefaultLocale:DateUtils.kt$String.format("%02d:%02d", hour, minute)</ID>
     <ID>InstanceOfCheckForException:NotificationDetailViewModel.kt$NotificationDetailViewModel$e is CancellationException</ID>
     <ID>InstanceOfCheckForException:ProcessNotificationUseCase.kt$ProcessNotificationUseCase$e is CancellationException</ID>
     <ID>InstanceOfCheckForException:RuleExecutionRepositoryImpl.kt$RuleExecutionRepositoryImpl$e is CancellationException</ID>
@@ -23,8 +20,6 @@
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationCard( notification: NotificationItem, onClick: () -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationColumn( notifications: LazyPagingItems&lt;InboxListItem&gt;, onNotificationClick: (String) -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Preview(showBackground = true, name = "Inbox Preview - Direct Items") @Composable fun PreviewInboxScreenDirect()</ID>
-    <ID>LongMethod:NotificationDetailScreen.kt$@Composable private fun NotificationDataCard(notification: Notification)</ID>
-    <ID>LongMethod:NotificationDetailScreen.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun ExecutionCard(execution: ExecutionWithDetails)</ID>
     <ID>LongMethod:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$override suspend fun getMonitorableApps(): List&lt;AppInfo&gt;</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun AboutCard()</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun MonitoredAppsCard( appsCount: Int, onSelectApps: () -&gt; Unit, )</ID>
@@ -43,7 +38,6 @@
     <ID>SpreadOperator:UiText.kt$UiText$(id = id, *args)</ID>
     <ID>SpreadOperator:UiText.kt$UiText$(id, *args)</ID>
     <ID>SwallowedException:InboxScreen.kt$e: Exception</ID>
-    <ID>SwallowedException:NotificationDetailScreen.kt$e: Exception</ID>
     <ID>SwallowedException:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$e: Exception</ID>
     <ID>SwallowedException:RuleMatcher.kt$RuleMatcher$e: Exception</ID>
     <ID>SwallowedException:UserPreferencesLocalDataSource.kt$UserPreferencesLocalDataSource$e: Exception</ID>
@@ -52,7 +46,6 @@
     <ID>TooGenericExceptionCaught:FieldExtractor.kt$FieldExtractor$e: Exception</ID>
     <ID>TooGenericExceptionCaught:InboxScreen.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificappListenerService.kt$NotificappListenerService$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:NotificationDetailScreen.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificationDetailViewModel.kt$NotificationDetailViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NotificationRepositoryImpl.kt$NotificationRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$e: Exception</ID>

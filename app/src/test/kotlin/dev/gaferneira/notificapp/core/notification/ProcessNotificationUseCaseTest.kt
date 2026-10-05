@@ -198,38 +198,12 @@ class ProcessNotificationUseCaseTest {
     }
 
     @Test
-    fun `evaluateAndPersist with executeActions false never invokes the action dispatcher, even for a matching non-dry-run rule`() = runTest(testDispatcher) {
-        // Given: a saved notification and a matching, non-dry-run rule with an enabled action
-        val notification = createTestNotification(title = "ICA Kvantum")
-        val condition = createTestCondition(
-            condition = MatchingCondition.TITLE,
-            operator = MatchingOperator.CONTAINS,
-            value = "ICA",
-        )
-        val action = createTestAction(id = "action-1")
-        val rule = createTestRule(id = "rule-1", isDryRun = false, conditions = listOf(condition), actions = listOf(action))
-
-        coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
-
-        // When: re-evaluating with executeActions = false (the refresh path)
-        val result = useCase.evaluateAndPersist(notification, executeActions = false)
-
-        // Then: the match is still recorded, but with no action outcomes, and the dispatcher is
-        // never invoked - refresh must never replay a real action a second time
-        result.isSuccess shouldBe true
-        val execution = result.getOrThrow().single()
-        execution.actionOutcomes shouldBe emptyMap()
-        coVerify(exactly = 0) { actionDispatcher.executeAll(any(), any()) }
-    }
-
-    @Test
     fun `evaluateAndPersist does not deduplicate or re-save the notification`() = runTest(testDispatcher) {
         // Given: an already-stored notification with no matching rules
         val notification = createTestNotification()
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(emptyList())
 
-        // When: re-evaluating rules directly (the re-run path used by NotificationDetailViewModel)
+        // When: re-evaluating rules directly
         val result = useCase.evaluateAndPersist(notification)
 
         // Then: the result succeeds and dedup/save are never invoked
@@ -430,25 +404,6 @@ class ProcessNotificationUseCaseTest {
         useCase.invoke(notification)
 
         // Then: no redaction happens - the privacy flag is off
-        coVerify(exactly = 0) { notificationRepository.redactContent(any()) }
-    }
-
-    @Test
-    fun `executeActions false never redacts, even for a flagged rule that would extract data`() = runTest(testDispatcher) {
-        // Given: a matching, flagged rule with extraction fields, evaluated via the refresh path
-        val notification = createTestNotification(title = "ICA Kvantum", rawContent = "ICA Kvantum 123")
-        val condition = createTestCondition(condition = MatchingCondition.TITLE, operator = MatchingOperator.CONTAINS, value = "ICA")
-        val fields = listOf(createTestField(method = RuleField.ExtractionMethod.RegexPattern("\\d+")))
-        val action = createTestAction(id = "action-1", type = ActionType.SAVE_DATA, isEnabled = true, fields = fields)
-        val rule = createTestRule(id = "rule-1", deleteRawContentAfterExtraction = true, conditions = listOf(condition), actions = listOf(action))
-
-        coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
-
-        // When: re-evaluating with executeActions = false (the detail-refresh path)
-        useCase.evaluateAndPersist(notification, executeActions = false)
-
-        // Then: scrubbing is an action-like side effect, gated the same way as real actions
         coVerify(exactly = 0) { notificationRepository.redactContent(any()) }
     }
 

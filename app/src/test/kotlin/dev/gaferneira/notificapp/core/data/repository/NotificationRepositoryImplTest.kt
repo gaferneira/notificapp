@@ -6,6 +6,7 @@ import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.entity.NotificationEntity
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -179,6 +180,28 @@ class NotificationRepositoryImplTest {
             apps.single().packageName shouldBe "com.bank"
             apps.single().name shouldBe "Bank"
             cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `observeNotification maps the entity and emits null when the row is gone`() = runTest(testDispatcher) {
+        // Given: a dao flow that first has the row and then loses it (deleted while observed)
+        every { dao.observeById("n1") } returns flowOf(entity("n1"), null)
+
+        // When / Then
+        repository.observeNotification("n1").test {
+            awaitItem()!!.id shouldBe "n1"
+            awaitItem() shouldBe null
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `observeNotification maps a dao failure to a Failure`() = runTest(testDispatcher) {
+        every { dao.observeById("n1") } returns kotlinx.coroutines.flow.flow { throw SQLException("db locked") }
+
+        repository.observeNotification("n1").test {
+            awaitError().shouldBeInstanceOf<dev.gaferneira.notificapp.core.common.Failure>()
         }
     }
 }

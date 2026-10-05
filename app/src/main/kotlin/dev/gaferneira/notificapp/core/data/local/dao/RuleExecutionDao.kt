@@ -80,10 +80,11 @@ internal interface RuleExecutionDao {
     suspend fun insertAll(executions: List<RuleExecutionEntity>)
 
     /**
-     * Delete executions for a specific notification.
+     * Replace only the serialized `extracted_data` of one execution. Outcomes, triggered actions,
+     * dry-run flag and `created_at` are deliberately untouched.
      */
-    @Query("DELETE FROM rule_executions WHERE notification_id = :notificationId")
-    suspend fun deleteExecutionsForNotification(notificationId: String)
+    @Query("UPDATE rule_executions SET extracted_data = :extractedData WHERE id = :id")
+    suspend fun updateExtractedData(id: String, extractedData: String)
 
     /**
      * Delete executions for a specific rule.

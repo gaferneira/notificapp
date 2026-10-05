@@ -87,6 +87,13 @@ interface NotificationRepository {
     suspend fun getNotification(id: String): Result<Notification?>
 
     /**
+     * Observe one notification. Emits `null` when it does not exist, and again with `null` if it is
+     * deleted while observed (retention cleanup, clear data, manual delete). Collection fails with
+     * a [dev.gaferneira.notificapp.core.common.Failure] on a storage error.
+     */
+    fun observeNotification(id: String): Flow<Notification?>
+
+    /**
      * Get unprocessed notifications for rule matching.
      */
     suspend fun getUnprocessedNotifications(): Result<List<Notification>>

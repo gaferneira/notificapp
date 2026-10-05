@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.testutil.fakes
 
+import dev.gaferneira.notificapp.domain.model.ExtractedDataUpdate
 import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
@@ -22,8 +23,11 @@ class FakeRuleExecutionRepository(
 
     private val executionsByNotification = MutableStateFlow(initial)
 
-    /** Opt-in failure injection: set before a call to make [deleteExecutionsForNotification] fail. */
-    var deleteError: Throwable? = null
+    /** Opt-in failure injection: set before a call to make [updateExtractedData] fail. */
+    var updateError: Throwable? = null
+
+    /** Batches passed to [updateExtractedData], in call order. */
+    val appliedUpdates: MutableList<List<ExtractedDataUpdate>> = mutableListOf()
 
     /** Opt-in failure injection: when set, [observeRuleStats] fails with this error. */
     var statsError: Throwable? = null
@@ -43,10 +47,25 @@ class FakeRuleExecutionRepository(
 
     override fun observeExecutionsForNotification(notificationId: String): Flow<List<RuleExecution>> = executionsByNotification.map { map -> map[notificationId].orEmpty() }
 
-    override suspend fun deleteExecutionsForNotification(notificationId: String): Result<Unit> {
-        deleteError?.let { return Result.failure(it) }
-        executionsByNotification.update { map -> map + (notificationId to emptyList()) }
+    /**
+     * Mirrors the real transactional contract: all updates apply or none, and only `extractedData`
+     * changes - executions are never added or removed, and outcomes/createdAt are kept.
+     */
+    override suspend fun updateExtractedData(updates: List<ExtractedDataUpdate>): Result<Unit> {
+        updateError?.let { return Result.failure(it) }
+        appliedUpdates += updates
+        val byId = updates.associateBy { it.executionId }
+        executionsByNotification.update { map ->
+            map.mapValues { (_, list) ->
+                list.map { e -> byId[e.id]?.let { e.copy(extractedData = it.extractedData) } ?: e }
+            }
+        }
         return Result.success(Unit)
+    }
+
+    /** Test helper: replace the stored executions of a notification (simulates a Room emission). */
+    fun setExecutions(notificationId: String, executions: List<RuleExecution>) {
+        executionsByNotification.update { it + (notificationId to executions) }
     }
 
     override suspend fun lastThrottleDeliveryAt(actionId: String, packageName: String, sinceMs: Long): Result<Long?> = Result.success(null)

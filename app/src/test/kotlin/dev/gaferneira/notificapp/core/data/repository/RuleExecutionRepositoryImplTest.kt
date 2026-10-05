@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.data.repository
 
+import androidx.room.withTransaction
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.core.data.local.AppDatabase
 import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
@@ -8,13 +9,18 @@ import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleStatsRow
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
+import dev.gaferneira.notificapp.domain.model.ExtractedDataUpdate
+import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleStats
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -36,11 +42,15 @@ class RuleExecutionRepositoryImplTest {
         every { nowEpochMillis() } returns NOW
     }
 
+    private val database = mockk<AppDatabase>(relaxed = true)
+    private val extractedFieldValueDao = mockk<ExtractedFieldValueDao>(relaxed = true)
+    private val notificationDao = mockk<NotificationDao>(relaxed = true)
+
     private fun repository() = RuleExecutionRepositoryImpl(
-        database = mockk<AppDatabase>(relaxed = true),
+        database = database,
         ruleExecutionDao = ruleExecutionDao,
-        extractedFieldValueDao = mockk<ExtractedFieldValueDao>(relaxed = true),
-        notificationDao = mockk<NotificationDao>(relaxed = true),
+        extractedFieldValueDao = extractedFieldValueDao,
+        notificationDao = notificationDao,
         timeProvider = timeProvider,
         ioDispatcher = testDispatcher,
     )
@@ -174,6 +184,52 @@ class RuleExecutionRepositoryImplTest {
 
         repository().observeRuleStats("rule-1").test {
             awaitError().shouldBeInstanceOf<dev.gaferneira.notificapp.core.common.Failure>()
+        }
+    }
+
+    @Test
+    fun `updateExtractedData replaces only the extracted values inside one transaction`() = runTest(testDispatcher) {
+        // Given: a transaction runner that just executes the block
+        mockkStatic("androidx.room.RoomDatabaseKt")
+        try {
+            coEvery { database.withTransaction<Unit>(any()) } coAnswers {
+                @Suppress("UNCHECKED_CAST")
+                (it.invocation.args[1] as suspend () -> Unit).invoke()
+            }
+            coEvery { ruleExecutionDao.updateExtractedData(any(), any()) } returns Unit
+            val field = RuleField(id = "f1", name = "Amount", fieldType = RuleField.FieldType.NUMBER, method = RuleField.ExtractionMethod.RegexPattern("\\d+"))
+            val update = ExtractedDataUpdate("exec-1", listOf(field), mapOf("f1" to "42", "orphan" to "kept"))
+
+            // When
+            val result = repository().updateExtractedData(listOf(update))
+
+            // Then: JSON column and typed rows for the current fields are replaced; nothing is
+            // deleted at execution level and the applied-rules counter is not touched
+            result.isSuccess shouldBe true
+            coVerify(exactly = 1) { database.withTransaction<Unit>(any()) }
+            coVerify { ruleExecutionDao.updateExtractedData("exec-1", """{"f1":"42","orphan":"kept"}""") }
+            coVerify { extractedFieldValueDao.deleteValuesForExecutionFields("exec-1", listOf("f1")) }
+            coVerify { extractedFieldValueDao.insertAll(match { it.single().ruleFieldId == "f1" && it.single().valueNumber == 42.0 }) }
+            coVerify(exactly = 0) { ruleExecutionDao.insert(any()) }
+            coVerify(exactly = 0) { ruleExecutionDao.delete(any()) }
+            coVerify(exactly = 0) { notificationDao.incrementAppliedRulesCount(any()) }
+        } finally {
+            unmockkStatic("androidx.room.RoomDatabaseKt")
+        }
+    }
+
+    @Test
+    fun `updateExtractedData maps a failure inside the transaction to a Failure result`() = runTest(testDispatcher) {
+        mockkStatic("androidx.room.RoomDatabaseKt")
+        try {
+            coEvery { database.withTransaction<Unit>(any()) } throws IllegalStateException("db error")
+            val update = ExtractedDataUpdate("exec-1", emptyList(), emptyMap())
+
+            val result = repository().updateExtractedData(listOf(update))
+
+            result.exceptionOrNull().shouldBeInstanceOf<dev.gaferneira.notificapp.core.common.Failure>()
+        } finally {
+            unmockkStatic("androidx.room.RoomDatabaseKt")
         }
     }
 }

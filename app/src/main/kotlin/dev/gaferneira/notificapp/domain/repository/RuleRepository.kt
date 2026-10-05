@@ -29,6 +29,12 @@ interface RuleRepository {
     suspend fun getRule(id: String): Result<Rule?>
 
     /**
+     * Fetch several rules at once (a fixed number of queries regardless of [ids] size).
+     * Ids that no longer exist are simply absent from the result.
+     */
+    suspend fun getRules(ids: Collection<String>): Result<List<Rule>>
+
+    /**
      * Get rules that apply to a specific app.
      */
     suspend fun getRulesForApp(packageName: String): Result<List<Rule>>

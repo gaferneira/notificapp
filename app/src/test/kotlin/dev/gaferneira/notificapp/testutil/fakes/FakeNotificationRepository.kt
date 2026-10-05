@@ -8,6 +8,7 @@ import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -87,6 +88,17 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
         return Result.success(filtered.take(limit))
     }
 
+    /** Opt-in failure injection: when set, [observeNotification] fails with this error. */
+    var observeError: Throwable? = null
+
+    /** Opt-in failure injection: set before a call to make [deleteNotification] fail. */
+    var deleteError: Throwable? = null
+
+    override fun observeNotification(id: String): Flow<Notification?> {
+        observeError?.let { error -> return flow { throw error } }
+        return notifications.map { list -> list.find { it.id == id } }
+    }
+
     override suspend fun getNotification(id: String): Result<Notification?> = Result.success(notifications.value.find { it.id == id })
 
     override suspend fun getUnprocessedNotifications(): Result<List<Notification>> = Result.success(notifications.value.filterNot { it.isProcessed })
@@ -124,6 +136,7 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
     }
 
     override suspend fun deleteNotification(id: String): Result<Unit> {
+        deleteError?.let { return Result.failure(it) }
         notifications.update { list -> list.filterNot { it.id == id } }
         return Result.success(Unit)
     }

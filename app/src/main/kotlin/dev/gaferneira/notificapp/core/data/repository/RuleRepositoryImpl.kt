@@ -59,6 +59,12 @@ internal class RuleRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getRules(ids: Collection<String>): Result<List<Rule>> = withContext(ioDispatcher) {
+        dbCatching("Failed to get rules by ids") {
+            if (ids.isEmpty()) emptyList() else assembleRules(ruleDao.getByIds(ids.distinct()))
+        }
+    }
+
     override suspend fun getRulesForApp(packageName: String): Result<List<Rule>> = withContext(ioDispatcher) {
         dbCatching("Failed to get rules for app: $packageName") { assembleRules(ruleDao.getRulesForApp(packageName)) }
     }

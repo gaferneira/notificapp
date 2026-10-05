@@ -5,7 +5,6 @@ import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.notification.action.ActionDispatcher
 import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
-import dev.gaferneira.notificapp.domain.action.RuleReEvaluator
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleExecution
@@ -54,9 +53,7 @@ class ProcessNotificationUseCase @Inject constructor(
     private val timeProvider: CurrentTimeProvider,
     private val userPreferencesRepository: UserPreferencesRepository,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
-) : RuleReEvaluator {
-
-    override suspend fun reEvaluate(notification: Notification): Result<List<RuleExecution>> = evaluateAndPersist(notification, executeActions = false)
+) {
 
     /**
      * Full pipeline: dedup, save, evaluate, persist.
@@ -94,19 +91,13 @@ class ProcessNotificationUseCase @Inject constructor(
     }
 
     /**
-     * Evaluate rules against an already-stored notification and persist the matches.
-     *
-     * Used to re-run rules without re-checking dedup or re-saving the notification
-     * (e.g. `NotificationDetailViewModel`'s refresh action).
+     * Evaluate rules against an already-stored notification, dispatch their actions and persist
+     * the matches. Does not re-check dedup or re-save the notification.
      *
      * @param notification The notification to evaluate
-     * @param executeActions Whether matched, non-dry-run rules should actually dispatch their
-     * actions. `NotificationDetailViewModel`'s refresh passes `false`: it recomputes what a rule
-     * *would* do without replaying alarms/snoozes/dismisses for a notification that's already
-     * been acted on once by the listener service.
      * @return Result containing the list of rule executions
      */
-    suspend fun evaluateAndPersist(notification: Notification, executeActions: Boolean = true): Result<List<RuleExecution>> = withContext(ioDispatcher) {
+    suspend fun evaluateAndPersist(notification: Notification): Result<List<RuleExecution>> = withContext(ioDispatcher) {
         try {
             val rulesResult = ruleRepository.getRulesForApp(notification.packageName)
             if (rulesResult.isFailure) {
@@ -125,7 +116,7 @@ class ProcessNotificationUseCase @Inject constructor(
                 // point of dry-run mode (trial a rule with zero risk of it acting on anything).
                 // Actions execute before the execution record is built/saved (per ADR 010) so the
                 // record reflects what actually happened, not just what was "triggered".
-                val outcomes = if (match.rule.isDryRun || !executeActions) {
+                val outcomes = if (match.rule.isDryRun) {
                     emptyMap()
                 } else {
                     actionDispatcher.executeAll(notification, match.rule.actions, match.extractedFieldsByName())
@@ -145,7 +136,7 @@ class ProcessNotificationUseCase @Inject constructor(
                     )
             }
 
-            if (executeActions && matches.qualifiesForRedaction()) {
+            if (matches.qualifiesForRedaction()) {
                 redactNotificationContent(notification.id)
             }
 

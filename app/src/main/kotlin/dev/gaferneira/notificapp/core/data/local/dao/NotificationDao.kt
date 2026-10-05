@@ -109,6 +109,13 @@ internal interface NotificationDao {
     suspend fun getById(id: String): NotificationEntity?
 
     /**
+     * Observe a single notification by ID; emits `null` when it does not exist or is deleted
+     * (retention cleanup, clear data) while observed.
+     */
+    @Query("SELECT * FROM notifications WHERE id = :id LIMIT 1")
+    fun observeById(id: String): Flow<NotificationEntity?>
+
+    /**
      * Get unprocessed notifications (for rule matching).
      */
     @Query("SELECT * FROM notifications WHERE is_processed = 0 ORDER BY timestamp ASC")
@@ -289,12 +296,6 @@ internal interface NotificationDao {
      */
     @Query("UPDATE notifications SET applied_rules_count = applied_rules_count + 1, is_processed = 1 WHERE id = :id")
     suspend fun incrementAppliedRulesCount(id: String)
-
-    /**
-     * Reset the applied rules count to 0 for a notification (e.g., when refreshing rules).
-     */
-    @Query("UPDATE notifications SET applied_rules_count = 0, is_processed = 0 WHERE id = :id")
-    suspend fun resetAppliedRulesCount(id: String)
 
     /**
      * Count distinct apps with at least one notification at or after [since] (epoch millis), as a

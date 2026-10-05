@@ -6,7 +6,6 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
-import dev.gaferneira.notificapp.core.notification.ProcessNotificationUseCase
 import dev.gaferneira.notificapp.core.notification.action.AndroidTorchController
 import dev.gaferneira.notificapp.core.notification.action.AndroidTtsController
 import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
@@ -27,7 +26,6 @@ import dev.gaferneira.notificapp.core.notification.action.alarm.AlarmUiIntentFac
 import dev.gaferneira.notificapp.core.notification.action.alarm.AndroidAlarmController
 import dev.gaferneira.notificapp.core.notification.action.alarm.AndroidAlarmPlayer
 import dev.gaferneira.notificapp.domain.action.ActionExecutor
-import dev.gaferneira.notificapp.domain.action.RuleReEvaluator
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.features.alarm.AlarmUiIntentFactoryImpl
 import javax.inject.Singleton
@@ -121,13 +119,6 @@ internal abstract class ActionModule {
      */
     @Binds
     abstract fun bindTorchController(impl: AndroidTorchController): TorchController
-
-    /**
-     * Binds the [RuleReEvaluator] seam used by `NotificationDetailViewModel` to re-run rule
-     * matching without depending on the full [ProcessNotificationUseCase] orchestrator directly.
-     */
-    @Binds
-    abstract fun bindRuleReEvaluator(impl: ProcessNotificationUseCase): RuleReEvaluator
 
     /**
      * Binds the executor for [ActionType.SEND_WEBHOOK].

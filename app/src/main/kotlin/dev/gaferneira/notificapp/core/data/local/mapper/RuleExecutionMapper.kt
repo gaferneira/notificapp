@@ -16,6 +16,9 @@ internal object RuleExecutionMapper {
         encodeDefaults = true
     }
 
+    /** Serialize an `extractedData` map exactly as [toEntity] stores it. */
+    fun encodeExtractedData(extractedData: Map<String, String>): String = json.encodeToString(extractedData)
+
     /**
      * Convert a RuleExecution domain model to a RuleExecutionEntity.
      *
@@ -26,7 +29,7 @@ internal object RuleExecutionMapper {
         id = domain.id,
         notificationId = domain.notificationId,
         ruleId = domain.ruleId,
-        extractedData = json.encodeToString(domain.extractedData),
+        extractedData = encodeExtractedData(domain.extractedData),
         triggeredActions = json.encodeToString(domain.triggeredActions),
         actionOutcomes = domain.actionOutcomes.takeIf { it.isNotEmpty() }?.let { json.encodeToString(it) },
         wasDryRun = domain.wasDryRun,

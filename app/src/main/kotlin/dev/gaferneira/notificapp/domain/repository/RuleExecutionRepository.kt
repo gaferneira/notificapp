@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.domain.repository
 
+import dev.gaferneira.notificapp.domain.model.ExtractedDataUpdate
 import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
@@ -30,10 +31,13 @@ interface RuleExecutionRepository {
     fun observeExecutionsForNotification(notificationId: String): Flow<List<RuleExecution>>
 
     /**
-     * Delete all executions recorded for a notification and reset its applied-rules
-     * counter, so it can be re-evaluated from scratch.
+     * Replace the extracted values of existing executions, all in one transaction (all or none).
+     *
+     * Only `extractedData` and the typed field values of the given fields change: executions are
+     * never created or deleted, and outcomes, dry-run flag, `createdAt` and the notification's
+     * applied-rules counter are untouched. No action is dispatched.
      */
-    suspend fun deleteExecutionsForNotification(notificationId: String): Result<Unit>
+    suspend fun updateExtractedData(updates: List<ExtractedDataUpdate>): Result<Unit>
 
     /**
      * Look up the most recent time [actionId] was successfully delivered (outcome `SUCCESS`) for

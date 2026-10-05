@@ -1,22 +1,33 @@
 package dev.gaferneira.notificapp.util
 
+import android.icu.text.RelativeDateTimeFormatter
+import android.icu.text.RelativeDateTimeFormatter.AbsoluteUnit
+import android.icu.text.RelativeDateTimeFormatter.Direction
+import android.icu.text.RelativeDateTimeFormatter.RelativeUnit
+import android.text.format.DateFormat
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+private const val DAYS_PER_WEEK = 7
+private const val DAYS_PER_MONTH = 30
+private const val DAYS_PER_YEAR = 365
+private const val HOURS_PER_DAY = 24L
+private const val MINUTES_PER_HOUR = 60L
+
 /**
- * Extension function to format a Date as a "time ago" string.
- * Examples: "Just now", "5 minutes ago", "Yesterday", "3 days ago"
+ * Formats a Date as a localized "time ago" string using the current default locale (which follows
+ * the in-app language). Examples: "now", "5 minutes ago", "yesterday", "3 days ago".
  *
  * @param showMinutesHours If true, shows minutes/hours for recent times
  * @return Formatted time ago string
  */
-fun Date.timeAgo(showMinutesHours: Boolean = true): String {
-    val calendar = Calendar.getInstance().apply {
-        time = this@timeAgo
-    }
-
+fun Date.timeAgo(showMinutesHours: Boolean = true, locale: Locale = Locale.getDefault()): String {
+    val calendar = Calendar.getInstance().apply { time = this@timeAgo }
     val now = Calendar.getInstance()
+    val formatter = RelativeDateTimeFormatter.getInstance(locale)
 
     if (showMinutesHours) {
         val diffMillis = now.timeInMillis - calendar.timeInMillis
@@ -24,65 +35,48 @@ fun Date.timeAgo(showMinutesHours: Boolean = true): String {
         val diffHours = TimeUnit.MILLISECONDS.toHours(diffMillis)
 
         return when {
-            diffMinutes < 1 -> "Just now"
-            diffMinutes < 60 -> "$diffMinutes min ago"
-            diffHours < 24 -> "$diffHours hr ago"
-            else -> getDaysAgoString(calendar, now)
+            diffMinutes < 1 -> formatter.format(Direction.PLAIN, AbsoluteUnit.NOW)
+            diffMinutes < MINUTES_PER_HOUR -> formatter.format(diffMinutes.toDouble(), Direction.LAST, RelativeUnit.MINUTES)
+            diffHours < HOURS_PER_DAY -> formatter.format(diffHours.toDouble(), Direction.LAST, RelativeUnit.HOURS)
+            else -> getDaysAgoString(formatter, calendar, now)
         }
     }
 
-    return getDaysAgoString(calendar, now)
+    return getDaysAgoString(formatter, calendar, now)
 }
 
 /**
- * Format a timestamp for display in the notification list.
- * Shows time for today, "Yesterday" for yesterday, and date for older.
+ * Format a timestamp for display in lists: time for today, "yesterday" for yesterday, and a short
+ * localized date for older ones.
  *
  * @return Formatted date/time string
  */
-fun Date.formatNotificationTime(): String {
+fun Date.formatNotificationTime(locale: Locale = Locale.getDefault()): String {
     val calendar = Calendar.getInstance().apply { time = this@formatNotificationTime }
     val now = Calendar.getInstance()
 
     return when (getDaysBetween(calendar, now)) {
-        0 -> {
-            // Today - show time only
-            val hour = calendar.get(Calendar.HOUR_OF_DAY)
-            val minute = calendar.get(Calendar.MINUTE)
-            String.format("%02d:%02d", hour, minute)
-        }
-        1 -> "Yesterday"
+        0 -> SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, "jm"), locale).format(this)
+        1 -> RelativeDateTimeFormatter.getInstance(locale).format(Direction.LAST, AbsoluteUnit.DAY)
         else -> {
-            // Show date
-            val day = calendar.get(Calendar.DAY_OF_MONTH)
-            val month = calendar.get(Calendar.MONTH) + 1
-            val year = calendar.get(Calendar.YEAR)
-            if (year == now.get(Calendar.YEAR)) {
-                String.format("%02d/%02d", day, month)
-            } else {
-                String.format("%02d/%02d/%d", day, month, year)
-            }
+            val skeleton = if (calendar.get(Calendar.YEAR) == now.get(Calendar.YEAR)) "dMMM" else "dMMMy"
+            SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, skeleton), locale).format(this)
         }
     }
 }
 
-private fun getDaysAgoString(startDate: Calendar, endDate: Calendar): String {
+private fun getDaysAgoString(formatter: RelativeDateTimeFormatter, startDate: Calendar, endDate: Calendar): String {
     val daysAgo = getDaysBetween(startDate, endDate)
-    val weeksAgo = daysAgo / 7
-    val monthsAgo = daysAgo / 30
+    val weeksAgo = daysAgo / DAYS_PER_WEEK
+    val monthsAgo = daysAgo / DAYS_PER_MONTH
 
     return when {
-        daysAgo == 0 -> "Today"
-        daysAgo == 1 -> "Yesterday"
-        daysAgo in 2..6 -> "$daysAgo days ago"
-        weeksAgo == 1 -> "1 week ago"
-        weeksAgo in 2..4 -> "$weeksAgo weeks ago"
-        monthsAgo == 1 -> "1 month ago"
-        monthsAgo in 2..12 -> "$monthsAgo months ago"
-        else -> {
-            val yearsAgo = daysAgo / 365
-            if (yearsAgo == 1) "1 year ago" else "$yearsAgo years ago"
-        }
+        daysAgo == 0 -> formatter.format(Direction.THIS, AbsoluteUnit.DAY)
+        daysAgo == 1 -> formatter.format(Direction.LAST, AbsoluteUnit.DAY)
+        daysAgo < DAYS_PER_WEEK -> formatter.format(daysAgo.toDouble(), Direction.LAST, RelativeUnit.DAYS)
+        monthsAgo < 1 -> formatter.format(weeksAgo.toDouble(), Direction.LAST, RelativeUnit.WEEKS)
+        daysAgo < DAYS_PER_YEAR -> formatter.format(monthsAgo.toDouble(), Direction.LAST, RelativeUnit.MONTHS)
+        else -> formatter.format((daysAgo / DAYS_PER_YEAR).toDouble(), Direction.LAST, RelativeUnit.YEARS)
     }
 }
 
@@ -102,5 +96,5 @@ private fun getDaysBetween(startDate: Calendar, endDate: Calendar): Int {
     }
 
     val diff = end.timeInMillis - start.timeInMillis
-    return (diff / (1000 * 60 * 60 * 24)).toInt()
+    return TimeUnit.MILLISECONDS.toDays(diff).toInt()
 }

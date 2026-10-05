@@ -45,6 +45,12 @@ internal interface RuleDao {
     suspend fun getById(id: String): RuleEntity?
 
     /**
+     * Batched form of [getById]; ids without a row are simply absent from the result.
+     */
+    @Query("SELECT * FROM rules WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<String>): List<RuleEntity>
+
+    /**
      * Get rules that apply to a specific app package.
      * Mirrors [Rule.appliesToPackage]: global rules, include-mode rules listing this app,
      * and exclude-mode rules NOT listing this app.

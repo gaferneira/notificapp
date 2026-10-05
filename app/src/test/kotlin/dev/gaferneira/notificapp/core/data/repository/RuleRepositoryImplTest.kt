@@ -224,4 +224,28 @@ class RuleRepositoryImplTest {
 
         result.getOrThrow() shouldBe false
     }
+
+    @Test
+    fun `getRules batches the aggregate load and skips ids that no longer exist`() = runTest(testDispatcher) {
+        // Given: two requested ids, only one still has a row
+        coEvery { ruleDao.getByIds(listOf("r1", "gone")) } returns listOf(ruleEntity("r1"))
+        coEvery { ruleDao.getConditionsForRules(listOf("r1")) } returns emptyList()
+        coEvery { ruleDao.getActionsForRules(listOf("r1")) } returns listOf(actionEntity("a1", "r1", "SAVE_DATA"))
+        coEvery { ruleDao.getFieldsForActions(listOf("a1")) } returns emptyList()
+        coEvery { ruleDao.getTargetAppsForRules(listOf("r1")) } returns emptyList()
+
+        // When
+        val result = repository.getRules(listOf("r1", "gone", "r1"))
+
+        // Then: one batched query set, the missing id is simply absent
+        result.getOrThrow().map { it.id } shouldBe listOf("r1")
+        coVerify(exactly = 1) { ruleDao.getByIds(any()) }
+        coVerify(exactly = 0) { ruleDao.getById(any()) }
+    }
+
+    @Test
+    fun `getRules with no ids never queries`() = runTest(testDispatcher) {
+        repository.getRules(emptyList()).getOrThrow() shouldBe emptyList()
+        coVerify(exactly = 0) { ruleDao.getByIds(any()) }
+    }
 }

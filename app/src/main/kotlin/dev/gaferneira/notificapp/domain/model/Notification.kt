@@ -26,4 +26,11 @@ data class Notification(
     val sbnKey: String? = null,
 ) {
     val app = AppInfo(packageName, appName)
+
+    /**
+     * Whether the free-text fields were scrubbed by a rule's delete-raw-content-after-extraction
+     * option (see `NotificationDao.redactContent`): raw content empty, content and title null.
+     */
+    val isContentRedacted: Boolean
+        get() = rawContent.isEmpty() && content == null && title == null
 }

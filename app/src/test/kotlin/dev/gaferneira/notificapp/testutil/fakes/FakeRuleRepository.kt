@@ -33,7 +33,23 @@ class FakeRuleRepository(initial: List<Rule> = emptyList()) : RuleRepository {
 
     override suspend fun getRule(id: String): Result<Rule?> = Result.success(rules.value.find { it.id == id })
 
-    override suspend fun getRulesForApp(packageName: String): Result<List<Rule>> = Result.success(
+    /** Number of [getRules] calls, to assert batching. */
+    var getRulesCallCount: Int = 0
+        private set
+
+    /** Opt-in failure injection for [getRules]. */
+    var getRulesError: Throwable? = null
+
+    override suspend fun getRules(ids: Collection<String>): Result<List<Rule>> {
+        getRulesCallCount++
+        getRulesError?.let { return Result.failure(it) }
+        return Result.success(rules.value.filter { it.id in ids })
+    }
+
+    /** Opt-in failure injection for [getRulesForApp]. */
+    var rulesForAppError: Throwable? = null
+
+    override suspend fun getRulesForApp(packageName: String): Result<List<Rule>> = rulesForAppError?.let { Result.failure(it) } ?: Result.success(
         rules.value.filter { rule -> rule.appliesToPackage(packageName) },
     )
 

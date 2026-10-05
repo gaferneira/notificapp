@@ -14,6 +14,7 @@ import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
+import dev.gaferneira.notificapp.domain.model.ExtractedDataUpdate
 import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
@@ -102,16 +103,32 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun deleteExecutionsForNotification(notificationId: String): Result<Unit> = withContext(ioDispatcher) {
+    override suspend fun updateExtractedData(updates: List<ExtractedDataUpdate>): Result<Unit> = withContext(ioDispatcher) {
         try {
             database.withTransaction {
-                ruleExecutionDao.deleteExecutionsForNotification(notificationId)
-                notificationDao.resetAppliedRulesCount(notificationId)
+                updates.forEach { update ->
+                    ruleExecutionDao.updateExtractedData(
+                        id = update.executionId,
+                        extractedData = RuleExecutionMapper.encodeExtractedData(update.extractedData),
+                    )
+                    extractedFieldValueDao.deleteValuesForExecutionFields(
+                        executionId = update.executionId,
+                        fieldIds = update.fields.map { it.id },
+                    )
+                    val values = ExtractedFieldValueMapper.fromExtractedData(
+                        executionId = update.executionId,
+                        extractedData = update.extractedData,
+                        fields = update.fields,
+                    )
+                    if (values.isNotEmpty()) {
+                        extractedFieldValueDao.insertAll(values)
+                    }
+                }
             }
             Result.success(Unit)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Timber.e(e, "Failed to delete executions for notification: $notificationId")
+            Timber.e(e, "Failed to update extracted data for ${updates.size} executions")
             e.toFailureResult()
         }
     }

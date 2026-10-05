@@ -104,6 +104,9 @@ internal interface ExtractedFieldValueDao {
     /**
      * Delete all values for a specific field.
      */
+    @Query("DELETE FROM extracted_field_values WHERE rule_execution_id = :executionId AND rule_field_id IN (:fieldIds)")
+    suspend fun deleteValuesForExecutionFields(executionId: String, fieldIds: List<String>)
+
     @Query("DELETE FROM extracted_field_values WHERE rule_field_id = :ruleFieldId")
     suspend fun deleteValuesForField(ruleFieldId: String)
 
