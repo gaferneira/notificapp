@@ -68,13 +68,7 @@ fun DoSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // The "Do" heading is rendered by the host SectionHeader; only the description lives here.
-        Text(
-            text = stringResource(R.string.do_section_description),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
+        // The heading and its help text are rendered by the host SectionHeader.
         // Action cards
         actions.forEach { action ->
             ActionCard(

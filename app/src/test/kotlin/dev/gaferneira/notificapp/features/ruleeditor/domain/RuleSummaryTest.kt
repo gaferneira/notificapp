@@ -76,4 +76,26 @@ class RuleSummaryTest {
 
         rule.toSummary().actions shouldBe listOf(ActionType.DISMISS_NOTIFICATION, ActionType.SAVE_DATA)
     }
+
+    @Test
+    fun `given a live rule with enabled actions when summarising then actions will run`() {
+        val rule = RuleUiModel(actions = persistentListOf(createTestAction(id = "a1", type = ActionType.DISMISS_NOTIFICATION)))
+
+        rule.toSummary().actionRun shouldBe RuleSummary.ActionRun.RUN
+    }
+
+    @Test
+    fun `given test mode when summarising then matches are only recorded even with actions`() {
+        val rule = RuleUiModel(
+            isDryRun = true,
+            actions = persistentListOf(createTestAction(id = "a1", type = ActionType.DISMISS_NOTIFICATION)),
+        )
+
+        rule.toSummary().actionRun shouldBe RuleSummary.ActionRun.RECORD_ONLY
+    }
+
+    @Test
+    fun `given a live rule without enabled actions when summarising then there is no run state to describe`() {
+        RuleUiModel().toSummary().actionRun shouldBe RuleSummary.ActionRun.NONE
+    }
 }

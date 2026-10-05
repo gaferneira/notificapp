@@ -81,9 +81,7 @@ internal fun SinglePageEditContent(uiState: UiState, onEvent: (UiEvent) -> Unit,
         ) {
             DoEditor(uiState = uiState, onEvent = onEvent)
         }
-        EditorSectionCard(title = stringResource(R.string.rule_editor_section_settings)) {
-            SettingsSection(uiState = uiState, onEvent = onEvent)
-        }
+        SettingsSection(uiState = uiState, onEvent = onEvent)
     }
 }
 

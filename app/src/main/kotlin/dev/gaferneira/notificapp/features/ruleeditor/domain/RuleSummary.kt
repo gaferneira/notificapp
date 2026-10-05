@@ -15,6 +15,8 @@ data class RuleSummary(
     val conditions: List<RuleCondition>,
     /** Types of the enabled actions, in rule order. */
     val actions: List<ActionType>,
+    /** Whether the enabled actions will run, or matches are only recorded (test mode). */
+    val actionRun: ActionRun = ActionRun.NONE,
 ) {
     sealed interface AppScope {
         /** No app restriction. */
@@ -29,6 +31,9 @@ data class RuleSummary(
 
     /** How the conditions are described; [ALL]/[ANY] only apply with two or more conditions. */
     enum class ConditionMatch { NONE, SINGLE, ALL, ANY }
+
+    /** [NONE]: no enabled action to describe; [RUN]: actions execute; [RECORD_ONLY]: test mode, nothing executes. */
+    enum class ActionRun { NONE, RUN, RECORD_ONLY }
 }
 
 fun RuleUiModel.toSummary(): RuleSummary {
@@ -44,10 +49,17 @@ fun RuleUiModel.toSummary(): RuleSummary {
         conditionLogic == ConditionCombinator.ANY -> RuleSummary.ConditionMatch.ANY
         else -> RuleSummary.ConditionMatch.ALL
     }
+    val enabledActions = actions.filter { it.isEnabled }.map { it.type }
+    val actionRun = when {
+        isDryRun -> RuleSummary.ActionRun.RECORD_ONLY
+        enabledActions.isEmpty() -> RuleSummary.ActionRun.NONE
+        else -> RuleSummary.ActionRun.RUN
+    }
     return RuleSummary(
         scope = scope,
         conditionMatch = match,
         conditions = triggers,
-        actions = actions.filter { it.isEnabled }.map { it.type },
+        actions = enabledActions,
+        actionRun = actionRun,
     )
 }

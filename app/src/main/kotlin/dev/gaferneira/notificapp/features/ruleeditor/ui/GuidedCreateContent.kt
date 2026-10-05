@@ -138,7 +138,5 @@ private fun ReviewStep(uiState: UiState, onEvent: (UiEvent) -> Unit) {
     val summary = remember(uiState.rule) { uiState.rule.toSummary() }
     ReviewSummaryCard(summary = summary, modifier = Modifier.fillMaxWidth())
 
-    EditorSectionCard(title = stringResource(R.string.rule_editor_section_settings)) {
-        SettingsSection(uiState = uiState, onEvent = onEvent)
-    }
+    SettingsSection(uiState = uiState, onEvent = onEvent)
 }

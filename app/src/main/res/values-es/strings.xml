@@ -408,7 +408,6 @@
     <string name="rule_editor_section_when_help">Elige qué notificaciones activan esta regla: selecciona apps y añade condiciones.</string>
     <string name="rule_editor_section_do">Qué hacer</string>
     <string name="rule_editor_section_do_help">Elige qué ocurre cuando una notificación coincide.</string>
-    <string name="rule_editor_section_settings">Ajustes</string>
     <string name="rule_editor_add_condition">Añadir condición</string>
     <string name="rule_editor_add_action">Añadir acción</string>
     <string name="rule_editor_test_history">Probar con el historial</string>
@@ -447,6 +446,12 @@
     <string name="rule_editor_summary_match_all">cumple todas estas condiciones: %1$s</string>
     <string name="rule_editor_summary_match_any">cumple alguna de estas condiciones: %1$s</string>
     <string name="rule_editor_summary_no_actions">todavía no ocurre nada</string>
+    <string name="rule_editor_summary_actions_run">Las acciones se ejecutarán.</string>
+    <string name="rule_editor_summary_record_only">El modo de prueba está activado: se registran las coincidencias, pero no se ejecuta ninguna acción.</string>
+    <string name="rule_editor_advanced_state_test_on">Modo de prueba activado</string>
+    <string name="rule_editor_advanced_state_test_off">Modo de prueba desactivado</string>
+    <string name="rule_editor_advanced_state_raw_deleted">Texto original eliminado tras la extracción</string>
+    <string name="rule_editor_advanced_state_join">%1$s · %2$s</string>
 
     <!-- Rule editor: single page helpers -->
     <string name="rule_editor_attention_title">Requiere atención</string>
@@ -646,7 +651,6 @@
     <string name="when_apps_only_these">Solo estas apps</string>
     <string name="when_apps_all_except_these">Todas excepto estas</string>
     <string name="when_condition_header">CONDICIÓN</string>
-    <string name="do_section_description">Acciones que se realizan con los datos extraídos, como guardarlos o enviar una nueva alerta.</string>
     <string name="do_extract_no_fields">Aún no hay campos</string>
     <plurals name="do_extract_field_count">
         <item quantity="one">%1$d campo</item>
@@ -668,6 +672,8 @@
     <string name="advanced_settings_title">Ajustes avanzados</string>
     <string name="advanced_settings_collapse_cd">Contraer ajustes avanzados</string>
     <string name="advanced_settings_expand_cd">Expandir ajustes avanzados</string>
+    <string name="advanced_settings_state_expanded">Expandido</string>
+    <string name="advanced_settings_state_collapsed">Contraído</string>
     <string name="notification_preview_no_content">(sin contenido)</string>
     <string name="notification_preview_field_chip">%1$s: %2$s</string>
     <string name="template_bank_payment_name">Seguimiento de pagos bancarios</string>

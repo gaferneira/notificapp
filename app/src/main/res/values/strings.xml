@@ -522,7 +522,6 @@
     <string name="rule_editor_section_when_help">Choose which notifications trigger this rule: pick apps and add conditions.</string>
     <string name="rule_editor_section_do">Do</string>
     <string name="rule_editor_section_do_help">Choose what happens when a notification matches.</string>
-    <string name="rule_editor_section_settings">Settings</string>
     <string name="rule_editor_add_condition">Add condition</string>
     <string name="rule_editor_add_action">Add action</string>
     <string name="rule_editor_test_history">Test against history</string>
@@ -541,7 +540,7 @@
     <string name="rule_editor_field_category_placeholder">e.g., Finance, Shopping</string>
 
     <!-- Rule editor: settings -->
-    <string name="rule_editor_dry_run_title">Dry run</string>
+    <string name="rule_editor_dry_run_title">Test mode</string>
     <string name="rule_editor_dry_run_description">While on, the rule only records its matches. It won\'t dismiss, snooze or alert until you turn this off.</string>
     <string name="rule_editor_delete_raw_title">Delete raw content after extraction</string>
     <string name="rule_editor_delete_raw_description">Removes the notification\'s original text once fields are extracted, keeping only the extracted data.</string>
@@ -560,6 +559,12 @@
     <string name="rule_editor_summary_match_all">matches all of: %1$s</string>
     <string name="rule_editor_summary_match_any">matches any of: %1$s</string>
     <string name="rule_editor_summary_no_actions">nothing happens yet</string>
+    <string name="rule_editor_summary_actions_run">Actions will run.</string>
+    <string name="rule_editor_summary_record_only">Test mode is on: matches are recorded but no actions run.</string>
+    <string name="rule_editor_advanced_state_test_on">Test mode on</string>
+    <string name="rule_editor_advanced_state_test_off">Test mode off</string>
+    <string name="rule_editor_advanced_state_raw_deleted">Original text deleted after extraction</string>
+    <string name="rule_editor_advanced_state_join">%1$s · %2$s</string>
 
     <!-- Rule editor: single page helpers -->
     <string name="rule_editor_attention_title">Needs attention</string>
@@ -703,7 +708,6 @@
     <string name="when_apps_only_these">Only these apps</string>
     <string name="when_apps_all_except_these">All apps except these</string>
     <string name="when_condition_header">CONDITION</string>
-    <string name="do_section_description">Actions to perform with the extracted data, like saving it or sending a new alert.</string>
     <string name="do_extract_no_fields">No fields yet</string>
     <plurals name="do_extract_field_count">
         <item quantity="one">%1$d field</item>
@@ -723,6 +727,8 @@
     <string name="advanced_settings_title">Advanced settings</string>
     <string name="advanced_settings_collapse_cd">Collapse advanced settings</string>
     <string name="advanced_settings_expand_cd">Expand advanced settings</string>
+    <string name="advanced_settings_state_expanded">Expandido</string>
+    <string name="advanced_settings_state_collapsed">Contraído</string>
     <string name="notification_preview_no_content">(no content)</string>
     <string name="notification_preview_field_chip">%1$s: %2$s</string>
     <string name="template_bank_payment_name">Bank payment tracker</string>
