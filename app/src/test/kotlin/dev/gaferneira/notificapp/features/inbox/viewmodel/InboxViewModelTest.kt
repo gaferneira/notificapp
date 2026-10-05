@@ -158,6 +158,34 @@ class InboxViewModelTest {
         }
 
         @Test
+        fun `OnClearFilters resets the search and persists a default filter`() = runTest(testDispatcher) {
+            savedFiltersFlow.value = InboxFilterSettings(listOf("com.a"), Status.UNPROCESSED)
+            val viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.onEvent(InboxEvent.OnSearchQueryChange("purchase"))
+            val slot = slot<InboxFilterSettings>()
+
+            viewModel.onEvent(InboxEvent.OnClearFilters)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.searchQuery shouldBe ""
+            coVerify { userPreferencesRepository.setInboxFilters(capture(slot)) }
+            slot.captured shouldBe InboxFilterSettings()
+        }
+
+        @Test
+        fun `OnClearFilters with only a search query resets the search and still persists defaults`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            viewModel.onEvent(InboxEvent.OnSearchQueryChange("zzz"))
+
+            viewModel.onEvent(InboxEvent.OnClearFilters)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.searchQuery shouldBe ""
+            coVerify { userPreferencesRepository.setInboxFilters(InboxFilterSettings()) }
+        }
+
+        @Test
         fun `updating the search query stores it in state`() {
             val viewModel = createViewModel()
 

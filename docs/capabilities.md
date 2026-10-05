@@ -124,6 +124,7 @@ Notificapp lets users create automation rules that act on the notifications thei
     * Status: single-select All / Processed / Unprocessed
     * Apps: pick one or more source apps from a searchable list showing each app's notification count (notifications from ANY selected app)
   * Active filters shown as dismissible chips under the search field (tap to remove one), with a count badge on the filter button
+  * When a filter or search hides every notification, a "Nothing matches your filters" state with a "Clear filters" action that resets the filters and the search at once (distinct from the "No notifications yet" state)
   * A warning banner if notification access has been revoked
   * Tapping an item opens its full content plus a history of which rules matched it, what data was extracted, and what actions ran (with outcome: Success, Failed, Skipped, or Suppressed)
   * From detail view: "Create rule" from this notification, or "Re-run rules" to manually recompute matches
@@ -166,6 +167,7 @@ Notificapp lets users create automation rules that act on the notifications thei
   * Delete a single entry directly from the list
   * Bulk-delete everything matching the current filters, after a confirmation dialog showing the exact affected count — the delete always targets the previewed ID set, so data arriving between preview and confirmation is never swept in
   * Export the currently filtered set as CSV or JSON via the Android share sheet; export streams in fixed-size batches so it never materializes the full result set in memory, even for tens of thousands of rows
+  * Two distinct empty states: "No extracted data yet" (explains Extract data fields, with a "Go to Rules" action) when nothing was ever extracted, versus "Nothing matches your filters" with "Clear filters" (resets filters and search, keeps the sort) when a filter or search hides every row. The stats card no longer shows its own "No data yet"
   * Dry-run rule executions (test/preview matches) are excluded from every Data Browser view by default: browsing, search, statistics, export, and deletion
 * **System Trigger:** User navigates to the Data tab (bottom navigation, between Home and Rules).
 * **Technical Spec Reference:** `openspec/changes/data-browser/specs/data-browsing/spec.md`, `data-statistics/spec.md`, `data-export/spec.md`, `data-deletion/spec.md`

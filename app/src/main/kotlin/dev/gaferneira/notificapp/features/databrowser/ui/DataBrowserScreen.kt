@@ -48,8 +48,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -61,13 +61,18 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.components.EmptyStateMessage
+import dev.gaferneira.notificapp.core.ui.components.FilterEmptyState
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
 import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
+import dev.gaferneira.notificapp.core.ui.navigation.navOptions
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.LocalIoDispatcher
+import dev.gaferneira.notificapp.domain.model.DataBrowserFilter
 import dev.gaferneira.notificapp.domain.model.DataBrowserRow
 import dev.gaferneira.notificapp.domain.model.DataSort
 import dev.gaferneira.notificapp.domain.model.DataStatistics
@@ -76,6 +81,8 @@ import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserEffect
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserEvent
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserUiState
+import dev.gaferneira.notificapp.features.databrowser.contract.DataListContent
+import dev.gaferneira.notificapp.features.databrowser.contract.dataListContent
 import dev.gaferneira.notificapp.features.databrowser.viewmodel.DataBrowserViewModel
 import dev.gaferneira.notificapp.util.formatNotificationTime
 import kotlinx.coroutines.CoroutineDispatcher
@@ -203,11 +210,18 @@ private fun DataBrowserScreenContent(
                 onQueryChange = { onEvent(DataBrowserEvent.OnSearchQueryChange(it)) },
             )
 
-            StatsHeader(stats = uiState.stats, isLoading = uiState.isStatsLoading)
+            if (uiState.isStatsLoading || (uiState.stats?.total ?: 0) > 0) {
+                StatsHeader(stats = uiState.stats, isLoading = uiState.isStatsLoading)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            DataRowList(rows = rows, onDeleteRow = { onEvent(DataBrowserEvent.OnDeleteRowClick(it)) })
+            DataRowList(
+                rows = rows,
+                filter = uiState.filter,
+                onDeleteRow = { onEvent(DataBrowserEvent.OnDeleteRowClick(it)) },
+                onClearFilters = { onEvent(DataBrowserEvent.OnClearFilters) },
+                onGoToRules = { navigateTo(Screen.Rules, navOptions { clearStack() }) },
+            )
         }
     }
 
@@ -354,13 +368,7 @@ private fun StatsHeader(stats: DataStatistics?, isLoading: Boolean) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            } else if (stats == null) {
-                Text(
-                    text = "No data yet",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
+            } else if (stats != null) {
                 val topRule = stats.mostActiveRuleName ?: "—"
                 Text(
                     text = "Total: ${stats.total} · This week: ${stats.thisWeek} · Top rule: $topRule",
@@ -377,24 +385,24 @@ private fun StatsHeader(stats: DataStatistics?, isLoading: Boolean) {
 @Composable
 private fun DataRowList(
     rows: LazyPagingItems<DataBrowserRow>,
+    filter: DataBrowserFilter,
     onDeleteRow: (String) -> Unit,
+    onClearFilters: () -> Unit,
+    onGoToRules: () -> Unit,
 ) {
-    when (val refreshState = rows.loadState.refresh) {
-        is LoadState.Loading -> {
+    val refresh = rows.loadState.refresh
+    when (dataListContent(refresh, rows.itemCount, filter)) {
+        DataListContent.Loading -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
-        is LoadState.Error -> {
-            DataRowListError(message = refreshState.error.message, onRetry = { rows.retry() })
+        DataListContent.Error -> {
+            DataRowListError(message = (refresh as? LoadState.Error)?.error?.message, onRetry = { rows.retry() })
         }
-        is LoadState.NotLoading -> {
-            if (rows.itemCount == 0) {
-                DataRowListEmpty()
-            } else {
-                DataRowListContent(rows = rows, onDeleteRow = onDeleteRow)
-            }
-        }
+        DataListContent.FilterEmpty -> FilterEmptyState(onClearFilters = onClearFilters)
+        DataListContent.NoData -> NoDataState(onGoToRules = onGoToRules)
+        DataListContent.Rows -> DataRowListContent(rows = rows, onDeleteRow = onDeleteRow)
     }
 }
 
@@ -424,20 +432,15 @@ private fun DataRowListError(message: String?, onRetry: () -> Unit) {
     }
 }
 
+/** No extracted data exists at all: explains how Data fills up and links to Rules. */
 @Composable
-private fun DataRowListEmpty() {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            text = "No extracted data yet",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-    }
+private fun NoDataState(onGoToRules: () -> Unit) {
+    EmptyStateMessage(
+        title = stringResource(R.string.data_empty_title),
+        message = stringResource(R.string.data_empty_explanation),
+        actionLabel = stringResource(R.string.data_empty_go_to_rules),
+        onAction = onGoToRules,
+    )
 }
 
 @Composable

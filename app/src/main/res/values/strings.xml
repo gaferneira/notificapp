@@ -768,4 +768,10 @@
     <string name="inbox_back_cd">Go back</string>
     <string name="inbox_search_hint">Search notifications…</string>
     <string name="app_selection_search_hint">Search apps…</string>
+    <string name="filter_empty_title">Nothing matches your filters</string>
+    <string name="filter_empty_message">Try changing or clearing the filters or the search.</string>
+    <string name="filter_empty_clear">Clear filters</string>
+    <string name="data_empty_title">No extracted data yet</string>
+    <string name="data_empty_explanation">Data fills up when a rule declares fields with the Extract data action and a notification matches it.</string>
+    <string name="data_empty_go_to_rules">Go to Rules</string>
 </resources>

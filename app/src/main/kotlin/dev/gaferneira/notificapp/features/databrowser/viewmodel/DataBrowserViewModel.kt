@@ -81,6 +81,7 @@ class DataBrowserViewModel @Inject constructor(
             }
             is DataBrowserEvent.OnSortChange -> updateFilter { copy(sort = event.sort) }
             DataBrowserEvent.OnRefreshStats -> loadStats()
+            DataBrowserEvent.OnClearFilters -> updateFilter { DataBrowserFilter(sort = sort) }
             is DataBrowserEvent.OnExportClick -> onExportClick(event.format)
             is DataBrowserEvent.OnDeleteRowClick -> onDeleteRowClick(event.valueId)
             DataBrowserEvent.OnBulkDeleteClick -> onBulkDeleteClick()

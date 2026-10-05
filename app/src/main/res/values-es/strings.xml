@@ -765,4 +765,10 @@
     <string name="notification_detail_error_load_notification">No se pudo cargar la notificación</string>
     <string name="notification_detail_error_not_found">Notificación no encontrada</string>
     <string name="notification_detail_error_refresh">No se pudieron actualizar las reglas</string>
+    <string name="filter_empty_title">Nada coincide con tus filtros</string>
+    <string name="filter_empty_message">Prueba a cambiar o borrar los filtros o la búsqueda.</string>
+    <string name="filter_empty_clear">Borrar filtros</string>
+    <string name="data_empty_title">Aún no hay datos extraídos</string>
+    <string name="data_empty_explanation">Los datos aparecen cuando una regla declara campos con la acción Extraer datos y una notificación coincide con ella.</string>
+    <string name="data_empty_go_to_rules">Ir a Reglas</string>
 </resources>

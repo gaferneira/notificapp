@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.databrowser.contract
 
+import androidx.paging.LoadState
 import dev.gaferneira.notificapp.domain.model.DataBrowserFilter
 import dev.gaferneira.notificapp.domain.model.DataSort
 import dev.gaferneira.notificapp.domain.model.DataStatistics
@@ -23,6 +24,29 @@ data class DataBrowserUiState(
 )
 
 /**
+ * True when the user narrowed the list by a rule, app, date bound or a non-blank search. Sort and the
+ * (UI-hidden) field-type filter do not count, so "nothing matches" is only reported when the user
+ * can actually undo something.
+ */
+fun DataBrowserFilter.isNarrowed(): Boolean = ruleIds.isNotEmpty() ||
+    packageNames.isNotEmpty() ||
+    dateFrom != null ||
+    dateTo != null ||
+    searchQuery.isNotBlank()
+
+/** What the Data list area renders for a given paging refresh state. */
+enum class DataListContent { Loading, Error, FilterEmpty, NoData, Rows }
+
+/** Pure branch selection for the Data list; empty states never show while loading (no flicker). */
+fun dataListContent(refresh: LoadState, itemCount: Int, filter: DataBrowserFilter): DataListContent = when {
+    refresh is LoadState.Loading -> DataListContent.Loading
+    refresh is LoadState.Error -> DataListContent.Error
+    itemCount > 0 -> DataListContent.Rows
+    filter.isNarrowed() -> DataListContent.FilterEmpty
+    else -> DataListContent.NoData
+}
+
+/**
  * UI Events for DataBrowserScreen.
  */
 sealed interface DataBrowserEvent {
@@ -30,6 +54,9 @@ sealed interface DataBrowserEvent {
     data class OnFilterChange(val filter: DataBrowserFilter) : DataBrowserEvent
     data class OnSortChange(val sort: DataSort) : DataBrowserEvent
     data object OnRefreshStats : DataBrowserEvent
+
+    /** Resets rule, app, date, field-type filters and the search query; keeps the sort. */
+    data object OnClearFilters : DataBrowserEvent
     data class OnExportClick(val format: ExportFormat) : DataBrowserEvent
     data class OnDeleteRowClick(val valueId: String) : DataBrowserEvent
     data object OnBulkDeleteClick : DataBrowserEvent

@@ -72,6 +72,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.components.FilterEmptyState
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
@@ -177,6 +178,8 @@ private fun InboxScreenContent(
             NotificationList(
                 notifications = notifications,
                 isNotificationListenerActive = uiState.isNotificationListenerActive,
+                isFilteredOrSearching = uiState.filter.isActive() || uiState.searchQuery.isNotBlank(),
+                onClearFilters = { onEvent(InboxEvent.OnClearFilters) },
                 onNotificationClick = { onEvent(InboxEvent.OnNotificationClick(it)) },
                 onRetry = { notifications.retry() },
                 onEnableAccessClick = { openNotificationListenerSettings(context) },
@@ -312,6 +315,8 @@ private fun InboxSearchField(query: String, onQueryChange: (String) -> Unit) {
 private fun NotificationList(
     notifications: LazyPagingItems<InboxListItem>,
     isNotificationListenerActive: Boolean,
+    isFilteredOrSearching: Boolean,
+    onClearFilters: () -> Unit,
     onNotificationClick: (String) -> Unit,
     onRetry: () -> Unit,
     onEnableAccessClick: () -> Unit,
@@ -328,7 +333,9 @@ private fun NotificationList(
             )
         }
         is LoadState.NotLoading -> {
-            if (notifications.itemCount == 0) {
+            if (notifications.itemCount == 0 && isFilteredOrSearching) {
+                FilterEmptyState(onClearFilters = onClearFilters)
+            } else if (notifications.itemCount == 0) {
                 EmptyState(
                     isNotificationListenerActive = isNotificationListenerActive,
                     onEnableAccessClick = onEnableAccessClick,

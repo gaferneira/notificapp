@@ -103,6 +103,9 @@ sealed interface InboxEvent {
 
     /** Remove a single active filter (chip) */
     data class OnRemoveFilter(val chip: InboxFilterChip) : InboxEvent
+
+    /** Reset the search query and every filter dimension (the filtered-empty state action) */
+    data object OnClearFilters : InboxEvent
     data class OnNotificationClick(val notificationId: String) : InboxEvent
 
     /** Re-check notification listener status (called on resume) */

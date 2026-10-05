@@ -144,6 +144,10 @@ class InboxViewModel @Inject constructor(
             is InboxEvent.OnSearchQueryChange -> updateSearchQuery(event.query)
             is InboxEvent.OnFilterChange -> saveFilter(event.filter)
             is InboxEvent.OnRemoveFilter -> saveFilter(uiState.value.filter.without(event.chip))
+            InboxEvent.OnClearFilters -> {
+                updateSearchQuery("")
+                saveFilter(InboxFilter())
+            }
             is InboxEvent.OnNotificationClick -> onNotificationClick(event.notificationId)
             is InboxEvent.OnResume -> checkNotificationListenerStatus()
         }

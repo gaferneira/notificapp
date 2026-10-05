@@ -4,6 +4,7 @@ import androidx.paging.PagingData
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.domain.model.DataBrowserFilter
 import dev.gaferneira.notificapp.domain.model.DataBrowserRow
+import dev.gaferneira.notificapp.domain.model.DataSort
 import dev.gaferneira.notificapp.domain.model.DataStatistics
 import dev.gaferneira.notificapp.domain.model.ExportFormat
 import dev.gaferneira.notificapp.domain.repository.DataBrowserRepository
@@ -75,6 +76,45 @@ class DataBrowserViewModelTest {
 
             collectJob.cancel()
             repository.searchCalls shouldBe listOf(DataBrowserFilter(searchQuery = "invoice"))
+        }
+    }
+
+    @Nested
+    inner class ClearFiltersTests {
+
+        @Test
+        fun `OnClearFilters clears rule, app, date and search but keeps the sort`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            viewModel.onEvent(
+                DataBrowserEvent.OnFilterChange(
+                    DataBrowserFilter(
+                        ruleIds = listOf("r1"),
+                        packageNames = listOf("com.a"),
+                        dateFrom = 10L,
+                        dateTo = 20L,
+                        searchQuery = "invoice",
+                        sort = DataSort.RULE_ASC,
+                    ),
+                ),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+            repository.statisticsCalls.clear()
+
+            viewModel.onEvent(DataBrowserEvent.OnClearFilters)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe DataBrowserFilter(sort = DataSort.RULE_ASC)
+            repository.statisticsCalls shouldBe listOf(DataBrowserFilter(sort = DataSort.RULE_ASC))
+        }
+
+        @Test
+        fun `OnClearFilters with the default sort resets to a default filter`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            viewModel.onEvent(DataBrowserEvent.OnSearchQueryChange("x"))
+
+            viewModel.onEvent(DataBrowserEvent.OnClearFilters)
+
+            viewModel.uiState.value.filter shouldBe DataBrowserFilter()
         }
     }
 
