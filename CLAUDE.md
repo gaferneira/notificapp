@@ -133,7 +133,7 @@ No `.git/hooks/pre-commit` is installed yet — these are enforced by CI / `./gr
 **Boy-scout baseline policy (TD-16):** the baseline is meant to shrink, not accumulate. When a PR meaningfully touches a file with baseline entries, fix those entries in the same PR and regenerate — the diff must show the count going *down*. Never regenerate to *add* entries except via the explicit rule above (intentionally accepted new debt, called out in the PR description).
 
 ### Architecture Check (`./gradlew architectureCheck`)
-Implemented in `config/architecture/architectureCheck.gradle.kts` (applied from `app/build.gradle.kts`), grandfathered violations in `config/architecture/baseline.txt`. Runs as part of `check`. Enforces eight rules Detekt can't express:
+Implemented in `config/architecture/architectureCheck.gradle.kts` (applied from `app/build.gradle.kts`), grandfathered violations in `config/architecture/baseline.txt`. Runs as part of `check`. Enforces nine rules Detekt can't express:
 
 1. **Visibility** — `core/data/repository/*Impl` and every DAO/entity/mapper under `core/data/local` must be `internal`.
 2. **Dispatcher injection** (ADR 008) — no hardcoded `Dispatchers.IO`/`Default`/`Main` outside `core/di/DispatchersModule.kt`.
@@ -143,8 +143,9 @@ Implemented in `config/architecture/architectureCheck.gradle.kts` (applied from 
 6. **No raw exception leaks** — a repository/data-source catch must not return a raw exception via `Result.failure(...)`; map to `Failure` (ADR 006) first. Starts with 41 grandfathered call sites — see DATA-07 in `audit/reports/step_5_data.md`.
 7. **Contract purity** — a feature's `contract/` must not import `core.extraction` internals; map to a feature-owned model at the ViewModel boundary.
 8. **Design-system styling** — `core/ui/components/*` must not reintroduce ad-hoc `.copy(alpha = ...)` tonal-color literals; use `NotificappStyles`/`NotificappTokens` instead (Styles API). Only the alpha-copy pattern is matched; hardcoded shapes remain a convention enforced by review.
+9. **Hardcoded strings** — `features/ruleeditor/ui/**` must not contain `Text("...")`/`text = "..."`-style prose literals outside `@Preview` functions; use `stringResource` (ADR 014). A line may opt out with a trailing `// i18n-ignore: reason` (technical samples only). Starts clean.
 
-Rules 1-4, 8 start clean; 5-7 start with grandfathered violations under the same shrink-only boy-scout policy: touch a listed file → fix its entry and remove the line in the same PR. The build fails on any **new** violation not in the baseline.
+Rules 1-4, 8, 9 start clean; 5-7 start with grandfathered violations under the same shrink-only boy-scout policy: touch a listed file → fix its entry and remove the line in the same PR. The build fails on any **new** violation not in the baseline.
 
 Not every audit finding is a mechanical rule — regex recompilation on hot paths (PERF-001/002) and N+1 DAO fan-out (PERF-008, DATA-01/03/05) need real data-flow analysis; a naive text-matching rule would be too fragile. Those stay as manual review checklist items in `.claude/commands/review-pr.md`.
 
