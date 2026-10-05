@@ -6,7 +6,7 @@
     "description": "Flashes the camera torch when a one-time verification code arrives, so you notice it immediately even with the phone face-down.",
     "category": "Security",
     "isActive": true,
-    "isDryRun": true,
+    "isDryRun": false,
     "targetApps": null,
     "isIncludeMode": true,
     "conditionLogic": "ANY",

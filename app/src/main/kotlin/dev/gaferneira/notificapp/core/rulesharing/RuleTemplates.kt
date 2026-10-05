@@ -16,9 +16,9 @@ data class RuleTemplateInfo(
 
 /**
  * Curated starter rule templates, one per hero use case, covering every [ActionType][dev.gaferneira.notificapp.domain.model.ActionType].
- * Templates ride the same import pipeline as Phase 2 file/clipboard import: reading the asset text
- * and feeding it through `RuleJsonCodec.decode` behaves identically to any other imported rule
- * (fresh IDs, forced dry-run, on confirmation).
+ * Templates ride the same decode pipeline as Phase 2 file/clipboard import (fresh IDs), but unlike
+ * imported files they are bundled and trusted: the editor keeps each template's own `isDryRun` flag
+ * (false in every bundled asset) instead of forcing dry-run.
  */
 object RuleTemplates {
     val all: List<RuleTemplateInfo> = listOf(

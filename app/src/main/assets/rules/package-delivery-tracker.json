@@ -6,7 +6,7 @@
     "description": "Catches delivery notifications and pulls out the tracking number so every package ends up in one searchable place. Select your carrier apps in the next step.",
     "category": "Deliveries",
     "isActive": true,
-    "isDryRun": true,
+    "isDryRun": false,
     "targetApps": null,
     "isIncludeMode": true,
     "conditionLogic": "ANY",

@@ -6,7 +6,7 @@
     "description": "Automatically dismisses notifications that look like sales or promotions, so your notification shade stays for things that matter.",
     "category": "Noise control",
     "isActive": true,
-    "isDryRun": true,
+    "isDryRun": false,
     "targetApps": null,
     "isIncludeMode": true,
     "conditionLogic": "ANY",

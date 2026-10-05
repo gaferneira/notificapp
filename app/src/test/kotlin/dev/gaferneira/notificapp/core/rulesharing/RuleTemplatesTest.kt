@@ -34,6 +34,27 @@ class RuleTemplatesTest {
     }
 
     @Test
+    fun `every bundled template is trusted and starts live (isDryRun false)`() {
+        RuleTemplates.all.forEach { template ->
+            val decoded = RuleJsonCodec.decode(readTemplateAsset(template.assetFileName)).getOrThrow()
+
+            decoded.rule.isDryRun shouldBe false
+        }
+    }
+
+    @Test
+    fun `every json file shipped under assets rules parses with isDryRun false`() {
+        val files = java.io.File("src/main/assets/rules").listFiles { f -> f.extension == "json" }.orEmpty()
+
+        files.isNotEmpty() shouldBe true
+        files.forEach { file ->
+            val decoded = RuleJsonCodec.decode(file.readText()).getOrThrow()
+
+            decoded.rule.isDryRun shouldBe false
+        }
+    }
+
+    @Test
     fun `templates together cover every action type at least once`() {
         val actionTypesInTemplates = RuleTemplates.all
             .map { readTemplateAsset(it.assetFileName) }

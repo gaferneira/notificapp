@@ -6,7 +6,7 @@
     "description": "Rings a full alarm when a notification is marked urgent or an emergency, even if the phone is on silent. Pick which apps should be able to wake you in the next step.",
     "category": "Alerts",
     "isActive": true,
-    "isDryRun": true,
+    "isDryRun": false,
     "targetApps": null,
     "isIncludeMode": true,
     "conditionLogic": "ANY",

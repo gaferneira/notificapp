@@ -6,7 +6,7 @@
     "description": "Extracts the amount and date from your bank's payment notifications into a searchable dataset. Pick your banking app in the next step and tweak the condition to match its exact wording.",
     "category": "Finance",
     "isActive": true,
-    "isDryRun": true,
+    "isDryRun": false,
     "targetApps": null,
     "isIncludeMode": true,
     "conditionLogic": "ALL",

@@ -6,7 +6,7 @@
     "description": "Holds back newsletter and digest notifications for 4 hours so they arrive in a batch instead of interrupting you one at a time.",
     "category": "Noise control",
     "isActive": true,
-    "isDryRun": true,
+    "isDryRun": false,
     "targetApps": null,
     "isIncludeMode": true,
     "conditionLogic": "ANY",
