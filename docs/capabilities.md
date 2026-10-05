@@ -103,7 +103,8 @@ Notificapp lets users create automation rules that act on the notifications thei
   stacked screen. While data loads Home shows a centered progress indicator; if observation fails
   it shows an error message with a "Retry" button instead of a blank screen. The banner turns into a
   warning with an "Enable access" action when notification access is off, or a "Choose apps" action
-  when access is on but no app is monitored, and a battery
+  when access is on but no app is monitored, a "Monitoring paused" banner with a "Resume" action
+  while global monitoring is paused, and a battery
   optimization hint (opens the system battery-optimization list) appears when access is on, past
   first run, and the app is not exempt from battery optimization.
 * **System Trigger:** User opens the app.
@@ -155,7 +156,7 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **System Trigger:** User taps a rule row on the Rules screen.
 
 ### Settings
-* **User Experience:** The user reviews and manages which apps are monitored, checks whether notification access is still granted (re-enabling it if revoked), toggles data collection and app-icon display preferences, sets a notification retention period (30 days / 90 days / Never, auto-deleting older notifications on app start), and views a storage usage summary (database size, row counts per data type).
+* **User Experience:** A sectioned screen (Monitoring, Integrations, Appearance, Data, About). Monitoring: a **Pause monitoring** switch (same global state as the Quick Settings tile; Home shows a "Monitoring paused" banner with Resume), notification-access status (re-enable if revoked), the monitored-apps summary with a link to manage them, and a battery-optimization row that opens the system exemption prompt. Integrations: webhook management. Appearance: **Theme** (System / Light / Dark) and **Language** (System / English / Spanish), both applied live. Data: notification retention (30 days / 90 days / Forever, swept on app start and whenever the setting changes), a storage usage summary (database size, row counts per data type), and **Clear all data** behind a confirmation dialog. About: version, privacy policy link, and open-source licenses link.
 * **System Trigger:** User navigates to the Settings tab.
 
 ### Data Browser
@@ -178,9 +179,9 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ## Background Data Handling
 
-### Global Monitoring Pause (Quick Settings Tile)
-* **User Experience:** The user adds a Notificapp tile to their Android Quick Settings panel and taps it to instantly pause or resume all notification monitoring — a privacy kill switch reachable without opening the app. While paused, the tile shows "Paused" and freshly posted notifications are not captured, processed, or acted on at all (existing rules stay configured; they simply see nothing new until monitoring resumes).
-* **System Trigger:** User taps the Quick Settings tile, or the tile is displayed (it reads the current state on `onStartListening`).
+### Global Monitoring Pause (Quick Settings Tile, Settings, Home)
+* **User Experience:** The user adds a Notificapp tile to their Android Quick Settings panel and taps it to instantly pause or resume all notification monitoring — a privacy kill switch reachable without opening the app. The same global state is also controlled by the Pause monitoring switch in Settings, and Home shows a "Monitoring paused" banner with a Resume action. While paused, the tile shows "Paused" and freshly posted notifications are not captured, processed, or acted on at all (existing rules stay configured; they simply see nothing new until monitoring resumes).
+* **System Trigger:** User taps the Quick Settings tile, flips the Settings switch, taps Resume on Home, or the tile is displayed (it reads the current state on `onStartListening`).
 * **Technical Spec Reference:** `features/notification/MonitoringTileService.kt`, gated in `core/notification/ProcessNotificationUseCase.kt`.
 
 ### Automatic Notification Capture

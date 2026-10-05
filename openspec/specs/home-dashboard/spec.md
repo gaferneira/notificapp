@@ -40,6 +40,11 @@ Home SHALL show a centered progress indicator (with an accessibility description
 ### Requirement: Monitoring status banner
 Outside the first-run checklist, Home SHALL display a monitoring banner whose state is derived from the notification listener status, the enabled monitored apps (`SelectedAppRepository`), and the rule count (`RuleRepository`). The listener status SHALL be refreshed each time Home resumes, and a failure to read it (e.g. `SecurityException`) SHALL be treated as "access off" without crashing.
 
+#### Scenario: Paused monitoring shows a paused banner with a resume action
+- GIVEN global monitoring is paused (`monitoringPaused` is true)
+- WHEN Home renders outside first run
+- THEN the banner shows "Monitoring paused" in place of "Monitoring active" and offers a "Resume" action that sets `monitoringPaused` to false; a failed resume is logged without crashing
+
 #### Scenario: Access off shows a warning with an enable action
 - GIVEN notification access is not granted
 - WHEN Home renders outside first run

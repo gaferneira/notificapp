@@ -4,6 +4,7 @@ import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.model.StorageStats
 import dev.gaferneira.notificapp.domain.model.preferences.AppLanguage
 import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
+import dev.gaferneira.notificapp.domain.model.preferences.ThemePreference
 
 /**
  * Contract for the Settings screen.
@@ -21,10 +22,12 @@ object SettingsContract {
         val monitoredApps: List<SelectedApp> = emptyList(),
         /** Whether notification listener is active */
         val isNotificationListenerActive: Boolean = false,
-        /** Whether data collection is enabled */
-        val isCollectionEnabled: Boolean = true,
-        /** Whether to show app icons in lists */
-        val showAppIcons: Boolean = true,
+        /** Whether monitoring is globally paused (persisted; shared with the Quick Settings tile) */
+        val monitoringPaused: Boolean = false,
+        /** Whether the system exempts the app from battery optimizations */
+        val isIgnoringBatteryOptimizations: Boolean = true,
+        /** Preferred theme (system, light, dark) */
+        val themePreference: ThemePreference = ThemePreference.SYSTEM,
         /** Notification retention period (auto-delete window) */
         val retentionPeriod: RetentionPeriod = RetentionPeriod.NEVER,
         /** Preferred app language (system, English, Spanish) */
@@ -55,11 +58,17 @@ object SettingsContract {
         /** User clicked to manage webhooks */
         data object OnWebhooksClicked : UiEvent()
 
-        /** User toggled data collection */
-        data class OnCollectionToggled(val isEnabled: Boolean) : UiEvent()
+        /** User toggled the global pause-monitoring switch */
+        data class OnMonitoringPausedChanged(val paused: Boolean) : UiEvent()
 
-        /** User toggled show app icons preference */
-        data class OnShowAppIconsToggled(val isEnabled: Boolean) : UiEvent()
+        /** User picked a new theme from the selection dialog */
+        data class OnThemeChanged(val theme: ThemePreference) : UiEvent()
+
+        /** User asked to open the system battery optimization settings */
+        data object OnOpenBatterySettingsClicked : UiEvent()
+
+        /** User confirmed clearing all collected data (notifications, executions, extracted values) */
+        data object OnClearAllData : UiEvent()
 
         /** User picked a new retention period from the selection dialog */
         data class RetentionPeriodChanged(val period: RetentionPeriod) : UiEvent()
@@ -86,6 +95,15 @@ object SettingsContract {
 
         /** Navigate to the webhook list screen */
         data object NavigateToWebhookList : UiEffect()
+
+        /** Open the system battery optimization settings (UI launches the platform intent) */
+        data object OpenBatteryOptimizationSettings : UiEffect()
+
+        /** Collected data was cleared successfully */
+        data object DataCleared : UiEffect()
+
+        /** Clearing collected data failed */
+        data object ClearDataFailed : UiEffect()
 
         /** Show error message */
         data class ShowError(val message: String) : UiEffect()

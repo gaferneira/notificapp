@@ -129,6 +129,12 @@ interface NotificationRepository {
     suspend fun deleteByApp(packageName: String): Result<Unit>
 
     /**
+     * Delete every notification. Rule executions and extracted field values cascade
+     * (foreign keys), so all collected data goes; rules and monitored apps are untouched.
+     */
+    suspend fun deleteAll(): Result<Unit>
+
+    /**
      * Get the total count of notifications.
      */
     suspend fun getNotificationCount(): Result<Int>

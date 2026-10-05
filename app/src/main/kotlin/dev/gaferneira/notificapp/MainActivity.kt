@@ -2,6 +2,7 @@ package dev.gaferneira.notificapp
 
 import android.content.Context
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +19,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -52,6 +54,8 @@ import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.navigation.rememberNavigationState
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.core.ui.theme.isDarkTheme
+import dev.gaferneira.notificapp.domain.model.preferences.ThemePreference
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.appselection.ui.AppSelectionScreen
 import dev.gaferneira.notificapp.features.databrowser.ui.DataBrowserScreen
@@ -70,6 +74,7 @@ import dev.gaferneira.notificapp.util.isNotificationListenerEnabled
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.graphics.Color as AndroidColor
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -108,7 +113,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContent {
-            NotificappTheme {
+            val themePreference by userPreferencesRepository.observeTheme()
+                .collectAsStateWithLifecycle(initialValue = ThemePreference.SYSTEM)
+            val darkTheme = themePreference.isDarkTheme()
+
+            // Keep system bar icon contrast in sync with the forced theme (enableEdgeToEdge only follows the system).
+            DisposableEffect(darkTheme) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT) { darkTheme },
+                    navigationBarStyle = SystemBarStyle.auto(
+                        DefaultLightScrim,
+                        DefaultDarkScrim,
+                    ) { darkTheme },
+                )
+                onDispose {}
+            }
+
+            NotificappTheme(darkTheme = darkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
@@ -124,6 +145,10 @@ class MainActivity : AppCompatActivity() {
 
     private companion object {
         var hasEnforcedRetentionThisProcess = false
+
+        // Same scrims enableEdgeToEdge() uses by default for the 3-button navigation bar.
+        val DefaultLightScrim = AndroidColor.argb(0xe6, 0xFF, 0xFF, 0xFF)
+        val DefaultDarkScrim = AndroidColor.argb(0x80, 0x1b, 0x1b, 0x1b)
     }
 }
 

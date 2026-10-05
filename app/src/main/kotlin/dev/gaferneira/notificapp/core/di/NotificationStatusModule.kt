@@ -4,7 +4,9 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import dev.gaferneira.notificapp.core.notification.AndroidBatteryOptimizationStatusProvider
 import dev.gaferneira.notificapp.core.notification.AndroidNotificationListenerStatusProvider
+import dev.gaferneira.notificapp.domain.BatteryOptimizationStatusProvider
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 
 /**
@@ -22,4 +24,12 @@ internal abstract class NotificationStatusModule {
     abstract fun bindNotificationListenerStatusProvider(
         impl: AndroidNotificationListenerStatusProvider,
     ): NotificationListenerStatusProvider
+
+    /**
+     * Binds BatteryOptimizationStatusProvider interface to its PowerManager-backed implementation.
+     */
+    @Binds
+    abstract fun bindBatteryOptimizationStatusProvider(
+        impl: AndroidBatteryOptimizationStatusProvider,
+    ): BatteryOptimizationStatusProvider
 }

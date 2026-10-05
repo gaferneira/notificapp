@@ -164,18 +164,19 @@ fun findArchViolations(srcDir: File): List<ArchViolation> {
         }
     }
 
-    // Rule 9: hardcoded-string — user-facing text in the rule editor UI must come from string
+    // Rule 9: hardcoded-string — user-facing text in the rule editor and settings UI must come from string
     // resources (ADR 014), never a Kotlin literal. Matches `Text("...")` and common text named
     // args (text/title/subtitle/placeholder/contentDescription/...) whose literal contains a
     // word of 3+ letters or whitespace-separated prose. @Preview functions are skipped; a line
     // may opt out with a trailing `// i18n-ignore` (technical samples such as JSON snippets).
-    val ruleEditorUiDir = File(srcDir, "dev/gaferneira/notificapp/features/ruleeditor/ui")
-    if (ruleEditorUiDir.exists()) {
+    val hardcodedStringUiDirs =
+        listOf("ruleeditor", "settings").map { File(srcDir, "dev/gaferneira/notificapp/features/$it/ui") }
+    hardcodedStringUiDirs.filter { it.exists() }.forEach { uiDir ->
         val literalRegex =
             Regex(
                 """(?:\bText\(\s*|\b(?:text|title|subtitle|placeholder|contentDescription|supportingText|confirmLabel|description)\s*=\s*(?:\{\s*Text\(\s*)?|\blabel\s*=\s*\{\s*Text\(\s*)"([^"]*)"""",
             )
-        ktFiles(ruleEditorUiDir).filter { it.name != "RuleEditorPreviews.kt" }.forEach { f ->
+        ktFiles(uiDir).filter { it.name != "RuleEditorPreviews.kt" }.forEach { f ->
             var inPreview = false
             f.readLines().forEachIndexed { idx, line ->
                 val trimmed = line.trim()
@@ -222,7 +223,7 @@ val architectureCheck =
         description = "Fails on NEW violations of Notificapp architecture rules not covered by Detekt " +
             "(data-layer visibility, dispatcher injection, MVI effect collection, platform statics in " +
             "ViewModels/domain, domain/features dependency direction, unmapped repository exceptions, " +
-            "contract purity, design-system styling, hardcoded rule-editor UI strings, core -> features imports). Pre-existing violations are grandfathered in " +
+            "contract purity, design-system styling, hardcoded rule-editor/settings UI strings, core -> features imports). Pre-existing violations are grandfathered in " +
             "config/architecture/baseline.txt."
 
         val srcDir = file("src/main/kotlin")

@@ -20,6 +20,7 @@ data class HomeUiState(
 @Immutable
 data class MonitoringStatus(
     val isListenerEnabled: Boolean = false,
+    val isPaused: Boolean = false,
     val monitoredAppCount: Int = 0,
     val ruleCount: Int = 0,
 )
@@ -66,6 +67,7 @@ sealed interface HomeEvent {
     data class OnSkipSimilar(val suggestion: RecurringSuggestionUi) : HomeEvent
     data class OnRecentActivityClick(val notificationId: String) : HomeEvent
     data object OnSeeAllActivity : HomeEvent
+    data object OnResumeMonitoring : HomeEvent
 }
 
 sealed interface HomeEffect {

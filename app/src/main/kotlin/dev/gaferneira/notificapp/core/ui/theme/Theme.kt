@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import dev.gaferneira.notificapp.domain.model.preferences.ThemePreference
 
 private val DarkColorScheme = darkColorScheme(
     primary = DeepTechPrimaryDark,
@@ -56,6 +57,14 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant = DeepTechOnSurfaceVariantLight,
     outline = DeepTechOutlineLight,
 )
+
+/** Resolves whether the dark scheme applies: SYSTEM follows the device, LIGHT/DARK force it. */
+@Composable
+fun ThemePreference.isDarkTheme(): Boolean = when (this) {
+    ThemePreference.SYSTEM -> isSystemInDarkTheme()
+    ThemePreference.LIGHT -> false
+    ThemePreference.DARK -> true
+}
 
 @Composable
 fun NotificappTheme(

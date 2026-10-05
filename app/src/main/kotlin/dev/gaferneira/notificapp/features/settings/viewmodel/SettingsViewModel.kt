@@ -4,12 +4,14 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.core.di.SettingsDataActions
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
+import dev.gaferneira.notificapp.domain.BatteryOptimizationStatusProvider
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.domain.model.preferences.AppLanguage
 import dev.gaferneira.notificapp.domain.model.preferences.RetentionPeriod
+import dev.gaferneira.notificapp.domain.model.preferences.ThemePreference
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
-import dev.gaferneira.notificapp.domain.repository.StorageStatsRepository
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEffect
 import dev.gaferneira.notificapp.features.settings.contract.SettingsContract.UiEvent
@@ -32,7 +34,8 @@ class SettingsViewModel @Inject constructor(
     private val listenerStatus: NotificationListenerStatusProvider,
     private val selectedAppRepository: SelectedAppRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
-    private val storageStatsRepository: StorageStatsRepository,
+    private val batteryOptimizationStatus: BatteryOptimizationStatusProvider,
+    private val dataActions: SettingsDataActions,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
@@ -40,6 +43,9 @@ class SettingsViewModel @Inject constructor(
         observeSettings()
         observeRetentionPeriod()
         observeAppLanguage()
+        observeTheme()
+        observeMonitoringPaused()
+        checkBatteryOptimizationStatus()
         loadStorageStats()
     }
 
@@ -51,12 +57,10 @@ class SettingsViewModel @Inject constructor(
             is UiEvent.OnWebhooksClicked -> {
                 sendEffect(UiEffect.NavigateToWebhookList)
             }
-            is UiEvent.OnCollectionToggled -> {
-                setState { copy(isCollectionEnabled = event.isEnabled) }
-            }
-            is UiEvent.OnShowAppIconsToggled -> {
-                setState { copy(showAppIcons = event.isEnabled) }
-            }
+            is UiEvent.OnMonitoringPausedChanged -> setMonitoringPaused(event.paused)
+            is UiEvent.OnThemeChanged -> setTheme(event.theme)
+            is UiEvent.OnOpenBatterySettingsClicked -> sendEffect(UiEffect.OpenBatteryOptimizationSettings)
+            is UiEvent.OnClearAllData -> clearAllData()
             is UiEvent.RetentionPeriodChanged -> setRetentionPeriod(event.period)
             is UiEvent.AppLanguageChanged -> setAppLanguage(event.language)
             is UiEvent.OnRefresh -> {
@@ -66,7 +70,10 @@ class SettingsViewModel @Inject constructor(
             is UiEvent.OnDismissError -> {
                 setState { copy(error = null) }
             }
-            is UiEvent.OnResume -> checkListenerStatus()
+            is UiEvent.OnResume -> {
+                checkListenerStatus()
+                checkBatteryOptimizationStatus()
+            }
         }
     }
 
@@ -92,7 +99,63 @@ class SettingsViewModel @Inject constructor(
     private fun setRetentionPeriod(period: RetentionPeriod) {
         viewModelScope.launch(ioDispatcher) {
             userPreferencesRepository.setRetentionPeriod(period)
+                .onSuccess { dataActions.enforceRetention() }
                 .onFailure { e -> Timber.e(e, "Failed to set retention period") }
+            // Retention shrank the data set; refresh the storage snapshot.
+            loadStorageStats()
+        }
+    }
+
+    private fun observeTheme() {
+        viewModelScope.launch {
+            userPreferencesRepository.observeTheme()
+                .flowOn(ioDispatcher)
+                .catch { e -> Timber.e(e, "Error observing theme") }
+                .collect { theme -> setState { copy(themePreference = theme) } }
+        }
+    }
+
+    private fun setTheme(theme: ThemePreference) {
+        viewModelScope.launch(ioDispatcher) {
+            userPreferencesRepository.setTheme(theme)
+                .onFailure { e -> Timber.e(e, "Failed to set theme") }
+        }
+    }
+
+    private fun observeMonitoringPaused() {
+        viewModelScope.launch {
+            userPreferencesRepository.observeMonitoringPaused()
+                .flowOn(ioDispatcher)
+                .catch { e -> Timber.e(e, "Error observing monitoring paused") }
+                .collect { paused -> setState { copy(monitoringPaused = paused) } }
+        }
+    }
+
+    private fun setMonitoringPaused(paused: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            userPreferencesRepository.setMonitoringPaused(paused)
+                .onFailure { e -> Timber.e(e, "Failed to set monitoring paused") }
+        }
+    }
+
+    private fun checkBatteryOptimizationStatus() {
+        viewModelScope.launch(ioDispatcher) {
+            setState { copy(isIgnoringBatteryOptimizations = batteryOptimizationStatus.isIgnoringBatteryOptimizations()) }
+        }
+    }
+
+    /** Clears collected data (not rules or monitored apps), then refreshes the storage snapshot. */
+    private fun clearAllData() {
+        viewModelScope.launch(ioDispatcher) {
+            dataActions.clearCollectedData()
+                .onSuccess {
+                    sendEffect(UiEffect.DataCleared)
+                    loadStorageStats()
+                }
+                .onFailure { e ->
+                    Timber.e(e, "Failed to clear collected data")
+                    sendEffect(UiEffect.ClearDataFailed)
+                }
         }
     }
 
@@ -128,7 +191,7 @@ class SettingsViewModel @Inject constructor(
      */
     private fun loadStorageStats() {
         viewModelScope.launch(ioDispatcher) {
-            storageStatsRepository.getStorageStats()
+            dataActions.storageStatsRepository.getStorageStats()
                 .onSuccess { stats -> setState { copy(storageStats = stats) } }
                 .onFailure { e -> Timber.e(e, "Failed to load storage stats") }
         }

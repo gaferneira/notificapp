@@ -79,3 +79,17 @@ The system SHALL allow deletion to proceed independently of an in-progress expor
 - GIVEN an export of the filtered dataset is currently reading data
 - WHEN the user deletes an entry from that same filtered set
 - THEN the delete completes successfully and does not deadlock or wait indefinitely on the export
+
+### Requirement: Clear all collected data
+
+The system SHALL provide a "Clear all data" action in Settings, behind a confirmation dialog, that deletes all captured notifications together with their rule executions and extracted values (via foreign-key cascades). Rules, webhooks, and monitored apps SHALL NOT be deleted. On success storage statistics SHALL refresh and a confirmation message SHALL be shown; on failure an error message SHALL be shown and no refresh occurs.
+
+#### Scenario: Confirming clears collected data but keeps configuration
+- GIVEN notifications, executions, extracted values, rules, and monitored apps exist
+- WHEN the user confirms "Clear all data"
+- THEN notifications, executions, and extracted values are gone while rules and monitored apps remain
+
+#### Scenario: Cancelling the dialog changes nothing
+- GIVEN the confirmation dialog is shown
+- WHEN the user cancels
+- THEN no data is deleted

@@ -7,4 +7,5 @@ package dev.gaferneira.notificapp.core.ui
  */
 object AppLinks {
     const val PRIVACY_POLICY_URL = "https://github.com/gaferneira/notificapp/blob/main/PRIVACY.md"
+    const val OPEN_SOURCE_LICENSES_URL = "https://github.com/gaferneira/notificapp/blob/main/THIRD_PARTY_LICENSES.md"
 }

@@ -57,6 +57,25 @@ class NotificationRepositoryImplTest {
     }
 
     @Test
+    fun `deleteAll delegates to the dao`() = runTest(testDispatcher) {
+        coEvery { dao.deleteAll() } returns Unit
+
+        val result = repository.deleteAll()
+
+        result.isSuccess shouldBe true
+        coVerify(exactly = 1) { dao.deleteAll() }
+    }
+
+    @Test
+    fun `deleteAll maps a dao exception to Result_failure without throwing`() = runTest(testDispatcher) {
+        coEvery { dao.deleteAll() } throws SQLException("db locked")
+
+        val result = repository.deleteAll()
+
+        result.isFailure shouldBe true
+    }
+
+    @Test
     fun `getNotification returns null when the dao has no matching row`() = runTest(testDispatcher) {
         coEvery { dao.getById("missing") } returns null
 

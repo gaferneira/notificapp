@@ -22,6 +22,7 @@ import dev.gaferneira.notificapp.features.home.contract.RecurringSuggestionUi
 import dev.gaferneira.notificapp.features.home.contract.WeekStats
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import dev.gaferneira.notificapp.testutil.createTestRule
+import dev.gaferneira.notificapp.testutil.fakes.FakeUserPreferencesRepository
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
@@ -57,12 +58,14 @@ class HomeViewModelTest {
     private lateinit var ruleExecutionRepository: RuleExecutionRepository
     private lateinit var notificationRepository: NotificationRepository
     private lateinit var suggestionDismissalRepository: SuggestionDismissalRepository
+    private lateinit var userPreferencesRepository: FakeUserPreferencesRepository
     private lateinit var dismissalsFlow: MutableStateFlow<Set<dev.gaferneira.notificapp.domain.model.SuggestionDismissalKey>>
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         dismissalsFlow = MutableStateFlow(emptySet())
+        userPreferencesRepository = FakeUserPreferencesRepository()
         ruleRepository = mockk {
             every { observeAllRules() } returns flowOf(emptyList())
         }
@@ -101,8 +104,44 @@ class HomeViewModelTest {
         dataSources = createDataSources(),
         recurringNotificationSuggester = RecurringNotificationSuggester(),
         listenerStatus = NotificationListenerStatusProvider { listenerEnabled },
+        userPreferencesRepository = userPreferencesRepository,
         ioDispatcher = testDispatcher,
     )
+
+    @Nested
+    inner class PausedStateTests {
+
+        @Test
+        fun `monitoring is not paused by default`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.monitoring.isPaused shouldBe false
+        }
+
+        @Test
+        fun `stored paused preference is reflected in monitoring status`() = runTest(testDispatcher) {
+            userPreferencesRepository.setMonitoringPaused(true)
+
+            val viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.monitoring.isPaused shouldBe true
+        }
+
+        @Test
+        fun `OnResumeMonitoring clears the paused flag and the state follows`() = runTest(testDispatcher) {
+            userPreferencesRepository.setMonitoringPaused(true)
+            val viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(HomeEvent.OnResumeMonitoring)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            userPreferencesRepository.current().monitoringPaused shouldBe false
+            viewModel.uiState.value.monitoring.isPaused shouldBe false
+        }
+    }
 
     @Nested
     inner class SectionSelectionTests {
@@ -236,6 +275,7 @@ class HomeViewModelTest {
                 dataSources = createDataSources(),
                 recurringNotificationSuggester = RecurringNotificationSuggester(),
                 listenerStatus = NotificationListenerStatusProvider { enabled },
+                userPreferencesRepository = userPreferencesRepository,
                 ioDispatcher = testDispatcher,
             )
             testDispatcher.scheduler.advanceUntilIdle()
@@ -471,6 +511,7 @@ class HomeViewModelTest {
                 dataSources = createDataSources(),
                 recurringNotificationSuggester = RecurringNotificationSuggester(),
                 listenerStatus = NotificationListenerStatusProvider { throw SecurityException("denied") },
+                userPreferencesRepository = userPreferencesRepository,
                 ioDispatcher = testDispatcher,
             )
             testDispatcher.scheduler.advanceUntilIdle()

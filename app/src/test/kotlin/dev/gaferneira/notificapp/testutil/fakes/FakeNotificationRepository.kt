@@ -133,6 +133,11 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
         return Result.success(Unit)
     }
 
+    override suspend fun deleteAll(): Result<Unit> {
+        notifications.value = emptyList()
+        return Result.success(Unit)
+    }
+
     override suspend fun deleteByApp(packageName: String): Result<Unit> {
         notifications.update { list -> list.filterNot { it.packageName == packageName } }
         return Result.success(Unit)

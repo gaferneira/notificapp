@@ -199,6 +199,16 @@ internal class NotificationRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun deleteAll(): Result<Unit> = withContext(ioDispatcher) {
+        try {
+            dao.deleteAll()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to delete all notifications")
+            e.toFailureResult()
+        }
+    }
+
     override suspend fun deleteByApp(packageName: String): Result<Unit> = withContext(ioDispatcher) {
         try {
             dao.deleteByPackageName(packageName)

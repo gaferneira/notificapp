@@ -193,8 +193,11 @@ internal fun HomeScreenContent(
                 uiState = uiState,
                 showBatteryHint = isBatteryOptimized && !isFirstRun,
                 navigateTo = navigateTo,
-                onEnableAccess = onEnableAccess,
-                onOpenBatterySettings = onOpenBatterySettings,
+                actions = StatusActions(
+                    onEnableAccess = onEnableAccess,
+                    onOpenBatterySettings = onOpenBatterySettings,
+                    onResumeMonitoring = { onEvent(HomeEvent.OnResumeMonitoring) },
+                ),
             )
 
             item {
@@ -225,25 +228,31 @@ private fun LazyListScope.activityItems(uiState: HomeUiState, onEvent: (HomeEven
     }
 }
 
+private class StatusActions(
+    val onEnableAccess: () -> Unit,
+    val onOpenBatterySettings: () -> Unit,
+    val onResumeMonitoring: () -> Unit,
+)
+
 /** Monitoring banner and battery hint; the first-run checklist already reports access/apps status itself. */
 private fun LazyListScope.statusItems(
     uiState: HomeUiState,
     showBatteryHint: Boolean,
     navigateTo: (Screen, NavOptions?) -> Unit,
-    onEnableAccess: () -> Unit,
-    onOpenBatterySettings: () -> Unit,
+    actions: StatusActions,
 ) {
     if (uiState.section !is HomeSection.StarterRules) {
         item {
             MonitoringStatusBanner(
                 monitoring = uiState.monitoring,
+                onResumeMonitoring = actions.onResumeMonitoring,
                 onManageApps = { navigateTo(Routes.appSelection(), null) },
-                onEnableAccess = onEnableAccess,
+                onEnableAccess = actions.onEnableAccess,
             )
         }
     }
     if (showBatteryHint && uiState.monitoring.isListenerEnabled) {
-        item { BatteryHintCard(onOpenSettings = onOpenBatterySettings) }
+        item { BatteryHintCard(onOpenSettings = actions.onOpenBatterySettings) }
     }
 }
 
@@ -387,10 +396,12 @@ private fun HomeTopBar() {
 @Composable
 private fun MonitoringStatusBanner(
     monitoring: MonitoringStatus,
+    onResumeMonitoring: () -> Unit,
     onManageApps: () -> Unit,
     onEnableAccess: () -> Unit,
 ) {
     when {
+        monitoring.isPaused -> PausedBanner(onResume = onResumeMonitoring)
         !monitoring.isListenerEnabled -> AccessOffBanner(onEnableAccess = onEnableAccess)
         monitoring.monitoredAppCount == 0 -> NoAppsBanner(onManageApps = onManageApps)
         else -> ActiveMonitoringBanner(monitoring = monitoring, onManageApps = onManageApps)
@@ -404,6 +415,18 @@ private fun AccessOffBanner(onEnableAccess: () -> Unit) {
         description = stringResource(R.string.home_banner_access_off_description),
         buttonText = stringResource(R.string.home_banner_enable_access_button),
         onClick = onEnableAccess,
+    )
+}
+
+/** Monitoring is globally paused: nothing is captured until the user resumes. */
+@Composable
+private fun PausedBanner(onResume: () -> Unit) {
+    val message = stringResource(R.string.home_banner_monitoring_paused)
+    WarningBanner(
+        message = message,
+        description = message,
+        buttonText = stringResource(R.string.home_banner_monitoring_paused_resume),
+        onClick = onResume,
     )
 }
 

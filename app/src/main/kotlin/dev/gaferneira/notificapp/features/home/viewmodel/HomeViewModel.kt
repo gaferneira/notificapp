@@ -13,6 +13,9 @@ import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RecurringSuggestion
+import dev.gaferneira.notificapp.domain.model.Rule
+import dev.gaferneira.notificapp.domain.model.SelectedApp
+import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.home.contract.HomeEffect
 import dev.gaferneira.notificapp.features.home.contract.HomeEvent
 import dev.gaferneira.notificapp.features.home.contract.HomeSection
@@ -43,6 +46,7 @@ class HomeViewModel @Inject constructor(
     private val dataSources: HomeDataSources,
     private val recurringNotificationSuggester: RecurringNotificationSuggester,
     private val listenerStatus: NotificationListenerStatusProvider,
+    private val userPreferencesRepository: UserPreferencesRepository,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MviViewModel<HomeUiState, HomeEvent, HomeEffect>(HomeUiState()) {
 
@@ -81,6 +85,7 @@ class HomeViewModel @Inject constructor(
             is HomeEvent.OnSkipSimilar -> onSkipSimilar(event.suggestion)
             is HomeEvent.OnRecentActivityClick -> sendEffect(HomeEffect.NavigateToNotificationDetail(event.notificationId))
             HomeEvent.OnSeeAllActivity -> sendEffect(HomeEffect.NavigateToInbox)
+            HomeEvent.OnResumeMonitoring -> resumeMonitoring()
         }
     }
 
@@ -101,8 +106,9 @@ class HomeViewModel @Inject constructor(
             rulesFlow,
             selectedAppRepository.observeEnabledApps(),
             isListenerEnabled,
-        ) { rules, enabledApps, listenerEnabled ->
-            Triple(rules, enabledApps, listenerEnabled)
+            userPreferencesRepository.observeMonitoringPaused(),
+        ) { rules, enabledApps, listenerEnabled, paused ->
+            HomeStatus(rules, enabledApps, listenerEnabled, paused)
         }
 
         val statsFlow = observeStats(weekStart)
@@ -122,15 +128,16 @@ class HomeViewModel @Inject constructor(
 
         observeJob = viewModelScope.launch {
             combine(statusFlow, statsFlow, suggestionsFlow) {
-                    (rules, enabledApps, listenerEnabled),
+                    status,
                     stats,
                     suggestions,
                 ->
                 buildState(
                     HomeStateParams(
-                        ruleCount = rules.size,
-                        monitoredAppCount = enabledApps.size,
-                        listenerEnabled = listenerEnabled,
+                        ruleCount = status.rules.size,
+                        monitoredAppCount = status.enabledApps.size,
+                        listenerEnabled = status.listenerEnabled,
+                        paused = status.paused,
                         rulesFired = stats.rulesFired,
                         appsActive = stats.appsActive,
                         recentActivity = stats.recentActivity,
@@ -166,6 +173,13 @@ class HomeViewModel @Inject constructor(
                     Timber.e(e, "Failed to dismiss suggestion: ${suggestion.packageName} / ${suggestion.normalizedTitleKey}")
                     sendEffect(HomeEffect.ShowError(UiText.StringResource(R.string.home_error_dismiss_suggestion)))
                 }
+        }
+    }
+
+    private fun resumeMonitoring() {
+        viewModelScope.launch(ioDispatcher) {
+            userPreferencesRepository.setMonitoringPaused(false)
+                .onFailure { e -> Timber.e(e, "Failed to resume monitoring") }
         }
     }
 
@@ -215,6 +229,13 @@ private fun RecentActivity.toUi(): RecentActivityUi = RecentActivityUi(
     appName = appName,
 )
 
+private data class HomeStatus(
+    val rules: List<Rule>,
+    val enabledApps: List<SelectedApp>,
+    val listenerEnabled: Boolean,
+    val paused: Boolean,
+)
+
 private data class HomeStats(
     val rulesFired: Int,
     val appsActive: Int,
@@ -226,6 +247,7 @@ private data class HomeStateParams(
     val ruleCount: Int,
     val monitoredAppCount: Int,
     val listenerEnabled: Boolean,
+    val paused: Boolean,
     val rulesFired: Int,
     val appsActive: Int,
     val recentActivity: List<RecentActivity>,
@@ -243,6 +265,7 @@ private fun buildHomeUiState(params: HomeStateParams): HomeUiState {
     return HomeUiState(
         monitoring = MonitoringStatus(
             isListenerEnabled = params.listenerEnabled,
+            isPaused = params.paused,
             monitoredAppCount = params.monitoredAppCount,
             ruleCount = params.ruleCount,
         ),
