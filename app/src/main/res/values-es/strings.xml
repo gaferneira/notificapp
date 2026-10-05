@@ -137,10 +137,28 @@
     <string name="rule_details_retry">Reintentar</string>
     <string name="rule_details_share_chooser_title">Compartir regla</string>
     <string name="rule_details_active_label">Regla activa</string>
-    <string name="rule_details_section_apps">Aplicaciones</string>
     <string name="rule_details_scope_all">Todas las aplicaciones</string>
     <string name="rule_details_scope_include">Solo estas aplicaciones</string>
     <string name="rule_details_scope_exclude">Todas las aplicaciones excepto</string>
+    <string name="rule_details_section_summary">Resumen</string>
+    <string name="rule_summary_action_disabled">%1$s (desactivada)</string>
+    <plurals name="rule_details_scope_more_apps">
+        <item quantity="one">+%d más</item>
+        <item quantity="many">+%d más</item>
+        <item quantity="other">+%d más</item>
+    </plurals>
+    <string name="rule_details_section_expand_cd">Expandir %1$s</string>
+    <string name="rule_details_section_collapse_cd">Contraer %1$s</string>
+    <plurals name="rule_details_when_count">
+        <item quantity="one">%d condición</item>
+        <item quantity="many">%d de condiciones</item>
+        <item quantity="other">%d condiciones</item>
+    </plurals>
+    <plurals name="rule_details_do_count">
+        <item quantity="one">%d acción</item>
+        <item quantity="many">%d de acciones</item>
+        <item quantity="other">%d acciones</item>
+    </plurals>
     <string name="rule_details_section_when">Cuando</string>
     <string name="rule_details_logic_all">Deben cumplirse todas las condiciones</string>
     <string name="rule_details_logic_any">Basta con que se cumpla una condición</string>
@@ -433,19 +451,19 @@
 
     <!-- Rule editor: review summary -->
     <string name="rule_editor_summary_title">Resumen</string>
-    <string name="rule_editor_summary_no_conditions">Cuando llegue una notificación de %1$s, entonces %2$s.</string>
-    <string name="rule_editor_summary_with_conditions">Cuando una notificación de %1$s %2$s, entonces %3$s.</string>
-    <string name="rule_editor_summary_scope_all">cualquier app</string>
-    <string name="rule_editor_summary_scope_except">cualquier app excepto %1$s</string>
-    <plurals name="rule_editor_summary_apps_count">
+    <string name="rule_summary_no_conditions">Cuando llegue una notificación de %1$s, entonces %2$s.</string>
+    <string name="rule_summary_with_conditions">Cuando una notificación de %1$s %2$s, entonces %3$s.</string>
+    <string name="rule_summary_scope_all">cualquier app</string>
+    <string name="rule_summary_scope_except">cualquier app excepto %1$s</string>
+    <plurals name="rule_summary_apps_count">
         <item quantity="one">%d app</item>
         <item quantity="many">%d de apps</item>
         <item quantity="other">%d apps</item>
     </plurals>
-    <string name="rule_editor_summary_match_single">cumple %1$s</string>
-    <string name="rule_editor_summary_match_all">cumple todas estas condiciones: %1$s</string>
-    <string name="rule_editor_summary_match_any">cumple alguna de estas condiciones: %1$s</string>
-    <string name="rule_editor_summary_no_actions">todavía no ocurre nada</string>
+    <string name="rule_summary_match_single">cumple %1$s</string>
+    <string name="rule_summary_match_all">cumple todas estas condiciones: %1$s</string>
+    <string name="rule_summary_match_any">cumple alguna de estas condiciones: %1$s</string>
+    <string name="rule_summary_no_actions">todavía no ocurre nada</string>
     <string name="rule_editor_summary_actions_run">Las acciones se ejecutarán.</string>
     <string name="rule_editor_summary_record_only">El modo de prueba está activado: se registran las coincidencias, pero no se ejecuta ninguna acción.</string>
     <string name="rule_editor_advanced_state_test_on">Modo de prueba activado</string>
@@ -672,8 +690,8 @@
     <string name="advanced_settings_title">Ajustes avanzados</string>
     <string name="advanced_settings_collapse_cd">Contraer ajustes avanzados</string>
     <string name="advanced_settings_expand_cd">Expandir ajustes avanzados</string>
-    <string name="advanced_settings_state_expanded">Expandido</string>
-    <string name="advanced_settings_state_collapsed">Contraído</string>
+    <string name="expandable_state_expanded">Expandido</string>
+    <string name="expandable_state_collapsed">Contraído</string>
     <string name="notification_preview_no_content">(sin contenido)</string>
     <string name="notification_preview_field_chip">%1$s: %2$s</string>
     <string name="template_bank_payment_name">Seguimiento de pagos bancarios</string>

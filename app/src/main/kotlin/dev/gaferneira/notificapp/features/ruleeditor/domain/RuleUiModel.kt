@@ -7,7 +7,9 @@ import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.RuleSummary
 import dev.gaferneira.notificapp.domain.model.saveDataFields
+import dev.gaferneira.notificapp.domain.model.toSummary
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
@@ -65,6 +67,9 @@ data class RuleUiModel(
         targetApps = targetApps,
         isIncludeMode = isIncludeMode,
     )
+
+    /** Plain-language summary of the draft (enabled actions only), built by the shared domain builder. */
+    fun toSummary(): RuleSummary = toEntity().toSummary(includeDisabledActions = false)
 
     /**
      * Attach the draft [fields] to the `SAVE_DATA` action, creating one if the draft has fields

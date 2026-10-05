@@ -27,7 +27,6 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorStep
 import dev.gaferneira.notificapp.features.ruleeditor.domain.shouldAutoFocusName
-import dev.gaferneira.notificapp.features.ruleeditor.domain.toSummary
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.StepIndicator
 
 /**

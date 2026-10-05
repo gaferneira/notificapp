@@ -1,7 +1,9 @@
 package dev.gaferneira.notificapp.features.ruledetails.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,17 +19,23 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
-import dev.gaferneira.notificapp.core.ui.components.AppIcon
 import dev.gaferneira.notificapp.core.ui.components.DryRunBadge
+import dev.gaferneira.notificapp.core.ui.components.ExpandableHeader
+import dev.gaferneira.notificapp.core.ui.components.RuleSummaryText
 import dev.gaferneira.notificapp.core.ui.components.StatusPill
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
 import dev.gaferneira.notificapp.core.ui.utils.getCategoryIcon
@@ -41,6 +49,8 @@ import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleStats
+import dev.gaferneira.notificapp.domain.model.toSummary
+import dev.gaferneira.notificapp.features.ruledetails.domain.sectionCollapseDefaults
 import dev.gaferneira.notificapp.features.ruleeditor.domain.ui
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.displayText
 import kotlinx.collections.immutable.persistentListOf
@@ -48,7 +58,7 @@ import java.text.DateFormat
 import java.util.Date
 
 /**
- * Read-only body of the rule details screen: header, statistics, app scope, WHEN, DO and metadata cards.
+ * Read-only body of the rule details screen: header, statistics, plain-language summary with app scope, collapsible WHEN and DO details, and metadata cards.
  */
 @Composable
 internal fun RuleDetailsContent(
@@ -58,6 +68,7 @@ internal fun RuleDetailsContent(
     onGoLive: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val collapseDefaults = remember(rule.conditions, rule.actions) { rule.sectionCollapseDefaults() }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -70,9 +81,9 @@ internal fun RuleDetailsContent(
         if (stats != null) {
             item { RuleStatsCard(stats = stats, isDryRun = rule.isDryRun) }
         }
-        item { RuleScopeCard(rule = rule) }
-        item { RuleWhenCard(rule = rule) }
-        item { RuleDoCard(rule = rule) }
+        item { RuleSummaryCard(rule = rule) }
+        item { RuleWhenCard(rule = rule, defaultCollapsed = collapseDefaults.whenCollapsed) }
+        item { RuleDoCard(rule = rule, defaultCollapsed = collapseDefaults.doCollapsed) }
         item { RuleMetadataCard(rule = rule) }
     }
 }
@@ -141,51 +152,49 @@ internal fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun RuleScopeCard(rule: Rule) {
-    val apps = rule.targetApps
+private fun RuleSummaryCard(rule: Rule) {
+    val summary = remember(rule) { rule.toSummary(includeDisabledActions = true) }
     TonalCard {
-        SectionTitle(stringResource(R.string.rule_details_section_apps))
-        if (apps.isNullOrEmpty()) {
-            Text(
-                text = stringResource(R.string.rule_details_scope_all),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        } else {
-            Text(
-                text = stringResource(
-                    if (rule.isIncludeMode) R.string.rule_details_scope_include else R.string.rule_details_scope_exclude,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-            apps.forEach { app -> AppRow(app = app) }
+        SectionTitle(stringResource(R.string.rule_details_section_summary))
+        RuleSummaryText(summary = summary)
+        RuleScopeChips(scope = summary.scope, modifier = Modifier.padding(top = 12.dp))
+    }
+}
+
+/** Collapsible detail section: an accessible header row ([ExpandableHeader]) over [content]. */
+@Composable
+private fun CollapsibleDetailSection(
+    title: String,
+    count: String,
+    defaultCollapsed: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    var expanded by rememberSaveable(title, defaultCollapsed) { mutableStateOf(!defaultCollapsed) }
+    TonalCard {
+        ExpandableHeader(
+            title = title,
+            summary = count,
+            expanded = expanded,
+            actionLabel = stringResource(
+                if (expanded) R.string.rule_details_section_collapse_cd else R.string.rule_details_section_expand_cd,
+                title,
+            ),
+            titleColor = MaterialTheme.colorScheme.primary,
+            onClick = { expanded = !expanded },
+        )
+        AnimatedVisibility(visible = expanded) {
+            Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), content = content)
         }
     }
 }
 
 @Composable
-private fun AppRow(app: AppInfo) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+private fun RuleWhenCard(rule: Rule, defaultCollapsed: Boolean) {
+    CollapsibleDetailSection(
+        title = stringResource(R.string.rule_details_section_when),
+        count = pluralStringResource(R.plurals.rule_details_when_count, rule.conditions.size, rule.conditions.size),
+        defaultCollapsed = defaultCollapsed,
     ) {
-        AppIcon(packageName = app.packageName, appName = app.name, size = 32.dp)
-        Text(
-            text = app.name,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun RuleWhenCard(rule: Rule) {
-    TonalCard {
-        SectionTitle(stringResource(R.string.rule_details_section_when))
         if (rule.conditions.isEmpty()) {
             Text(
                 text = stringResource(R.string.rule_details_no_conditions),
@@ -219,9 +228,12 @@ private fun RuleWhenCard(rule: Rule) {
 }
 
 @Composable
-private fun RuleDoCard(rule: Rule) {
-    TonalCard {
-        SectionTitle(stringResource(R.string.rule_details_section_do))
+private fun RuleDoCard(rule: Rule, defaultCollapsed: Boolean) {
+    CollapsibleDetailSection(
+        title = stringResource(R.string.rule_details_section_do),
+        count = pluralStringResource(R.plurals.rule_details_do_count, rule.actions.size, rule.actions.size),
+        defaultCollapsed = defaultCollapsed,
+    ) {
         if (rule.actions.isEmpty()) {
             Text(
                 text = stringResource(R.string.rule_details_no_actions),

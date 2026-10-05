@@ -3,8 +3,9 @@ package dev.gaferneira.notificapp.features.ruleeditor.domain
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.ConditionCombinator
-import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleSummary.AppScope
-import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleSummary.ConditionMatch
+import dev.gaferneira.notificapp.domain.model.RuleSummary
+import dev.gaferneira.notificapp.domain.model.RuleSummary.AppScope
+import dev.gaferneira.notificapp.domain.model.RuleSummary.ConditionMatch
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestCondition
 import io.kotest.matchers.shouldBe
@@ -28,7 +29,8 @@ class RuleSummaryTest {
             targetApps = persistentListOf(AppInfo("com.a", "App A"), AppInfo("com.b", "")),
         )
 
-        rule.toSummary().scope shouldBe AppScope.Only(listOf("App A", "com.b"))
+        rule.toSummary().scope.appNames shouldBe listOf("App A", "com.b")
+        rule.toSummary().scope::class shouldBe AppScope.Only::class
     }
 
     @Test
@@ -38,7 +40,7 @@ class RuleSummaryTest {
             isIncludeMode = false,
         )
 
-        rule.toSummary().scope shouldBe AppScope.Except(listOf("App A"))
+        rule.toSummary().scope shouldBe AppScope.Except(listOf(AppInfo("com.a", "App A")))
     }
 
     @Test
@@ -74,7 +76,7 @@ class RuleSummaryTest {
             ),
         )
 
-        rule.toSummary().actions shouldBe listOf(ActionType.DISMISS_NOTIFICATION, ActionType.SAVE_DATA)
+        rule.toSummary().actions.map { it.type } shouldBe listOf(ActionType.DISMISS_NOTIFICATION, ActionType.SAVE_DATA)
     }
 
     @Test
