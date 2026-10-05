@@ -120,10 +120,12 @@ fun MatchingLogicBottomSheet(
         }
     }
 
-    val title = when (uiState.mode) {
-        MatchingLogicContract.UiState.Mode.EDIT -> "Edit Condition"
-        MatchingLogicContract.UiState.Mode.ADD -> "Add Condition"
-    }
+    val title = stringResource(
+        when (uiState.mode) {
+            MatchingLogicContract.UiState.Mode.EDIT -> R.string.matching_logic_title_edit
+            MatchingLogicContract.UiState.Mode.ADD -> R.string.matching_logic_title_add
+        },
+    )
 
     ModalBottomSheet(
         onDismissRequest = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnDismiss) },
@@ -178,7 +180,7 @@ private fun ConditionForm(
 
         // Description
         Text(
-            text = "Define the condition under which this rule should trigger.",
+            text = stringResource(R.string.matching_logic_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -195,7 +197,7 @@ private fun ConditionForm(
         // Validation error
         uiState.validationError?.let { error ->
             Text(
-                text = error,
+                text = error.asString(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier
@@ -264,7 +266,7 @@ private fun ConditionSheetButtons(isEdit: Boolean, onCancel: () -> Unit, onConfi
                 .heightIn(min = 48.dp),
             shape = RoundedCornerShape(12.dp),
         ) {
-            Text(if (isEdit) "Update" else "Add")
+            Text(stringResource(if (isEdit) R.string.rule_editor_action_update else R.string.rule_editor_action_add))
         }
     }
 }
@@ -305,7 +307,7 @@ private fun ConditionModeContent(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             MatchingDropdown(
-                label = "Condition",
+                label = stringResource(R.string.rule_editor_condition),
                 selected = condition,
                 options = MatchingCondition.entries.toList(),
                 onSelect = onConditionChange,
@@ -314,7 +316,7 @@ private fun ConditionModeContent(
             )
 
             MatchingDropdown(
-                label = "Operator",
+                label = stringResource(R.string.rule_editor_operator),
                 selected = operator,
                 options = MatchingOperator.entries.toList(),
                 onSelect = onOperatorChange,
@@ -329,8 +331,8 @@ private fun ConditionModeContent(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text("Value to match") },
-            placeholder = { Text("e.g., Your purchase") },
+            label = { Text(stringResource(R.string.matching_logic_value_label)) },
+            placeholder = { Text(stringResource(R.string.matching_logic_value_hint)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = literalKeyboardOptions(ImeAction.Done),
@@ -348,7 +350,7 @@ private fun DayOfWeekModeContent(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "Trigger only on these days",
+            text = stringResource(R.string.matching_logic_days_prompt),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -382,7 +384,7 @@ private fun TimeRangeModeContent(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "From",
+            text = stringResource(R.string.matching_logic_time_from),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
         )
@@ -392,7 +394,7 @@ private fun TimeRangeModeContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "To",
+            text = stringResource(R.string.matching_logic_time_to),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
         )
@@ -402,7 +404,7 @@ private fun TimeRangeModeContent(
         if (start > end) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "This range spans midnight ($start – $end covers overnight).",
+                text = stringResource(R.string.matching_logic_time_spans_midnight, start.toString(), end.toString()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -438,10 +440,10 @@ private fun TimePickerButton(
                         onTimePicked(state.hour, state.minute)
                         showDialog = false
                     },
-                ) { Text("OK") }
+                ) { Text(stringResource(R.string.rule_editor_action_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.rule_editor_action_cancel)) }
             },
             text = { Box(modifier = Modifier.verticalScroll(rememberScrollState())) { TimePicker(state = state) } },
         )
@@ -515,7 +517,7 @@ private fun MatchingLogicBottomSheetPreview() {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Define the condition under which this rule should trigger.",
+                text = stringResource(R.string.matching_logic_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

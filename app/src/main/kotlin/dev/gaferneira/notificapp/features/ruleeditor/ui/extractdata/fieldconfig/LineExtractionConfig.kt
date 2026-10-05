@@ -9,8 +9,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.numberKeyboardOptions
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
 
@@ -26,12 +28,12 @@ fun LineExtractionConfig(
     ) {
         SectionHeader(
             icon = Icons.AutoMirrored.Default.List,
-            title = "LINE",
+            title = stringResource(R.string.field_config_line_section),
         )
         OutlinedTextField(
             value = lineNumber.toString(),
             onValueChange = { onLineNumberChange(it.toIntOrNull()?.coerceAtLeast(1) ?: 1) },
-            label = { Text("Line Number") },
+            label = { Text(stringResource(R.string.config_line_number)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = numberKeyboardOptions(ImeAction.Done),

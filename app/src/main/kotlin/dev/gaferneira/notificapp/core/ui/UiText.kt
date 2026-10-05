@@ -10,7 +10,13 @@ sealed interface UiText {
     class StringResource(
         @StringRes val id: Int,
         val args: Array<Any> = arrayOf(),
-    ) : UiText
+    ) : UiText {
+        override fun equals(other: Any?): Boolean = other is StringResource && other.id == id && other.args.contentEquals(args)
+
+        override fun hashCode(): Int = 31 * id + args.contentHashCode()
+
+        override fun toString(): String = "StringResource(id=$id, args=${args.contentToString()})"
+    }
 
     @Composable
     fun asString(): String = when (this) {

@@ -9,8 +9,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.literalKeyboardOptions
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.numberKeyboardOptions
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
@@ -21,7 +24,7 @@ fun TextAfterKeywordConfig(
     maxLength: Int?,
     onKeywordChange: (String) -> Unit,
     onMaxLengthChange: (Int?) -> Unit,
-    error: String?,
+    error: UiText?,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -30,23 +33,23 @@ fun TextAfterKeywordConfig(
     ) {
         SectionHeader(
             icon = Icons.Default.TextFields,
-            title = "KEYWORD",
+            title = stringResource(R.string.field_config_keyword_section),
         )
         OutlinedTextField(
             value = keyword,
             onValueChange = onKeywordChange,
-            label = { Text("Keyword") },
-            placeholder = { Text("Text to search for") },
+            label = { Text(stringResource(R.string.config_keyword)) },
+            placeholder = { Text(stringResource(R.string.config_keyword_hint)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = literalKeyboardOptions(ImeAction.Next),
             isError = error != null,
-            supportingText = error?.let { { Text(it) } },
+            supportingText = error?.let { { Text(it.asString()) } },
         )
         OutlinedTextField(
             value = maxLength?.toString() ?: "",
             onValueChange = { onMaxLengthChange(it.toIntOrNull()) },
-            label = { Text("Max Length (optional)") },
+            label = { Text(stringResource(R.string.config_max_length)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = numberKeyboardOptions(ImeAction.Done),
@@ -59,7 +62,7 @@ fun TextAfterKeywordConfig(
 fun TextBeforeKeywordConfig(
     keyword: String,
     onKeywordChange: (String) -> Unit,
-    error: String?,
+    error: UiText?,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -68,19 +71,19 @@ fun TextBeforeKeywordConfig(
     ) {
         SectionHeader(
             icon = Icons.Default.TextFields,
-            title = "KEYWORD",
+            title = stringResource(R.string.field_config_keyword_section),
         )
         OutlinedTextField(
             value = keyword,
             onValueChange = onKeywordChange,
-            label = { Text("Keyword") },
-            placeholder = { Text("Text to search for") },
+            label = { Text(stringResource(R.string.config_keyword)) },
+            placeholder = { Text(stringResource(R.string.config_keyword_hint)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = literalKeyboardOptions(ImeAction.Done),
             keyboardActions = rememberClearFocusKeyboardActions(),
             isError = error != null,
-            supportingText = error?.let { { Text(it) } },
+            supportingText = error?.let { { Text(it.asString()) } },
         )
     }
 }

@@ -1,6 +1,8 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import app.cash.turbine.test
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.MethodType
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.PreviewResult
@@ -180,7 +182,7 @@ class AddFieldViewModelTest {
             // reports blank-anchor errors, which are unrelated to this assertion)
             viewModel.onEvent(UiEvent.OnSaveClicked)
             testDispatcher.scheduler.advanceUntilIdle()
-            viewModel.uiState.value.validationErrors["fieldName"] shouldBe "Field name is required"
+            viewModel.uiState.value.validationErrors["fieldName"] shouldBe UiText.StringResource(R.string.error_field_name_required)
 
             // When: changing the field name
             viewModel.onEvent(UiEvent.OnFieldNameChange("Amount"))
@@ -385,7 +387,7 @@ class AddFieldViewModelTest {
 
             // Then: the preview reports a failure and stops testing
             val state = viewModel.uiState.value
-            state.previewResult.shouldBeInstanceOf<PreviewResult.Failure>().reason shouldBe "Start anchor not found: START"
+            state.previewResult.shouldBeInstanceOf<PreviewResult.Failure>().reason shouldBe UiText.DynamicString("Start anchor not found: START")
             state.isTesting shouldBe false
         }
     }
@@ -403,8 +405,8 @@ class AddFieldViewModelTest {
                 testDispatcher.scheduler.advanceUntilIdle()
 
                 // Then: a validation error is set and a ShowError effect is sent
-                viewModel.uiState.value.validationErrors["fieldName"] shouldBe "Field name is required"
-                awaitItem() shouldBe UiEffect.ShowError("Please fix validation errors")
+                viewModel.uiState.value.validationErrors["fieldName"] shouldBe UiText.StringResource(R.string.error_field_name_required)
+                awaitItem() shouldBe UiEffect.ShowError(UiText.StringResource(R.string.error_fix_validation))
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -421,8 +423,8 @@ class AddFieldViewModelTest {
 
             // Then: validation errors are reported for both anchors
             viewModel.uiState.value.validationErrors shouldBe mapOf(
-                "startAnchor" to "Start anchor is required",
-                "endAnchor" to "End anchor is required",
+                "startAnchor" to UiText.StringResource(R.string.error_start_anchor_required),
+                "endAnchor" to UiText.StringResource(R.string.error_end_anchor_required),
             )
         }
 

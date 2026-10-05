@@ -49,6 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
@@ -101,7 +102,7 @@ fun WebhookConfigBottomSheet(
     }
 
     ActionConfigSheet(
-        title = "Send webhook",
+        title = stringResource(R.string.action_type_webhook_label),
         confirmLabel = confirmLabelFor(isEdit = initial != null),
         onConfirm = if (uiState.canConfirm) {
             { viewModel.onEvent(UiEvent.OnConfirmClicked) }
@@ -133,7 +134,7 @@ private fun WebhookConfigSheetBody(
 
         if (uiState.selectedWebhookMethod == HttpMethod.GET) {
             Text(
-                text = "This webhook uses GET — no payload is sent. Use query parameters on the webhook to pass data.",
+                text = stringResource(R.string.webhook_get_notice),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -163,7 +164,7 @@ private fun WebhookPickerSection(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "Webhook",
+            text = stringResource(R.string.webhook_section_title),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
         )
@@ -183,7 +184,7 @@ private fun WebhookPickerSection(
         ) {
             Icon(imageVector = Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("New webhook")
+            Text(stringResource(R.string.webhook_new))
         }
     }
 }
@@ -228,14 +229,14 @@ private fun PayloadModeToggle(
             onClick = { onEvent(UiEvent.OnModeChanged(WebhookPayloadMode.FIELDS)) },
             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
         ) {
-            Text("Fields")
+            Text(stringResource(R.string.webhook_mode_fields))
         }
         SegmentedButton(
             selected = mode == WebhookPayloadMode.TEMPLATE,
             onClick = { onEvent(UiEvent.OnModeChanged(WebhookPayloadMode.TEMPLATE)) },
             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
         ) {
-            Text("Template")
+            Text(stringResource(R.string.webhook_mode_template))
         }
     }
 }
@@ -249,7 +250,7 @@ private fun FieldChecklistSection(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "Notification fields",
+            text = stringResource(R.string.webhook_notification_fields),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
         )
@@ -264,13 +265,13 @@ private fun FieldChecklistSection(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Extracted fields",
+            text = stringResource(R.string.webhook_extracted_fields),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
         )
         if (uiState.ruleFields.isEmpty()) {
             Text(
-                text = "No extracted fields yet — add an Extract Data action to reference custom fields here.",
+                text = stringResource(R.string.webhook_no_extracted_fields),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
@@ -323,7 +324,7 @@ private fun TemplateEditorSection(
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "Insert field",
+            text = stringResource(R.string.rule_editor_insert_field),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
         )
@@ -348,8 +349,8 @@ private fun TemplateEditorSection(
                 fieldValue = it
                 onEvent(UiEvent.OnTemplateChanged(it.text))
             },
-            label = { Text("JSON template") },
-            placeholder = { Text("""{ "merchant": "{{field.<id>}}" }""") },
+            label = { Text(stringResource(R.string.webhook_json_template)) },
+            placeholder = { Text("""{ "merchant": "{{field.<id>}}" }""") }, // i18n-ignore: technical JSON sample
             modifier = Modifier.fillMaxWidth(),
             minLines = 4,
         )
@@ -370,7 +371,7 @@ private fun PreviewSection(
         ) {
             Icon(imageVector = Icons.Default.Check, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Preview payload")
+            Text(stringResource(R.string.webhook_preview_payload))
         }
 
         val previewJson = uiState.previewJson
@@ -387,7 +388,7 @@ private fun PreviewSection(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = "Payload preview",
+                            text = stringResource(R.string.webhook_payload_preview_title),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -397,7 +398,7 @@ private fun PreviewSection(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Dismiss preview",
+                                contentDescription = stringResource(R.string.webhook_dismiss_preview_cd),
                             )
                         }
                     }
@@ -405,7 +406,7 @@ private fun PreviewSection(
                     uiState.previewWarning?.let { warning ->
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = warning,
+                            text = warning.asString(),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )

@@ -28,10 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -68,20 +68,12 @@ fun DoSection(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Header
-        Column {
-            Text(
-                text = "Do",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.semantics { heading() },
-            )
-            Text(
-                text = "Actions to perform with the extracted data, like saving it or sending a new alert.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        // The "Do" heading is rendered by the host SectionHeader; only the description lives here.
+        Text(
+            text = stringResource(R.string.do_section_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
         // Action cards
         actions.forEach { action ->
@@ -97,17 +89,19 @@ fun DoSection(
 }
 
 /** Secondary line for an action card: snooze duration/schedule, extract-data field count, or none. */
+@Composable
 private fun RuleAction.cardSubtitle(extractDataFieldCount: Int): String? = when (type) {
     ActionType.SNOOZE_NOTIFICATION -> snoozeSubtitle()
-    ActionType.SAVE_DATA -> when (extractDataFieldCount) {
-        0 -> "No fields yet"
-        1 -> "1 field"
-        else -> "$extractDataFieldCount fields"
+    ActionType.SAVE_DATA -> if (extractDataFieldCount == 0) {
+        stringResource(R.string.do_extract_no_fields)
+    } else {
+        pluralStringResource(R.plurals.do_extract_field_count, extractDataFieldCount, extractDataFieldCount)
     }
     else -> null
 }
 
 /** Snooze action subtitle: a fixed duration, or the configured schedule. */
+@Composable
 private fun RuleAction.snoozeSubtitle(): String = when (getSnoozeMode()) {
     SnoozeMode.DURATION -> formatDurationMinutes(getSnoozeDurationMinutes())
     SnoozeMode.SCHEDULED -> {
@@ -118,12 +112,12 @@ private fun RuleAction.snoozeSubtitle(): String = when (getSnoozeMode()) {
         val windowEndMinute = schedule?.windowEndMinute
         if (interval != null && windowEndHour != null && windowEndMinute != null) {
             val end = "%02d:%02d".format(windowEndHour, windowEndMinute)
-            "Every ${formatDurationMinutes(interval)}, $start-$end"
+            stringResource(R.string.do_snooze_every, formatDurationMinutes(interval), start, end)
         } else {
-            "Until $start"
+            stringResource(R.string.do_snooze_until, start)
         }
     }
-    SnoozeMode.THROTTLE -> "1 per ${formatDurationMinutes(getThrottleWindowMinutes())}"
+    SnoozeMode.THROTTLE -> stringResource(R.string.do_snooze_throttle, formatDurationMinutes(getThrottleWindowMinutes()))
 }
 
 @Composable

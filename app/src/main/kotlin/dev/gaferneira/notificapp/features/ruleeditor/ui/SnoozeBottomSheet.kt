@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_DURATION_MINUTES
 import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_THROTTLE_RESET_AT
@@ -73,7 +74,7 @@ fun SnoozeBottomSheet(
 
     ActionConfigSheet(
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-        title = "Snooze notification",
+        title = stringResource(R.string.action_type_snooze_label),
         confirmLabel = confirmLabelFor(isEdit = initial != null),
         onConfirm = if (canConfirm) {
             { onSave(buildSnoozeAction(initial, outcome, configs)) }

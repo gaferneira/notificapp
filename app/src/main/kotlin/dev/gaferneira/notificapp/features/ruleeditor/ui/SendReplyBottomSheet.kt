@@ -21,6 +21,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.components.BetaBadge
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
@@ -60,7 +61,7 @@ fun SendReplyBottomSheet(
     }
 
     ActionConfigSheet(
-        title = "Send reply",
+        title = stringResource(R.string.action_type_send_reply_label),
         confirmLabel = confirmLabelFor(isEdit = initial != null),
         onConfirm = if (fieldValue.text.isNotBlank()) {
             {
@@ -81,7 +82,7 @@ fun SendReplyBottomSheet(
 
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "Insert field",
+                text = stringResource(R.string.rule_editor_insert_field),
                 style = MaterialTheme.typography.labelLarge,
             )
 
@@ -100,8 +101,8 @@ fun SendReplyBottomSheet(
             OutlinedTextField(
                 value = fieldValue,
                 onValueChange = { fieldValue = it },
-                label = { Text("Reply text") },
-                placeholder = { Text("Got it, thanks {{field.<id>}}") },
+                label = { Text(stringResource(R.string.send_reply_text)) },
+                placeholder = { Text(stringResource(R.string.send_reply_text_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
             )
@@ -118,9 +119,7 @@ private fun SendReplyHeader() {
     ActionSheetDescription(stringResource(ActionType.SEND_REPLY.ui().descriptionRes))
 
     Text(
-        text = "Only works on apps that support direct reply. If they don't, this action " +
-            "quietly does nothing - check the notification's per-action outcomes to see " +
-            "whether it fired.",
+        text = stringResource(R.string.send_reply_best_effort_note),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

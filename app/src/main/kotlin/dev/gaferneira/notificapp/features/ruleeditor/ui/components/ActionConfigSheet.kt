@@ -127,4 +127,5 @@ fun ActionSheetDescription(text: String) {
 }
 
 /** Confirm-button label for an add vs. edit flow. */
-internal fun confirmLabelFor(isEdit: Boolean): String = if (isEdit) "Update" else "Add action"
+@Composable
+internal fun confirmLabelFor(isEdit: Boolean): String = stringResource(if (isEdit) R.string.rule_editor_action_update else R.string.rule_editor_action_add_action)

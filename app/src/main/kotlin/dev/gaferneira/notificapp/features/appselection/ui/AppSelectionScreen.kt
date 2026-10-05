@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -69,6 +70,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.AppInfo
@@ -438,7 +440,7 @@ private fun SearchField(
         value = query,
         onValueChange = onQueryChange,
         modifier = modifier,
-        placeholder = { Text("Search apps...") },
+        placeholder = { Text(stringResource(R.string.app_selection_search_hint)) },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Default.Search,

@@ -2,9 +2,11 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.FieldExtractor
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
@@ -277,7 +279,7 @@ class AddFieldViewModel @Inject constructor(
                             endIndex = result.endIndex,
                         )
                     is dev.gaferneira.notificapp.core.extraction.ExtractionResult.Failure ->
-                        AddFieldContract.PreviewResult.Failure(result.reason)
+                        AddFieldContract.PreviewResult.Failure(UiText.DynamicString(result.reason))
                 }
 
                 setState {
@@ -290,7 +292,9 @@ class AddFieldViewModel @Inject constructor(
                 Timber.e(e, "Preview extraction failed")
                 setState {
                     copy(
-                        previewResult = AddFieldContract.PreviewResult.Failure("Preview failed: ${e.message}"),
+                        previewResult = AddFieldContract.PreviewResult.Failure(
+                            UiText.StringResource(R.string.add_field_preview_error, arrayOf(e.message.orEmpty())),
+                        ),
                         isTesting = false,
                     )
                 }
@@ -302,39 +306,39 @@ class AddFieldViewModel @Inject constructor(
         val currentState = uiState.value
 
         // Validate
-        val errors = mutableMapOf<String, String>()
+        val errors = mutableMapOf<String, UiText>()
         if (currentState.fieldName.isBlank()) {
-            errors["fieldName"] = "Field name is required"
+            errors["fieldName"] = UiText.StringResource(R.string.error_field_name_required)
         }
 
         // Validate method-specific required fields
         when (currentState.selectedMethodType) {
             AddFieldContract.MethodType.TEXT_BETWEEN_ANCHORS -> {
                 if (currentState.startAnchor.isBlank()) {
-                    errors["startAnchor"] = "Start anchor is required"
+                    errors["startAnchor"] = UiText.StringResource(R.string.error_start_anchor_required)
                 }
                 if (currentState.endAnchor.isBlank()) {
-                    errors["endAnchor"] = "End anchor is required"
+                    errors["endAnchor"] = UiText.StringResource(R.string.error_end_anchor_required)
                 }
             }
             AddFieldContract.MethodType.REGEX -> {
                 if (currentState.regexPattern.isBlank()) {
-                    errors["regexPattern"] = "Pattern is required"
+                    errors["regexPattern"] = UiText.StringResource(R.string.error_regex_pattern_required)
                 }
             }
             AddFieldContract.MethodType.TEXT_AFTER_KEYWORD -> {
                 if (currentState.afterKeyword.isBlank()) {
-                    errors["afterKeyword"] = "Keyword is required"
+                    errors["afterKeyword"] = UiText.StringResource(R.string.error_keyword_required)
                 }
             }
             AddFieldContract.MethodType.TEXT_BEFORE_KEYWORD -> {
                 if (currentState.beforeKeyword.isBlank()) {
-                    errors["beforeKeyword"] = "Keyword is required"
+                    errors["beforeKeyword"] = UiText.StringResource(R.string.error_keyword_required)
                 }
             }
             AddFieldContract.MethodType.JSON_PATH -> {
                 if (currentState.jsonPath.isBlank()) {
-                    errors["jsonPath"] = "JSON path is required"
+                    errors["jsonPath"] = UiText.StringResource(R.string.error_json_path_required)
                 }
             }
             else -> { /* No additional validation needed */ }
@@ -342,7 +346,7 @@ class AddFieldViewModel @Inject constructor(
 
         if (errors.isNotEmpty()) {
             setState { copy(validationErrors = errors) }
-            sendEffect(UiEffect.ShowError("Please fix validation errors"))
+            sendEffect(UiEffect.ShowError(UiText.StringResource(R.string.error_fix_validation)))
             return
         }
 

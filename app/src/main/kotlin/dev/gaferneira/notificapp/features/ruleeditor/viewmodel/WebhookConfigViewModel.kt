@@ -2,9 +2,11 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.notification.action.WebhookPayloadBuilder
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
@@ -156,19 +158,21 @@ class WebhookConfigViewModel @Inject constructor(
         setState { copy(previewJson = json, previewWarning = previewWarningFor(state, json)) }
     }
 
-    private fun previewWarningFor(state: UiState, json: String): String? = when {
+    private fun previewWarningFor(state: UiState, json: String): UiText? = when {
         runCatching { Json.parseToJsonElement(json) }.isFailure ->
-            "Invalid JSON — check your template for unescaped quotes or a malformed structure."
+            UiText.StringResource(R.string.webhook_preview_invalid_json)
         state.config.mode != WebhookPayloadMode.TEMPLATE -> null
         else -> unknownTokenWarning(state)
     }
 
-    private fun unknownTokenWarning(state: UiState): String? {
+    private fun unknownTokenWarning(state: UiState): UiText? {
         val knownTokens = WEBHOOK_ALL_BUILTINS.toSet() +
             state.ruleFields.map { "$WEBHOOK_FIELD_ID_PREFIX${it.id}" }
         val usedTokens = WEBHOOK_TOKEN_REGEX.findAll(state.config.template).map { it.groupValues[1] }.toSet()
         val unknown = usedTokens - knownTokens
-        return "Unknown token(s): ${unknown.joinToString(", ") { "{{$it}}" }}".takeIf { unknown.isNotEmpty() }
+        return unknown.takeIf { it.isNotEmpty() }?.let { tokens ->
+            UiText.StringResource(R.string.webhook_preview_unknown_tokens, arrayOf(tokens.joinToString(", ") { "{{$it}}" }))
+        }
     }
 
     private fun observeWebhooks() {

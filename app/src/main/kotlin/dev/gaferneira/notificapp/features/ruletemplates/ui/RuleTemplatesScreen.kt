@@ -117,9 +117,9 @@ internal fun RuleTemplatesContent(
             ) {
                 items(items = uiState.templates, key = { it.assetFileName }) { template ->
                     RuleTemplateCard(
-                        category = template.category,
-                        name = template.name,
-                        description = template.description,
+                        category = stringResource(template.categoryRes),
+                        name = stringResource(template.nameRes),
+                        description = stringResource(template.descriptionRes),
                         onClick = { onEvent(RuleTemplatesEvent.OnTemplateClick(template)) },
                     )
                 }
@@ -150,7 +150,7 @@ private fun CategoryFilterRow(
             FilterChip(
                 selected = selected == category,
                 onClick = { onSelected(category) },
-                label = { Text(category) },
+                label = { Text(RuleTemplates.categoryLabelRes(category)?.let { stringResource(it) } ?: category) },
             )
         }
     }

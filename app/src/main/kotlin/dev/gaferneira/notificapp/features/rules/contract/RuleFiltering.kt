@@ -38,9 +38,10 @@ private fun RuleFilter.matchesCategory(rule: Rule): Boolean = when {
     else -> rule.category in selectedCategories
 }
 
-private fun RuleFilter.matchesApps(rule: Rule): Boolean = selectedApps.isEmpty() || selectedApps.any { pkg ->
-    rule.mentionsApp(pkg) || (includeGlobalRules && rule.appliesToPackage(pkg))
-}
+private fun RuleFilter.matchesApps(rule: Rule): Boolean = selectedApps.isEmpty() ||
+    selectedApps.any { pkg ->
+        rule.mentionsApp(pkg) || (includeGlobalRules && rule.appliesToPackage(pkg))
+    }
 
 /** Orders [rules] according to [RuleFilter.sortBy]. Text comparisons are case-insensitive. */
 fun RuleFilter.sort(rules: List<Rule>): List<Rule> = when (sortBy) {

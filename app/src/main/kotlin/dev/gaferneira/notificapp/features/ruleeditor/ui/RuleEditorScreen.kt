@@ -37,10 +37,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.rulesharing.RuleTemplates
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorMode
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LoadError
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LocalizedTemplateText
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
@@ -66,8 +68,16 @@ fun RuleEditorScreen(
     val context = LocalContext.current
 
     // Idempotent: the ViewModel ignores a repeat of the same args (rotation, recomposition).
-    LaunchedEffect(ruleId, notificationId, templateAssetFileName) {
-        viewModel.onEvent(UiEvent.Initialize(InitArgs(ruleId, notificationId, templateAssetFileName)))
+    val templateInfo = templateAssetFileName?.let(RuleTemplates::find)
+    val templateText = templateInfo?.let {
+        LocalizedTemplateText(
+            name = stringResource(it.nameRes),
+            description = stringResource(it.descriptionRes),
+            category = stringResource(it.categoryRes),
+        )
+    }
+    LaunchedEffect(ruleId, notificationId, templateAssetFileName, templateText) {
+        viewModel.onEvent(UiEvent.Initialize(InitArgs(ruleId, notificationId, templateAssetFileName, templateText)))
     }
 
     CollectOneOffEffects(viewModel.effect) { effect ->

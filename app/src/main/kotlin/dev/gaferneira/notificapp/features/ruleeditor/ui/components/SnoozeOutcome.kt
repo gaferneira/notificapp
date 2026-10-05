@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.components
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,10 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 
 /** The user-facing outcome a snooze action produces once a rule matches. */
 enum class SnoozeOutcome {
@@ -40,35 +43,35 @@ enum class SnoozeOutcome {
 
 private data class SnoozeOutcomeInfo(
     val icon: ImageVector,
-    val title: String,
-    val subtitle: String,
-    val example: String,
+    @StringRes val title: Int,
+    @StringRes val subtitle: Int,
+    @StringRes val example: Int,
 )
 
 private fun SnoozeOutcome.info(): SnoozeOutcomeInfo = when (this) {
     SnoozeOutcome.DELAY_EACH_ONE -> SnoozeOutcomeInfo(
         icon = Icons.Default.Timer,
-        title = "Delay each one",
-        subtitle = "Deliver every match after a set wait.",
-        example = "\"News → arrive 20 min later\"",
+        title = R.string.snooze_outcome_delay_title,
+        subtitle = R.string.snooze_outcome_delay_subtitle,
+        example = R.string.snooze_outcome_delay_example,
     )
     SnoozeOutcome.BATCH_AT_TIME -> SnoozeOutcomeInfo(
         icon = Icons.Default.NightsStay,
-        title = "Batch at time",
-        subtitle = "Collect and deliver at chosen times.",
-        example = "\"LinkedIn → 9:00 AM and 5:00 PM daily\"",
+        title = R.string.snooze_outcome_batch_title,
+        subtitle = R.string.snooze_outcome_batch_subtitle,
+        example = R.string.snooze_outcome_batch_example,
     )
     SnoozeOutcome.BATCH_INTO_DIGEST -> SnoozeOutcomeInfo(
         icon = Icons.Default.Inbox,
-        title = "Batch into a digest",
-        subtitle = "Recurring checkpoints in a window.",
-        example = "\"Release every hour from 9 AM to 6 PM\"",
+        title = R.string.snooze_outcome_digest_title,
+        subtitle = R.string.snooze_outcome_digest_subtitle,
+        example = R.string.snooze_outcome_digest_example,
     )
     SnoozeOutcome.THROTTLE -> SnoozeOutcomeInfo(
         icon = Icons.Default.DoNotDisturb,
-        title = "Let the first through, mute the rest",
-        subtitle = "Deliver the first match, drop the rest until the window elapses.",
-        example = "\"WhatsApp → 1 alert per 10 min\"",
+        title = R.string.snooze_outcome_throttle_title,
+        subtitle = R.string.snooze_outcome_throttle_subtitle,
+        example = R.string.snooze_outcome_throttle_example,
     )
 }
 
@@ -97,9 +100,9 @@ fun SnoozeOutcomeSelector(
             val info = outcome.info()
             SnoozeOutcomeCard(
                 icon = info.icon,
-                title = info.title,
-                subtitle = info.subtitle,
-                example = info.example,
+                title = stringResource(info.title),
+                subtitle = stringResource(info.subtitle),
+                example = stringResource(info.example),
                 isSelected = isSelected,
                 onClick = { onOutcomeSelected(outcome) },
                 content = if (isSelected) {

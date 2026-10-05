@@ -9,8 +9,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.literalKeyboardOptions
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
 
@@ -18,7 +21,7 @@ import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClear
 fun JsonPathConfig(
     path: String,
     onPathChange: (String) -> Unit,
-    error: String?,
+    error: UiText?,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -27,19 +30,19 @@ fun JsonPathConfig(
     ) {
         SectionHeader(
             icon = Icons.Default.DataObject,
-            title = "JSON PATH",
+            title = stringResource(R.string.field_config_json_section),
         )
         OutlinedTextField(
             value = path,
             onValueChange = onPathChange,
-            label = { Text("JSON Path") },
-            placeholder = { Text("e.g., $.amount") },
+            label = { Text(stringResource(R.string.config_json_path)) },
+            placeholder = { Text(stringResource(R.string.config_json_path_hint)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = literalKeyboardOptions(ImeAction.Done),
             keyboardActions = rememberClearFocusKeyboardActions(),
             isError = error != null,
-            supportingText = error?.let { { Text(it) } },
+            supportingText = error?.let { { Text(it.asString()) } },
         )
     }
 }

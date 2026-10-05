@@ -55,6 +55,18 @@ class RuleTemplatesTest {
     }
 
     @Test
+    fun `every template has distinct localized resources for name, description and category`() {
+        RuleTemplates.all.forEach { template ->
+            (template.nameRes != 0) shouldBe true
+            (template.descriptionRes != 0) shouldBe true
+            RuleTemplates.categoryLabelRes(template.category) shouldBe template.categoryRes
+        }
+        RuleTemplates.all.map { it.nameRes }.distinct().size shouldBe RuleTemplates.all.size
+        RuleTemplates.find("mute-promotions.json")?.category shouldBe "Noise control"
+        RuleTemplates.find("missing.json") shouldBe null
+    }
+
+    @Test
     fun `templates together cover every action type at least once`() {
         val actionTypesInTemplates = RuleTemplates.all
             .map { readTemplateAsset(it.assetFileName) }

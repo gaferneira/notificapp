@@ -10,8 +10,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.literalKeyboardOptions
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.numberKeyboardOptions
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
@@ -30,7 +32,7 @@ fun SplitByDelimiterConfig(
     ) {
         SectionHeader(
             icon = Icons.AutoMirrored.Default.CallSplit,
-            title = "DELIMITER",
+            title = stringResource(R.string.field_config_delimiter_section),
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -39,7 +41,7 @@ fun SplitByDelimiterConfig(
             OutlinedTextField(
                 value = delimiter,
                 onValueChange = onDelimiterChange,
-                label = { Text("Delimiter") },
+                label = { Text(stringResource(R.string.config_delimiter)) },
                 placeholder = { Text(",") },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
@@ -48,7 +50,7 @@ fun SplitByDelimiterConfig(
             OutlinedTextField(
                 value = takeIndex.toString(),
                 onValueChange = { onTakeIndexChange(it.toIntOrNull()?.coerceAtLeast(0) ?: 0) },
-                label = { Text("Take Index") },
+                label = { Text(stringResource(R.string.config_take_index)) },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 keyboardOptions = numberKeyboardOptions(ImeAction.Done),

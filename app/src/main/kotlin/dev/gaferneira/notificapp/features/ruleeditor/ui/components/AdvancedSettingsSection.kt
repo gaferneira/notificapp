@@ -26,9 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 
 /**
  * Collapsed-by-default card for action-sheet options that most users don't need to touch (e.g.
@@ -62,14 +64,16 @@ fun AdvancedSettingsSection(modifier: Modifier = Modifier, content: @Composable 
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Advanced settings",
+                text = stringResource(R.string.advanced_settings_title),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Icon(
                 imageVector = Icons.Default.ExpandMore,
-                contentDescription = if (expanded) "Collapse advanced settings" else "Expand advanced settings",
+                contentDescription = stringResource(
+                    if (expanded) R.string.advanced_settings_collapse_cd else R.string.advanced_settings_expand_cd,
+                ),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.rotate(chevronRotation),
             )

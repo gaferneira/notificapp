@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
@@ -127,7 +129,7 @@ class MatchingLogicViewModel @Inject constructor() :
         val condition = when (state.conditionType) {
             MatchingLogicContract.ConditionType.CONTENT -> {
                 if (state.matchingValue.isBlank()) {
-                    reportValidationError("Please enter a value to match")
+                    reportValidationError(UiText.StringResource(R.string.matching_logic_error_value_required))
                     return
                 }
                 RuleCondition.ContentMatchCondition(
@@ -139,7 +141,7 @@ class MatchingLogicViewModel @Inject constructor() :
             }
             MatchingLogicContract.ConditionType.DAY_OF_WEEK -> {
                 if (state.selectedDays.isEmpty()) {
-                    reportValidationError("Please select at least one day")
+                    reportValidationError(UiText.StringResource(R.string.matching_logic_error_days_required))
                     return
                 }
                 RuleCondition.DayOfWeekCondition(
@@ -165,7 +167,7 @@ class MatchingLogicViewModel @Inject constructor() :
         sendEffect(MatchingLogicContract.UiEffect.Dismiss)
     }
 
-    private fun reportValidationError(message: String) {
+    private fun reportValidationError(message: UiText) {
         setState { copy(validationError = message) }
         sendEffect(MatchingLogicContract.UiEffect.ShowError(message))
     }

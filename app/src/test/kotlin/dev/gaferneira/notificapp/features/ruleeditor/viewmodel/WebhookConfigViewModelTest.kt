@@ -1,6 +1,8 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.notification.action.WebhookPayloadBuilder
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.WEBHOOK_BUILTIN_APP_NAME
@@ -123,7 +125,7 @@ class WebhookConfigViewModelTest {
 
         viewModel.onEvent(UiEvent.OnPreviewClicked)
 
-        viewModel.uiState.value.previewWarning shouldBe "Unknown token(s): {{totally_unknown}}"
+        viewModel.uiState.value.previewWarning shouldBe UiText.StringResource(R.string.webhook_preview_unknown_tokens, arrayOf("{{totally_unknown}}"))
     }
 
     @Test

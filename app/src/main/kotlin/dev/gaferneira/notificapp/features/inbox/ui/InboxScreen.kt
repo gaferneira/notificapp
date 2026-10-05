@@ -230,12 +230,12 @@ private fun InboxTopBar(activeFilterCount: Int, onFilterClick: () -> Unit, onBac
         title = {
             Column {
                 Text(
-                    text = "Inbox",
+                    text = stringResource(R.string.inbox_title),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = "Live Notification Feed",
+                    text = stringResource(R.string.inbox_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -243,7 +243,7 @@ private fun InboxTopBar(activeFilterCount: Int, onFilterClick: () -> Unit, onBac
         },
         navigationIcon = {
             IconButton(onClick = onBackClick) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Go back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.inbox_back_cd))
             }
         },
         actions = {
@@ -289,7 +289,7 @@ private fun InboxSearchField(query: String, onQueryChange: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        placeholder = { Text("Search notifications...") },
+        placeholder = { Text(stringResource(R.string.inbox_search_hint)) },
         leadingIcon = {
             Icon(
                 Icons.Default.Search,

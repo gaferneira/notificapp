@@ -116,7 +116,7 @@ fun AlarmBottomSheet(
 
     ActionConfigSheet(
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
-        title = "Create alarm",
+        title = stringResource(R.string.action_type_create_alarm_label),
         confirmLabel = confirmLabelFor(isEdit = initial != null),
         onConfirm = { viewModel.onEvent(AlarmContract.UiEvent.OnConfirmClicked) },
         onDismiss = {
@@ -244,7 +244,7 @@ fun AlarmOptionsSelector(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             AlarmToggleRow(
-                label = "Full-screen alarm (when screen is off)",
+                label = stringResource(R.string.alarm_fullscreen_toggle_label),
                 checked = options.fullScreenEnabled,
                 onCheckedChange = { onEvent(AlarmContract.UiEvent.OnFullScreenToggle(it)) },
             )

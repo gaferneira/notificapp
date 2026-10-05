@@ -19,6 +19,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.RuleAction
@@ -57,7 +58,7 @@ fun ReadAloudBottomSheet(
     }
 
     ActionConfigSheet(
-        title = "Read aloud",
+        title = stringResource(R.string.action_type_read_aloud_label),
         confirmLabel = confirmLabelFor(isEdit = initial != null),
         onConfirm = if (fieldValue.text.isNotBlank()) {
             {
@@ -78,7 +79,7 @@ fun ReadAloudBottomSheet(
 
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "Insert field",
+                text = stringResource(R.string.rule_editor_insert_field),
                 style = MaterialTheme.typography.labelLarge,
             )
 
@@ -97,8 +98,8 @@ fun ReadAloudBottomSheet(
             OutlinedTextField(
                 value = fieldValue,
                 onValueChange = { fieldValue = it },
-                label = { Text("Spoken text") },
-                placeholder = { Text("Received {{field.<id>}} from {{field.<id>}}") },
+                label = { Text(stringResource(R.string.read_aloud_spoken_text)) },
+                placeholder = { Text(stringResource(R.string.read_aloud_spoken_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
             )

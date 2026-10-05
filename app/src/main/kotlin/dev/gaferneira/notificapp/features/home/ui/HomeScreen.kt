@@ -534,9 +534,9 @@ internal fun StarterTemplates(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         templates.forEach { template ->
             RuleTemplateCard(
-                category = template.category,
-                name = template.name,
-                description = template.description,
+                category = stringResource(template.categoryRes),
+                name = stringResource(template.nameRes),
+                description = stringResource(template.descriptionRes),
                 onClick = { onCreateFromTemplate(template) },
                 style = cardStyle,
                 shape = cardShape,

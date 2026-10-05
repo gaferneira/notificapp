@@ -9,8 +9,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.literalKeyboardOptions
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
 
@@ -20,7 +23,7 @@ fun TextBetweenAnchorsConfig(
     endAnchor: String,
     onStartAnchorChange: (String) -> Unit,
     onEndAnchorChange: (String) -> Unit,
-    errors: Map<String, String>,
+    errors: Map<String, UiText>,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -29,30 +32,30 @@ fun TextBetweenAnchorsConfig(
     ) {
         SectionHeader(
             icon = Icons.Default.HorizontalRule,
-            title = "ANCHORS",
+            title = stringResource(R.string.field_config_anchors_section),
         )
         OutlinedTextField(
             value = startAnchor,
             onValueChange = onStartAnchorChange,
-            label = { Text("Start Anchor") },
-            placeholder = { Text("Text before the value") },
+            label = { Text(stringResource(R.string.config_start_anchor)) },
+            placeholder = { Text(stringResource(R.string.config_start_anchor_hint)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = literalKeyboardOptions(ImeAction.Next),
             isError = errors.contains("startAnchor"),
-            supportingText = errors["startAnchor"]?.let { { Text(it) } },
+            supportingText = errors["startAnchor"]?.let { { Text(it.asString()) } },
         )
         OutlinedTextField(
             value = endAnchor,
             onValueChange = onEndAnchorChange,
-            label = { Text("End Anchor") },
-            placeholder = { Text("Text after the value") },
+            label = { Text(stringResource(R.string.config_end_anchor)) },
+            placeholder = { Text(stringResource(R.string.config_end_anchor_hint)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             keyboardOptions = literalKeyboardOptions(ImeAction.Done),
             keyboardActions = rememberClearFocusKeyboardActions(),
             isError = errors.contains("endAnchor"),
-            supportingText = errors["endAnchor"]?.let { { Text(it) } },
+            supportingText = errors["endAnchor"]?.let { { Text(it.asString()) } },
         )
     }
 }

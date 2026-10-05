@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
@@ -44,7 +45,7 @@ object MatchingLogicContract {
         /** Range end - TIME_RANGE family only */
         val endTime: LocalTime = LocalTime.of(17, 0),
         /** Validation error message, if any */
-        val validationError: String? = null,
+        val validationError: UiText? = null,
     ) {
         enum class Mode {
             ADD,
@@ -104,6 +105,6 @@ object MatchingLogicContract {
         data object Dismiss : UiEffect()
 
         /** Show error message */
-        data class ShowError(val message: String) : UiEffect()
+        data class ShowError(val message: UiText) : UiEffect()
     }
 }

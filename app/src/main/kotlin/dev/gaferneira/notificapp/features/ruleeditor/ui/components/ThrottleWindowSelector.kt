@@ -25,8 +25,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.domain.model.MAX_SNOOZE_THROTTLE_WINDOW_MINUTES
 import dev.gaferneira.notificapp.domain.model.MIN_SNOOZE_THROTTLE_WINDOW_MINUTES
 import dev.gaferneira.notificapp.util.formatDurationMinutes
@@ -90,7 +92,7 @@ private fun ThrottleWindowHeader(selectedMinutes: Int) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Throttle window",
+            text = stringResource(R.string.snooze_throttle_window_title),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -143,7 +145,7 @@ private fun ThrottleWindowPresetChips(
         FilterChip(
             selected = isCustomSelected,
             onClick = onCustomSelected,
-            label = { Text("Custom") },
+            label = { Text(stringResource(R.string.rule_editor_custom)) },
             colors = FilterChipDefaults.filterChipColors(
                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
@@ -157,7 +159,7 @@ private fun CustomThrottleWindowSlider(selectedMinutes: Int, onWindowChange: (In
     Spacer(modifier = Modifier.height(8.dp))
 
     Text(
-        text = "Drag to set custom window",
+        text = stringResource(R.string.snooze_drag_custom_window),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

@@ -184,6 +184,13 @@ object RuleEditorContract {
         SINGLE_PAGE,
     }
 
+    /** Display text of a starter template resolved in the current app language by the UI layer. */
+    data class LocalizedTemplateText(
+        val name: String,
+        val description: String,
+        val category: String,
+    )
+
     /**
      * Navigation arguments that determine what the editor pre-fills. Loading is idempotent per
      * distinct [InitArgs], so re-sending [UiEvent.Initialize] after a recomposition or
@@ -193,6 +200,8 @@ object RuleEditorContract {
         val ruleId: String? = null,
         val notificationId: String? = null,
         val templateAssetFileName: String? = null,
+        /** Template name/description/category in the app language; the JSON asset itself stays English. */
+        val templateText: LocalizedTemplateText? = null,
     ) {
         /** Only a rule created from scratch gets the guided flow; anything prefilled is a single page. */
         val editorMode: EditorMode

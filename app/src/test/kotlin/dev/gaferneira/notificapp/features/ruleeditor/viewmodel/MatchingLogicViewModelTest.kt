@@ -1,6 +1,8 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import app.cash.turbine.test
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
@@ -117,7 +119,7 @@ class MatchingLogicViewModelTest {
         fun `updating the matching value replaces it and clears any validation error`() {
             viewModel.onEvent(UiEvent.OnMatchingValueChange(""))
             viewModel.onEvent(UiEvent.OnConfirm)
-            viewModel.uiState.value.validationError shouldBe "Please enter a value to match"
+            viewModel.uiState.value.validationError shouldBe UiText.StringResource(R.string.matching_logic_error_value_required)
 
             viewModel.onEvent(UiEvent.OnMatchingValueChange("purchase"))
 
@@ -148,7 +150,7 @@ class MatchingLogicViewModelTest {
         @Test
         fun `OnClearError resets only the validation error`() {
             viewModel.onEvent(UiEvent.OnConfirm)
-            viewModel.uiState.value.validationError shouldBe "Please enter a value to match"
+            viewModel.uiState.value.validationError shouldBe UiText.StringResource(R.string.matching_logic_error_value_required)
 
             viewModel.onEvent(UiEvent.OnClearError)
 
@@ -165,10 +167,10 @@ class MatchingLogicViewModelTest {
                 viewModel.onEvent(UiEvent.OnConfirm)
                 testDispatcher.scheduler.advanceUntilIdle()
 
-                awaitItem() shouldBe UiEffect.ShowError("Please enter a value to match")
+                awaitItem() shouldBe UiEffect.ShowError(UiText.StringResource(R.string.matching_logic_error_value_required))
                 cancelAndIgnoreRemainingEvents()
             }
-            viewModel.uiState.value.validationError shouldBe "Please enter a value to match"
+            viewModel.uiState.value.validationError shouldBe UiText.StringResource(R.string.matching_logic_error_value_required)
         }
 
         @Test
@@ -218,7 +220,7 @@ class MatchingLogicViewModelTest {
                 viewModel.onEvent(UiEvent.OnConfirm)
                 testDispatcher.scheduler.advanceUntilIdle()
 
-                awaitItem() shouldBe UiEffect.ShowError("Please select at least one day")
+                awaitItem() shouldBe UiEffect.ShowError(UiText.StringResource(R.string.matching_logic_error_days_required))
                 cancelAndIgnoreRemainingEvents()
             }
         }

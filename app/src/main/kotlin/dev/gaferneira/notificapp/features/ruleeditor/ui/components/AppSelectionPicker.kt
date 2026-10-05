@@ -51,6 +51,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -59,6 +61,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.LocalIoDispatcher
 import dev.gaferneira.notificapp.domain.model.AppInfo
@@ -140,7 +143,7 @@ fun AppSelectionPicker(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Select Apps",
+                    text = stringResource(R.string.rule_editor_app_picker_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.semantics { heading() },
@@ -148,7 +151,7 @@ fun AppSelectionPicker(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.rule_editor_action_close),
                     )
                 }
             }
@@ -157,7 +160,7 @@ fun AppSelectionPicker(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search apps...") },
+                placeholder = { Text(stringResource(R.string.rule_editor_app_picker_search)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -219,7 +222,7 @@ fun AppSelectionPicker(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "$selectedCount app${if (selectedCount == 1) "" else "s"} selected",
+                        text = pluralStringResource(R.plurals.rule_editor_app_picker_selected, selectedCount, selectedCount),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -227,7 +230,7 @@ fun AppSelectionPicker(
                         TextButton(
                             onClick = { tempSelectedPackages = emptySet() },
                         ) {
-                            Text("CLEAR ALL")
+                            Text(stringResource(R.string.rule_editor_app_picker_clear_all))
                         }
                     }
                 }
@@ -247,7 +250,7 @@ fun AppSelectionPicker(
                         containerColor = MaterialTheme.colorScheme.primary,
                     ),
                 ) {
-                    Text("Confirm Selection")
+                    Text(stringResource(R.string.rule_editor_app_picker_confirm))
                 }
             }
         }

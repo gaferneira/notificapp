@@ -1,6 +1,8 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import app.cash.turbine.test
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.PreviewResult
 import dev.gaferneira.notificapp.features.ruleeditor.contract.ExtractDataContract.UiEffect
@@ -167,7 +169,7 @@ class ExtractDataViewModelTest {
                 testDispatcher.scheduler.advanceUntilIdle()
 
                 // Then: a ShowError effect is sent and the draft stays empty
-                awaitItem() shouldBe UiEffect.ShowError("No notification text available to analyze")
+                awaitItem() shouldBe UiEffect.ShowError(UiText.StringResource(R.string.extract_data_error_no_text))
                 cancelAndIgnoreRemainingEvents()
             }
             viewModel.uiState.value.fields shouldBe emptyList()
@@ -184,7 +186,7 @@ class ExtractDataViewModelTest {
                 testDispatcher.scheduler.advanceUntilIdle()
 
                 // Then: a ShowError effect is sent
-                awaitItem() shouldBe UiEffect.ShowError("No numbers found in the notification")
+                awaitItem() shouldBe UiEffect.ShowError(UiText.StringResource(R.string.extract_data_error_no_numbers))
                 cancelAndIgnoreRemainingEvents()
             }
         }

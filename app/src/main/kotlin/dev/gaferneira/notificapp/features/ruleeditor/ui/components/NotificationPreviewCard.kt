@@ -12,10 +12,12 @@ import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 
 /**
@@ -46,7 +48,7 @@ fun NotificationPreviewCard(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = title ?: content ?: "(no content)",
+                text = title ?: content ?: stringResource(R.string.notification_preview_no_content),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -76,7 +78,7 @@ fun ExtractedFieldChips(fields: List<ExtractedField>, modifier: Modifier = Modif
         fields.forEach { (name, value) ->
             SuggestionChip(
                 onClick = {},
-                label = { Text("$name: $value") },
+                label = { Text(stringResource(R.string.notification_preview_field_chip, name, value)) },
                 colors = SuggestionChipDefaults.suggestionChipColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     labelColor = MaterialTheme.colorScheme.onPrimaryContainer,

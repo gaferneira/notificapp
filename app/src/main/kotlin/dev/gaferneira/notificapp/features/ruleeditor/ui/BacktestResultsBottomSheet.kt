@@ -18,11 +18,14 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
@@ -72,7 +75,7 @@ private fun BacktestResultsContent(
 ) {
     Column(modifier = modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp)) {
         Text(
-            text = "Test results",
+            text = stringResource(R.string.backtest_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.semantics { heading() },
@@ -97,9 +100,9 @@ private fun BacktestResultsContent(
 @Composable
 private fun BacktestSummary(resultCount: Int, testedCount: Int, modifier: Modifier = Modifier) {
     val summary = if (resultCount == 0) {
-        "No matches found in the most recent $testedCount captured notification${if (testedCount == 1) "" else "s"}"
+        pluralStringResource(R.plurals.backtest_summary_none, testedCount, testedCount)
     } else {
-        "Matched $resultCount of the most recent $testedCount captured notifications"
+        pluralStringResource(R.plurals.backtest_summary_matched, testedCount, resultCount, testedCount)
     }
     Text(
         text = summary,

@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.HttpMethod
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleField
@@ -37,7 +38,7 @@ object WebhookConfigContract {
         /** The rule's currently-defined extraction fields, for the checklist/insert-field chips. */
         val ruleFields: ImmutableList<RuleField> = persistentListOf(),
         val previewJson: String? = null,
-        val previewWarning: String? = null,
+        val previewWarning: UiText? = null,
     ) {
         /** The currently-selected webhook's HTTP method, or POST if none selected. */
         val selectedWebhookMethod: HttpMethod

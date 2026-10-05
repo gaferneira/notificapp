@@ -21,6 +21,7 @@ import dev.gaferneira.notificapp.domain.repository.RuleTemplateRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorMode
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LocalizedTemplateText
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorIssue
@@ -252,6 +253,25 @@ class RuleEditorViewModelTest {
             state.rule.id shouldBe null
             state.rule.name shouldBe "Template"
             state.hasUnsavedChanges shouldBe false
+        }
+
+        @Test
+        fun `loading a template applies the localized name, description and category`() = runTest(testDispatcher) {
+            // Given: an English template asset and localized display text resolved by the UI layer
+            val template = dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec.encode(createTestRule(id = "tpl", name = "Template"))
+            coEvery { ruleTemplateRepository.getTemplateText("tpl.json") } returns Result.success(template)
+            val localized = LocalizedTemplateText(name = "Plantilla", description = "Descripción", category = "Finanzas")
+
+            // When: initializing with the template and its localized text
+            viewModel.onEvent(UiEvent.Initialize(InitArgs(templateAssetFileName = "tpl.json", templateText = localized)))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: the draft shows the localized text while the rule contents come from the asset
+            val rule = viewModel.uiState.value.rule
+            rule.name shouldBe "Plantilla"
+            rule.description shouldBe "Descripción"
+            rule.category shouldBe "Finanzas"
+            viewModel.uiState.value.hasUnsavedChanges shouldBe false
         }
 
         @Test

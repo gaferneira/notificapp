@@ -13,8 +13,10 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.domain.model.MAX_FLASH_COUNT
 import dev.gaferneira.notificapp.domain.model.MAX_FLASH_DURATION_MS
 import dev.gaferneira.notificapp.domain.model.MIN_FLASH_COUNT
@@ -57,7 +59,7 @@ fun FlashOptionsSelector(
                 .padding(16.dp),
         ) {
             Text(
-                text = "Flash options",
+                text = stringResource(R.string.flash_options_title),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -91,7 +93,7 @@ private fun FlashCountSlider(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "Number of flashes: $flashCount",
+            text = stringResource(R.string.flash_count_label, flashCount),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
@@ -116,7 +118,7 @@ private fun FlashDurationSlider(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "Flash speed: ${flashDurationMs}ms per phase",
+            text = stringResource(R.string.flash_speed_label, flashDurationMs.toInt()),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )

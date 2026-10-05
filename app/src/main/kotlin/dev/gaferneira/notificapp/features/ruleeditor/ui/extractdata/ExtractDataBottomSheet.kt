@@ -117,7 +117,7 @@ fun ExtractDataBottomSheet(
     }
 
     ActionConfigSheet(
-        title = "Extract data",
+        title = stringResource(R.string.action_type_save_data_label),
         confirmLabel = confirmLabelFor(uiState.isEditingAction),
         // A null onConfirm disables the button while the draft has no fields.
         onConfirm = if (uiState.canConfirm) {
@@ -188,7 +188,7 @@ private fun DataExtractionSection(
 
         // Add field button (outlined style)
         AddButton(
-            text = "Add field",
+            text = stringResource(R.string.extract_data_add_field),
             onClick = { onEvent(UiEvent.OnAddFieldClicked) },
             modifier = Modifier.fillMaxWidth(),
         )
@@ -209,7 +209,7 @@ private fun DataExtractionHeaderRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Define the data fields you want to extract from the notification text using rules.",
+            text = stringResource(R.string.extract_data_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f),
@@ -228,7 +228,7 @@ private fun DataExtractionHeaderRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.AutoFixHigh,
-                    contentDescription = "Auto-generate extraction",
+                    contentDescription = stringResource(R.string.extract_data_auto_generate_cd),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -504,7 +504,7 @@ private val previewNotification = Notification(
     id = "1",
     packageName = "com.example.bank",
     appName = "Bank App",
-    title = "Payment received",
+    title = "Payment received", // i18n-ignore: preview sample
     content = "ICA Kvantum charged you 153.50 kr",
     rawContent = "ICA Kvantum charged you 153.50 kr",
     timestamp = 0L,

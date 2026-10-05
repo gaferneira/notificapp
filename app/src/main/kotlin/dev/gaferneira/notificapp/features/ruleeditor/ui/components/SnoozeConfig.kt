@@ -25,8 +25,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.util.formatDurationMinutes
 
 /**
@@ -73,7 +75,7 @@ fun SnoozeDurationSelector(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Snooze duration",
+                text = stringResource(R.string.snooze_duration_title),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -124,7 +126,7 @@ fun SnoozeDurationSelector(
             FilterChip(
                 selected = isCustomSelected,
                 onClick = { isCustomSelected = true },
-                label = { Text("Custom") },
+                label = { Text(stringResource(R.string.rule_editor_custom)) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
@@ -137,7 +139,7 @@ fun SnoozeDurationSelector(
 
             // Slider for fine-grained control
             Text(
-                text = "Drag to set custom time",
+                text = stringResource(R.string.snooze_drag_custom_time),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

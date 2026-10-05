@@ -33,10 +33,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.features.ruleeditor.domain.fullLabel
 import dev.gaferneira.notificapp.features.ruleeditor.domain.shortLabel
 import dev.gaferneira.notificapp.util.formatDurationMinutes
@@ -93,7 +95,7 @@ fun BatchAtTimeSelector(
             )
             .padding(16.dp),
     ) {
-        SectionLabel("Delivery times")
+        SectionLabel(stringResource(R.string.snooze_delivery_times))
         Spacer(modifier = Modifier.height(8.dp))
 
         Column(
@@ -125,7 +127,7 @@ fun BatchAtTimeSelector(
                             },
                             modifier = Modifier.padding(0.dp),
                         ) {
-                            Text("Remove")
+                            Text(stringResource(R.string.snooze_remove_time))
                         }
                     }
                 }
@@ -140,7 +142,7 @@ fun BatchAtTimeSelector(
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("+ Add time")
+            Text(stringResource(R.string.snooze_add_time))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -204,7 +206,7 @@ fun DigestScheduleSelector(
             )
             .padding(16.dp),
     ) {
-        SectionLabel("Start delivering at")
+        SectionLabel(stringResource(R.string.snooze_start_delivering))
         Spacer(modifier = Modifier.height(8.dp))
         TimePickerButton(
             hour = config.startHour,
@@ -215,7 +217,7 @@ fun DigestScheduleSelector(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Every",
+            text = stringResource(R.string.snooze_every),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -236,7 +238,7 @@ fun DigestScheduleSelector(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        SectionLabel("Until")
+        SectionLabel(stringResource(R.string.snooze_until))
         Spacer(modifier = Modifier.height(8.dp))
         TimePickerButton(
             hour = config.windowEndHour,
@@ -249,7 +251,7 @@ fun DigestScheduleSelector(
         if (!isDigestScheduleConfigValid(config)) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "The end time must be after the start time",
+                text = stringResource(R.string.snooze_end_before_start_error),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -278,26 +280,26 @@ fun WeekdaySelector(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        SectionLabel("Days")
+        SectionLabel(stringResource(R.string.snooze_days))
         Spacer(modifier = Modifier.height(8.dp))
 
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             SegmentedButton(
                 selected = weekdayMode == WeekdayMode.EVERYDAY,
                 onClick = { onSelectionChange(WeekdayMode.EVERYDAY, emptySet()) },
-                label = { Text("Everyday") },
+                label = { Text(stringResource(R.string.snooze_days_everyday)) },
                 shape = RoundedCornerShape(8.dp),
             )
             SegmentedButton(
                 selected = weekdayMode == WeekdayMode.WORKDAYS,
                 onClick = { onSelectionChange(WeekdayMode.WORKDAYS, WORKDAYS) },
-                label = { Text("Workdays") },
+                label = { Text(stringResource(R.string.snooze_days_workdays)) },
                 shape = RoundedCornerShape(8.dp),
             )
             SegmentedButton(
                 selected = weekdayMode == WeekdayMode.CUSTOM,
                 onClick = { onSelectionChange(WeekdayMode.CUSTOM, WORKDAYS) },
-                label = { Text("Custom") },
+                label = { Text(stringResource(R.string.rule_editor_custom)) },
                 shape = RoundedCornerShape(8.dp),
             )
         }
@@ -305,7 +307,7 @@ fun WeekdaySelector(
         if (weekdayMode == WeekdayMode.CUSTOM) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Select days",
+                text = stringResource(R.string.snooze_select_days),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -376,10 +378,10 @@ private fun TimePickerButton(
                         onTimePicked(state.hour, state.minute)
                         showDialog = false
                     },
-                ) { Text("OK") }
+                ) { Text(stringResource(R.string.rule_editor_action_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.rule_editor_action_cancel)) }
             },
             text = { Box(modifier = Modifier.verticalScroll(rememberScrollState())) { TimePicker(state = state) } },
         )

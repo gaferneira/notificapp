@@ -29,6 +29,7 @@ import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorMode
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LoadError
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LocalizedTemplateText
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
@@ -271,7 +272,7 @@ class RuleEditorViewModel @Inject constructor(
 
             val prefill = when {
                 args.ruleId != null -> loadExistingRule(args.ruleId)
-                args.templateAssetFileName != null -> loadTemplate(args.templateAssetFileName)
+                args.templateAssetFileName != null -> loadTemplate(args.templateAssetFileName, args.templateText)
                 else -> Prefill.Ready(RuleUiModel())
             }
             if (prefill is Prefill.Failed) {
@@ -325,7 +326,7 @@ class RuleEditorViewModel @Inject constructor(
      * Populates the form from a template without persisting anything: `id = null` keeps the
      * editor in "create" mode, so the rule is only saved when the user taps Save.
      */
-    private suspend fun loadTemplate(assetFileName: String): Prefill {
+    private suspend fun loadTemplate(assetFileName: String, localized: LocalizedTemplateText?): Prefill {
         val text = ruleTemplateRepository.getTemplateText(assetFileName).getOrElse { e ->
             Timber.w(e, "Rule template unavailable: $assetFileName")
             return Prefill.Failed(LoadError(UiText.StringResource(R.string.rule_editor_error_template_missing), canRetry = false))
@@ -335,7 +336,14 @@ class RuleEditorViewModel @Inject constructor(
                 // Bundled templates are trusted: keep their own dry-run flag, which the import
                 // pipeline would otherwise force on (that safety rule is for untrusted files).
                 val template = result.rule.withFreshIdentityForImport().copy(isDryRun = result.rule.isDryRun)
-                Prefill.Ready(RuleUiModel.fromDomain(template).copy(id = null))
+                val ui = RuleUiModel.fromDomain(template).copy(id = null)
+                Prefill.Ready(
+                    if (localized == null) {
+                        ui
+                    } else {
+                        ui.copy(name = localized.name, description = localized.description, category = localized.category)
+                    },
+                )
             },
             onFailure = { e ->
                 Timber.w(e, "Failed to decode rule template: $assetFileName")

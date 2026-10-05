@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COOLDOWN_SECONDS
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COUNT
@@ -43,7 +44,7 @@ fun FlashBottomSheet(
     }
 
     ActionConfigSheet(
-        title = "Flash alert",
+        title = stringResource(R.string.action_type_flash_label),
         confirmLabel = confirmLabelFor(isEdit = initial != null),
         onConfirm = {
             onSave(

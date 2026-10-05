@@ -1,5 +1,8 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
+import androidx.annotation.StringRes
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
@@ -27,9 +30,9 @@ object AddFieldContract {
         /** Whether currently loading/testing */
         val isTesting: Boolean = false,
         /** Error message */
-        val error: String? = null,
+        val error: UiText? = null,
         /** Validation errors by field */
-        val validationErrors: Map<String, String> = emptyMap(),
+        val validationErrors: Map<String, UiText> = emptyMap(),
 
         // Method-specific parameters
         /** Fixed position: start index */
@@ -143,47 +146,17 @@ object AddFieldContract {
     /**
      * Available extraction method types.
      */
-    enum class MethodType(val displayName: String, val description: String) {
-        FIXED_POSITION(
-            "Fixed position",
-            "Extract characters from position X to Y",
-        ),
-        TEXT_BETWEEN_ANCHORS(
-            "Text between anchors",
-            "Extract text between two marker strings",
-        ),
-        REGEX(
-            "Regex pattern",
-            "Use regular expression with capture groups",
-        ),
-        TEXT_AFTER_KEYWORD(
-            "Text after keyword",
-            "Extract everything after a specific word",
-        ),
-        TEXT_BEFORE_KEYWORD(
-            "Text before keyword",
-            "Extract everything before a specific word",
-        ),
-        LINE_EXTRACTION(
-            "Line extraction",
-            "Extract a specific line by number",
-        ),
-        SPLIT_BY_DELIMITER(
-            "Split by delimiter",
-            "Split by comma/space and take Nth part",
-        ),
-        JSON_PATH(
-            "JSON path",
-            "Extract from JSON using dot notation",
-        ),
-        SMART_AMOUNT(
-            "Smart amount detection",
-            "Auto-detect currency amounts",
-        ),
-        SMART_DATE(
-            "Smart date detection",
-            "Auto-detect dates",
-        ),
+    enum class MethodType(@StringRes val displayNameRes: Int, @StringRes val descriptionRes: Int) {
+        FIXED_POSITION(R.string.method_fixed_position, R.string.method_fixed_position_desc),
+        TEXT_BETWEEN_ANCHORS(R.string.method_text_between_anchors, R.string.method_text_between_anchors_desc),
+        REGEX(R.string.method_regex, R.string.method_regex_desc),
+        TEXT_AFTER_KEYWORD(R.string.method_text_after_keyword, R.string.method_text_after_keyword_desc),
+        TEXT_BEFORE_KEYWORD(R.string.method_text_before_keyword, R.string.method_text_before_keyword_desc),
+        LINE_EXTRACTION(R.string.method_line_extraction, R.string.method_line_extraction_desc),
+        SPLIT_BY_DELIMITER(R.string.method_split_by_delimiter, R.string.method_split_by_delimiter_desc),
+        JSON_PATH(R.string.method_json_path, R.string.method_json_path_desc),
+        SMART_AMOUNT(R.string.method_smart_amount, R.string.method_smart_amount_desc),
+        SMART_DATE(R.string.method_smart_date, R.string.method_smart_date_desc),
     }
 
     /**
@@ -198,7 +171,7 @@ object AddFieldContract {
         ) : PreviewResult() {
             val hasPosition: Boolean get() = startIndex >= 0 && endIndex > startIndex
         }
-        data class Failure(val reason: String) : PreviewResult()
+        data class Failure(val reason: UiText) : PreviewResult()
     }
 
     /**
@@ -267,6 +240,6 @@ object AddFieldContract {
         data object CancelAndReturn : UiEffect()
 
         /** Show error message */
-        data class ShowError(val message: String) : UiEffect()
+        data class ShowError(val message: UiText) : UiEffect()
     }
 }

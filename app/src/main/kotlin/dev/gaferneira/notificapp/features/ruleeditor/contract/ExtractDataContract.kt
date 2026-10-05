@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
 import kotlinx.collections.immutable.ImmutableList
@@ -118,6 +119,6 @@ object ExtractDataContract {
         data object Dismiss : UiEffect()
 
         /** Non-fatal auto-generate feedback (e.g. no text / no numbers) */
-        data class ShowError(val message: String) : UiEffect()
+        data class ShowError(val message: UiText) : UiEffect()
     }
 }

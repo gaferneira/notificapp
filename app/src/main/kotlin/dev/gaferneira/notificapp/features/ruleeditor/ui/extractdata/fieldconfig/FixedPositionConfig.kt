@@ -10,8 +10,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.numberKeyboardOptions
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
 
@@ -29,7 +31,7 @@ fun FixedPositionConfig(
     ) {
         SectionHeader(
             icon = Icons.Default.Straighten,
-            title = "POSITION",
+            title = stringResource(R.string.field_config_position_section),
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -38,7 +40,7 @@ fun FixedPositionConfig(
             OutlinedTextField(
                 value = startIndex.toString(),
                 onValueChange = { onStartIndexChange(it.toIntOrNull() ?: 0) },
-                label = { Text("Start Index") },
+                label = { Text(stringResource(R.string.config_start_index)) },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 keyboardOptions = numberKeyboardOptions(ImeAction.Next),
@@ -46,7 +48,7 @@ fun FixedPositionConfig(
             OutlinedTextField(
                 value = endIndex.toString(),
                 onValueChange = { onEndIndexChange(it.toIntOrNull() ?: 0) },
-                label = { Text("End Index") },
+                label = { Text(stringResource(R.string.config_end_index)) },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
                 keyboardOptions = numberKeyboardOptions(ImeAction.Done),

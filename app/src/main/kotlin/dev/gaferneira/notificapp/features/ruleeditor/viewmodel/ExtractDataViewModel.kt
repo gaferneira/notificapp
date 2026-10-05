@@ -2,10 +2,12 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.ExtractionResult
 import dev.gaferneira.notificapp.core.extraction.FieldExtractor
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleField
@@ -141,13 +143,13 @@ class ExtractDataViewModel @Inject constructor(
     private fun autoGenerate() {
         val text = effectiveSampleText().orEmpty()
         if (text.isEmpty()) {
-            sendEffect(UiEffect.ShowError("No notification text available to analyze"))
+            sendEffect(UiEffect.ShowError(UiText.StringResource(R.string.extract_data_error_no_text)))
             return
         }
 
         val matches = Regex("""\d+[.,]?\d*""").findAll(text).toList()
         if (matches.isEmpty()) {
-            sendEffect(UiEffect.ShowError("No numbers found in the notification"))
+            sendEffect(UiEffect.ShowError(UiText.StringResource(R.string.extract_data_error_no_numbers)))
             return
         }
 

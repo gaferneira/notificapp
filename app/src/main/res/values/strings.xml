@@ -1,43 +1,21 @@
 <resources>
-    <string name="app_name">Notificapp</string>
-    <string name="title_activity_main">MainActivity</string>
+    <string name="app_name" translatable="false">Notificapp</string>
 
     <!-- Rule Editor -->
-    <string name="rule_editor_title">Advanced Trainer</string>
-    <string name="rule_editor_save">Save Rule</string>
-    <string name="rule_editor_global_rule">Global Rule</string>
-    <string name="rule_editor_global_rule_desc">Apply to notifications from all apps</string>
-    <string name="rule_editor_name">Rule Name</string>
-    <string name="rule_editor_name_hint">e.g., Purchase extraction</string>
-    <string name="rule_editor_description">Description (optional)</string>
-    <string name="rule_editor_description_hint">What does this rule do?</string>
-    <string name="rule_editor_matching_logic">MATCHING LOGIC</string>
     <string name="rule_editor_condition">Condition</string>
     <string name="rule_editor_operator">Operator</string>
-    <string name="rule_editor_value">Value</string>
-    <string name="rule_editor_value_hint">e.g., Your purchase</string>
-    <string name="rule_editor_action">ACTION</string>
-    <string name="rule_editor_action_save_data">Save extracted data</string>
-    <string name="rule_editor_action_delete">Delete notification</string>
-    <string name="rule_editor_data_extraction">DATA EXTRACTION</string>
-    <string name="rule_editor_add_field">Add Field</string>
-    <string name="rule_editor_test_extraction">Test Extraction</string>
-    <string name="rule_editor_notification_sample">NOTIFICATION SAMPLE</string>
-    <string name="rule_editor_no_fields">No extraction fields configured. Add a field to extract data from notifications.</string>
 
     <!-- Add Field -->
     <string name="add_field_title">Add Field</string>
-    <string name="add_field_add">Add</string>
-    <string name="add_field_save">Save Field</string>
+    <string name="add_field_save">Save</string>
     <string name="add_field_cancel">Cancel</string>
     <string name="add_field_name">Field Name</string>
-    <string name="add_field_name_hint">e.g., Amount</string>
+    <string name="add_field_name_hint">e.g., Amount, Date, Order ID</string>
     <string name="add_field_extraction_method">Extraction Method</string>
-    <string name="add_field_preview_result">Preview Result</string>
-    <string name="add_field_preview_none">Configure the extraction method to see a preview</string>
+    <string name="add_field_preview_result">PREVIEW RESULT</string>
     <string name="add_field_preview_success">EXTRACTED VALUE</string>
-    <string name="add_field_preview_error">Preview failed</string>
-    <string name="add_field_sample_text">NOTIFICATION SAMPLE</string>
+    <string name="add_field_preview_error">Preview failed: %1$s</string>
+    <string name="add_field_sample_text">Notification Sample:</string>
 
     <!-- Method Types -->
     <string name="method_fixed_position">Fixed position</string>
@@ -57,34 +35,28 @@
     <string name="method_json_path">JSON path</string>
     <string name="method_json_path_desc">Extract from JSON using dot notation</string>
     <string name="method_smart_amount">Smart amount detection</string>
-    <string name="method_smart_amount_desc">Auto-detect currency amounts in text</string>
+    <string name="method_smart_amount_desc">Auto-detect currency amounts</string>
     <string name="method_smart_date">Smart date detection</string>
-    <string name="method_smart_date_desc">Auto-detect dates in various formats</string>
+    <string name="method_smart_date_desc">Auto-detect dates</string>
 
     <!-- Field Configuration Labels -->
     <string name="config_start_index">Start Index</string>
     <string name="config_end_index">End Index</string>
     <string name="config_start_anchor">Start Anchor</string>
-    <string name="config_start_anchor_hint">e.g., of</string>
+    <string name="config_start_anchor_hint">Text before the value</string>
     <string name="config_end_anchor">End Anchor</string>
-    <string name="config_end_anchor_hint">e.g., at</string>
+    <string name="config_end_anchor_hint">Text after the value</string>
     <string name="config_regex_pattern">Regex Pattern</string>
-    <string name="config_regex_pattern_hint">e.g., ([\d,.]+) (\w+)</string>
+    <string name="config_regex_pattern_hint">e.g., (\\d+[.,]?\\d*)</string>
     <string name="config_capture_group">Capture Group</string>
     <string name="config_keyword">Keyword</string>
-    <string name="config_after_keyword_hint">e.g., Total:</string>
-    <string name="config_before_keyword_hint">e.g., was</string>
     <string name="config_line_number">Line Number</string>
     <string name="config_delimiter">Delimiter</string>
-    <string name="config_delimiter_hint">e.g., , or space</string>
-    <string name="config_take_index">Take Index (0-based)</string>
+    <string name="config_take_index">Take Index</string>
     <string name="config_json_path">JSON Path</string>
-    <string name="config_json_path_hint">e.g., data.amount or items.0.name</string>
+    <string name="config_json_path_hint">e.g., $.amount</string>
 
     <!-- Validation Messages -->
-    <string name="error_field_required">This field is required</string>
-    <string name="error_rule_name_required">Rule name is required</string>
-    <string name="error_matching_value_required">Matching pattern is required</string>
     <string name="error_field_name_required">Field name is required</string>
     <string name="error_start_anchor_required">Start anchor is required</string>
     <string name="error_end_anchor_required">End anchor is required</string>
@@ -94,15 +66,8 @@
 
     <!-- UI Actions -->
     <string name="action_back">Back</string>
-    <string name="action_delete">Remove field</string>
-    <string name="action_dismiss">Dismiss</string>
-    <string name="action_retry">Retry</string>
 
     <!-- Success/Error Messages -->
-    <string name="success_rule_saved">Rule saved successfully</string>
-    <string name="error_saving_rule">Failed to save rule</string>
-    <string name="error_loading_rule">Failed to load rule</string>
-    <string name="error_test_extraction">No sample notification available</string>
     <string name="error_fix_validation">Please fix validation errors</string>
 
     <!-- Notification Detail -->
@@ -115,7 +80,6 @@
     <string name="filter_rules_title">Filter &amp; Sort</string>
     <string name="filter_inbox_title">Filter Notifications</string>
     <string name="sort_by">Sort by</string>
-    <string name="filter_by_category">By Category</string>
     <string name="status_all">All</string>
     <string name="status_enabled">Enabled</string>
     <string name="status_disabled">Disabled</string>
@@ -129,7 +93,6 @@
     <string name="sort_updated_recent">Recently Updated</string>
     <string name="sort_status">Enabled first</string>
     <string name="clear_all">Clear All</string>
-    <string name="apply">Apply</string>
     <string name="no_filters_available">No filter options available. Create more rules with different categories or target apps.</string>
 
     <!-- Rules filter & sort sheet -->
@@ -141,7 +104,6 @@
     <string name="rules_filter_include_global_hint">Adds rules with no app restriction, and rules that exclude other apps but not the selected ones.</string>
     <string name="rules_filter_apps_group_used">Used by rules</string>
     <string name="rules_filter_apps_group_other">Other monitored apps</string>
-    <string name="rules_filter_sort_current_cd">%1$s, %2$s</string>
     <string name="rules_filter_chip_all_apps">+ rules for all apps</string>
     <string name="rules_filter_chip_remove_cd">Remove filter %1$s</string>
     <plurals name="rules_filter_rule_count">
@@ -412,7 +374,6 @@
     <string name="rule_details_delete_message">This will permanently delete \"%1$s\". This action cannot be undone.</string>
     <string name="rule_details_error_load">Failed to load rule</string>
     <string name="rule_details_error_toggle">Failed to update rule</string>
-    <string name="rule_details_error_share">Failed to share rule</string>
     <string name="rule_details_error_delete">Failed to delete rule</string>
 
     <!-- Rules list -->
@@ -562,7 +523,6 @@
     <string name="rule_editor_section_do">Do</string>
     <string name="rule_editor_section_do_help">Choose what happens when a notification matches.</string>
     <string name="rule_editor_section_settings">Settings</string>
-    <string name="rule_editor_section_review">Review</string>
     <string name="rule_editor_add_condition">Add condition</string>
     <string name="rule_editor_add_action">Add action</string>
     <string name="rule_editor_test_history">Test against history</string>
@@ -633,4 +593,158 @@
     <string name="alarm_background_preset_forest">Forest</string>
     <string name="alarm_background_preset_lavender">Lavender</string>
     <string name="alarm_background_preset_coral">Coral</string>
+
+    <!-- Phase 5: rule editor localization sweep -->
+    <string name="add_field_title_edit">Edit Field</string>
+    <string name="add_field_smart_detection">SMART DETECTION</string>
+    <string name="add_field_smart_amount_text">This method will automatically detect currency amounts in the text.</string>
+    <string name="add_field_smart_date_text">This method will automatically detect dates in the text.</string>
+    <string name="add_field_preview_failed_label">EXTRACTION FAILED</string>
+    <string name="field_config_keyword_section">KEYWORD</string>
+    <string name="config_keyword_hint">Text to search for</string>
+    <string name="config_max_length">Max Length (optional)</string>
+    <string name="field_config_regex_section">REGEX PATTERN</string>
+    <string name="field_config_anchors_section">ANCHORS</string>
+    <string name="field_config_json_section">JSON PATH</string>
+    <string name="field_config_delimiter_section">DELIMITER</string>
+    <string name="field_config_line_section">LINE</string>
+    <string name="field_config_position_section">POSITION</string>
+    <string name="rule_editor_action_ok">OK</string>
+    <string name="rule_editor_action_add">Add</string>
+    <string name="rule_editor_action_update">Update</string>
+    <string name="rule_editor_action_add_action">Add action</string>
+    <string name="rule_editor_action_close">Close</string>
+    <string name="rule_editor_custom">Custom</string>
+    <string name="extract_data_add_field">Add field</string>
+    <string name="extract_data_description">Define the data fields you want to extract from the notification text using rules.</string>
+    <string name="extract_data_auto_generate_cd">Auto-generate extraction</string>
+    <string name="extract_data_error_no_text">No notification text available to analyze</string>
+    <string name="extract_data_error_no_numbers">No numbers found in the notification</string>
+    <string name="matching_logic_title_edit">Edit Condition</string>
+    <string name="matching_logic_title_add">Add Condition</string>
+    <string name="matching_logic_description">Define the condition under which this rule should trigger.</string>
+    <string name="matching_logic_error_value_required">Please enter a value to match</string>
+    <string name="matching_logic_error_days_required">Please select at least one day</string>
+    <string name="matching_logic_value_label">Value to match</string>
+    <string name="matching_logic_value_hint">e.g., Your purchase</string>
+    <string name="matching_logic_days_prompt">Trigger only on these days</string>
+    <string name="matching_logic_time_from">From</string>
+    <string name="matching_logic_time_to">To</string>
+    <string name="matching_logic_time_spans_midnight">This range spans midnight (%1$s – %2$s covers overnight).</string>
+    <string name="rule_editor_insert_field">Insert field</string>
+    <string name="read_aloud_spoken_text">Spoken text</string>
+    <string name="read_aloud_spoken_hint">Received {{field.&lt;id>}} from {{field.&lt;id>}}</string>
+    <string name="send_reply_text">Reply text</string>
+    <string name="send_reply_text_hint">Got it, thanks {{field.&lt;id>}}</string>
+    <string name="send_reply_best_effort_note">Only works on apps that support direct reply. If they don\'t, this action quietly does nothing - check the notification\'s per-action outcomes to see whether it fired.</string>
+    <string name="webhook_get_notice">This webhook uses GET — no payload is sent. Use query parameters on the webhook to pass data.</string>
+    <string name="webhook_section_title">Webhook</string>
+    <string name="webhook_new">New webhook</string>
+    <string name="webhook_mode_fields">Fields</string>
+    <string name="webhook_mode_template">Template</string>
+    <string name="webhook_notification_fields">Notification fields</string>
+    <string name="webhook_extracted_fields">Extracted fields</string>
+    <string name="webhook_no_extracted_fields">No extracted fields yet — add an Extract Data action to reference custom fields here.</string>
+    <string name="webhook_json_template">JSON template</string>
+    <string name="webhook_preview_payload">Preview payload</string>
+    <string name="webhook_payload_preview_title">Payload preview</string>
+    <string name="webhook_dismiss_preview_cd">Dismiss preview</string>
+    <string name="webhook_preview_invalid_json">Invalid JSON — check your template for unescaped quotes or a malformed structure.</string>
+    <string name="webhook_preview_unknown_tokens">Unknown token(s): %1$s</string>
+    <string name="backtest_title">Test results</string>
+    <plurals name="backtest_summary_none">
+        <item quantity="one">No matches found in the most recent %1$d captured notification</item>
+        <item quantity="other">No matches found in the most recent %1$d captured notifications</item>
+    </plurals>
+    <plurals name="backtest_summary_matched">
+        <item quantity="one">Matched %1$d of the most recent %2$d captured notification</item>
+        <item quantity="other">Matched %1$d of the most recent %2$d captured notifications</item>
+    </plurals>
+    <string name="alarm_fullscreen_toggle_label">Full-screen alarm (when screen is off)</string>
+    <string name="snooze_outcome_delay_title">Delay each one</string>
+    <string name="snooze_outcome_delay_subtitle">Deliver every match after a set wait.</string>
+    <string name="snooze_outcome_delay_example">\"News → arrive 20 min later\"</string>
+    <string name="snooze_outcome_batch_title">Batch at time</string>
+    <string name="snooze_outcome_batch_subtitle">Collect and deliver at chosen times.</string>
+    <string name="snooze_outcome_batch_example">\"LinkedIn → 9:00 AM and 5:00 PM daily\"</string>
+    <string name="snooze_outcome_digest_title">Batch into a digest</string>
+    <string name="snooze_outcome_digest_subtitle">Recurring checkpoints in a window.</string>
+    <string name="snooze_outcome_digest_example">\"Release every hour from 9 AM to 6 PM\"</string>
+    <string name="snooze_outcome_throttle_title">Let the first through, mute the rest</string>
+    <string name="snooze_outcome_throttle_subtitle">Deliver the first match, drop the rest until the window elapses.</string>
+    <string name="snooze_outcome_throttle_example">\"WhatsApp → 1 alert per 10 min\"</string>
+    <string name="snooze_duration_title">Snooze duration</string>
+    <string name="snooze_drag_custom_time">Drag to set custom time</string>
+    <string name="snooze_throttle_window_title">Throttle window</string>
+    <string name="snooze_drag_custom_window">Drag to set custom window</string>
+    <string name="cooldown_title">Cooldown</string>
+    <string name="cooldown_description">Suppress repeated firing from a chatty app</string>
+    <string name="cooldown_drag_custom">Drag to set custom cooldown</string>
+    <string name="flash_options_title">Flash options</string>
+    <string name="flash_count_label">Number of flashes: %1$d</string>
+    <string name="flash_speed_label">Flash speed: %1$dms per phase</string>
+    <string name="snooze_delivery_times">Delivery times</string>
+    <string name="snooze_remove_time">Remove</string>
+    <string name="snooze_add_time">+ Add time</string>
+    <string name="snooze_start_delivering">Start delivering at</string>
+    <string name="snooze_every">Every</string>
+    <string name="snooze_until">Until</string>
+    <string name="snooze_end_before_start_error">The end time must be after the start time</string>
+    <string name="snooze_days">Days</string>
+    <string name="snooze_days_everyday">Everyday</string>
+    <string name="snooze_days_workdays">Workdays</string>
+    <string name="snooze_select_days">Select days</string>
+    <string name="when_match_label">Match</string>
+    <string name="when_match_all">All conditions</string>
+    <string name="when_match_any">Any condition</string>
+    <string name="when_apps_all">All apps</string>
+    <string name="when_apps_all_except">All apps except %1$s</string>
+    <string name="when_apps_header">APPS</string>
+    <string name="when_apps_only_these">Only these apps</string>
+    <string name="when_apps_all_except_these">All apps except these</string>
+    <string name="when_condition_header">CONDITION</string>
+    <string name="do_section_description">Actions to perform with the extracted data, like saving it or sending a new alert.</string>
+    <string name="do_extract_no_fields">No fields yet</string>
+    <plurals name="do_extract_field_count">
+        <item quantity="one">%1$d field</item>
+        <item quantity="other">%1$d fields</item>
+    </plurals>
+    <string name="do_snooze_every">Every %1$s, %2$s-%3$s</string>
+    <string name="do_snooze_until">Until %1$s</string>
+    <string name="do_snooze_throttle">1 per %1$s</string>
+    <string name="rule_editor_app_picker_title">Select Apps</string>
+    <string name="rule_editor_app_picker_search">Search apps…</string>
+    <plurals name="rule_editor_app_picker_selected">
+        <item quantity="one">%1$d app selected</item>
+        <item quantity="other">%1$d apps selected</item>
+    </plurals>
+    <string name="rule_editor_app_picker_clear_all">CLEAR ALL</string>
+    <string name="rule_editor_app_picker_confirm">Confirm Selection</string>
+    <string name="advanced_settings_title">Advanced settings</string>
+    <string name="advanced_settings_collapse_cd">Collapse advanced settings</string>
+    <string name="advanced_settings_expand_cd">Expand advanced settings</string>
+    <string name="notification_preview_no_content">(no content)</string>
+    <string name="notification_preview_field_chip">%1$s: %2$s</string>
+    <string name="template_bank_payment_name">Bank payment tracker</string>
+    <string name="template_bank_payment_description">Extracts the amount and date from your bank\'s payment notifications into a searchable dataset.</string>
+    <string name="template_package_delivery_name">Package delivery tracker</string>
+    <string name="template_package_delivery_description">Catches delivery notifications and pulls out the tracking number so every package ends up in one searchable place.</string>
+    <string name="template_mute_promotions_name">Mute promotional notifications</string>
+    <string name="template_mute_promotions_description">Automatically dismisses notifications that look like sales or promotions.</string>
+    <string name="template_snooze_digests_name">Snooze newsletters and digests</string>
+    <string name="template_snooze_digests_description">Holds back newsletter and digest notifications for 4 hours so they arrive in a batch.</string>
+    <string name="template_flash_codes_name">Flash alert for verification codes</string>
+    <string name="template_flash_codes_description">Flashes the camera torch when a one-time verification code arrives.</string>
+    <string name="template_urgent_alerts_name">Wake me for urgent alerts</string>
+    <string name="template_urgent_alerts_description">Rings a full alarm when a notification is marked urgent or an emergency, even on silent.</string>
+    <string name="template_category_finance">Finance</string>
+    <string name="template_category_deliveries">Deliveries</string>
+    <string name="template_category_noise">Noise control</string>
+    <string name="template_category_security">Security</string>
+    <string name="template_category_alerts">Alerts</string>
+    <string name="inbox_title">Inbox</string>
+    <string name="inbox_subtitle">Live Notification Feed</string>
+    <string name="inbox_back_cd">Go back</string>
+    <string name="inbox_search_hint">Search notifications…</string>
+    <string name="app_selection_search_hint">Search apps…</string>
 </resources>

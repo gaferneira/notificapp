@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -117,7 +118,7 @@ private fun ConditionLogicToggle(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "Match",
+            text = stringResource(R.string.when_match_label),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -127,13 +128,13 @@ private fun ConditionLogicToggle(
                 selected = conditionLogic == ConditionCombinator.ALL,
                 onClick = { onLogicChanged(ConditionCombinator.ALL) },
                 shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                label = { Text("All conditions") },
+                label = { Text(stringResource(R.string.when_match_all)) },
             )
             SegmentedButton(
                 selected = conditionLogic == ConditionCombinator.ANY,
                 onClick = { onLogicChanged(ConditionCombinator.ANY) },
                 shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                label = { Text("Any condition") },
+                label = { Text(stringResource(R.string.when_match_any)) },
             )
         }
     }
@@ -192,14 +193,18 @@ private fun AppsCardContent(
     }
 }
 
+@Composable
 private fun resolveAppsDisplayText(
     selectedApps: ImmutableList<AppInfo>,
     isIncludeMode: Boolean,
 ): String = when {
-    selectedApps.isEmpty() -> "All apps"
-    !isIncludeMode -> "All apps except " + if (selectedApps.size == 1) selectedApps.first().name else "${selectedApps.size}"
+    selectedApps.isEmpty() -> stringResource(R.string.when_apps_all)
+    !isIncludeMode -> stringResource(
+        R.string.when_apps_all_except,
+        if (selectedApps.size == 1) selectedApps.first().name else "${selectedApps.size}",
+    )
     selectedApps.size == 1 -> selectedApps.first().name
-    else -> "${selectedApps.size} apps selected"
+    else -> pluralStringResource(R.plurals.rule_editor_app_picker_selected, selectedApps.size, selectedApps.size)
 }
 
 @Composable
@@ -232,7 +237,7 @@ private fun AppsCardLabel(
             modifier = Modifier.weight(1f),
         ) {
             Text(
-                text = "APPS",
+                text = stringResource(R.string.when_apps_header),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.tertiary,
                 fontWeight = FontWeight.SemiBold,
@@ -272,7 +277,7 @@ private fun AppScopeModeToggle(
                 count = 2,
             ),
             enabled = enabled,
-            label = { Text("Only these apps") },
+            label = { Text(stringResource(R.string.when_apps_only_these)) },
         )
         SegmentedButton(
             selected = !isIncludeMode,
@@ -282,7 +287,7 @@ private fun AppScopeModeToggle(
                 count = 2,
             ),
             enabled = enabled,
-            label = { Text("All apps except these") },
+            label = { Text(stringResource(R.string.when_apps_all_except_these)) },
         )
     }
 }
@@ -353,7 +358,7 @@ private fun ConditionCardLabel(text: String, modifier: Modifier = Modifier) {
 
         Column {
             Text(
-                text = "CONDITION",
+                text = stringResource(R.string.when_condition_header),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.SemiBold,

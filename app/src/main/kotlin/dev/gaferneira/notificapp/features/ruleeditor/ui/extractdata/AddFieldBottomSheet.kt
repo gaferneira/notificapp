@@ -39,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
@@ -50,6 +51,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.Notification
@@ -158,7 +160,7 @@ private fun AddFieldBottomSheetContent(
         TopAppBar(
             title = {
                 Text(
-                    text = if (uiState.fieldName.isBlank()) "Add Field" else "Edit Field",
+                    text = stringResource(if (uiState.fieldName.isBlank()) R.string.add_field_title else R.string.add_field_title_edit),
                     modifier = Modifier.semantics { heading() },
                 )
             },
@@ -166,7 +168,7 @@ private fun AddFieldBottomSheetContent(
                 IconButton(onClick = { onEvent(UiEvent.OnCancelClicked) }) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Cancel",
+                        contentDescription = stringResource(R.string.add_field_cancel),
                     )
                 }
             },
@@ -175,7 +177,7 @@ private fun AddFieldBottomSheetContent(
                     onClick = { onEvent(UiEvent.OnSaveClicked) },
                     enabled = uiState.isValid,
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.add_field_save))
                 }
             },
         )
@@ -183,7 +185,7 @@ private fun AddFieldBottomSheetContent(
         // Error message
         if (uiState.error != null) {
             Text(
-                text = uiState.error,
+                text = uiState.error.asString(),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -202,14 +204,14 @@ private fun AddFieldBottomSheetContent(
             OutlinedTextField(
                 value = uiState.fieldName,
                 onValueChange = { onEvent(UiEvent.OnFieldNameChange(it)) },
-                label = { Text("Field Name") },
-                placeholder = { Text("e.g., Amount, Date, Order ID") },
+                label = { Text(stringResource(R.string.add_field_name)) },
+                placeholder = { Text(stringResource(R.string.add_field_name_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = proseKeyboardOptions(ImeAction.Done),
                 keyboardActions = rememberClearFocusKeyboardActions(),
                 isError = uiState.validationErrors.contains("fieldName"),
-                supportingText = uiState.validationErrors["fieldName"]?.let { { Text(it) } },
+                supportingText = uiState.validationErrors["fieldName"]?.let { { Text(it.asString()) } },
             )
 
             // Method Type Selection
@@ -286,10 +288,10 @@ private fun AddFieldBottomSheetContent(
                 AddFieldContract.MethodType.SMART_AMOUNT -> {
                     SectionHeader(
                         icon = Icons.Default.AttachMoney,
-                        title = "SMART DETECTION",
+                        title = stringResource(R.string.add_field_smart_detection),
                     )
                     Text(
-                        text = "This method will automatically detect currency amounts in the text.",
+                        text = stringResource(R.string.add_field_smart_amount_text),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -297,10 +299,10 @@ private fun AddFieldBottomSheetContent(
                 AddFieldContract.MethodType.SMART_DATE -> {
                     SectionHeader(
                         icon = Icons.Default.CalendarToday,
-                        title = "SMART DETECTION",
+                        title = stringResource(R.string.add_field_smart_detection),
                     )
                     Text(
-                        text = "This method will automatically detect dates in the text.",
+                        text = stringResource(R.string.add_field_smart_date_text),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -318,7 +320,7 @@ private fun AddFieldBottomSheetContent(
                     val highlightEnd = (uiState.previewResult as? AddFieldContract.PreviewResult.Success)?.endIndex ?: -1
 
                     Text(
-                        text = "PREVIEW RESULT",
+                        text = stringResource(R.string.add_field_preview_result),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -335,7 +337,7 @@ private fun AddFieldBottomSheetContent(
                                 .padding(12.dp),
                         ) {
                             Text(
-                                text = "Notification Sample:",
+                                text = stringResource(R.string.add_field_sample_text),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -378,10 +380,10 @@ private fun MethodTypeDropdown(
         modifier = modifier.fillMaxWidth(),
     ) {
         OutlinedTextField(
-            value = selectedMethodType.displayName,
+            value = stringResource(selectedMethodType.displayNameRes),
             onValueChange = {},
             readOnly = true,
-            label = { Text("Extraction Method") },
+            label = { Text(stringResource(R.string.add_field_extraction_method)) },
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -400,12 +402,12 @@ private fun MethodTypeDropdown(
                     text = {
                         Column {
                             Text(
-                                text = methodType.displayName,
+                                text = stringResource(methodType.displayNameRes),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                             )
                             Text(
-                                text = methodType.description,
+                                text = stringResource(methodType.descriptionRes),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -488,7 +490,7 @@ private fun PreviewResultCard(
                     ) {
                         Column {
                             Text(
-                                text = "EXTRACTED VALUE",
+                                text = stringResource(R.string.add_field_preview_success),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -521,13 +523,13 @@ private fun PreviewResultCard(
                             .padding(16.dp),
                     ) {
                         Text(
-                            text = "EXTRACTION FAILED",
+                            text = stringResource(R.string.add_field_preview_failed_label),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = targetResult.reason,
+                            text = targetResult.reason.asString(),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                         )
