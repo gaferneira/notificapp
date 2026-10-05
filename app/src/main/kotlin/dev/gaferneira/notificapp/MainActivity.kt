@@ -10,14 +10,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -40,6 +44,7 @@ import androidx.navigation3.ui.NavDisplay
 import dagger.hilt.android.AndroidEntryPoint
 import dev.gaferneira.notificapp.core.notification.EnforceRetentionUseCase
 import dev.gaferneira.notificapp.core.ui.locale.LocaleController
+import dev.gaferneira.notificapp.core.ui.messaging.AppMessenger
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationCommand
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Navigator
@@ -70,6 +75,9 @@ import javax.inject.Inject
 class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var navigationHandler: NavigationHandler
+
+    @Inject
+    lateinit var appMessenger: AppMessenger
 
     @Inject
     lateinit var enforceRetentionUseCase: EnforceRetentionUseCase
@@ -107,6 +115,7 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     Notificapp(
                         navigationHandler = navigationHandler,
+                        appMessenger = appMessenger,
                     )
                 }
             }
@@ -133,6 +142,7 @@ enum class AppFlowState {
 @Composable
 fun Notificapp(
     navigationHandler: NavigationHandler,
+    appMessenger: AppMessenger,
     viewModel: MainViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -185,11 +195,23 @@ fun Notificapp(
         navigator.goBack()
     }
 
-    NotificappNavHost(navigator = navigator, context = context)
+    // App-level snackbar: shows one-shot messages that outlive the screen that posted them
+    // (e.g. "Rule saved" from the editor, which pops itself right after). Lifecycle-gated like
+    // navigation so queued messages wait while the Activity is stopped.
+    val messageHostState = remember { SnackbarHostState() }
+    LaunchedEffect(appMessenger, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            appMessenger.messages.collect { message ->
+                messageHostState.showSnackbar(message.asString(context))
+            }
+        }
+    }
+
+    NotificappNavHost(navigator = navigator, context = context, messageHostState = messageHostState)
 }
 
 @Composable
-private fun NotificappNavHost(navigator: Navigator, context: Context) {
+private fun NotificappNavHost(navigator: Navigator, context: Context, messageHostState: SnackbarHostState) {
     Box(modifier = Modifier.fillMaxSize()) {
         NavDisplay(
             backStack = navigator.state.backStack,
@@ -199,6 +221,13 @@ private fun NotificappNavHost(navigator: Navigator, context: Context) {
                 rememberViewModelStoreNavEntryDecorator(),
             ),
             entryProvider = notificappEntryProvider(navigator, context),
+        )
+
+        SnackbarHost(
+            hostState = messageHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding(),
         )
 
         // Debug overlay (only in debug builds)
