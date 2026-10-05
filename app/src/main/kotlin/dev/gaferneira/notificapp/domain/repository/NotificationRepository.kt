@@ -63,6 +63,25 @@ interface NotificationRepository {
     ): Result<List<Notification>>
 
     /**
+     * Count the notifications that [observeNotificationsPaged] / [searchNotificationsPaged] would
+     * list for the same filters, as a Flow. Feeds the Inbox filter sheet's live "Show N" count.
+     *
+     * @param query Search query for title/content (blank = no text search)
+     * @param packageNames Filter by app package names (empty = all apps)
+     * @param isProcessed Filter by processed status (null = all statuses)
+     */
+    fun observeFilteredCount(
+        query: String = "",
+        packageNames: List<String> = emptyList(),
+        isProcessed: Boolean? = null,
+    ): Flow<Int>
+
+    /**
+     * Number of notifications per app package, for every app that has at least one.
+     */
+    fun observeNotificationCountsByApp(): Flow<Map<String, Int>>
+
+    /**
      * Get a specific notification by ID.
      */
     suspend fun getNotification(id: String): Result<Notification?>

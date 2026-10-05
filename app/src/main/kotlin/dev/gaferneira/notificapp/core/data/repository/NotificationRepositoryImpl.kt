@@ -239,6 +239,36 @@ internal class NotificationRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun observeFilteredCount(
+        query: String,
+        packageNames: List<String>,
+        isProcessed: Boolean?,
+    ): Flow<Int> {
+        val hasPackageFilter = packageNames.isNotEmpty()
+        val hasStatusFilter = isProcessed != null
+        val flow = if (query.isBlank()) {
+            dao.observeFilteredCount(
+                packageNames = packageNames,
+                hasPackageFilter = hasPackageFilter,
+                isProcessed = isProcessed ?: false,
+                hasStatusFilter = hasStatusFilter,
+            )
+        } else {
+            dao.observeSearchFilteredCount(
+                ftsQuery = FtsQuerySanitizer.toMatchExpression(query),
+                packageNames = packageNames,
+                hasPackageFilter = hasPackageFilter,
+                isProcessed = isProcessed ?: false,
+                hasStatusFilter = hasStatusFilter,
+            )
+        }
+        return flow.flowOn(ioDispatcher)
+    }
+
+    override fun observeNotificationCountsByApp(): Flow<Map<String, Int>> = dao.observeCountsByPackage()
+        .map { rows -> rows.associate { it.packageName to it.count } }
+        .flowOn(ioDispatcher)
+
     override fun observeAppsWithNotifications(): Flow<List<AppInfo>> = dao.observeAppsWithLatestName()
         .map { rows -> rows.map { AppInfo(packageName = it.packageName, name = it.appName) } }
         .flowOn(ioDispatcher)

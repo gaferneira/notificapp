@@ -50,6 +50,26 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
         isProcessed: Boolean?,
     ): Flow<PagingData<Notification>> = pagedNotifications
 
+    override fun observeFilteredCount(
+        query: String,
+        packageNames: List<String>,
+        isProcessed: Boolean?,
+    ): Flow<Int> = notifications.map { list ->
+        list.count { n ->
+            (packageNames.isEmpty() || n.packageName in packageNames) &&
+                (isProcessed == null || n.isProcessed == isProcessed) &&
+                (
+                    query.isBlank() ||
+                        n.title?.contains(query, ignoreCase = true) == true ||
+                        n.content?.contains(query, ignoreCase = true) == true
+                    )
+        }
+    }
+
+    override fun observeNotificationCountsByApp(): Flow<Map<String, Int>> = notifications.map { list ->
+        list.groupingBy { it.packageName }.eachCount()
+    }
+
     override suspend fun getNotificationsForBacktest(
         targetPackages: List<String>?,
         isIncludeMode: Boolean,

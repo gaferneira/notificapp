@@ -243,6 +243,48 @@ internal interface NotificationDao {
     fun observeAppsWithLatestName(): Flow<List<AppWithLatestName>>
 
     /**
+     * Count notifications with the same optional app and status filters as [getFilteredPaged].
+     */
+    @Query(
+        """
+        SELECT COUNT(*) FROM notifications
+        WHERE (package_name IN (:packageNames) OR :hasPackageFilter = 0)
+        AND (is_processed = :isProcessed OR :hasStatusFilter = 0)
+    """,
+    )
+    fun observeFilteredCount(
+        packageNames: List<String>,
+        hasPackageFilter: Boolean,
+        isProcessed: Boolean,
+        hasStatusFilter: Boolean,
+    ): Flow<Int>
+
+    /**
+     * Count notifications with the same filters as [searchFilteredPaged].
+     * [ftsQuery] must already be a valid FTS4 MATCH expression (see [FtsQuerySanitizer]).
+     */
+    @Query(
+        """
+        SELECT COUNT(*) FROM notifications n
+        JOIN notifications_fts fts ON n.rowid = fts.rowid
+        WHERE (n.package_name IN (:packageNames) OR :hasPackageFilter = 0)
+        AND (n.is_processed = :isProcessed OR :hasStatusFilter = 0)
+        AND notifications_fts MATCH :ftsQuery
+    """,
+    )
+    fun observeSearchFilteredCount(
+        ftsQuery: String,
+        packageNames: List<String>,
+        hasPackageFilter: Boolean,
+        isProcessed: Boolean,
+        hasStatusFilter: Boolean,
+    ): Flow<Int>
+
+    /** Number of notifications per package. */
+    @Query("SELECT package_name AS packageName, COUNT(*) AS count FROM notifications GROUP BY package_name")
+    fun observeCountsByPackage(): Flow<List<PackageNotificationCount>>
+
+    /**
      * Increment the applied rules count for a notification.
      */
     @Query("UPDATE notifications SET applied_rules_count = applied_rules_count + 1, is_processed = 1 WHERE id = :id")
@@ -278,3 +320,6 @@ internal interface NotificationDao {
 
 /** Projection for [NotificationDao.observeAppsWithLatestName]. */
 internal data class AppWithLatestName(val packageName: String, val appName: String)
+
+/** Projection for [NotificationDao.observeCountsByPackage]. */
+internal data class PackageNotificationCount(val packageName: String, val count: Int)
