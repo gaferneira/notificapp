@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.data.repository
 
 import androidx.room.withTransaction
+import dev.gaferneira.notificapp.core.common.Failure
 import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.local.AppDatabase
 import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
@@ -11,18 +12,22 @@ import dev.gaferneira.notificapp.core.data.local.mapper.RecentActivityMapper
 import dev.gaferneira.notificapp.core.data.local.mapper.RuleExecutionMapper
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
+import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.RuleStats
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 /**
@@ -42,6 +47,7 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
     private val ruleExecutionDao: RuleExecutionDao,
     private val extractedFieldValueDao: ExtractedFieldValueDao,
     private val notificationDao: NotificationDao,
+    private val timeProvider: CurrentTimeProvider,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : RuleExecutionRepository {
 
@@ -116,4 +122,37 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
     override fun observeRecentActivity(limit: Int): Flow<List<RecentActivity>> = ruleExecutionDao.observeRecentActivity(limit)
         .map { rows -> rows.map { RecentActivityMapper.toDomain(it) } }
         .flowOn(ioDispatcher)
+
+    /**
+     * "Now" is read once when collection starts, so the 7/30-day windows are fixed for the life of
+     * the flow and only re-evaluated against new rows (Room re-runs the query on table changes).
+     */
+    override fun observeRuleStats(ruleId: String): Flow<RuleStats> {
+        val now = timeProvider.nowEpochMillis()
+        return ruleExecutionDao.observeRuleStats(
+            ruleId = ruleId,
+            since7Days = now - TimeUnit.DAYS.toMillis(DAYS_7),
+            since30Days = now - TimeUnit.DAYS.toMillis(DAYS_30),
+        )
+            .map { row ->
+                RuleStats(
+                    totalMatches = row.total,
+                    matchesLast7Days = row.last7Days,
+                    matchesLast30Days = row.last30Days,
+                    liveMatches = row.live,
+                    testModeMatches = row.testMode,
+                    lastTriggeredAt = row.lastTriggeredAt,
+                )
+            }
+            .catch { e ->
+                Timber.e(e, "Failed to observe stats for rule $ruleId")
+                throw Failure.analyzeCause(e)
+            }
+            .flowOn(ioDispatcher)
+    }
+
+    private companion object {
+        const val DAYS_7 = 7L
+        const val DAYS_30 = 30L
+    }
 }

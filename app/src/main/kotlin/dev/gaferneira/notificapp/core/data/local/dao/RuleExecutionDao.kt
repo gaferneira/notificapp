@@ -146,7 +146,36 @@ internal interface RuleExecutionDao {
         """,
     )
     fun observeRecentActivity(limit: Int): Flow<List<RecentActivityRow>>
+
+    /**
+     * Aggregate match statistics for one rule in a single pass over its rows (served by the
+     * `rule_id` index). Always returns exactly one row: with no executions the counts are 0 and
+     * `lastTriggeredAt` is null. [since7Days] / [since30Days] are inclusive epoch-millis cutoffs.
+     */
+    @Query(
+        """
+        SELECT COUNT(*) AS total,
+               COALESCE(SUM(CASE WHEN created_at >= :since7Days THEN 1 ELSE 0 END), 0) AS last7Days,
+               COALESCE(SUM(CASE WHEN created_at >= :since30Days THEN 1 ELSE 0 END), 0) AS last30Days,
+               COALESCE(SUM(CASE WHEN was_dry_run = 0 THEN 1 ELSE 0 END), 0) AS live,
+               COALESCE(SUM(CASE WHEN was_dry_run = 1 THEN 1 ELSE 0 END), 0) AS testMode,
+               MAX(created_at) AS lastTriggeredAt
+        FROM rule_executions
+        WHERE rule_id = :ruleId
+        """,
+    )
+    fun observeRuleStats(ruleId: String, since7Days: Long, since30Days: Long): Flow<RuleStatsRow>
 }
+
+/** Projection for [RuleExecutionDao.observeRuleStats]. */
+internal data class RuleStatsRow(
+    val total: Int,
+    val last7Days: Int,
+    val last30Days: Int,
+    val live: Int,
+    val testMode: Int,
+    val lastTriggeredAt: Long?,
+)
 
 /** Projection for [RuleExecutionDao.observeRecentActivity]. */
 internal data class RecentActivityRow(

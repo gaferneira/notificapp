@@ -3,11 +3,14 @@ package dev.gaferneira.notificapp.testutil.fakes
 import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.RuleStats
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import java.util.concurrent.TimeUnit
 
 /**
  * Deterministic in-memory [RuleExecutionRepository] fake for VM tests, backed by a
@@ -21,6 +24,12 @@ class FakeRuleExecutionRepository(
 
     /** Opt-in failure injection: set before a call to make [deleteExecutionsForNotification] fail. */
     var deleteError: Throwable? = null
+
+    /** Opt-in failure injection: when set, [observeRuleStats] fails with this error. */
+    var statsError: Throwable? = null
+
+    /** Epoch millis used as "now" for the 7/30-day windows in [observeRuleStats]. */
+    var now: Long = 0L
 
     fun currentExecutions(notificationId: String): List<RuleExecution> = executionsByNotification.value[notificationId].orEmpty()
 
@@ -64,5 +73,22 @@ class FakeRuleExecutionRepository(
                     executedAt = execution.createdAt,
                 )
             }
+    }
+
+    override fun observeRuleStats(ruleId: String): Flow<RuleStats> {
+        statsError?.let { error -> return flow { throw error } }
+        val since7 = now - TimeUnit.DAYS.toMillis(7)
+        val since30 = now - TimeUnit.DAYS.toMillis(30)
+        return executionsByNotification.map { map ->
+            val rows = map.values.flatten().filter { it.ruleId == ruleId }
+            RuleStats(
+                totalMatches = rows.size,
+                matchesLast7Days = rows.count { it.createdAt >= since7 },
+                matchesLast30Days = rows.count { it.createdAt >= since30 },
+                liveMatches = rows.count { !it.wasDryRun },
+                testModeMatches = rows.count { it.wasDryRun },
+                lastTriggeredAt = rows.maxOfOrNull { it.createdAt },
+            )
+        }
     }
 }

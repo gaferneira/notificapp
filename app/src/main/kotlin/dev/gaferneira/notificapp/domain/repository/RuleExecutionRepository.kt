@@ -3,6 +3,7 @@ package dev.gaferneira.notificapp.domain.repository
 import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
+import dev.gaferneira.notificapp.domain.model.RuleStats
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -52,4 +53,11 @@ interface RuleExecutionRepository {
      * bounded by [limit], most recent first.
      */
     fun observeRecentActivity(limit: Int): Flow<List<RecentActivity>>
+
+    /**
+     * Observe aggregate match statistics for one rule (totals, 7/30-day windows, live vs test
+     * mode, last trigger). Computed in the database, never by loading executions. The flow
+     * errors with a `Failure` if the query fails; with no executions it emits a zeroed [RuleStats].
+     */
+    fun observeRuleStats(ruleId: String): Flow<RuleStats>
 }

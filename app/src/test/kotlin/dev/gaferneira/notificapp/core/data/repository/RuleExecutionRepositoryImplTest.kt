@@ -5,31 +5,43 @@ import dev.gaferneira.notificapp.core.data.local.AppDatabase
 import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
+import dev.gaferneira.notificapp.core.data.local.dao.RuleStatsRow
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
+import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
+import dev.gaferneira.notificapp.domain.model.RuleStats
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
+import java.util.concurrent.TimeUnit
 
 private const val ACTION_ID = "action-1"
 private const val PACKAGE_NAME = "com.test.app"
+private const val NOW = 1_000_000_000_000L
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RuleExecutionRepositoryImplTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val ruleExecutionDao = mockk<RuleExecutionDao>()
+    private val timeProvider = mockk<CurrentTimeProvider> {
+        every { nowEpochMillis() } returns NOW
+    }
 
     private fun repository() = RuleExecutionRepositoryImpl(
         database = mockk<AppDatabase>(relaxed = true),
         ruleExecutionDao = ruleExecutionDao,
         extractedFieldValueDao = mockk<ExtractedFieldValueDao>(relaxed = true),
         notificationDao = mockk<NotificationDao>(relaxed = true),
+        timeProvider = timeProvider,
         ioDispatcher = testDispatcher,
     )
 
@@ -117,6 +129,51 @@ class RuleExecutionRepositoryImplTest {
         repository.observeExecutionsForNotification("notif-e1").test {
             awaitItem().single().id shouldBe "e1"
             cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `observeRuleStats queries 7 and 30 day cutoffs from the injected clock and maps the row`() = runTest(testDispatcher) {
+        // Given: the DAO returns an aggregate row
+        val since7 = slot<Long>()
+        val since30 = slot<Long>()
+        every { ruleExecutionDao.observeRuleStats("rule-1", capture(since7), capture(since30)) } returns
+            flowOf(RuleStatsRow(total = 10, last7Days = 3, last30Days = 6, live = 4, testMode = 6, lastTriggeredAt = 123L))
+
+        // When: observing
+        repository().observeRuleStats("rule-1").test {
+            // Then: every field is mapped and cutoffs derive from the provider's now
+            awaitItem() shouldBe RuleStats(
+                totalMatches = 10,
+                matchesLast7Days = 3,
+                matchesLast30Days = 6,
+                liveMatches = 4,
+                testModeMatches = 6,
+                lastTriggeredAt = 123L,
+            )
+            since7.captured shouldBe NOW - TimeUnit.DAYS.toMillis(7)
+            since30.captured shouldBe NOW - TimeUnit.DAYS.toMillis(30)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `observeRuleStats maps an empty aggregate to zeros and a null last trigger`() = runTest(testDispatcher) {
+        every { ruleExecutionDao.observeRuleStats(any(), any(), any()) } returns
+            flowOf(RuleStatsRow(total = 0, last7Days = 0, last30Days = 0, live = 0, testMode = 0, lastTriggeredAt = null))
+
+        repository().observeRuleStats("rule-1").test {
+            awaitItem() shouldBe RuleStats()
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `observeRuleStats surfaces DAO errors as a Failure`() = runTest(testDispatcher) {
+        every { ruleExecutionDao.observeRuleStats(any(), any(), any()) } returns flow { throw IllegalStateException("db error") }
+
+        repository().observeRuleStats("rule-1").test {
+            awaitError().shouldBeInstanceOf<dev.gaferneira.notificapp.core.common.Failure>()
         }
     }
 }
