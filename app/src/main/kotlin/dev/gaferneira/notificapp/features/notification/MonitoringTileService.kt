@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.notification
 
+import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import dagger.hilt.android.AndroidEntryPoint
@@ -89,12 +90,14 @@ class MonitoringTileService : TileService() {
         val tile = qsTile ?: return
         tile.state = if (paused) Tile.STATE_INACTIVE else Tile.STATE_ACTIVE
         tile.label = getString(R.string.monitoring_tile_label)
-        tile.subtitle = if (paused) {
+        // Tile subtitle/contentDescription only exist on API 29/30+; minSdk is 26.
+        val subtitle = if (paused) {
             getString(R.string.monitoring_tile_subtitle_paused)
         } else {
             getString(R.string.monitoring_tile_subtitle_active)
         }
-        tile.contentDescription = tile.subtitle
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) tile.subtitle = subtitle
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) tile.contentDescription = subtitle
         tile.updateTile()
     }
 }
