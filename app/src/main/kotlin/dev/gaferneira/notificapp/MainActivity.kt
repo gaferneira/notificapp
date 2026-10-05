@@ -54,6 +54,7 @@ import dev.gaferneira.notificapp.features.home.ui.HomeScreen
 import dev.gaferneira.notificapp.features.inbox.ui.InboxScreen
 import dev.gaferneira.notificapp.features.notificationdetail.ui.NotificationDetailScreen
 import dev.gaferneira.notificapp.features.onboarding.ui.OnboardingScreen
+import dev.gaferneira.notificapp.features.ruledetails.ui.RuleDetailsScreen
 import dev.gaferneira.notificapp.features.ruleeditor.ui.RuleEditorScreen
 import dev.gaferneira.notificapp.features.rules.ui.RulesScreen
 import dev.gaferneira.notificapp.features.ruletemplates.ui.RuleTemplatesScreen
@@ -224,6 +225,12 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
     entry<Screen.NotificationDetails> { screen ->
         NotificationDetailScreen(
             notificationId = screen.notificationId,
+        )
+    }
+
+    entry<Screen.RuleDetails> { screen ->
+        RuleDetailsScreen(
+            ruleId = screen.ruleId,
         )
     }
 

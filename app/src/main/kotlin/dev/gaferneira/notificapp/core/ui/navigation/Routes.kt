@@ -62,6 +62,13 @@ object Routes {
     fun appSelectionForRule(preSelectedApps: List<String> = emptyList()): Screen = Screen.AppSelectionForRule(preSelectedApps)
 
     /**
+     * Rule details screen - read-only view of a rule with edit, share and delete actions.
+     *
+     * @param ruleId The ID of the rule to display
+     */
+    fun ruleDetails(ruleId: String): Screen = Screen.RuleDetails(ruleId)
+
+    /**
      * Rule editor screen - create or edit extraction rules.
      *
      * @param ruleId The ID of the rule to edit (null for new rule)

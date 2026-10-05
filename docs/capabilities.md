@@ -77,7 +77,7 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ### Rule Sharing (Import/Export)
 * **User Experience:** The user can export any rule as a shareable file (via the standard Android share sheet) and import a rule shared by someone else, previewing and confirming it before it's added. Imported rules always start disabled from acting until reviewed.
-* **System Trigger:** User taps "Export" on a rule in the Rules list, or "Import" and selects a shared file/clipboard text.
+* **System Trigger:** User opens a rule from the Rules list and taps "Share" in the Rule Details overflow menu, or taps "Import" on the Rules screen and selects a shared file/clipboard text.
 
 ---
 
@@ -140,6 +140,10 @@ Notificapp lets users create automation rules that act on the notifications thei
   * Exclude-list — rule fires for every app except the listed ones
 * **System Trigger:** User navigates to the Rules tab.
 * **Technical Spec Reference:** `openspec/specs/rule-app-scope/`
+
+### Rule Details
+* **User Experience:** Tapping a rule in the Rules list opens a read-only details screen instead of the editor, so an accidental tap cannot start editing. It shows the rule's name, category, description and dry-run state, an enable/disable switch, the app scope (all apps, include-list or exclude-list), the WHEN conditions with their ALL/ANY logic, the DO actions (with disabled ones marked and the extracted fields of "Extract data"), a compact Statistics card (matches in the last 7 / 30 days and in total, when the rule last triggered, and the test-mode vs live split, emphasizing test-mode matches while in dry run; an empty state when it has never matched; a caption notes counts only cover notifications still stored, so retention auto-delete can lower them), and created/updated dates. While the rule is in dry-run (test) mode, a prominent banner explains that matches are logged but no actions run (with the number of test-mode matches so far) and offers a "Go live" button; it opens a confirmation dialog listing the rule's enabled actions (and noting raw-content deletion when enabled), and confirming saves the rule with dry run off and shows a confirmation message (turning dry run back on is done in the editor). The top bar offers "Edit" (opens the Rule Editor) and an overflow menu with "Share" (Android share sheet with the rule's JSON) and "Delete" (with a confirmation dialog). The screen observes the rule, so edits made in the editor appear on return, and it closes itself if the rule is deleted (from here or from the editor).
+* **System Trigger:** User taps a rule row on the Rules screen.
 
 ### Settings
 * **User Experience:** The user reviews and manages which apps are monitored, checks whether notification access is still granted (re-enabling it if revoked), toggles data collection and app-icon display preferences, sets a notification retention period (30 days / 90 days / Never, auto-deleting older notifications on app start), and views a storage usage summary (database size, row counts per data type).

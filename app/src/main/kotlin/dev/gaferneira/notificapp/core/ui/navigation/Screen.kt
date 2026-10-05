@@ -62,6 +62,12 @@ sealed class Screen : NavKey {
     data class AppSelectionForRule(val preSelectedApps: List<String> = emptyList()) : Screen()
 
     /**
+     * Rule details screen - read-only view of a rule with edit, share and delete actions.
+     */
+    @Serializable
+    data class RuleDetails(val ruleId: String) : Screen()
+
+    /**
      * Rule editor screen - create or edit extraction rules.
      */
     @Serializable
