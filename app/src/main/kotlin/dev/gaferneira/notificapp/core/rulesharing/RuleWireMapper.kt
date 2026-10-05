@@ -51,7 +51,7 @@ private fun <T> String.fromWireStringOrNull(serializer: KSerializer<T>): T? = tr
 }
 
 private fun <T> String.fromWireStringStrict(serializer: KSerializer<T>, label: String): T = fromWireStringOrNull(serializer)
-    ?: throw IllegalArgumentException("Unknown $label: \"$this\". This rule may require a newer version of Notificapp.")
+    ?: throw RuleImportFailure.UnknownValue(label, this)
 
 /**
  * Maps a domain [Rule] to its wire representation, ready to be encoded as JSON.
@@ -138,9 +138,7 @@ private fun RuleCondition.toDto(): ConditionDto = when (this) {
  * every level of [ConditionDto.Group.children].
  */
 private fun ConditionDto.toDomain(depth: Int): RuleCondition {
-    require(depth <= MAX_CONDITION_DEPTH) {
-        "This rule's conditions are nested too deeply (max $MAX_CONDITION_DEPTH levels) and can't be imported."
-    }
+    if (depth > MAX_CONDITION_DEPTH) throw RuleImportFailure.NestedTooDeeply(MAX_CONDITION_DEPTH)
     return when (this) {
         is ConditionDto.ContentMatch -> RuleCondition.ContentMatchCondition(
             id = id,

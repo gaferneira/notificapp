@@ -306,6 +306,11 @@
     <string name="home_battery_hint_message">Your device may stop Notificapp in the background and miss notifications. Open Battery and choose Unrestricted.</string>
     <string name="home_battery_hint_button">Open app settings</string>
     <string name="home_error_dismiss_suggestion">Failed to dismiss suggestion</string>
+    <string name="rules_import_error_newer_version">This rule was exported from a newer version of Notificapp and can\'t be imported here.</string>
+    <string name="rules_import_error_missing_name">This rule has no name.</string>
+    <string name="rules_import_error_unknown_value">This rule uses an option this version of Notificapp doesn\'t recognize (\"%1$s\"). It may require a newer version.</string>
+    <string name="rules_import_error_too_deep">This rule\'s conditions are nested too deeply (max %1$d levels) and can\'t be imported.</string>
+    <string name="rules_import_error_title">Couldn\'t import rule</string>
 
     <!-- Action types (rule editor + rule details) -->
     <string name="action_type_save_data_label">Extract data</string>

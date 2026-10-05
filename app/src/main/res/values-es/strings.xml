@@ -125,6 +125,11 @@
     <string name="home_battery_hint_message">Tu dispositivo podría detener Notificapp en segundo plano y perder notificaciones. Abre Batería y elige Sin restricciones.</string>
     <string name="home_battery_hint_button">Abrir ajustes de la app</string>
     <string name="home_error_dismiss_suggestion">No se pudo descartar la sugerencia</string>
+    <string name="rules_import_error_newer_version">Esta regla se exportó desde una versión más reciente de Notificapp y no se puede importar aquí.</string>
+    <string name="rules_import_error_missing_name">Esta regla no tiene nombre.</string>
+    <string name="rules_import_error_unknown_value">Esta regla usa una opción que esta versión de Notificapp no reconoce (\"%1$s\"). Puede requerir una versión más reciente.</string>
+    <string name="rules_import_error_too_deep">Las condiciones de esta regla están anidadas demasiado profundo (máx. %1$d niveles) y no se puede importar.</string>
+    <string name="rules_import_error_title">No se pudo importar la regla</string>
 
     <!-- Action types (rule editor + rule details) -->
     <string name="action_type_save_data_label">Extraer datos</string>

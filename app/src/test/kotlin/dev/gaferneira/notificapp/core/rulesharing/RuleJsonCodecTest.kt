@@ -20,6 +20,7 @@ import dev.gaferneira.notificapp.testutil.createTestTimeRangeCondition
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -155,7 +156,7 @@ class RuleJsonCodecTest {
         val result = RuleJsonCodec.decode(json)
 
         // Then: decoding fails
-        result.isFailure shouldBe true
+        result.exceptionOrNull().shouldBeInstanceOf<RuleImportFailure.UnsupportedSchemaVersion>()
     }
 
     @Test
@@ -168,7 +169,7 @@ class RuleJsonCodecTest {
         val result = RuleJsonCodec.decode(encoded)
 
         // Then: decoding fails
-        result.isFailure shouldBe true
+        result.exceptionOrNull().shouldBeInstanceOf<RuleImportFailure.MissingName>()
     }
 
     @Test
@@ -177,7 +178,7 @@ class RuleJsonCodecTest {
         val result = RuleJsonCodec.decode("not json at all")
 
         // Then: decoding fails rather than throwing
-        result.isFailure shouldBe true
+        result.exceptionOrNull().shouldBeInstanceOf<RuleImportFailure.InvalidFile>()
     }
 
     @Test
@@ -256,7 +257,7 @@ class RuleJsonCodecTest {
         val result = RuleJsonCodec.decode(tampered)
 
         // Then: decoding fails rather than silently dropping or misinterpreting the condition
-        result.isFailure shouldBe true
+        result.exceptionOrNull().shouldBeInstanceOf<RuleImportFailure.UnknownValue>()
     }
 
     @Test
@@ -317,7 +318,7 @@ class RuleJsonCodecTest {
         val result = RuleJsonCodec.decode(encoded)
 
         // Then: decoding fails cleanly instead of risking a stack overflow evaluating the rule
-        result.isFailure shouldBe true
+        result.exceptionOrNull().shouldBeInstanceOf<RuleImportFailure.NestedTooDeeply>()
     }
 
     /**

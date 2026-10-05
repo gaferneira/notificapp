@@ -31,7 +31,7 @@ object RuleJsonCodec {
 
     /**
      * Parse [source] into a [RuleImportResult], validating the envelope's schema version and that
-     * the rule has a name. Returns [Result.failure] with a user-presentable message on any
+     * the rule has a name. Returns [Result.failure] with a typed [RuleImportFailure] on any
      * problem - malformed JSON, an unsupported (newer) schema version, a blank name, or an
      * unrecognized condition/extraction method. Actions this app version doesn't recognize are
      * dropped rather than failing the import - see [RuleImportResult.skippedActions].
@@ -40,14 +40,10 @@ object RuleJsonCodec {
         val export = try {
             json.decodeFromString<RuleExportDto>(source)
         } catch (e: SerializationException) {
-            throw IllegalArgumentException("This doesn't look like a valid rule file.", e)
+            throw RuleImportFailure.InvalidFile(e)
         }
-        require(export.schemaVersion <= RULE_EXPORT_SCHEMA_VERSION) {
-            "This rule was exported from a newer version of Notificapp and can't be imported here."
-        }
-        require(export.rule.name.isNotBlank()) {
-            "This rule has no name."
-        }
+        if (export.schemaVersion > RULE_EXPORT_SCHEMA_VERSION) throw RuleImportFailure.UnsupportedSchemaVersion(export.schemaVersion)
+        if (export.rule.name.isBlank()) throw RuleImportFailure.MissingName()
         export.toDomain()
     }
 
