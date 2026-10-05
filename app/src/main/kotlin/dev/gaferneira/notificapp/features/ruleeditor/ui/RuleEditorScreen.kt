@@ -1,100 +1,51 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui
 
-import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.R
-import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
-import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.domain.model.ActionType
-import dev.gaferneira.notificapp.domain.model.MatchingCondition
-import dev.gaferneira.notificapp.domain.model.MatchingOperator
-import dev.gaferneira.notificapp.domain.model.Notification
-import dev.gaferneira.notificapp.domain.model.RuleAction
-import dev.gaferneira.notificapp.domain.model.RuleCondition
-import dev.gaferneira.notificapp.domain.model.RuleField
-import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorMode
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LoadError
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
-import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
-import dev.gaferneira.notificapp.features.ruleeditor.domain.availableActionTypes
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionCardCallbacks
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionTypePickerDialog
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AppSelectionPicker
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DoSection
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.StepIndicator
-import dev.gaferneira.notificapp.features.ruleeditor.ui.components.WhenSection
-import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.ExtractDataBottomSheet
-import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.MatchingLogicBottomSheet
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.RuleEditorViewModel
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
+/**
+ * Rule editor host: wires the ViewModel to the content. The same state renders either the guided
+ * create flow or the single-page editor, depending on [UiState.mode].
+ */
 @Composable
 fun RuleEditorScreen(
     modifier: Modifier = Modifier,
@@ -113,7 +64,6 @@ fun RuleEditorScreen(
         viewModel.onEvent(UiEvent.Initialize(InitArgs(ruleId, notificationId, templateAssetFileName)))
     }
 
-    // Collect effects
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
             is UiEffect.ShowError -> {
@@ -130,15 +80,13 @@ fun RuleEditorScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RuleEditorScreenContent(
+internal fun RuleEditorScreenContent(
     uiState: UiState,
     onEvent: (UiEvent) -> Unit,
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
-    val scrollState = rememberScrollState()
     val context = LocalContext.current
 
     // Sheets and dialogs own their back press; the editor's back logic only applies underneath them.
@@ -160,15 +108,16 @@ private fun RuleEditorScreenContent(
         }
     }
 
+    val isFormVisible = uiState.loadError == null && !uiState.isLoading
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            RuleEditorTopBar(
-                uiState = uiState,
-                onEvent = onEvent,
-                onBackClicked = { onEvent(UiEvent.OnBackClicked) },
-            )
+        topBar = { EditorTopBar(uiState = uiState, onEvent = onEvent) },
+        bottomBar = {
+            if (isFormVisible) {
+                EditorBottomBar(uiState = uiState, onEvent = onEvent)
+            }
         },
     ) { paddingValues ->
         Box(
@@ -176,32 +125,16 @@ private fun RuleEditorScreenContent(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            RuleEditorBody(
-                uiState = uiState,
-                onEvent = onEvent,
-                scrollState = scrollState,
-            )
-
-            RuleEditorBottomSheets(
-                uiState = uiState,
-                onEvent = onEvent,
-            )
-
-            RuleEditorDialogs(
-                uiState = uiState,
-                onEvent = onEvent,
-            )
+            RuleEditorBody(uiState = uiState, onEvent = onEvent)
+            RuleEditorBottomSheets(uiState = uiState, onEvent = onEvent)
+            RuleEditorDialogs(uiState = uiState, onEvent = onEvent)
         }
     }
 }
 
 /** Form (or progress / blocking load error) plus the saving indicator. */
 @Composable
-private fun BoxScope.RuleEditorBody(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-    scrollState: androidx.compose.foundation.ScrollState,
-) {
+private fun BoxScope.RuleEditorBody(uiState: UiState, onEvent: (UiEvent) -> Unit) {
     when {
         uiState.loadError != null -> LoadErrorState(
             error = uiState.loadError,
@@ -210,12 +143,8 @@ private fun BoxScope.RuleEditorBody(
             modifier = Modifier.align(Alignment.Center),
         )
         uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-        else -> RuleEditorSteps(
-            uiState = uiState,
-            onEvent = onEvent,
-            scrollState = scrollState,
-            onCancelClicked = { onEvent(UiEvent.OnBackClicked) },
-        )
+        uiState.mode == EditorMode.GUIDED -> GuidedCreateContent(uiState = uiState, onEvent = onEvent)
+        else -> SinglePageEditContent(uiState = uiState, onEvent = onEvent)
     }
 
     if (uiState.isSaving) {
@@ -225,140 +154,6 @@ private fun BoxScope.RuleEditorBody(
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
                 .semantics { contentDescription = savingDescription },
-        )
-    }
-}
-
-/** Step indicator + animated Logic/Metadata step switcher. */
-@Composable
-private fun RuleEditorSteps(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-    scrollState: androidx.compose.foundation.ScrollState,
-    onCancelClicked: () -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        StepIndicator(
-            currentStep = uiState.currentStep,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp),
-        )
-
-        AnimatedContent(
-            targetState = uiState.currentStep,
-            transitionSpec = {
-                if (targetState > initialState) {
-                    slideInHorizontally { width -> width } togetherWith
-                        slideOutHorizontally { width -> -width }
-                } else {
-                    slideInHorizontally { width -> -width } togetherWith
-                        slideOutHorizontally { width -> width }
-                }
-            },
-            modifier = Modifier.weight(1f),
-        ) { step ->
-            when (step) {
-                1 -> LogicStep(
-                    uiState = uiState,
-                    onEvent = onEvent,
-                    scrollState = scrollState,
-                    onCancelClicked = onCancelClicked,
-                )
-                2 -> MetadataStep(
-                    uiState = uiState,
-                    onEvent = onEvent,
-                    scrollState = scrollState,
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun RuleEditorTopBar(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-    onBackClicked: () -> Unit,
-) {
-    TopAppBar(
-        title = {
-            Text(
-                when (uiState.currentStep) {
-                    1 -> if (uiState.rule.id == null) "New rule" else "Edit rule"
-                    else -> "Name your rule"
-                },
-            )
-        },
-        navigationIcon = {
-            IconButton(onClick = onBackClicked) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                )
-            }
-        },
-        actions = {
-            // Show delete icon only when editing an existing rule
-            if (uiState.rule.id != null) {
-                IconButton(onClick = { onEvent(UiEvent.OnDeleteClicked) }, enabled = !uiState.isSaving) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete rule",
-                    )
-                }
-            }
-            if (uiState.currentStep == 2) {
-                TextButton(
-                    onClick = { onEvent(UiEvent.OnSaveClicked) },
-                    enabled = uiState.rule.name.isNotBlank() && !uiState.isLoading && !uiState.isSaving,
-                ) {
-                    Text("Save")
-                }
-            }
-        },
-    )
-}
-
-@Composable
-private fun RuleEditorDialogs(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-) {
-    if (uiState.showDeleteConfirmation) {
-        AlertDialog(
-            onDismissRequest = { onEvent(UiEvent.OnDeleteDismissed) },
-            title = { Text("Delete Rule") },
-            text = { Text("Are you sure you want to delete this rule? This action cannot be undone.") },
-            confirmButton = {
-                TextButton(onClick = { onEvent(UiEvent.OnDeleteConfirmed) }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onEvent(UiEvent.OnDeleteDismissed) }) {
-                    Text("Cancel")
-                }
-            },
-        )
-    }
-
-    if (uiState.showUnsavedChangesDialog) {
-        AlertDialog(
-            onDismissRequest = { onEvent(UiEvent.OnDiscardDismissed) },
-            title = { Text(stringResource(R.string.rule_editor_discard_title)) },
-            text = { Text(stringResource(R.string.rule_editor_discard_message)) },
-            confirmButton = {
-                TextButton(onClick = { onEvent(UiEvent.OnDiscardConfirmed) }) {
-                    Text(stringResource(R.string.rule_editor_discard_confirm), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onEvent(UiEvent.OnDiscardDismissed) }) {
-                    Text(stringResource(R.string.rule_editor_discard_keep))
-                }
-            },
         )
     }
 }
@@ -386,652 +181,5 @@ private fun LoadErrorState(
             Button(onClick = onRetry) { Text(stringResource(R.string.rule_editor_load_retry)) }
         }
         TextButton(onClick = onBack) { Text(stringResource(R.string.rule_editor_load_back)) }
-    }
-}
-
-@Composable
-private fun RuleEditorBottomSheets(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-) {
-    ConditionAndAppSheets(uiState = uiState, onEvent = onEvent)
-
-    if (uiState.isActionTypePickerVisible) {
-        ActionTypePickerDialog(
-            availableTypes = availableActionTypes(uiState.rule.actions.map { it.type }),
-            onTypeSelected = { type -> onEvent(UiEvent.OnActionTypeSelected(type)) },
-            onDismiss = { onEvent(UiEvent.OnDismissActionTypePicker) },
-        )
-    }
-
-    if (uiState.isActionSheetVisible) {
-        ActionSheetForType(uiState = uiState, onEvent = onEvent)
-    }
-
-    if (uiState.pendingExtractDataRemovalId != null) {
-        ExtractDataRemovalDialog(onEvent = onEvent)
-    }
-
-    uiState.backtestResults?.let { results ->
-        BacktestResultsBottomSheet(
-            results = results,
-            testedCount = uiState.backtestTestedCount,
-            fields = uiState.rule.fields,
-            onDismiss = { onEvent(UiEvent.OnDismissBacktestResults) },
-        )
-    }
-}
-
-/** Routes to the type-scoped sheet for the action being added (`pendingActionType`) or edited (`editingAction`). */
-@Composable
-private fun ActionSheetForType(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-) {
-    val editing = uiState.editingAction
-    val onSave: (RuleAction) -> Unit = { action -> onEvent(UiEvent.OnActionSaved(action)) }
-    val onSheetDismiss: () -> Unit = { onEvent(UiEvent.OnDismissSheet) }
-    when (editing?.type ?: uiState.pendingActionType) {
-        ActionType.SNOOZE_NOTIFICATION ->
-            SnoozeBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
-        ActionType.CREATE_ALARM ->
-            AlarmBottomSheet(
-                initial = editing,
-                onSave = onSave,
-                onDismiss = onSheetDismiss,
-            )
-        ActionType.FLASH_ALERT ->
-            FlashBottomSheet(initial = editing, onSave = onSave, onDismiss = onSheetDismiss)
-        ActionType.SAVE_DATA ->
-            ExtractDataBottomSheet(
-                initialFields = uiState.rule.fields,
-                isEditingAction = editing?.type == ActionType.SAVE_DATA,
-                notification = uiState.sampleNotification,
-                targetPackages = uiState.rule.targetApps.map { it.packageName }.takeIf { it.isNotEmpty() },
-                onCommitted = { fields -> onEvent(UiEvent.OnExtractDataCommitted(fields)) },
-                onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-            )
-        ActionType.SEND_WEBHOOK ->
-            WebhookConfigBottomSheet(
-                initial = editing,
-                ruleFields = uiState.rule.fields,
-                onSave = onSave,
-                onDismiss = onSheetDismiss,
-            )
-        ActionType.READ_ALOUD ->
-            ReadAloudBottomSheet(
-                initial = editing,
-                ruleFields = uiState.rule.fields,
-                onSave = onSave,
-                onDismiss = onSheetDismiss,
-            )
-        ActionType.SEND_REPLY ->
-            SendReplyBottomSheet(
-                initial = editing,
-                ruleFields = uiState.rule.fields,
-                onSave = onSave,
-                onDismiss = onSheetDismiss,
-            )
-        // Dismiss adds directly (no sheet) and Extract-data uses its own sheet.
-        else -> Unit
-    }
-}
-
-@Composable
-private fun ConditionAndAppSheets(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-) {
-    if (uiState.isMatchingLogicSheetVisible) {
-        MatchingLogicBottomSheet(
-            initialCondition = uiState.editingCondition,
-            onConditionSaved = { condition ->
-                onEvent(UiEvent.OnConditionSaved(condition))
-            },
-            onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-        )
-    }
-
-    if (uiState.isAppSheetVisible) {
-        AppSelectionPicker(
-            selectedApps = uiState.rule.targetApps,
-            enabledApps = uiState.enabledApps,
-            onConfirm = { apps ->
-                onEvent(UiEvent.OnAppsSelected(apps.toImmutableList()))
-            },
-            onDismiss = { onEvent(UiEvent.OnDismissSheet) },
-        )
-    }
-}
-
-@Composable
-private fun ExtractDataRemovalDialog(
-    onEvent: (UiEvent) -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = { onEvent(UiEvent.OnDismissExtractDataRemoval) },
-        title = { Text("Remove Extract data?") },
-        text = { Text("This will also delete the extraction fields configured for this rule. This cannot be undone.") },
-        confirmButton = {
-            TextButton(onClick = { onEvent(UiEvent.OnConfirmExtractDataRemoval) }) {
-                Text("Remove", color = MaterialTheme.colorScheme.error)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = { onEvent(UiEvent.OnDismissExtractDataRemoval) }) {
-                Text("Cancel")
-            }
-        },
-    )
-}
-
-@Composable
-private fun LogicStep(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-    scrollState: androidx.compose.foundation.ScrollState,
-    onCancelClicked: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        // When Section
-        SectionWithHelp(
-            title = "When",
-            description = "Define when this rule should trigger. Select apps and add conditions.",
-        ) {
-            WhenSection(
-                targetApps = uiState.rule.targetApps,
-                isIncludeMode = uiState.rule.isIncludeMode,
-                onAppsClick = { onEvent(UiEvent.OnAppsClicked) },
-                onAppScopeModeChanged = { onEvent(UiEvent.OnAppScopeModeChanged(it)) },
-                conditions = uiState.rule.triggers,
-                conditionLogic = uiState.rule.conditionLogic,
-                onRemoveCondition = { onEvent(UiEvent.OnRemoveConditionClicked(it)) },
-                onConditionClick = { onEvent(UiEvent.OnConditionItemClicked(it)) },
-                onConditionLogicChanged = { onEvent(UiEvent.OnConditionLogicChanged(it)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            // Add condition button
-            AddButton(
-                text = "Add condition",
-                onClick = { onEvent(UiEvent.OnAddConditionClicked) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        // Do Section (Extract data lives here as an action; its fields are edited in its sheet)
-        DoSection(
-            actions = uiState.rule.actions,
-            extractDataFieldCount = uiState.rule.fields.size,
-            callbacks = ActionCardCallbacks(
-                onToggle = { id, enabled -> onEvent(UiEvent.OnToggleActionClicked(id, enabled)) },
-                onRemove = { onEvent(UiEvent.OnRemoveActionClicked(it)) },
-                onEdit = { onEvent(UiEvent.OnEditActionClicked(it)) },
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        // Add action button - hidden once every action type is configured (one action per type)
-        val canAddAction = availableActionTypes(uiState.rule.actions.map { it.type }).isNotEmpty()
-        if (canAddAction) {
-            AddButton(
-                text = "Add action",
-                onClick = { onEvent(UiEvent.OnAddActionClicked) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        TestAgainstHistoryButton(uiState = uiState, onEvent = onEvent)
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        LogicStepBottomActions(onCancelClicked = onCancelClicked, onEvent = onEvent)
-
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-}
-
-@Composable
-private fun TestAgainstHistoryButton(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-) {
-    // Gated so the first tap doesn't test an empty rule against the entire notification history.
-    val canTestAgainstHistory = uiState.rule.triggers.isNotEmpty() || uiState.rule.targetApps.isNotEmpty()
-
-    OutlinedButton(
-        onClick = { onEvent(UiEvent.OnTestAgainstHistoryClicked) },
-        enabled = !uiState.isBacktesting && canTestAgainstHistory,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-    ) {
-        Icon(
-            imageVector = Icons.Default.History,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(if (uiState.isBacktesting) "Testing..." else "Test against history")
-    }
-    if (!canTestAgainstHistory) {
-        Text(
-            text = "Add a condition or app to test against history",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun LogicStepBottomActions(
-    onCancelClicked: () -> Unit,
-    onEvent: (UiEvent) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        OutlinedButton(
-            onClick = onCancelClicked,
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(12.dp),
-        ) {
-            Text("Cancel")
-        }
-
-        Button(
-            onClick = { onEvent(UiEvent.OnContinueClicked) },
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(12.dp),
-        ) {
-            Text("Continue")
-        }
-    }
-}
-
-@Composable
-private fun MetadataStep(
-    uiState: UiState,
-    onEvent: (UiEvent) -> Unit,
-    scrollState: androidx.compose.foundation.ScrollState,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Name field (required)
-        OutlinedTextField(
-            value = uiState.rule.name,
-            onValueChange = { onEvent(UiEvent.OnNameChange(it)) },
-            label = { Text("Name*") },
-            placeholder = { Text("e.g., ICA Banken Purchase") },
-            isError = uiState.validationErrors.containsKey("name"),
-            supportingText = uiState.validationErrors["name"]?.let { { Text(it.asString()) } },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (!uiState.showDescription) {
-                ActionChip(
-                    text = "Add description",
-                    onClick = { onEvent(UiEvent.OnAddDescriptionClicked) },
-                )
-            }
-            if (!uiState.showCategory) {
-                ActionChip(
-                    text = "Add category",
-                    onClick = { onEvent(UiEvent.OnAddCategoryClicked) },
-                )
-            }
-        }
-
-        // Description field (shown when showDescription is true)
-        if (uiState.showDescription) {
-            OutlinedTextField(
-                value = uiState.rule.description,
-                onValueChange = { onEvent(UiEvent.OnDescriptionChange(it)) },
-                label = { Text("Description") },
-                placeholder = { Text("What does this rule do?") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2,
-            )
-        }
-
-        // Category field (shown when showCategory is true)
-        if (uiState.showCategory) {
-            OutlinedTextField(
-                value = uiState.rule.category,
-                onValueChange = { onEvent(UiEvent.OnCategoryChange(it)) },
-                label = { Text("Category") },
-                placeholder = { Text("e.g., Finance, Shopping") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-        }
-
-        DryRunToggle(
-            enabled = uiState.rule.isDryRun,
-            onToggle = { onEvent(UiEvent.OnDryRunToggle(it)) },
-        )
-
-        DeleteRawContentToggle(
-            enabled = uiState.rule.deleteRawContentAfterExtraction,
-            onToggle = { onEvent(UiEvent.OnDeleteRawContentToggle(it)) },
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Back is the only bottom action now - Save moved to the top bar (Material
-        // convention for editors) so it doesn't compete with the step title for attention.
-        TextButton(
-            onClick = { onEvent(UiEvent.OnBackToLogicClicked) },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Back")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-}
-
-/**
- * Toggle for dry-run mode: when enabled, matches are logged but no actions execute - a safe
- * way to trial a rule before trusting it to act on real notifications.
- */
-@Composable
-private fun DryRunToggle(
-    enabled: Boolean,
-    onToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp),
-            )
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Dry run",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "Matches are recorded but no actions run - test this rule safely before turning it loose",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(checked = enabled, onCheckedChange = onToggle)
-    }
-}
-
-/**
- * Toggle for post-extraction privacy: when enabled, the source notification's original text is
- * scrubbed once this rule matches and extracts data, keeping only the extracted fields.
- */
-@Composable
-private fun DeleteRawContentToggle(
-    enabled: Boolean,
-    onToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp),
-            )
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Delete raw content after extraction",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "Removes the notification's original text once fields are extracted - keeps only the extracted data.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(checked = enabled, onCheckedChange = onToggle)
-    }
-}
-
-@Composable
-private fun SectionWithHelp(
-    title: String,
-    description: String,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        content()
-    }
-}
-
-@Composable
-private fun ActionChip(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.height(40.dp),
-        shape = RoundedCornerShape(20.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-    ) {
-        Text(text)
-    }
-}
-
-@Preview(showBackground = true, device = "id:pixel_5")
-@Composable
-private fun RuleEditorScreenStep1Preview() {
-    NotificappTheme {
-        RuleEditorScreenContent(
-            uiState = UiState(
-                currentStep = 1,
-                rule = RuleUiModel(
-                    name = "ICA Banken Purchase",
-                    targetApps = persistentListOf(),
-                    triggers = persistentListOf(
-                        RuleCondition.ContentMatchCondition(
-                            id = "1",
-                            condition = MatchingCondition.TEXT_CONTENT,
-                            operator = MatchingOperator.CONTAINS,
-                            value = "purchase",
-                        ),
-                    ),
-                    fields = persistentListOf(
-                        RuleField(
-                            id = "1",
-                            name = "Merchant",
-                            method = ExtractionMethod.LineExtraction(10),
-                        ),
-                        RuleField(
-                            id = "2",
-                            name = "Amount",
-                            method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
-                        ),
-                    ),
-                    actions = persistentListOf(
-                        RuleAction(
-                            id = "1",
-                            type = ActionType.SAVE_DATA,
-                            isEnabled = true,
-                        ),
-                    ),
-                ),
-                sampleNotification = Notification(
-                    id = "test",
-                    packageName = "com.ica.banken",
-                    appName = "ICA Banken",
-                    title = "Purchase notification",
-                    content = "Your purchase of 153.50 kr at ICA Kvantum was successful",
-                    rawContent = "Your purchase of 153.50 kr at ICA Kvantum was successful",
-                    timestamp = System.currentTimeMillis(),
-                ),
-            ),
-            onEvent = {},
-        )
-    }
-}
-
-@Preview(showBackground = true, device = "id:pixel_5", uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Composable
-private fun RuleEditorScreenStep1PreviewDark() {
-    NotificappTheme {
-        RuleEditorScreenContent(
-            uiState = UiState(
-                currentStep = 1,
-                rule = RuleUiModel(
-                    name = "ICA Banken Purchase",
-                    targetApps = persistentListOf(),
-                    triggers = persistentListOf(
-                        RuleCondition.ContentMatchCondition(
-                            id = "1",
-                            condition = MatchingCondition.TEXT_CONTENT,
-                            operator = MatchingOperator.CONTAINS,
-                            value = "purchase",
-                        ),
-                    ),
-                    fields = persistentListOf(
-                        RuleField(
-                            id = "1",
-                            name = "Merchant",
-                            method = ExtractionMethod.LineExtraction(10),
-                        ),
-                        RuleField(
-                            id = "2",
-                            name = "Amount",
-                            method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
-                        ),
-                    ),
-                    actions = persistentListOf(
-                        RuleAction(
-                            id = "1",
-                            type = ActionType.SAVE_DATA,
-                            isEnabled = true,
-                        ),
-                    ),
-                ),
-                sampleNotification = Notification(
-                    id = "test",
-                    packageName = "com.ica.banken",
-                    appName = "ICA Banken",
-                    title = "Purchase notification",
-                    content = "Your purchase of 153.50 kr at ICA Kvantum was successful",
-                    rawContent = "Your purchase of 153.50 kr at ICA Kvantum was successful",
-                    timestamp = System.currentTimeMillis(),
-                ),
-            ),
-            onEvent = {},
-        )
-    }
-}
-
-@Preview(showBackground = true, device = "id:pixel_5")
-@Composable
-private fun RuleEditorScreenStep2Preview() {
-    NotificappTheme {
-        RuleEditorScreenContent(
-            uiState = UiState(
-                currentStep = 2,
-                rule = RuleUiModel(
-                    name = "ICA Banken Purchase",
-                    description = "Extracts purchase information from ICA Banken notifications",
-                    targetApps = persistentListOf(),
-                    fields = persistentListOf(
-                        RuleField(
-                            id = "1",
-                            name = "Merchant",
-                            method = ExtractionMethod.LineExtraction(10),
-                        ),
-                        RuleField(
-                            id = "2",
-                            name = "Amount",
-                            method = ExtractionMethod.RegexPattern("\\d+(\\.\\d+)?"),
-                        ),
-                    ),
-                    actions = persistentListOf(
-                        RuleAction(
-                            id = "1",
-                            type = ActionType.SAVE_DATA,
-                            isEnabled = true,
-                        ),
-                    ),
-                ),
-            ),
-            onEvent = {},
-        )
-    }
-}
-
-@Preview(showBackground = true, device = "id:pixel_5")
-@Composable
-private fun RuleEditorScreenLoadingPreview() {
-    NotificappTheme {
-        RuleEditorScreenContent(uiState = UiState(isLoading = true), onEvent = {})
-    }
-}
-
-@Preview(showBackground = true, device = "id:pixel_5")
-@Composable
-private fun RuleEditorScreenLoadErrorPreview() {
-    NotificappTheme {
-        RuleEditorScreenContent(
-            uiState = UiState(
-                loadError = LoadError(UiText.StringResource(R.string.rule_editor_error_load), canRetry = true),
-            ),
-            onEvent = {},
-        )
     }
 }

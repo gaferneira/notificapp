@@ -26,6 +26,8 @@ import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.RuleTemplateRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorMode
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorStep
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LoadError
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
@@ -64,7 +66,10 @@ import kotlin.collections.plus
  *   a recomposition or configuration change can never wipe in-progress edits. A blocking failure
  *   surfaces as [UiState.loadError] and [UiEvent.OnRetryLoadClicked] repeats the load.
  * - **Dirty check.** [UiState.hasUnsavedChanges] compares the draft against that snapshot.
- * - **Process death.** The draft, its snapshot and the current step are mirrored into
+ * - **Presentation.** [UiState.mode] (guided create vs single page) is derived once from [InitArgs]
+ *   and persisted with the draft. In guided mode [UiState.currentStep] walks WHEN, DO, REVIEW over
+ *   the same single draft, so moving between steps never loses data.
+ * - **Process death.** The draft, its snapshot, the mode and the current step are mirrored into
  *   [SavedStateHandle] (debounced) using the shareable rule wire format ([RuleDraftCodec]). On
  *   recreation the draft is restored and the nav-arg prefill is skipped. Transient UI state (open
  *   sheets, dialogs, backtest results) and the sample notification payload are not persisted; the
@@ -105,11 +110,17 @@ class RuleEditorViewModel @Inject constructor(
         val initial = savedStateHandle.get<String>(KEY_INITIAL)?.let(RuleDraftCodec::decode) ?: return
         restoredFromSavedState = true
         isDraftTrackable = true
+        val mode = savedStateHandle.get<String>(KEY_MODE)?.let { name -> EditorMode.entries.find { it.name == name } }
+            ?: if (draft.id != null) EditorMode.SINGLE_PAGE else EditorMode.GUIDED
+        val step = savedStateHandle.get<String>(KEY_STEP)?.let { name -> EditorStep.entries.find { it.name == name } }
+            ?: EditorStep.WHEN
         setState {
             copy(
                 rule = draft,
                 initialRule = initial,
-                currentStep = savedStateHandle.get<Int>(KEY_STEP) ?: 1,
+                mode = mode,
+                currentStep = step,
+                isFromTemplate = savedStateHandle.get<Boolean>(KEY_FROM_TEMPLATE) ?: false,
                 showCategory = draft.category.isNotBlank(),
                 showDescription = draft.description.isNotBlank(),
             )
@@ -120,7 +131,7 @@ class RuleEditorViewModel @Inject constructor(
     private fun persistDraftOnChange() {
         viewModelScope.launch {
             uiState
-                .map { DraftSnapshot(it.rule, it.initialRule, it.currentStep) }
+                .map { DraftSnapshot(it.rule, it.initialRule, it.currentStep, it.mode, it.isFromTemplate) }
                 .distinctUntilChanged()
                 .debounce(PERSIST_DEBOUNCE_MS)
                 .collect { snapshot ->
@@ -130,7 +141,9 @@ class RuleEditorViewModel @Inject constructor(
                     }
                     savedStateHandle[KEY_DRAFT] = draftJson
                     savedStateHandle[KEY_INITIAL] = initialJson
-                    savedStateHandle[KEY_STEP] = snapshot.step
+                    savedStateHandle[KEY_STEP] = snapshot.step.name
+                    savedStateHandle[KEY_MODE] = snapshot.mode.name
+                    savedStateHandle[KEY_FROM_TEMPLATE] = snapshot.fromTemplate
                 }
         }
     }
@@ -152,8 +165,9 @@ class RuleEditorViewModel @Inject constructor(
         when (event) {
             is UiEvent.Initialize -> initialize(event.args)
             UiEvent.OnRetryLoadClicked -> retryLoad()
-            is UiEvent.OnContinueClicked -> navigateToStep(2)
-            is UiEvent.OnBackToLogicClicked -> navigateToStep(1)
+            UiEvent.OnNextStepClicked -> navigateToNextStep()
+            UiEvent.OnPreviousStepClicked -> navigateToPreviousStep()
+            is UiEvent.OnStepSelected -> jumpToCompletedStep(event.step)
             is UiEvent.OnNameChange -> updateName(event.name)
             is UiEvent.OnDescriptionChange -> updateDescription(event.description)
             is UiEvent.OnAddDescriptionClicked -> showDescriptionField()
@@ -197,14 +211,15 @@ class RuleEditorViewModel @Inject constructor(
     }
 
     /**
-     * Back intent shared by the top-bar arrow and the system back: step 2 returns to step 1,
-     * unsaved changes ask for confirmation, otherwise the editor closes. Ignored while saving.
+     * Back intent shared by the top-bar arrow, Cancel and the system back: in the guided flow a
+     * later step returns to the previous one; otherwise unsaved changes ask for confirmation and a
+     * clean draft closes the editor. Ignored while saving.
      */
     private fun onBackClicked() {
         val state = uiState.value
         when {
             state.isSaving -> Unit
-            state.currentStep == 2 -> navigateToStep(1)
+            state.mode == EditorMode.GUIDED && state.currentStep.previous() != null -> navigateToPreviousStep()
             state.hasUnsavedChanges -> setState { copy(showUnsavedChangesDialog = true) }
             else -> leaveEditor()
         }
@@ -234,7 +249,16 @@ class RuleEditorViewModel @Inject constructor(
     private fun startLoad(args: InitArgs) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            setState { copy(isLoading = true, loadError = null) }
+            // The presentation is decided here, once, from how the editor was opened.
+            setState {
+                copy(
+                    isLoading = true,
+                    loadError = null,
+                    mode = args.editorMode,
+                    currentStep = EditorStep.WHEN,
+                    isFromTemplate = args.templateAssetFileName != null,
+                )
+            }
 
             val prefill = when {
                 args.ruleId != null -> loadExistingRule(args.ruleId)
@@ -309,7 +333,13 @@ class RuleEditorViewModel @Inject constructor(
         data class Failed(val error: LoadError) : Prefill
     }
 
-    private data class DraftSnapshot(val draft: RuleUiModel, val initial: RuleUiModel, val step: Int)
+    private data class DraftSnapshot(
+        val draft: RuleUiModel,
+        val initial: RuleUiModel,
+        val step: EditorStep,
+        val mode: EditorMode,
+        val fromTemplate: Boolean,
+    )
 
     private fun updateName(name: String) {
         setState {
@@ -344,7 +374,24 @@ class RuleEditorViewModel @Inject constructor(
         setState { copy(rule = rule.copy(deleteRawContentAfterExtraction = enabled)) }
     }
 
-    private fun navigateToStep(step: Int) {
+    private fun navigateToNextStep() {
+        val state = uiState.value
+        if (state.mode != EditorMode.GUIDED) return
+        val next = state.currentStep.next() ?: return
+        setState { copy(currentStep = next) }
+    }
+
+    private fun navigateToPreviousStep() {
+        val state = uiState.value
+        if (state.mode != EditorMode.GUIDED) return
+        val previous = state.currentStep.previous() ?: return
+        setState { copy(currentStep = previous) }
+    }
+
+    /** Only already completed steps are reachable from the indicator; moving forward goes through Next. */
+    private fun jumpToCompletedStep(step: EditorStep) {
+        val state = uiState.value
+        if (state.mode != EditorMode.GUIDED || step.ordinal >= state.currentStep.ordinal) return
         setState { copy(currentStep = step) }
     }
 
@@ -702,6 +749,8 @@ class RuleEditorViewModel @Inject constructor(
         const val PERSIST_DEBOUNCE_MS = 300L
         const val KEY_DRAFT = "rule_editor_draft"
         const val KEY_INITIAL = "rule_editor_initial"
-        const val KEY_STEP = "rule_editor_step"
+        const val KEY_STEP = "rule_editor_wizard_step"
+        const val KEY_MODE = "rule_editor_mode"
+        const val KEY_FROM_TEMPLATE = "rule_editor_from_template"
     }
 }

@@ -16,7 +16,7 @@ import kotlinx.collections.immutable.persistentListOf
 /**
  * MVI Contract for the Rule Editor screen.
  *
- * Provides two-screen rule editing: main editor + add field screen.
+ * Two presentations of one draft: a guided 3-step create flow and a single-page editor.
  * The matching logic bottom sheet state is managed by its own ViewModel.
  */
 object RuleEditorContract {
@@ -25,8 +25,15 @@ object RuleEditorContract {
      * UI State for the rule editor.
      */
     data class UiState(
-        /** Current step in the wizard (1 = Logic, 2 = Metadata) */
-        val currentStep: Int = 1,
+        /**
+         * How the editor is presented. Decided once from [InitArgs] when the editor opens (and
+         * persisted with the draft), never recomputed from the rule's content.
+         */
+        val mode: EditorMode = EditorMode.GUIDED,
+        /** Current step of the guided flow; ignored in [EditorMode.SINGLE_PAGE]. */
+        val currentStep: EditorStep = EditorStep.WHEN,
+        /** Whether the draft was started from a starter template (drives the one-line hint card). */
+        val isFromTemplate: Boolean = false,
         /** Rule being edited */
         val rule: RuleUiModel = RuleUiModel(),
         /** Sample notification for testing */
@@ -84,6 +91,30 @@ object RuleEditorContract {
         val hasUnsavedChanges: Boolean
             get() = rule != initialRule
 
+        /** Everything that currently prevents saving; empty when the draft is saveable. */
+        val blockingIssues: List<EditorIssue>
+            get() = buildList { if (rule.name.isBlank()) add(EditorIssue.NAME_REQUIRED) }
+
+        /** Save is offered only for a valid draft that is not loading or already being saved. */
+        val canSave: Boolean
+            get() = blockingIssues.isEmpty() && !isLoading && !isSaving
+
+        /** Delete only applies to rules that already exist. */
+        val canDelete: Boolean
+            get() = rule.id != null
+
+        /** Deleting raw content only makes sense when the rule extracts data. */
+        val showDeleteRawContentToggle: Boolean
+            get() = rule.actions.any { it.type == ActionType.SAVE_DATA }
+
+        /** Gated so the first tap doesn't test an empty rule against the entire notification history. */
+        val canTestAgainstHistory: Boolean
+            get() = rule.triggers.isNotEmpty() || rule.targetApps.isNotEmpty()
+
+        /** Template drafts that still need the user to choose apps get a one-line hint. */
+        val showTemplateHint: Boolean
+            get() = mode == EditorMode.SINGLE_PAGE && isFromTemplate && rule.id == null && rule.targetApps.isEmpty()
+
         /** Whether we can test extraction */
         val canTestExtraction: Boolean
             get() = sampleNotification != null &&
@@ -106,6 +137,32 @@ object RuleEditorContract {
      */
     data class LoadError(val message: UiText, val canRetry: Boolean)
 
+    /** Presentation of the editor: a 3-step guided flow or one scrollable page. */
+    enum class EditorMode {
+        /** Creating a rule from scratch: When, Do, then Name & review. */
+        GUIDED,
+
+        /** Editing an existing rule, or creating from a template / notification (content is prefilled). */
+        SINGLE_PAGE,
+    }
+
+    /** Steps of the [EditorMode.GUIDED] flow, in order. */
+    enum class EditorStep {
+        WHEN,
+        DO,
+        REVIEW,
+        ;
+
+        fun next(): EditorStep? = entries.getOrNull(ordinal + 1)
+
+        fun previous(): EditorStep? = entries.getOrNull(ordinal - 1)
+    }
+
+    /** Reasons the draft cannot be saved yet. */
+    enum class EditorIssue {
+        NAME_REQUIRED,
+    }
+
     /**
      * Navigation arguments that determine what the editor pre-fills. Loading is idempotent per
      * distinct [InitArgs], so re-sending [UiEvent.Initialize] after a recomposition or
@@ -115,7 +172,15 @@ object RuleEditorContract {
         val ruleId: String? = null,
         val notificationId: String? = null,
         val templateAssetFileName: String? = null,
-    )
+    ) {
+        /** Only a rule created from scratch gets the guided flow; anything prefilled is a single page. */
+        val editorMode: EditorMode
+            get() = if (ruleId == null && notificationId == null && templateAssetFileName == null) {
+                EditorMode.GUIDED
+            } else {
+                EditorMode.SINGLE_PAGE
+            }
+    }
 
     /**
      * UI Events from user interactions.
@@ -130,11 +195,14 @@ object RuleEditorContract {
         /** Retry a failed initial load */
         data object OnRetryLoadClicked : UiEvent()
 
-        /** Navigate to next step (Continue clicked) */
-        data object OnContinueClicked : UiEvent()
+        /** Guided flow: advance to the next step (no-op on the last step or in single-page mode) */
+        data object OnNextStepClicked : UiEvent()
 
-        /** Navigate back to logic step from metadata */
-        data object OnBackToLogicClicked : UiEvent()
+        /** Guided flow: return to the previous step (no-op on the first step or in single-page mode) */
+        data object OnPreviousStepClicked : UiEvent()
+
+        /** Guided flow: jump back to an already completed [step] from the step indicator */
+        data class OnStepSelected(val step: EditorStep) : UiEvent()
 
         /** Update rule name */
         data class OnNameChange(val name: String) : UiEvent()
@@ -222,8 +290,9 @@ object RuleEditorContract {
         data object OnSaveClicked : UiEvent()
 
         /**
-         * Back intent (top-bar arrow or system back): step 2 returns to step 1, unsaved changes
-         * raise the discard dialog, otherwise the editor closes.
+         * Back intent (top-bar arrow, Cancel or system back): in the guided flow a later step returns
+         * to the previous one; otherwise unsaved changes raise the discard dialog and a clean draft
+         * closes the editor.
          */
         data object OnBackClicked : UiEvent()
 

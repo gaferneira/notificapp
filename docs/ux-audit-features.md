@@ -185,6 +185,8 @@ Screens covered: Onboarding, App Selection, Inbox, Notification Detail, Rules, R
 
 `features/ruleeditor/ui/RuleEditorScreen.kt` (+ `WhenSection`, `DoSection`, bottom sheets)
 
+> **Superseded structure (rule editor redesign, phase 2):** the two-step wizard described below was replaced by a hybrid. Creating from scratch is a guided 3-step flow (When, Do, Review) with a labeled `StepIndicator` and a sticky Next/Back/Save bar; editing and prefilled creation (template, notification) is a single page with Name/When/Do/Settings cards, sticky Save/Cancel, a "Needs attention" card and Delete in an overflow menu. The screen is split into `GuidedCreateContent`, `SinglePageEditContent`, `EditorTopBar`, `EditorBottomBar`, `ReviewSummary`, `SettingsSection` and shared section composables. The findings below are kept as history.
+
 > **Implemented (2026-07-10):**
 > - Wired `UiEffect.ShowSuccess`/`ShowError` to a `SnackbarHostState` (both were empty collector branches — a successful or failed Save produced zero visible feedback). Confirmed via `RuleEditorViewModel` that navigation-back on success already happens through `navigationHandler.goBack()` independent of the effect, so this was purely a missing-feedback bug, not a missing-navigation one.
 > - Added the existing (previously unused) `StepIndicator` component under the top bar, so Continue → Save reads as a 2-step wizard instead of an unexplained navigation.

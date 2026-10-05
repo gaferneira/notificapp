@@ -528,4 +528,81 @@
     <string name="rule_editor_discard_message">You have unsaved changes. Leaving now will discard them.</string>
     <string name="rule_editor_discard_confirm">Discard</string>
     <string name="rule_editor_discard_keep">Keep editing</string>
+
+    <!-- Rule editor: shared chrome -->
+    <string name="rule_editor_title_new">New rule</string>
+    <string name="rule_editor_title_edit">Edit rule</string>
+    <string name="rule_editor_back">Back</string>
+    <string name="rule_editor_more_options">More options</string>
+    <string name="rule_editor_menu_delete">Delete rule</string>
+    <string name="rule_editor_action_next">Next</string>
+    <string name="rule_editor_action_previous">Back</string>
+    <string name="rule_editor_action_save">Save</string>
+    <string name="rule_editor_action_cancel">Cancel</string>
+    <string name="rule_editor_delete_title">Delete rule?</string>
+    <string name="rule_editor_delete_message">This rule will be permanently deleted. This can\'t be undone.</string>
+    <string name="rule_editor_delete_confirm">Delete</string>
+    <string name="rule_editor_remove_extract_title">Remove Extract data?</string>
+    <string name="rule_editor_remove_extract_message">This also deletes the extraction fields configured for this rule. This can\'t be undone.</string>
+    <string name="rule_editor_remove_extract_confirm">Remove</string>
+
+    <!-- Rule editor: guided steps -->
+    <string name="rule_editor_step_when">When</string>
+    <string name="rule_editor_step_do">Do</string>
+    <string name="rule_editor_step_review">Review</string>
+    <string name="rule_editor_step_description">Step %1$d of %2$d: %3$s</string>
+    <string name="rule_editor_step_completed_action">Go back to this step</string>
+    <string name="rule_editor_step_completed_state">Completed</string>
+
+    <!-- Rule editor: sections -->
+    <string name="rule_editor_section_name">Name</string>
+    <string name="rule_editor_section_name_help">Give the rule a name you will recognise later.</string>
+    <string name="rule_editor_section_when">When</string>
+    <string name="rule_editor_section_when_help">Choose which notifications trigger this rule: pick apps and add conditions.</string>
+    <string name="rule_editor_section_do">Do</string>
+    <string name="rule_editor_section_do_help">Choose what happens when a notification matches.</string>
+    <string name="rule_editor_section_settings">Settings</string>
+    <string name="rule_editor_section_review">Review</string>
+    <string name="rule_editor_add_condition">Add condition</string>
+    <string name="rule_editor_add_action">Add action</string>
+    <string name="rule_editor_test_history">Test against history</string>
+    <string name="rule_editor_test_history_running">Testing…</string>
+    <string name="rule_editor_test_history_disabled_hint">Add a condition or app to test against history</string>
+
+    <!-- Rule editor: name, description, category -->
+    <string name="rule_editor_field_name">Name*</string>
+    <string name="rule_editor_field_name_placeholder">e.g., Bank purchase alerts</string>
+    <string name="rule_editor_field_name_helper">A name is required to save the rule</string>
+    <string name="rule_editor_add_description">Add description</string>
+    <string name="rule_editor_add_category">Add category</string>
+    <string name="rule_editor_field_description">Description</string>
+    <string name="rule_editor_field_description_placeholder">What does this rule do?</string>
+    <string name="rule_editor_field_category">Category</string>
+    <string name="rule_editor_field_category_placeholder">e.g., Finance, Shopping</string>
+
+    <!-- Rule editor: settings -->
+    <string name="rule_editor_dry_run_title">Dry run</string>
+    <string name="rule_editor_dry_run_description">While on, the rule only records its matches. It won\'t dismiss, snooze or alert until you turn this off.</string>
+    <string name="rule_editor_delete_raw_title">Delete raw content after extraction</string>
+    <string name="rule_editor_delete_raw_description">Removes the notification\'s original text once fields are extracted, keeping only the extracted data.</string>
+
+    <!-- Rule editor: review summary -->
+    <string name="rule_editor_summary_title">Summary</string>
+    <string name="rule_editor_summary_no_conditions">When a notification from %1$s arrives, then %2$s.</string>
+    <string name="rule_editor_summary_with_conditions">When a notification from %1$s %2$s, then %3$s.</string>
+    <string name="rule_editor_summary_scope_all">any app</string>
+    <string name="rule_editor_summary_scope_except">any app except %1$s</string>
+    <plurals name="rule_editor_summary_apps_count">
+        <item quantity="one">%d app</item>
+        <item quantity="other">%d apps</item>
+    </plurals>
+    <string name="rule_editor_summary_match_single">matches %1$s</string>
+    <string name="rule_editor_summary_match_all">matches all of: %1$s</string>
+    <string name="rule_editor_summary_match_any">matches any of: %1$s</string>
+    <string name="rule_editor_summary_no_actions">nothing happens yet</string>
+
+    <!-- Rule editor: single page helpers -->
+    <string name="rule_editor_attention_title">Needs attention</string>
+    <string name="rule_editor_attention_name">Give your rule a name</string>
+    <string name="rule_editor_template_hint">This template is a starting point. Choose the apps it should watch, review the details, then save.</string>
 </resources>

@@ -17,6 +17,9 @@ import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.RuleTemplateRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorIssue
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorMode
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorStep
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
@@ -107,6 +110,15 @@ class RuleEditorViewModelTest {
 
     private fun stubRule(rule: dev.gaferneira.notificapp.domain.model.Rule) {
         coEvery { ruleRepository.getRule(rule.id) } returns Result.success(rule)
+    }
+
+    private fun templateJson(): String = dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec.encode(
+        createTestRule(id = "tpl", name = "Template"),
+    )
+
+    private fun loadExisting() {
+        stubRule(createTestRule(id = "rule-1", name = "Rule"))
+        viewModel.initialize(ruleId = "rule-1")
     }
 
     @AfterEach
@@ -434,16 +446,52 @@ class RuleEditorViewModelTest {
         }
 
         @Test
-        fun `back from step two returns to step one even with unsaved changes`() = runTest(testDispatcher) {
-            loadExisting()
-            viewModel.onEvent(UiEvent.OnNameChange("Other"))
-            viewModel.onEvent(UiEvent.OnContinueClicked)
+        fun `guided back from a later step returns to the previous step even with unsaved changes`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.onEvent(UiEvent.OnNameChange("Draft"))
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
 
             viewModel.onEvent(UiEvent.OnBackClicked)
             testDispatcher.scheduler.advanceUntilIdle()
 
-            viewModel.uiState.value.currentStep shouldBe 1
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
             viewModel.uiState.value.showUnsavedChangesDialog shouldBe false
+            coVerify(exactly = 0) { navigationHandler.goBack() }
+        }
+
+        @Test
+        fun `guided back from the first step with unsaved changes asks to discard`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.onEvent(UiEvent.OnNameChange("Draft"))
+
+            viewModel.onEvent(UiEvent.OnBackClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.showUnsavedChangesDialog shouldBe true
+            coVerify(exactly = 0) { navigationHandler.goBack() }
+        }
+
+        @Test
+        fun `guided back from the first step of a clean draft closes the editor`() = runTest(testDispatcher) {
+            viewModel.initialize()
+
+            viewModel.onEvent(UiEvent.OnBackClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify(exactly = 1) { navigationHandler.goBack() }
+        }
+
+        @Test
+        fun `single page back never changes steps and asks to discard when dirty`() = runTest(testDispatcher) {
+            loadExisting()
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.onEvent(UiEvent.OnNameChange("Other"))
+
+            viewModel.onEvent(UiEvent.OnBackClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
+            viewModel.uiState.value.showUnsavedChangesDialog shouldBe true
             coVerify(exactly = 0) { navigationHandler.goBack() }
         }
     }
@@ -453,25 +501,24 @@ class RuleEditorViewModelTest {
 
         @Test
         fun `edits are persisted to saved state and restored without reloading`() = runTest(testDispatcher) {
-            // Given: an existing rule edited by the user, with the step advanced
+            // Given: an existing rule edited by the user
             val handle = SavedStateHandle()
             val first = createViewModel(handle)
             stubRule(createTestRule(id = "rule-1", name = "Original"))
             first.initialize(ruleId = "rule-1")
             first.onEvent(UiEvent.OnNameChange("Edited"))
-            first.onEvent(UiEvent.OnContinueClicked)
             testDispatcher.scheduler.advanceUntilIdle()
 
             // When: the process dies and a new ViewModel is created from the same saved state
             val restored = createViewModel(handle)
             restored.initialize(ruleId = "rule-1")
 
-            // Then: the draft, baseline and step are restored, still dirty, and no reload happened
+            // Then: the draft, baseline and mode are restored, still dirty, and no reload happened
             val state = restored.uiState.value
             state.rule.id shouldBe "rule-1"
             state.rule.name shouldBe "Edited"
             state.initialRule.name shouldBe "Original"
-            state.currentStep shouldBe 2
+            state.mode shouldBe EditorMode.SINGLE_PAGE
             state.hasUnsavedChanges shouldBe true
             coVerify(exactly = 1) { ruleRepository.getRule("rule-1") }
         }
@@ -532,27 +579,211 @@ class RuleEditorViewModelTest {
     }
 
     @Nested
-    inner class StepNavigationTests {
+    inner class EditorModeTests {
 
         @Test
-        fun `continue clicked navigates to step two`() {
-            // When: continue is clicked
-            viewModel.onEvent(UiEvent.OnContinueClicked)
+        fun `creating from scratch opens the guided flow on the first step`() = runTest(testDispatcher) {
+            viewModel.initialize()
 
-            // Then: the current step becomes 2
-            viewModel.uiState.value.currentStep shouldBe 2
+            viewModel.uiState.value.mode shouldBe EditorMode.GUIDED
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
         }
 
         @Test
-        fun `back to logic clicked navigates to step one`() {
-            // Given: currently on step 2
-            viewModel.onEvent(UiEvent.OnContinueClicked)
+        fun `editing an existing rule opens the single page`() = runTest(testDispatcher) {
+            loadExisting()
 
-            // When: navigating back to logic
-            viewModel.onEvent(UiEvent.OnBackToLogicClicked)
+            viewModel.uiState.value.mode shouldBe EditorMode.SINGLE_PAGE
+        }
 
-            // Then: the current step becomes 1
-            viewModel.uiState.value.currentStep shouldBe 1
+        @Test
+        fun `creating from a template opens the single page and flags the template`() = runTest(testDispatcher) {
+            coEvery { ruleTemplateRepository.getTemplateText("t.json") } returns Result.success(templateJson())
+
+            viewModel.initialize(templateAssetFileName = "t.json")
+
+            viewModel.uiState.value.mode shouldBe EditorMode.SINGLE_PAGE
+            viewModel.uiState.value.isFromTemplate shouldBe true
+        }
+
+        @Test
+        fun `creating from a notification opens the single page`() = runTest(testDispatcher) {
+            coEvery { notificationRepository.getNotification("n1") } returns Result.success(createTestNotification(id = "n1"))
+
+            viewModel.initialize(notificationId = "n1")
+
+            viewModel.uiState.value.mode shouldBe EditorMode.SINGLE_PAGE
+            viewModel.uiState.value.isFromTemplate shouldBe false
+        }
+
+        @Test
+        fun `a template with no target apps shows the hint, and choosing apps hides it`() = runTest(testDispatcher) {
+            coEvery { ruleTemplateRepository.getTemplateText("t.json") } returns Result.success(templateJson())
+            viewModel.initialize(templateAssetFileName = "t.json")
+            viewModel.uiState.value.rule.targetApps.isEmpty() shouldBe true
+            viewModel.uiState.value.showTemplateHint shouldBe true
+
+            viewModel.onEvent(UiEvent.OnAppsSelected(persistentListOf(AppInfo("com.a", "App A"))))
+
+            viewModel.uiState.value.showTemplateHint shouldBe false
+        }
+
+        @Test
+        fun `the mode is not recomputed from content when the rule changes`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.onEvent(UiEvent.OnNameChange("Something"))
+            viewModel.onEvent(UiEvent.OnConditionSaved(createTestCondition(id = "c1")))
+
+            viewModel.uiState.value.mode shouldBe EditorMode.GUIDED
+        }
+
+        @Test
+        fun `the guided mode and step survive process death`() = runTest(testDispatcher) {
+            val handle = SavedStateHandle()
+            val first = createViewModel(handle)
+            first.initialize()
+            first.onEvent(UiEvent.OnNameChange("Draft"))
+            first.onEvent(UiEvent.OnNextStepClicked)
+            first.onEvent(UiEvent.OnNextStepClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val restored = createViewModel(handle)
+            restored.initialize()
+
+            restored.uiState.value.mode shouldBe EditorMode.GUIDED
+            restored.uiState.value.currentStep shouldBe EditorStep.REVIEW
+            restored.uiState.value.rule.name shouldBe "Draft"
+        }
+
+        @Test
+        fun `the single page mode and template flag survive process death`() = runTest(testDispatcher) {
+            coEvery { ruleTemplateRepository.getTemplateText("t.json") } returns Result.success(templateJson())
+            val handle = SavedStateHandle()
+            val first = createViewModel(handle)
+            first.initialize(templateAssetFileName = "t.json")
+            first.onEvent(UiEvent.OnNameChange("Tweaked"))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val restored = createViewModel(handle)
+            restored.initialize(templateAssetFileName = "t.json")
+
+            restored.uiState.value.mode shouldBe EditorMode.SINGLE_PAGE
+            restored.uiState.value.isFromTemplate shouldBe true
+        }
+    }
+
+    @Nested
+    inner class StepNavigationTests {
+
+        @Test
+        fun `next walks the guided steps in order and stops at the last`() = runTest(testDispatcher) {
+            viewModel.initialize()
+
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.uiState.value.currentStep shouldBe EditorStep.DO
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.uiState.value.currentStep shouldBe EditorStep.REVIEW
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.uiState.value.currentStep shouldBe EditorStep.REVIEW
+        }
+
+        @Test
+        fun `previous walks back and stops at the first step`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+
+            viewModel.onEvent(UiEvent.OnPreviousStepClicked)
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
+            viewModel.onEvent(UiEvent.OnPreviousStepClicked)
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
+        }
+
+        @Test
+        fun `tapping a completed step jumps back to it`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+
+            viewModel.onEvent(UiEvent.OnStepSelected(EditorStep.WHEN))
+
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
+        }
+
+        @Test
+        fun `tapping the current or an upcoming step does not move`() = runTest(testDispatcher) {
+            viewModel.initialize()
+
+            viewModel.onEvent(UiEvent.OnStepSelected(EditorStep.REVIEW))
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
+
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.onEvent(UiEvent.OnStepSelected(EditorStep.DO))
+            viewModel.uiState.value.currentStep shouldBe EditorStep.DO
+        }
+
+        @Test
+        fun `moving between steps keeps the single draft intact`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.onEvent(UiEvent.OnConditionSaved(createTestCondition(id = "c1")))
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.onEvent(UiEvent.OnNameChange("Kept"))
+            viewModel.onEvent(UiEvent.OnPreviousStepClicked)
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+
+            viewModel.uiState.value.rule.name shouldBe "Kept"
+            viewModel.uiState.value.rule.triggers.size shouldBe 1
+        }
+
+        @Test
+        fun `step events are ignored in single page mode`() = runTest(testDispatcher) {
+            loadExisting()
+
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.onEvent(UiEvent.OnStepSelected(EditorStep.REVIEW))
+
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
+        }
+    }
+
+    @Nested
+    inner class SettingsAndSaveGatingTests {
+
+        @Test
+        fun `delete raw content toggle is shown only when the rule has an extract data action`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.uiState.value.showDeleteRawContentToggle shouldBe false
+
+            viewModel.onEvent(UiEvent.OnExtractDataCommitted(persistentListOf(createTestField(method = ExtractionMethod.SmartAmountDetection))))
+            viewModel.uiState.value.showDeleteRawContentToggle shouldBe true
+
+            val actionId = viewModel.uiState.value.rule.actions.first { it.type == ActionType.SAVE_DATA }.id
+            viewModel.onEvent(UiEvent.OnRemoveActionClicked(actionId))
+            viewModel.onEvent(UiEvent.OnConfirmExtractDataRemoval)
+            viewModel.uiState.value.showDeleteRawContentToggle shouldBe false
+        }
+
+        @Test
+        fun `a blank name blocks saving and a name unblocks it`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.uiState.value.blockingIssues shouldBe listOf(EditorIssue.NAME_REQUIRED)
+            viewModel.uiState.value.canSave shouldBe false
+
+            viewModel.onEvent(UiEvent.OnNameChange("Named"))
+
+            viewModel.uiState.value.blockingIssues shouldBe emptyList()
+            viewModel.uiState.value.canSave shouldBe true
+        }
+
+        @Test
+        fun `delete is available only for existing rules`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.uiState.value.canDelete shouldBe false
+
+            val existing = createViewModel()
+            stubRule(createTestRule(id = "rule-9"))
+            existing.initialize(ruleId = "rule-9")
+            existing.uiState.value.canDelete shouldBe true
         }
     }
 

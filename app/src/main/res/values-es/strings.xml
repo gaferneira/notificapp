@@ -379,4 +379,82 @@
     <string name="rule_editor_discard_message">Tienes cambios sin guardar. Si sales ahora, se descartarán.</string>
     <string name="rule_editor_discard_confirm">Descartar</string>
     <string name="rule_editor_discard_keep">Seguir editando</string>
+
+    <!-- Rule editor: shared chrome -->
+    <string name="rule_editor_title_new">Nueva regla</string>
+    <string name="rule_editor_title_edit">Editar regla</string>
+    <string name="rule_editor_back">Atrás</string>
+    <string name="rule_editor_more_options">Más opciones</string>
+    <string name="rule_editor_menu_delete">Eliminar regla</string>
+    <string name="rule_editor_action_next">Siguiente</string>
+    <string name="rule_editor_action_previous">Atrás</string>
+    <string name="rule_editor_action_save">Guardar</string>
+    <string name="rule_editor_action_cancel">Cancelar</string>
+    <string name="rule_editor_delete_title">¿Eliminar la regla?</string>
+    <string name="rule_editor_delete_message">La regla se eliminará de forma permanente. Esta acción no se puede deshacer.</string>
+    <string name="rule_editor_delete_confirm">Eliminar</string>
+    <string name="rule_editor_remove_extract_title">¿Quitar Extraer datos?</string>
+    <string name="rule_editor_remove_extract_message">También se eliminarán los campos de extracción configurados para esta regla. Esta acción no se puede deshacer.</string>
+    <string name="rule_editor_remove_extract_confirm">Quitar</string>
+
+    <!-- Rule editor: guided steps -->
+    <string name="rule_editor_step_when">Cuándo</string>
+    <string name="rule_editor_step_do">Qué hacer</string>
+    <string name="rule_editor_step_review">Revisar</string>
+    <string name="rule_editor_step_description">Paso %1$d de %2$d: %3$s</string>
+    <string name="rule_editor_step_completed_action">Volver a este paso</string>
+    <string name="rule_editor_step_completed_state">Completado</string>
+
+    <!-- Rule editor: sections -->
+    <string name="rule_editor_section_name">Nombre</string>
+    <string name="rule_editor_section_name_help">Ponle a la regla un nombre que reconozcas más adelante.</string>
+    <string name="rule_editor_section_when">Cuándo</string>
+    <string name="rule_editor_section_when_help">Elige qué notificaciones activan esta regla: selecciona apps y añade condiciones.</string>
+    <string name="rule_editor_section_do">Qué hacer</string>
+    <string name="rule_editor_section_do_help">Elige qué ocurre cuando una notificación coincide.</string>
+    <string name="rule_editor_section_settings">Ajustes</string>
+    <string name="rule_editor_section_review">Revisar</string>
+    <string name="rule_editor_add_condition">Añadir condición</string>
+    <string name="rule_editor_add_action">Añadir acción</string>
+    <string name="rule_editor_test_history">Probar con el historial</string>
+    <string name="rule_editor_test_history_running">Probando…</string>
+    <string name="rule_editor_test_history_disabled_hint">Añade una condición o una app para probar con el historial</string>
+
+    <!-- Rule editor: name, description, category -->
+    <string name="rule_editor_field_name">Nombre*</string>
+    <string name="rule_editor_field_name_placeholder">p. ej., Avisos de compras del banco</string>
+    <string name="rule_editor_field_name_helper">Se necesita un nombre para guardar la regla</string>
+    <string name="rule_editor_add_description">Añadir descripción</string>
+    <string name="rule_editor_add_category">Añadir categoría</string>
+    <string name="rule_editor_field_description">Descripción</string>
+    <string name="rule_editor_field_description_placeholder">¿Qué hace esta regla?</string>
+    <string name="rule_editor_field_category">Categoría</string>
+    <string name="rule_editor_field_category_placeholder">p. ej., Finanzas, Compras</string>
+
+    <!-- Rule editor: settings -->
+    <string name="rule_editor_dry_run_title">Modo de prueba</string>
+    <string name="rule_editor_dry_run_description">Mientras esté activado, la regla solo registra sus coincidencias. No descartará, pospondrá ni avisará hasta que lo desactives.</string>
+    <string name="rule_editor_delete_raw_title">Eliminar el contenido original tras la extracción</string>
+    <string name="rule_editor_delete_raw_description">Quita el texto original de la notificación una vez extraídos los campos y conserva solo los datos extraídos.</string>
+
+    <!-- Rule editor: review summary -->
+    <string name="rule_editor_summary_title">Resumen</string>
+    <string name="rule_editor_summary_no_conditions">Cuando llegue una notificación de %1$s, entonces %2$s.</string>
+    <string name="rule_editor_summary_with_conditions">Cuando una notificación de %1$s %2$s, entonces %3$s.</string>
+    <string name="rule_editor_summary_scope_all">cualquier app</string>
+    <string name="rule_editor_summary_scope_except">cualquier app excepto %1$s</string>
+    <plurals name="rule_editor_summary_apps_count">
+        <item quantity="one">%d app</item>
+        <item quantity="many">%d de apps</item>
+        <item quantity="other">%d apps</item>
+    </plurals>
+    <string name="rule_editor_summary_match_single">cumple %1$s</string>
+    <string name="rule_editor_summary_match_all">cumple todas estas condiciones: %1$s</string>
+    <string name="rule_editor_summary_match_any">cumple alguna de estas condiciones: %1$s</string>
+    <string name="rule_editor_summary_no_actions">todavía no ocurre nada</string>
+
+    <!-- Rule editor: single page helpers -->
+    <string name="rule_editor_attention_title">Requiere atención</string>
+    <string name="rule_editor_attention_name">Ponle un nombre a la regla</string>
+    <string name="rule_editor_template_hint">Esta plantilla es un punto de partida. Elige las apps que debe vigilar, revisa los detalles y guarda.</string>
 </resources>
