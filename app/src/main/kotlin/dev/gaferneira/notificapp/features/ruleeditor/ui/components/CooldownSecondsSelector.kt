@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -28,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -101,11 +104,14 @@ fun CooldownSecondsSelector(
 @Composable
 private fun CooldownHeader(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .toggleable(value = enabled, role = Role.Switch, onValueChange = onEnabledChange),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Cooldown",
                 style = MaterialTheme.typography.labelLarge,
@@ -123,7 +129,7 @@ private fun CooldownHeader(enabled: Boolean, onEnabledChange: (Boolean) -> Unit)
             if (enabled) {
                 Spacer(modifier = Modifier.width(8.dp))
             }
-            Switch(checked = enabled, onCheckedChange = onEnabledChange)
+            Switch(checked = enabled, onCheckedChange = null)
         }
     }
 }

@@ -27,11 +27,12 @@ data class RuleUiModel(
     /** Rule category */
     val category: String = "",
     /**
-     * When true, matches are logged but no actions execute. Defaults to true for new
-     * rules (id == null) so a rule can be trialed before it's trusted to act on real
-     * notifications - matches the default already used for imported rules.
+     * When true, matches are logged but no actions execute. Defaults to false: rules the user
+     * builds (from scratch, a notification or a bundled template) act right away. Only rules
+     * imported from a file or the clipboard are forced into dry run (untrusted input, see
+     * `RuleJsonCodec.withFreshIdentityForImport`).
      */
-    val isDryRun: Boolean = true,
+    val isDryRun: Boolean = false,
     /**
      * When true, after this rule matches and extracts data the source notification's raw text is
      * scrubbed for privacy, keeping only the extracted fields.

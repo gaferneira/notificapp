@@ -10,7 +10,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.numberKeyboardOptions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
 
 @Composable
 fun FixedPositionConfig(
@@ -38,6 +41,7 @@ fun FixedPositionConfig(
                 label = { Text("Start Index") },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
+                keyboardOptions = numberKeyboardOptions(ImeAction.Next),
             )
             OutlinedTextField(
                 value = endIndex.toString(),
@@ -45,6 +49,8 @@ fun FixedPositionConfig(
                 label = { Text("End Index") },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
+                keyboardOptions = numberKeyboardOptions(ImeAction.Done),
+                keyboardActions = rememberClearFocusKeyboardActions(),
             )
         }
     }

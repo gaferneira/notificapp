@@ -9,7 +9,12 @@ import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorIssue
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorStep
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorWarning
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
+import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleValidation
+import dev.gaferneira.notificapp.features.ruleeditor.domain.ValidationResult
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -34,6 +39,13 @@ object RuleEditorContract {
         val currentStep: EditorStep = EditorStep.WHEN,
         /** Whether the draft was started from a starter template (drives the one-line hint card). */
         val isFromTemplate: Boolean = false,
+        /**
+         * Whether the editor was opened on an already saved rule. Decided from [InitArgs.ruleId], so
+         * the title reads "Edit rule" even when that rule fails to load (and [RuleUiModel.id] is null).
+         */
+        val isExistingRule: Boolean = false,
+        /** Whether a condition was prefilled from the source notification and its hint card is still showing. */
+        val showPrefillHint: Boolean = false,
         /** Rule being edited */
         val rule: RuleUiModel = RuleUiModel(),
         /** Sample notification for testing */
@@ -91,9 +103,35 @@ object RuleEditorContract {
         val hasUnsavedChanges: Boolean
             get() = rule != initialRule
 
+        /** Validation of the current draft; every gate and message below derives from it. */
+        val validation: ValidationResult
+            get() = RuleValidation.evaluate(rule)
+
         /** Everything that currently prevents saving; empty when the draft is saveable. */
         val blockingIssues: List<EditorIssue>
-            get() = buildList { if (rule.name.isBlank()) add(EditorIssue.NAME_REQUIRED) }
+            get() = validation.blocking
+
+        /** Non-blocking heads-ups about the draft. */
+        val warnings: List<EditorWarning>
+            get() = validation.warnings
+
+        /** Blocking issues that belong to [step]. */
+        fun blockingIssuesFor(step: EditorStep): List<EditorIssue> = blockingIssues.filter { it.step == step }
+
+        /** Warnings that belong to [step]. */
+        fun warningsFor(step: EditorStep): List<EditorWarning> = warnings.filter { it.step == step }
+
+        /** Blocking issues of steps before the review step, to surface (with a jump) on the review step. */
+        val earlierStepIssues: List<EditorIssue>
+            get() = blockingIssues.filter { it.step != EditorStep.REVIEW }
+
+        /** The issue that currently disables Next on [currentStep] (guided flow), or null when Next is allowed. */
+        val nextBlockedBy: EditorIssue?
+            get() = if (mode == EditorMode.GUIDED) blockingIssuesFor(currentStep).firstOrNull { it.nextBlockedMessage != null } else null
+
+        /** Next is offered on a non-final guided step whose own requirements are met. */
+        val canGoNext: Boolean
+            get() = mode == EditorMode.GUIDED && currentStep.next() != null && nextBlockedBy == null && !isSaving
 
         /** Save is offered only for a valid draft that is not loading or already being saved. */
         val canSave: Boolean
@@ -146,23 +184,6 @@ object RuleEditorContract {
         SINGLE_PAGE,
     }
 
-    /** Steps of the [EditorMode.GUIDED] flow, in order. */
-    enum class EditorStep {
-        WHEN,
-        DO,
-        REVIEW,
-        ;
-
-        fun next(): EditorStep? = entries.getOrNull(ordinal + 1)
-
-        fun previous(): EditorStep? = entries.getOrNull(ordinal - 1)
-    }
-
-    /** Reasons the draft cannot be saved yet. */
-    enum class EditorIssue {
-        NAME_REQUIRED,
-    }
-
     /**
      * Navigation arguments that determine what the editor pre-fills. Loading is idempotent per
      * distinct [InitArgs], so re-sending [UiEvent.Initialize] after a recomposition or
@@ -197,6 +218,15 @@ object RuleEditorContract {
 
         /** Guided flow: advance to the next step (no-op on the last step or in single-page mode) */
         data object OnNextStepClicked : UiEvent()
+
+        /**
+         * A blocking [issue] was tapped: the guided flow jumps back to the step it belongs to (the
+         * single-page editor scrolls to the section in the UI instead, so this is a no-op there).
+         */
+        data class OnIssueClicked(val issue: EditorIssue) : UiEvent()
+
+        /** Dismiss the "we pre-filled a condition" hint */
+        data object OnPrefillHintDismissed : UiEvent()
 
         /** Guided flow: return to the previous step (no-op on the first step or in single-page mode) */
         data object OnPreviousStepClicked : UiEvent()

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -22,14 +23,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.components.BetaBadge
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
@@ -66,6 +74,7 @@ fun DoSection(
                 text = "Do",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() },
             )
             Text(
                 text = "Actions to perform with the extracted data, like saving it or sending a new alert.",
@@ -125,10 +134,12 @@ private fun ActionCard(
     onRemove: () -> Unit,
     onClick: () -> Unit,
 ) {
+    val actionLabel = stringResource(action.type.ui().labelRes)
+    val configureLabel = stringResource(R.string.rule_editor_a11y_configure_action, actionLabel)
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClickLabel = configureLabel, role = Role.Button, onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -149,6 +160,7 @@ private fun ActionCard(
             )
 
             ActionCardControls(
+                actionLabel = actionLabel,
                 isEnabled = action.isEnabled,
                 onToggle = onToggle,
                 onRemove = onRemove,
@@ -210,21 +222,34 @@ private fun ActionCardLabel(
 
 @Composable
 private fun ActionCardControls(
+    actionLabel: String,
     isEnabled: Boolean,
     onToggle: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val stateText = stringResource(
+        if (isEnabled) R.string.rule_editor_a11y_state_enabled else R.string.rule_editor_a11y_state_disabled,
+    )
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        Switch(
-            checked = isEnabled,
-            onCheckedChange = { onToggle() },
-        )
+        // The switch is announced as "<action>, <Enabled|Disabled>, switch" and toggles from its whole 48dp area.
+        Box(
+            modifier = Modifier
+                .minimumInteractiveComponentSize()
+                .toggleable(value = isEnabled, role = Role.Switch, onValueChange = { onToggle() })
+                .semantics {
+                    contentDescription = actionLabel
+                    stateDescription = stateText
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Switch(checked = isEnabled, onCheckedChange = null)
+        }
 
         IconButton(onClick = onRemove) {
             Icon(
                 imageVector = Icons.Default.Delete,
-                contentDescription = "Remove action",
+                contentDescription = stringResource(R.string.rule_editor_a11y_remove_action, actionLabel),
                 tint = MaterialTheme.colorScheme.error,
             )
         }

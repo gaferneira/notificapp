@@ -604,5 +604,33 @@
     <!-- Rule editor: single page helpers -->
     <string name="rule_editor_attention_title">Needs attention</string>
     <string name="rule_editor_attention_name">Give your rule a name</string>
+    <string name="rule_editor_issue_too_broad">With no conditions, this rule would match almost every notification. Add a condition or choose specific apps.</string>
+    <string name="rule_editor_issue_action_required">Turn on at least one action so the rule does something.</string>
+    <string name="rule_editor_next_blocked_too_broad">Add a condition or choose specific apps to continue</string>
+    <string name="rule_editor_next_blocked_action_required">Add and turn on an action to continue</string>
+    <string name="rule_editor_warning_matches_all_of_apps">This rule will match every notification from the selected apps.</string>
+    <string name="rule_editor_attention_jump">Go to step</string>
+    <string name="rule_editor_prefill_hint">We pre-filled a condition from this notification. Adjust it to match similar ones.</string>
+    <string name="rule_editor_prefill_hint_dismiss">Dismiss</string>
     <string name="rule_editor_template_hint">This template is a starting point. Choose the apps it should watch, review the details, then save.</string>
+
+    <!-- Rule editor: accessibility -->
+    <string name="rule_editor_a11y_remove_condition">Remove condition: %1$s</string>
+    <string name="rule_editor_a11y_remove_action">Remove action: %1$s</string>
+    <string name="rule_editor_a11y_remove_field">Remove field: %1$s</string>
+    <string name="rule_editor_a11y_state_enabled">Enabled</string>
+    <string name="rule_editor_a11y_state_disabled">Disabled</string>
+    <string name="rule_editor_a11y_edit_field">Edit field</string>
+    <string name="rule_editor_a11y_choose_apps">Choose apps</string>
+    <string name="rule_editor_a11y_edit_condition">Edit condition</string>
+    <string name="rule_editor_a11y_configure_action">Configure %1$s</string>
+    <string name="rule_editor_a11y_notice_blocking">Needs attention</string>
+    <string name="rule_editor_a11y_notice_warning">Warning</string>
+    <string name="rule_editor_a11y_fix_issue">Fix this</string>
+    <string name="alarm_background_preset_sunrise">Sunrise</string>
+    <string name="alarm_background_preset_ocean">Ocean</string>
+    <string name="alarm_background_preset_midnight">Midnight</string>
+    <string name="alarm_background_preset_forest">Forest</string>
+    <string name="alarm_background_preset_lavender">Lavender</string>
+    <string name="alarm_background_preset_coral">Coral</string>
 </resources>

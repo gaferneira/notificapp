@@ -27,15 +27,17 @@ import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.RuleTemplateRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorMode
-import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorStep
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LoadError
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorIssue
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorStep
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleDraftCodec
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
+import dev.gaferneira.notificapp.features.ruleeditor.domain.prefillConditionFrom
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
@@ -121,6 +123,8 @@ class RuleEditorViewModel @Inject constructor(
                 mode = mode,
                 currentStep = step,
                 isFromTemplate = savedStateHandle.get<Boolean>(KEY_FROM_TEMPLATE) ?: false,
+                isExistingRule = draft.id != null,
+                showPrefillHint = savedStateHandle.get<Boolean>(KEY_PREFILL_HINT) ?: false,
                 showCategory = draft.category.isNotBlank(),
                 showDescription = draft.description.isNotBlank(),
             )
@@ -131,7 +135,7 @@ class RuleEditorViewModel @Inject constructor(
     private fun persistDraftOnChange() {
         viewModelScope.launch {
             uiState
-                .map { DraftSnapshot(it.rule, it.initialRule, it.currentStep, it.mode, it.isFromTemplate) }
+                .map { DraftSnapshot(it.rule, it.initialRule, it.currentStep, it.mode, it.isFromTemplate, it.showPrefillHint) }
                 .distinctUntilChanged()
                 .debounce(PERSIST_DEBOUNCE_MS)
                 .collect { snapshot ->
@@ -144,6 +148,7 @@ class RuleEditorViewModel @Inject constructor(
                     savedStateHandle[KEY_STEP] = snapshot.step.name
                     savedStateHandle[KEY_MODE] = snapshot.mode.name
                     savedStateHandle[KEY_FROM_TEMPLATE] = snapshot.fromTemplate
+                    savedStateHandle[KEY_PREFILL_HINT] = snapshot.prefillHint
                 }
         }
     }
@@ -168,6 +173,8 @@ class RuleEditorViewModel @Inject constructor(
             UiEvent.OnNextStepClicked -> navigateToNextStep()
             UiEvent.OnPreviousStepClicked -> navigateToPreviousStep()
             is UiEvent.OnStepSelected -> jumpToCompletedStep(event.step)
+            is UiEvent.OnIssueClicked -> jumpToIssueStep(event.issue)
+            UiEvent.OnPrefillHintDismissed -> setState { copy(showPrefillHint = false) }
             is UiEvent.OnNameChange -> updateName(event.name)
             is UiEvent.OnDescriptionChange -> updateDescription(event.description)
             is UiEvent.OnAddDescriptionClicked -> showDescriptionField()
@@ -257,6 +264,8 @@ class RuleEditorViewModel @Inject constructor(
                     mode = args.editorMode,
                     currentStep = EditorStep.WHEN,
                     isFromTemplate = args.templateAssetFileName != null,
+                    isExistingRule = args.ruleId != null,
+                    showPrefillHint = false,
                 )
             }
 
@@ -272,8 +281,16 @@ class RuleEditorViewModel @Inject constructor(
 
             var rule = (prefill as Prefill.Ready).rule
             val sample = args.notificationId?.let { fetchSampleNotification(it) }
+            var prefilledCondition = false
             if (sample != null && rule.id == null) {
-                rule = rule.copy(targetApps = persistentListOf(sample.app), triggers = persistentListOf())
+                // Scope to the source app and seed one content condition so the rule is not "too broad".
+                val condition = prefillConditionFrom(sample)
+                rule = rule.copy(
+                    targetApps = persistentListOf(sample.app),
+                    isIncludeMode = true,
+                    triggers = listOfNotNull(condition).toPersistentList(),
+                )
+                prefilledCondition = condition != null
             }
             isDraftTrackable = true
             setState {
@@ -281,6 +298,7 @@ class RuleEditorViewModel @Inject constructor(
                     rule = rule,
                     initialRule = rule,
                     sampleNotification = sample,
+                    showPrefillHint = prefilledCondition,
                     isLoading = false,
                     showCategory = rule.category.isNotBlank(),
                     showDescription = rule.description.isNotBlank(),
@@ -314,7 +332,10 @@ class RuleEditorViewModel @Inject constructor(
         }
         return RuleJsonCodec.decode(text).fold(
             onSuccess = { result ->
-                Prefill.Ready(RuleUiModel.fromDomain(result.rule.withFreshIdentityForImport()).copy(id = null))
+                // Bundled templates are trusted: keep their own dry-run flag, which the import
+                // pipeline would otherwise force on (that safety rule is for untrusted files).
+                val template = result.rule.withFreshIdentityForImport().copy(isDryRun = result.rule.isDryRun)
+                Prefill.Ready(RuleUiModel.fromDomain(template).copy(id = null))
             },
             onFailure = { e ->
                 Timber.w(e, "Failed to decode rule template: $assetFileName")
@@ -339,6 +360,7 @@ class RuleEditorViewModel @Inject constructor(
         val step: EditorStep,
         val mode: EditorMode,
         val fromTemplate: Boolean,
+        val prefillHint: Boolean,
     )
 
     private fun updateName(name: String) {
@@ -376,7 +398,8 @@ class RuleEditorViewModel @Inject constructor(
 
     private fun navigateToNextStep() {
         val state = uiState.value
-        if (state.mode != EditorMode.GUIDED) return
+        // The gate (and the bottom bar's explanation of it) derives from the same validation.
+        if (!state.canGoNext) return
         val next = state.currentStep.next() ?: return
         setState { copy(currentStep = next) }
     }
@@ -393,6 +416,13 @@ class RuleEditorViewModel @Inject constructor(
         val state = uiState.value
         if (state.mode != EditorMode.GUIDED || step.ordinal >= state.currentStep.ordinal) return
         setState { copy(currentStep = step) }
+    }
+
+    /** Guided flow only: bring the user to the step an offending issue belongs to. */
+    private fun jumpToIssueStep(issue: EditorIssue) {
+        val state = uiState.value
+        if (state.mode != EditorMode.GUIDED || state.isSaving) return
+        setState { copy(currentStep = issue.step) }
     }
 
     private fun showMatchingLogicSheet() {
@@ -660,15 +690,14 @@ class RuleEditorViewModel @Inject constructor(
         if (currentState.isSaving || currentState.isLoading) return
         val ruleUiModel = currentState.rule
 
-        // Validate - only name is required in the new design
-        val errors = mutableMapOf<String, UiText>()
-        if (ruleUiModel.name.isBlank()) {
-            errors["name"] = UiText.StringResource(R.string.rule_editor_error_name_required)
-        }
-
-        if (errors.isNotEmpty()) {
-            setState { copy(validationErrors = errors) }
-            sendEffect(UiEffect.ShowError(UiText.StringResource(R.string.rule_editor_error_enter_name)))
+        val issues = currentState.blockingIssues
+        if (issues.isNotEmpty()) {
+            if (EditorIssue.NAME_REQUIRED in issues) {
+                setState { copy(validationErrors = mapOf("name" to UiText.StringResource(R.string.rule_editor_error_name_required))) }
+                sendEffect(UiEffect.ShowError(UiText.StringResource(R.string.rule_editor_error_enter_name)))
+            } else {
+                sendEffect(UiEffect.ShowError(UiText.StringResource(issues.first().message)))
+            }
             return
         }
 
@@ -752,5 +781,6 @@ class RuleEditorViewModel @Inject constructor(
         const val KEY_STEP = "rule_editor_wizard_step"
         const val KEY_MODE = "rule_editor_mode"
         const val KEY_FROM_TEMPLATE = "rule_editor_from_template"
+        const val KEY_PREFILL_HINT = "rule_editor_prefill_hint"
     }
 }

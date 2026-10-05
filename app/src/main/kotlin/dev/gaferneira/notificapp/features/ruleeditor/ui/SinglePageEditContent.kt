@@ -1,11 +1,11 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -16,15 +16,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
-import dev.gaferneira.notificapp.core.ui.theme.NotificappStyles
-import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorIssue
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorStep
 import kotlinx.coroutines.launch
 
 /**
@@ -37,6 +34,8 @@ internal fun SinglePageEditContent(uiState: UiState, onEvent: (UiEvent) -> Unit,
     val scrollState = rememberScrollState()
     val nameFocusRequester = remember { FocusRequester() }
     val coroutineScope = rememberCoroutineScope()
+    val whenRequester = remember { BringIntoViewRequester() }
+    val doRequester = remember { BringIntoViewRequester() }
 
     Column(
         modifier = modifier
@@ -48,18 +47,22 @@ internal fun SinglePageEditContent(uiState: UiState, onEvent: (UiEvent) -> Unit,
         if (uiState.blockingIssues.isNotEmpty()) {
             NeedsAttentionCard(
                 issues = uiState.blockingIssues,
-                onClick = {
-                    // The name is the first field of the page, so scrolling to the top reveals it.
+                onIssueClick = { issue ->
                     coroutineScope.launch {
-                        scrollState.animateScrollTo(0)
-                        nameFocusRequester.requestFocus()
+                        when (issue.step) {
+                            // The name is the first field of the page, so scrolling to the top reveals it.
+                            EditorStep.REVIEW -> {
+                                scrollState.animateScrollTo(0)
+                                nameFocusRequester.requestFocus()
+                            }
+                            EditorStep.WHEN -> whenRequester.bringIntoView()
+                            EditorStep.DO -> doRequester.bringIntoView()
+                        }
                     }
                 },
             )
         }
-        if (uiState.showTemplateHint) {
-            TemplateHintCard()
-        }
+        SinglePageHints(uiState = uiState, onEvent = onEvent)
 
         EditorSectionCard(title = stringResource(R.string.rule_editor_section_name)) {
             NameFields(uiState = uiState, onEvent = onEvent, nameFocusRequester = nameFocusRequester)
@@ -67,12 +70,14 @@ internal fun SinglePageEditContent(uiState: UiState, onEvent: (UiEvent) -> Unit,
         EditorSectionCard(
             title = stringResource(R.string.rule_editor_section_when),
             description = stringResource(R.string.rule_editor_section_when_help),
+            modifier = Modifier.bringIntoViewRequester(whenRequester),
         ) {
             WhenEditor(uiState = uiState, onEvent = onEvent)
         }
         EditorSectionCard(
             title = stringResource(R.string.rule_editor_section_do),
             description = stringResource(R.string.rule_editor_section_do_help),
+            modifier = Modifier.bringIntoViewRequester(doRequester),
         ) {
             DoEditor(uiState = uiState, onEvent = onEvent)
         }
@@ -83,31 +88,17 @@ internal fun SinglePageEditContent(uiState: UiState, onEvent: (UiEvent) -> Unit,
 }
 
 @Composable
-private fun NeedsAttentionCard(issues: List<EditorIssue>, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    TonalCard(
-        modifier = modifier.clickable(role = Role.Button, onClick = onClick),
-        style = NotificappStyles.warningCardStyle,
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = stringResource(R.string.rule_editor_attention_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            issues.forEach { issue ->
-                Text(
-                    text = stringResource(issue.messageRes()),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                )
-            }
-        }
+private fun SinglePageHints(uiState: UiState, onEvent: (UiEvent) -> Unit) {
+    if (uiState.showTemplateHint) {
+        TemplateHintCard()
     }
-}
-
-private fun EditorIssue.messageRes(): Int = when (this) {
-    EditorIssue.NAME_REQUIRED -> R.string.rule_editor_attention_name
+    if (uiState.showPrefillHint) {
+        DismissibleHintCard(
+            text = stringResource(R.string.rule_editor_prefill_hint),
+            dismissLabel = stringResource(R.string.rule_editor_prefill_hint_dismiss),
+            onDismiss = { onEvent(UiEvent.OnPrefillHintDismissed) },
+        )
+    }
 }
 
 @Composable

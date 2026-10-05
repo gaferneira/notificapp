@@ -5,8 +5,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -23,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -39,6 +44,7 @@ import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
+import dev.gaferneira.notificapp.features.ruleeditor.domain.shouldHideBottomBarForIme
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.RuleEditorViewModel
 import kotlinx.coroutines.launch
 
@@ -80,6 +86,7 @@ fun RuleEditorScreen(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun RuleEditorScreenContent(
     uiState: UiState,
@@ -110,12 +117,21 @@ internal fun RuleEditorScreenContent(
 
     val isFormVisible = uiState.loadError == null && !uiState.isLoading
 
+    // The activity is edge-to-edge, so nothing resizes for the keyboard: lifting the whole Scaffold by the
+    // IME inset keeps the bottom bar and snackbar above the keyboard and shrinks the scroll area so the
+    // focused field can scroll into view. On short windows the bar yields to the keyboard instead.
+    val isImeVisible = WindowInsets.isImeVisible
+    val windowHeightDp = LocalConfiguration.current.screenHeightDp
+    val showBottomBar = isFormVisible && !shouldHideBottomBarForIme(isImeVisible, windowHeightDp)
+
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { EditorTopBar(uiState = uiState, onEvent = onEvent) },
         bottomBar = {
-            if (isFormVisible) {
+            if (showBottomBar) {
                 EditorBottomBar(uiState = uiState, onEvent = onEvent)
             }
         },

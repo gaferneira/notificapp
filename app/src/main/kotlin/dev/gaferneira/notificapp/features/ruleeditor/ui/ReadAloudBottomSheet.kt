@@ -107,6 +107,7 @@ fun ReadAloudBottomSheet(
 }
 
 @Preview(showBackground = true, name = "Read aloud sheet")
+@Preview(showBackground = true, name = "Read aloud sheet - Font 2x", fontScale = 2f)
 @Preview(showBackground = true, name = "Read aloud sheet - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ReadAloudBottomSheetPreview() {

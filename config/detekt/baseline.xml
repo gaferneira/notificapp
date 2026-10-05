@@ -24,7 +24,6 @@
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationCard( notification: NotificationItem, onClick: () -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationColumn( notifications: LazyPagingItems&lt;InboxListItem&gt;, onNotificationClick: (String) -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Preview(showBackground = true, name = "Inbox Preview - Direct Items") @Composable fun PreviewInboxScreenDirect()</ID>
-    <ID>LongMethod:MatchingLogicBottomSheet.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun MatchingLogicBottomSheet( modifier: Modifier = Modifier, viewModel: MatchingLogicViewModel = hiltViewModel(), initialCondition: RuleCondition? = null, onConditionSaved: (RuleCondition) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
     <ID>LongMethod:NotificationDetailScreen.kt$@Composable private fun NotificationDataCard(notification: Notification)</ID>
     <ID>LongMethod:NotificationDetailScreen.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun ExecutionCard(execution: ExecutionWithDetails)</ID>
     <ID>LongMethod:OnboardingScreen.kt$@Composable private fun PermissionToggleCard()</ID>
@@ -35,7 +34,6 @@
     <ID>LongMethod:SnoozeConfig.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun SnoozeDurationSelector( selectedMinutes: Int, onDurationChange: (Int) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:SnoozeScheduleSelectors.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun BatchAtTimeSelector( config: BatchAtTimeConfig, onConfigChange: (BatchAtTimeConfig) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:SnoozeScheduleSelectors.kt$@OptIn(ExperimentalLayoutApi::class) @Composable fun DigestScheduleSelector( config: DigestScheduleConfig, onConfigChange: (DigestScheduleConfig) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:WhenSection.kt$@Composable private fun ConditionCard( condition: RuleCondition, onClick: () -&gt; Unit, onRemove: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongParameterList:TestFixtures.kt$( id: String = "test-id", packageName: String = "com.test.app", appName: String = "Test App", title: String? = "Test Title", content: String? = "Test Content", rawContent: String = "Test Title\nTest Content", timestamp: Long = 0L, isProcessed: Boolean = false, appliedRulesCount: Int = 0, sbnKey: String? = null, )</ID>
     <ID>LoopWithTooManyJumpStatements:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$for</ID>
     <ID>MatchingDeclarationName:MainBottomNav.kt$AppDestinations</ID>

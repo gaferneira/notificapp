@@ -1,7 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DoNotDisturb
@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -133,7 +134,7 @@ private fun SnoozeOutcomeCard(
                     MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 },
             )
-            .clickable(onClick = onClick)
+            .selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick)
             .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -164,7 +165,7 @@ private fun SnoozeOutcomeCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            RadioButton(selected = isSelected, onClick = onClick)
+            RadioButton(selected = isSelected, onClick = null)
         }
 
         if (content != null) {

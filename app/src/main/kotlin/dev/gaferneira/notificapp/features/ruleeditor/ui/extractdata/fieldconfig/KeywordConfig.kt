@@ -9,7 +9,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.literalKeyboardOptions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.numberKeyboardOptions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
 
 @Composable
 fun TextAfterKeywordConfig(
@@ -35,6 +39,7 @@ fun TextAfterKeywordConfig(
             placeholder = { Text("Text to search for") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            keyboardOptions = literalKeyboardOptions(ImeAction.Next),
             isError = error != null,
             supportingText = error?.let { { Text(it) } },
         )
@@ -44,6 +49,8 @@ fun TextAfterKeywordConfig(
             label = { Text("Max Length (optional)") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            keyboardOptions = numberKeyboardOptions(ImeAction.Done),
+            keyboardActions = rememberClearFocusKeyboardActions(),
         )
     }
 }
@@ -70,6 +77,8 @@ fun TextBeforeKeywordConfig(
             placeholder = { Text("Text to search for") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            keyboardOptions = literalKeyboardOptions(ImeAction.Done),
+            keyboardActions = rememberClearFocusKeyboardActions(),
             isError = error != null,
             supportingText = error?.let { { Text(it) } },
         )

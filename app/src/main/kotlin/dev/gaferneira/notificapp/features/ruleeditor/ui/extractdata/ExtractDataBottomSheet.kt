@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -221,7 +222,7 @@ private fun DataExtractionHeaderRow(
             IconButton(
                 onClick = { onEvent(UiEvent.OnAutoGenerate) },
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.primaryContainer),
             ) {
@@ -311,8 +312,7 @@ private fun SampleNotificationPreview(
                 onClick = onClear,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(32.dp),
+                    .padding(4.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
@@ -330,7 +330,7 @@ private fun BrowseHistoryIconButton(onClick: () -> Unit, modifier: Modifier = Mo
     IconButton(
         onClick = onClick,
         modifier = modifier
-            .size(40.dp)
+            .size(48.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.primaryContainer),
     ) {
@@ -396,10 +396,11 @@ private fun ExtractionFieldItem(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val editLabel = stringResource(R.string.rule_editor_a11y_edit_field)
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -428,7 +429,7 @@ private fun ExtractionFieldItem(
                     IconButton(onClick = onRemove) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Remove field",
+                            contentDescription = stringResource(R.string.rule_editor_a11y_remove_field, field.name),
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }

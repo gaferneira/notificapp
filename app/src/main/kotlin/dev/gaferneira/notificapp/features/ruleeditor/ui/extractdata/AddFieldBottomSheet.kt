@@ -39,9 +39,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,6 +57,9 @@ import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.UiState
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.proseKeyboardOptions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.sheetInsetsPadding
 import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.FixedPositionConfig
 import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.JsonPathConfig
 import dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata.fieldconfig.LineExtractionConfig
@@ -144,12 +150,18 @@ private fun AddFieldBottomSheetContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .sheetInsetsPadding()
             .padding(horizontal = 16.dp)
-            .padding(bottom = 32.dp),
+            .padding(bottom = 16.dp),
     ) {
         // Header
         TopAppBar(
-            title = { Text(if (uiState.fieldName.isBlank()) "Add Field" else "Edit Field") },
+            title = {
+                Text(
+                    text = if (uiState.fieldName.isBlank()) "Add Field" else "Edit Field",
+                    modifier = Modifier.semantics { heading() },
+                )
+            },
             navigationIcon = {
                 IconButton(onClick = { onEvent(UiEvent.OnCancelClicked) }) {
                     Icon(
@@ -181,6 +193,7 @@ private fun AddFieldBottomSheetContent(
         // Content
         Column(
             modifier = Modifier
+                .weight(1f, fill = false)
                 .fillMaxWidth()
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -193,6 +206,8 @@ private fun AddFieldBottomSheetContent(
                 placeholder = { Text("e.g., Amount, Date, Order ID") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                keyboardOptions = proseKeyboardOptions(ImeAction.Done),
+                keyboardActions = rememberClearFocusKeyboardActions(),
                 isError = uiState.validationErrors.contains("fieldName"),
                 supportingText = uiState.validationErrors["fieldName"]?.let { { Text(it) } },
             )

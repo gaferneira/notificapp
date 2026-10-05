@@ -9,7 +9,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.literalKeyboardOptions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
 
 @Composable
 fun JsonPathConfig(
@@ -33,6 +36,8 @@ fun JsonPathConfig(
             placeholder = { Text("e.g., $.amount") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            keyboardOptions = literalKeyboardOptions(ImeAction.Done),
+            keyboardActions = rememberClearFocusKeyboardActions(),
             isError = error != null,
             supportingText = error?.let { { Text(it) } },
         )

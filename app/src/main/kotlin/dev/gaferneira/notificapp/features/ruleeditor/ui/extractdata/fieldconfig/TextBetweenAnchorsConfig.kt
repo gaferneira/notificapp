@@ -9,7 +9,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.literalKeyboardOptions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
 
 @Composable
 fun TextBetweenAnchorsConfig(
@@ -35,6 +38,7 @@ fun TextBetweenAnchorsConfig(
             placeholder = { Text("Text before the value") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            keyboardOptions = literalKeyboardOptions(ImeAction.Next),
             isError = errors.contains("startAnchor"),
             supportingText = errors["startAnchor"]?.let { { Text(it) } },
         )
@@ -45,6 +49,8 @@ fun TextBetweenAnchorsConfig(
             placeholder = { Text("Text after the value") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            keyboardOptions = literalKeyboardOptions(ImeAction.Done),
+            keyboardActions = rememberClearFocusKeyboardActions(),
             isError = errors.contains("endAnchor"),
             supportingText = errors["endAnchor"]?.let { { Text(it) } },
         )

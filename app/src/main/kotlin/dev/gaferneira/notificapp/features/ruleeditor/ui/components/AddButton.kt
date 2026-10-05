@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,7 +36,7 @@ fun AddButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, 
         enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
-            .height(48.dp),
+            .heightIn(min = 48.dp),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             width = 1.dp,

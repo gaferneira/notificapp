@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -8,9 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
@@ -37,18 +40,32 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
+import dev.gaferneira.notificapp.features.ruleeditor.domain.fullLabel
+import dev.gaferneira.notificapp.features.ruleeditor.domain.shortLabel
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.displayName
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.literalKeyboardOptions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.sheetInsetsPadding
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.MatchingLogicViewModel
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -113,100 +130,141 @@ fun MatchingLogicBottomSheet(
         sheetState = sheetState,
         modifier = modifier,
     ) {
+        // The form scrolls while the buttons stay pinned, so both remain reachable with the keyboard open.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp)
-                .navigationBarsPadding(),
+                .sheetInsetsPadding(),
         ) {
-            // Title
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+            ConditionForm(
+                title = title,
+                uiState = uiState,
+                onEvent = viewModel::onEvent,
+                modifier = Modifier.weight(1f, fill = false),
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            ConditionSheetButtons(
+                isEdit = uiState.mode == MatchingLogicContract.UiState.Mode.EDIT,
+                onCancel = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnDismiss) },
+                onConfirm = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnConfirm) },
+            )
+        }
+    }
+}
 
-            // Description
+/** Scrollable form: title, description, family picker, validation error and the family's fields. */
+@Composable
+private fun ConditionForm(
+    title: String,
+    uiState: MatchingLogicContract.UiState,
+    onEvent: (MatchingLogicContract.UiEvent) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(start = 24.dp, end = 24.dp, top = 24.dp),
+    ) {
+        // Title
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.semantics { heading() },
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Description
+        Text(
+            text = "Define the condition under which this rule should trigger.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ConditionTypePicker(
+            selected = uiState.conditionType,
+            onSelect = { onEvent(MatchingLogicContract.UiEvent.OnConditionTypeChange(it)) },
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Validation error
+        uiState.validationError?.let { error ->
             Text(
-                text = "Define the condition under which this rule should trigger.",
+                text = error,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier
+                    .padding(bottom = 16.dp)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
             )
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        ConditionFamilyContent(uiState = uiState, onEvent = onEvent)
 
-            ConditionTypePicker(
-                selected = uiState.conditionType,
-                onSelect = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnConditionTypeChange(it)) },
-            )
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
 
-            Spacer(modifier = Modifier.height(16.dp))
+/** Condition body for the selected family (per TD-13 the sheet only dispatches). */
+@Composable
+private fun ConditionFamilyContent(
+    uiState: MatchingLogicContract.UiState,
+    onEvent: (MatchingLogicContract.UiEvent) -> Unit,
+) {
+    when (uiState.conditionType) {
+        MatchingLogicContract.ConditionType.CONTENT -> ConditionModeContent(
+            condition = uiState.matchingCondition,
+            operator = uiState.matchingOperator,
+            value = uiState.matchingValue,
+            onConditionChange = { onEvent(MatchingLogicContract.UiEvent.OnMatchingConditionChange(it)) },
+            onOperatorChange = { onEvent(MatchingLogicContract.UiEvent.OnMatchingOperatorChange(it)) },
+            onValueChange = { onEvent(MatchingLogicContract.UiEvent.OnMatchingValueChange(it)) },
+        )
+        MatchingLogicContract.ConditionType.DAY_OF_WEEK -> DayOfWeekModeContent(
+            selectedDays = uiState.selectedDays,
+            onDayToggled = { onEvent(MatchingLogicContract.UiEvent.OnDayToggled(it)) },
+        )
+        MatchingLogicContract.ConditionType.TIME_RANGE -> TimeRangeModeContent(
+            start = uiState.startTime,
+            end = uiState.endTime,
+            onStartChange = { onEvent(MatchingLogicContract.UiEvent.OnStartTimeChange(it)) },
+            onEndChange = { onEvent(MatchingLogicContract.UiEvent.OnEndTimeChange(it)) },
+        )
+    }
+}
 
-            // Validation error
-            uiState.validationError?.let { error ->
-                Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                )
-            }
+/** Cancel / confirm row pinned below the scrolling form so it stays reachable above the keyboard. */
+@Composable
+private fun ConditionSheetButtons(isEdit: Boolean, onCancel: () -> Unit, onConfirm: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        OutlinedButton(
+            onClick = onCancel,
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 48.dp),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text(stringResource(R.string.rule_editor_action_cancel))
+        }
 
-            // Condition content, dispatched by family
-            when (uiState.conditionType) {
-                MatchingLogicContract.ConditionType.CONTENT -> ConditionModeContent(
-                    condition = uiState.matchingCondition,
-                    operator = uiState.matchingOperator,
-                    value = uiState.matchingValue,
-                    onConditionChange = {
-                        viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingConditionChange(it))
-                    },
-                    onOperatorChange = {
-                        viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingOperatorChange(it))
-                    },
-                    onValueChange = {
-                        viewModel.onEvent(MatchingLogicContract.UiEvent.OnMatchingValueChange(it))
-                    },
-                )
-                MatchingLogicContract.ConditionType.DAY_OF_WEEK -> DayOfWeekModeContent(
-                    selectedDays = uiState.selectedDays,
-                    onDayToggled = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnDayToggled(it)) },
-                )
-                MatchingLogicContract.ConditionType.TIME_RANGE -> TimeRangeModeContent(
-                    start = uiState.startTime,
-                    end = uiState.endTime,
-                    onStartChange = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnStartTimeChange(it)) },
-                    onEndChange = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnEndTimeChange(it)) },
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                OutlinedButton(
-                    onClick = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnDismiss) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("Cancel")
-                }
-
-                Button(
-                    onClick = { viewModel.onEvent(MatchingLogicContract.UiEvent.OnConfirm) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text(if (uiState.mode == MatchingLogicContract.UiState.Mode.EDIT) "Update" else "Add")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = onConfirm,
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 48.dp),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text(if (isEdit) "Update" else "Add")
         }
     }
 }
@@ -274,6 +332,9 @@ private fun ConditionModeContent(
             label = { Text("Value to match") },
             placeholder = { Text("e.g., Your purchase") },
             modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            keyboardOptions = literalKeyboardOptions(ImeAction.Done),
+            keyboardActions = rememberClearFocusKeyboardActions(),
         )
     }
 }
@@ -297,11 +358,14 @@ private fun DayOfWeekModeContent(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            val locale = LocalConfiguration.current.locales[0]
             DayOfWeek.entries.forEach { day ->
+                val fullName = day.fullLabel(locale)
                 FilterChip(
                     selected = day in selectedDays,
                     onClick = { onDayToggled(day) },
-                    label = { Text(day.name.substring(0, 3)) },
+                    label = { Text(day.shortLabel(locale)) },
+                    modifier = Modifier.semantics { contentDescription = fullName },
                 )
             }
         }
@@ -379,7 +443,7 @@ private fun TimePickerButton(
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) { Text("Cancel") }
             },
-            text = { TimePicker(state = state) },
+            text = { Box(modifier = Modifier.verticalScroll(rememberScrollState())) { TimePicker(state = state) } },
         )
     }
 }

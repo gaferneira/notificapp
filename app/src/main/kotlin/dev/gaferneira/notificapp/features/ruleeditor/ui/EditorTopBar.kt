@@ -34,7 +34,7 @@ internal fun EditorTopBar(uiState: UiState, onEvent: (UiEvent) -> Unit) {
         title = {
             Text(
                 stringResource(
-                    if (uiState.rule.id == null) R.string.rule_editor_title_new else R.string.rule_editor_title_edit,
+                    if (uiState.isExistingRule) R.string.rule_editor_title_edit else R.string.rule_editor_title_new,
                 ),
             )
         },

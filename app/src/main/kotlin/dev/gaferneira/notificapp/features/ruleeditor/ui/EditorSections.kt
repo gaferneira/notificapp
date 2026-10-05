@@ -7,10 +7,11 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Icon
@@ -24,17 +25,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorStep
+import dev.gaferneira.notificapp.features.ruleeditor.domain.NameNextField
 import dev.gaferneira.notificapp.features.ruleeditor.domain.availableActionTypes
+import dev.gaferneira.notificapp.features.ruleeditor.domain.nameNextField
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.ActionCardCallbacks
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.AddButton
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.DoSection
 import dev.gaferneira.notificapp.features.ruleeditor.ui.components.WhenSection
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.proseKeyboardOptions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
 
 /*
  * Section bodies shared by the guided flow and the single-page editor: both presentations render
@@ -49,6 +58,7 @@ internal fun SectionHeader(title: String, description: String?, modifier: Modifi
             text = title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
+            modifier = Modifier.semantics { heading() },
         )
         if (description != null) {
             Text(
@@ -91,6 +101,7 @@ internal fun WhenEditor(uiState: UiState, onEvent: (UiEvent) -> Unit, modifier: 
             onConditionClick = { onEvent(UiEvent.OnConditionItemClicked(it)) },
             onConditionLogicChanged = { onEvent(UiEvent.OnConditionLogicChanged(it)) },
         )
+        StepNotices(uiState = uiState, step = EditorStep.WHEN)
         AddButton(
             text = stringResource(R.string.rule_editor_add_condition),
             onClick = { onEvent(UiEvent.OnAddConditionClicked) },
@@ -112,6 +123,7 @@ internal fun DoEditor(uiState: UiState, onEvent: (UiEvent) -> Unit, modifier: Mo
                 onEdit = { onEvent(UiEvent.OnEditActionClicked(it)) },
             ),
         )
+        StepNotices(uiState = uiState, step = EditorStep.DO)
         // Hidden once every action type is configured (one action per type)
         if (availableActionTypes(uiState.rule.actions.map { it.type }).isNotEmpty()) {
             AddButton(
@@ -162,6 +174,9 @@ internal fun NameFields(
     modifier: Modifier = Modifier,
     nameFocusRequester: FocusRequester = remember { FocusRequester() },
 ) {
+    val descriptionFocusRequester = remember { FocusRequester() }
+    val categoryFocusRequester = remember { FocusRequester() }
+    val nextField = nameNextField(uiState.showDescription, uiState.showCategory)
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         val nameError = uiState.validationErrors["name"]
         OutlinedTextField(
@@ -183,15 +198,42 @@ internal fun NameFields(
                 .fillMaxWidth()
                 .focusRequester(nameFocusRequester),
             singleLine = true,
+            keyboardOptions = proseKeyboardOptions(if (nextField == NameNextField.NONE) ImeAction.Done else ImeAction.Next),
+            keyboardActions = nameKeyboardActions(nextField, descriptionFocusRequester, categoryFocusRequester),
         )
 
-        OptionalFields(uiState = uiState, onEvent = onEvent)
+        OptionalFields(
+            uiState = uiState,
+            onEvent = onEvent,
+            descriptionFocusRequester = descriptionFocusRequester,
+            categoryFocusRequester = categoryFocusRequester,
+        )
+    }
+}
+
+/** Done hides the keyboard; Next jumps straight to the first optional field that is shown. */
+@Composable
+private fun nameKeyboardActions(
+    nextField: NameNextField,
+    descriptionFocusRequester: FocusRequester,
+    categoryFocusRequester: FocusRequester,
+): KeyboardActions {
+    val clearFocusActions = rememberClearFocusKeyboardActions()
+    return when (nextField) {
+        NameNextField.DESCRIPTION -> KeyboardActions(onNext = { descriptionFocusRequester.requestFocus() })
+        NameNextField.CATEGORY -> KeyboardActions(onNext = { categoryFocusRequester.requestFocus() })
+        NameNextField.NONE -> clearFocusActions
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun OptionalFields(uiState: UiState, onEvent: (UiEvent) -> Unit) {
+private fun OptionalFields(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+    descriptionFocusRequester: FocusRequester,
+    categoryFocusRequester: FocusRequester,
+) {
     if (!uiState.showDescription || !uiState.showCategory) {
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
@@ -213,13 +255,17 @@ private fun OptionalFields(uiState: UiState, onEvent: (UiEvent) -> Unit) {
     }
 
     if (uiState.showDescription) {
+        // Multi-line: the Enter key inserts a line break, so there is no Next/Done on this field.
         OutlinedTextField(
             value = uiState.rule.description,
             onValueChange = { onEvent(UiEvent.OnDescriptionChange(it)) },
             label = { Text(stringResource(R.string.rule_editor_field_description)) },
             placeholder = { Text(stringResource(R.string.rule_editor_field_description_placeholder)) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(descriptionFocusRequester),
             minLines = 2,
+            keyboardOptions = proseKeyboardOptions(ImeAction.Default),
         )
     }
 
@@ -229,8 +275,12 @@ private fun OptionalFields(uiState: UiState, onEvent: (UiEvent) -> Unit) {
             onValueChange = { onEvent(UiEvent.OnCategoryChange(it)) },
             label = { Text(stringResource(R.string.rule_editor_field_category)) },
             placeholder = { Text(stringResource(R.string.rule_editor_field_category_placeholder)) },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(categoryFocusRequester),
             singleLine = true,
+            keyboardOptions = proseKeyboardOptions(ImeAction.Done),
+            keyboardActions = rememberClearFocusKeyboardActions(),
         )
     }
 }
@@ -239,8 +289,8 @@ private fun OptionalFields(uiState: UiState, onEvent: (UiEvent) -> Unit) {
 private fun OptionalFieldChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.height(40.dp),
-        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.heightIn(min = 48.dp),
+        shape = RoundedCornerShape(24.dp),
         contentPadding = PaddingValues(horizontal = 16.dp),
     ) {
         Text(text)

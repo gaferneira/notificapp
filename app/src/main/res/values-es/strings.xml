@@ -456,5 +456,33 @@
     <!-- Rule editor: single page helpers -->
     <string name="rule_editor_attention_title">Requiere atención</string>
     <string name="rule_editor_attention_name">Ponle un nombre a la regla</string>
+    <string name="rule_editor_issue_too_broad">Sin condiciones, esta regla coincidiría con casi todas las notificaciones. Añade una condición o elige apps concretas.</string>
+    <string name="rule_editor_issue_action_required">Activa al menos una acción para que la regla haga algo.</string>
+    <string name="rule_editor_next_blocked_too_broad">Añade una condición o elige apps concretas para continuar</string>
+    <string name="rule_editor_next_blocked_action_required">Añade y activa una acción para continuar</string>
+    <string name="rule_editor_warning_matches_all_of_apps">Esta regla coincidirá con todas las notificaciones de las apps seleccionadas.</string>
+    <string name="rule_editor_attention_jump">Ir al paso</string>
+    <string name="rule_editor_prefill_hint">Rellenamos una condición a partir de esta notificación. Ajústala para que coincida con otras similares.</string>
+    <string name="rule_editor_prefill_hint_dismiss">Descartar</string>
     <string name="rule_editor_template_hint">Esta plantilla es un punto de partida. Elige las apps que debe vigilar, revisa los detalles y guarda.</string>
+
+    <!-- Rule editor: accessibility -->
+    <string name="rule_editor_a11y_remove_condition">Eliminar condición: %1$s</string>
+    <string name="rule_editor_a11y_remove_action">Eliminar acción: %1$s</string>
+    <string name="rule_editor_a11y_remove_field">Eliminar campo: %1$s</string>
+    <string name="rule_editor_a11y_state_enabled">Activada</string>
+    <string name="rule_editor_a11y_state_disabled">Desactivada</string>
+    <string name="rule_editor_a11y_edit_field">Editar campo</string>
+    <string name="rule_editor_a11y_choose_apps">Elegir apps</string>
+    <string name="rule_editor_a11y_edit_condition">Editar condición</string>
+    <string name="rule_editor_a11y_configure_action">Configurar %1$s</string>
+    <string name="rule_editor_a11y_notice_blocking">Requiere atención</string>
+    <string name="rule_editor_a11y_notice_warning">Aviso</string>
+    <string name="rule_editor_a11y_fix_issue">Corregir</string>
+    <string name="alarm_background_preset_sunrise">Amanecer</string>
+    <string name="alarm_background_preset_ocean">Océano</string>
+    <string name="alarm_background_preset_midnight">Medianoche</string>
+    <string name="alarm_background_preset_forest">Bosque</string>
+    <string name="alarm_background_preset_lavender">Lavanda</string>
+    <string name="alarm_background_preset_coral">Coral</string>
 </resources>

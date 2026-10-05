@@ -5,7 +5,6 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -51,7 +51,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
@@ -124,7 +128,8 @@ fun AppSelectionPicker(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .sheetInsetsPadding(),
         ) {
             // Header
             Row(
@@ -138,6 +143,7 @@ fun AppSelectionPicker(
                     text = "Select Apps",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.semantics { heading() },
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
@@ -161,6 +167,8 @@ fun AppSelectionPicker(
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                 ),
                 singleLine = true,
+                keyboardOptions = literalKeyboardOptions(ImeAction.Search),
+                keyboardActions = rememberClearFocusKeyboardActions(),
             )
 
             // Content
@@ -256,7 +264,7 @@ private fun AppListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
+            .toggleable(value = isSelected, role = Role.Checkbox, onValueChange = { onToggle() })
             .background(
                 if (isSelected) {
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
@@ -319,7 +327,7 @@ private fun AppListItem(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(16.dp),
                 )

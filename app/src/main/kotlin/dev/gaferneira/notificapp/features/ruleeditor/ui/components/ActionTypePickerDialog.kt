@@ -9,10 +9,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,9 +26,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.components.BetaBadge
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.ActionType
@@ -49,9 +56,13 @@ fun ActionTypePickerDialog(
     AlertDialog(
         modifier = modifier,
         onDismissRequest = onDismiss,
-        title = { Text("Add action") },
+        title = { Text(stringResource(R.string.rule_editor_add_action), modifier = Modifier.semantics { heading() }) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Scrolls inside the dialog's bounded text slot so up to 8 rows never clip (landscape, large fonts).
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 availableTypes.forEach { type ->
                     ActionTypeRow(
                         meta = type.ui(),
@@ -63,7 +74,7 @@ fun ActionTypePickerDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.rule_editor_action_cancel))
             }
         },
     )
@@ -79,7 +90,8 @@ private fun ActionTypeRow(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
+            .heightIn(min = 48.dp)
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -130,6 +142,23 @@ private fun ActionTypePickerDialogPreview() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             availableActionTypes(configured = listOf(ActionType.SAVE_DATA)).forEach { type ->
+                ActionTypeRow(meta = type.ui(), onClick = {})
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "ActionTypePickerDialog Font 2x", fontScale = 2f, heightDp = 480)
+@Composable
+private fun ActionTypePickerDialogLargeFontPreview() {
+    NotificappTheme(dynamicColor = false) {
+        Column(
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            availableActionTypes(configured = emptyList()).take(3).forEach { type ->
                 ActionTypeRow(meta = type.ui(), onClick = {})
             }
         }

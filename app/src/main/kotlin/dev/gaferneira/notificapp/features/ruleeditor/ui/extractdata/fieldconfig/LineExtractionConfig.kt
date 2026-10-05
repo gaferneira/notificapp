@@ -9,7 +9,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.numberKeyboardOptions
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.rememberClearFocusKeyboardActions
 
 @Composable
 fun LineExtractionConfig(
@@ -31,6 +34,8 @@ fun LineExtractionConfig(
             label = { Text("Line Number") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            keyboardOptions = numberKeyboardOptions(ImeAction.Done),
+            keyboardActions = rememberClearFocusKeyboardActions(),
         )
     }
 }

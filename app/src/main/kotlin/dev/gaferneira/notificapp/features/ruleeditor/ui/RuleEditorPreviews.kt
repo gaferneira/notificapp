@@ -15,9 +15,9 @@ import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorMode
-import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorStep
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LoadError
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorStep
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
 import kotlinx.collections.immutable.persistentListOf
 
@@ -47,7 +47,7 @@ private val previewRule = RuleUiModel(
 )
 
 private val guidedState = UiState(mode = EditorMode.GUIDED, rule = previewRule.copy(id = null))
-private val singlePageState = UiState(mode = EditorMode.SINGLE_PAGE, rule = previewRule, showDescription = true)
+private val singlePageState = UiState(mode = EditorMode.SINGLE_PAGE, isExistingRule = true, rule = previewRule, showDescription = true)
 private val templateState = UiState(
     mode = EditorMode.SINGLE_PAGE,
     isFromTemplate = true,
@@ -115,6 +115,59 @@ private fun SinglePageTemplatePreview() = Host(templateState)
 @Composable
 private fun SinglePageNeedsAttentionPreview() = Host(singlePageState.copy(rule = previewRule.copy(name = "")))
 
+private val emptyRule = RuleUiModel()
+private val noConditionsRule = previewRule.copy(triggers = persistentListOf())
+
+@Preview(showBackground = true, device = DEVICE)
+@Composable
+private fun GuidedWhenTooBroadPreview() = Host(UiState(mode = EditorMode.GUIDED, rule = emptyRule))
+
+@Preview(showBackground = true, device = DEVICE, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun GuidedWhenTooBroadDarkPreview() = Host(UiState(mode = EditorMode.GUIDED, rule = emptyRule))
+
+@Preview(showBackground = true, device = DEVICE)
+@Composable
+private fun GuidedWhenWarningPreview() = Host(guidedState.copy(rule = noConditionsRule.copy(id = null)))
+
+@Preview(showBackground = true, device = DEVICE)
+@Composable
+private fun GuidedDoNoActionPreview() = Host(
+    guidedState.copy(currentStep = EditorStep.DO, rule = guidedState.rule.copy(actions = persistentListOf(), fields = persistentListOf())),
+)
+
+@Preview(showBackground = true, device = DEVICE, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun GuidedReviewEarlierIssuesDarkPreview() = Host(
+    guidedState.copy(currentStep = EditorStep.REVIEW, rule = emptyRule),
+)
+
+@Preview(showBackground = true, device = DEVICE)
+@Composable
+private fun GuidedReviewEarlierIssuesPreview() = Host(
+    guidedState.copy(currentStep = EditorStep.REVIEW, rule = emptyRule),
+)
+
+@Preview(showBackground = true, device = DEVICE)
+@Composable
+private fun SinglePageWarningPreview() = Host(singlePageState.copy(rule = noConditionsRule))
+
+@Preview(showBackground = true, device = DEVICE, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun SinglePageWarningDarkPreview() = Host(singlePageState.copy(rule = noConditionsRule))
+
+@Preview(showBackground = true, device = DEVICE)
+@Composable
+private fun SinglePageAllIssuesPreview() = Host(singlePageState.copy(rule = emptyRule))
+
+@Preview(showBackground = true, device = DEVICE, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun SinglePageAllIssuesDarkPreview() = Host(singlePageState.copy(rule = emptyRule))
+
+@Preview(showBackground = true, device = DEVICE)
+@Composable
+private fun SinglePagePrefillHintPreview() = Host(singlePageState.copy(rule = previewRule.copy(id = null), showPrefillHint = true))
+
 @Preview(showBackground = true, device = DEVICE)
 @Composable
 private fun LoadingPreview() = Host(UiState(isLoading = true))
@@ -124,3 +177,40 @@ private fun LoadingPreview() = Host(UiState(isLoading = true))
 private fun LoadErrorPreview() = Host(
     UiState(loadError = LoadError(UiText.StringResource(R.string.rule_editor_error_load), canRetry = true)),
 )
+
+private val longTextRule = previewRule.copy(
+    id = null,
+    name = "A rule with a very long name that has to wrap across several lines at large font sizes",
+    triggers = persistentListOf(
+        RuleCondition.ContentMatchCondition(
+            id = "1",
+            condition = MatchingCondition.TEXT_CONTENT,
+            operator = MatchingOperator.CONTAINS,
+            value = "your monthly statement is ready to be reviewed in the banking application",
+        ),
+    ),
+)
+
+@Preview(showBackground = true, device = DEVICE, fontScale = 2f)
+@Composable
+private fun GuidedWhenLongTextLargestFontPreview() = Host(guidedState.copy(rule = longTextRule))
+
+@Preview(showBackground = true, device = DEVICE, fontScale = 2f)
+@Composable
+private fun GuidedWhenBlockedReasonLargestFontPreview() = Host(
+    UiState(mode = EditorMode.GUIDED, rule = emptyRule),
+)
+
+@Preview(showBackground = true, device = DEVICE, fontScale = 2f)
+@Composable
+private fun GuidedDoLargestFontPreview() = Host(guidedState.copy(currentStep = EditorStep.DO))
+
+@Preview(showBackground = true, device = DEVICE, fontScale = 2f)
+@Composable
+private fun GuidedReviewLongTextLargestFontPreview() = Host(
+    guidedState.copy(currentStep = EditorStep.REVIEW, rule = longTextRule),
+)
+
+@Preview(showBackground = true, device = DEVICE, fontScale = 2f, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun SinglePageAllIssuesLargestFontDarkPreview() = Host(singlePageState.copy(rule = emptyRule))

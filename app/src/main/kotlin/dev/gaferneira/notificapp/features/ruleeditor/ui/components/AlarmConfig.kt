@@ -10,6 +10,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,9 +23,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -38,6 +42,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +54,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
@@ -201,11 +209,12 @@ private fun VibrationPatternPickerDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(pattern) }
+                            .heightIn(min = 48.dp)
+                            .selectable(selected = pattern == selected, role = Role.RadioButton, onClick = { onSelect(pattern) })
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(selected = pattern == selected, onClick = { onSelect(pattern) })
+                        RadioButton(selected = pattern == selected, onClick = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(pattern.displayName())
                     }
@@ -381,11 +390,12 @@ private fun AlarmImagePickerSwatch(
     }
     Box(
         modifier = modifier
+            .minimumInteractiveComponentSize()
             .size(if (isSelected) 42.dp else 36.dp)
             .then(borderModifier)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick),
+            .selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         if (imageUri != null) {
@@ -405,6 +415,16 @@ private fun AlarmImagePickerSwatch(
     }
 }
 
+@StringRes
+private fun AlarmBackgroundPreset.labelRes(): Int = when (this) {
+    AlarmBackgroundPreset.SUNRISE -> R.string.alarm_background_preset_sunrise
+    AlarmBackgroundPreset.OCEAN -> R.string.alarm_background_preset_ocean
+    AlarmBackgroundPreset.MIDNIGHT -> R.string.alarm_background_preset_midnight
+    AlarmBackgroundPreset.FOREST -> R.string.alarm_background_preset_forest
+    AlarmBackgroundPreset.LAVENDER -> R.string.alarm_background_preset_lavender
+    AlarmBackgroundPreset.CORAL -> R.string.alarm_background_preset_coral
+}
+
 @Composable
 private fun AlarmPresetSwatch(
     preset: AlarmBackgroundPreset,
@@ -417,13 +437,16 @@ private fun AlarmPresetSwatch(
     } else {
         Modifier
     }
+    val presetName = stringResource(preset.labelRes())
     Box(
         modifier = modifier
+            .minimumInteractiveComponentSize()
             .size(if (isSelected) 42.dp else 36.dp)
             .then(borderModifier)
             .clip(CircleShape)
             .background(preset.toBrush())
-            .clickable(onClick = onClick),
+            .selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick)
+            .semantics { contentDescription = presetName },
     )
 }
 
@@ -470,7 +493,10 @@ internal fun AlarmToggleRow(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -481,7 +507,7 @@ internal fun AlarmToggleRow(
         )
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = null,
         )
     }
 }
@@ -508,7 +534,8 @@ private fun AlarmValueRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+            .heightIn(min = 48.dp)
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -529,6 +556,7 @@ private fun AlarmValueRow(
         Switch(
             checked = toggle.checked,
             onCheckedChange = toggle.onCheckedChange,
+            modifier = Modifier.semantics { contentDescription = title },
         )
     }
 }

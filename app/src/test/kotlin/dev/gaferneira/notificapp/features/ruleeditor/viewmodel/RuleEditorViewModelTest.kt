@@ -9,7 +9,9 @@ import dev.gaferneira.notificapp.core.ui.messaging.AppMessenger
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.RuleAction
+import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.model.getThrottleResetAt
@@ -17,12 +19,13 @@ import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.domain.repository.RuleTemplateRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
-import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorIssue
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorMode
-import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.EditorStep
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorIssue
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorStep
+import dev.gaferneira.notificapp.features.ruleeditor.domain.EditorWarning
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
 import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestCondition
@@ -106,6 +109,12 @@ class RuleEditorViewModelTest {
     ) {
         onEvent(UiEvent.Initialize(InitArgs(ruleId, notificationId, templateAssetFileName)))
         testDispatcher.scheduler.advanceUntilIdle()
+    }
+
+    /** Gives the draft a condition and an enabled action so the WHEN and DO steps pass validation. */
+    private fun RuleEditorViewModel.satisfyWhenAndDo() {
+        onEvent(UiEvent.OnConditionSaved(createTestCondition(id = "c-valid", value = "x")))
+        onEvent(UiEvent.OnActionSaved(createTestAction(id = "a-valid", type = ActionType.DISMISS_NOTIFICATION)))
     }
 
     private fun stubRule(rule: dev.gaferneira.notificapp.domain.model.Rule) {
@@ -289,7 +298,8 @@ class RuleEditorViewModelTest {
             val state = viewModel.uiState.value
             state.sampleNotification shouldBe notification
             state.rule.targetApps shouldBe listOf(notification.app)
-            state.rule.triggers shouldBe emptyList()
+            state.rule.isIncludeMode shouldBe true
+            state.rule.triggers.single().shouldBeInstanceOf<RuleCondition.ContentMatchCondition>().value shouldBe "Test Title"
             state.hasUnsavedChanges shouldBe false
         }
 
@@ -449,6 +459,7 @@ class RuleEditorViewModelTest {
         fun `guided back from a later step returns to the previous step even with unsaved changes`() = runTest(testDispatcher) {
             viewModel.initialize()
             viewModel.onEvent(UiEvent.OnNameChange("Draft"))
+            viewModel.satisfyWhenAndDo()
             viewModel.onEvent(UiEvent.OnNextStepClicked)
 
             viewModel.onEvent(UiEvent.OnBackClicked)
@@ -643,6 +654,7 @@ class RuleEditorViewModelTest {
             val first = createViewModel(handle)
             first.initialize()
             first.onEvent(UiEvent.OnNameChange("Draft"))
+            first.satisfyWhenAndDo()
             first.onEvent(UiEvent.OnNextStepClicked)
             first.onEvent(UiEvent.OnNextStepClicked)
             testDispatcher.scheduler.advanceUntilIdle()
@@ -678,6 +690,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `next walks the guided steps in order and stops at the last`() = runTest(testDispatcher) {
             viewModel.initialize()
+            viewModel.satisfyWhenAndDo()
 
             viewModel.onEvent(UiEvent.OnNextStepClicked)
             viewModel.uiState.value.currentStep shouldBe EditorStep.DO
@@ -690,6 +703,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `previous walks back and stops at the first step`() = runTest(testDispatcher) {
             viewModel.initialize()
+            viewModel.satisfyWhenAndDo()
             viewModel.onEvent(UiEvent.OnNextStepClicked)
 
             viewModel.onEvent(UiEvent.OnPreviousStepClicked)
@@ -701,6 +715,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `tapping a completed step jumps back to it`() = runTest(testDispatcher) {
             viewModel.initialize()
+            viewModel.satisfyWhenAndDo()
             viewModel.onEvent(UiEvent.OnNextStepClicked)
             viewModel.onEvent(UiEvent.OnNextStepClicked)
 
@@ -713,6 +728,7 @@ class RuleEditorViewModelTest {
         fun `tapping the current or an upcoming step does not move`() = runTest(testDispatcher) {
             viewModel.initialize()
 
+            viewModel.satisfyWhenAndDo()
             viewModel.onEvent(UiEvent.OnStepSelected(EditorStep.REVIEW))
             viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
 
@@ -724,7 +740,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `moving between steps keeps the single draft intact`() = runTest(testDispatcher) {
             viewModel.initialize()
-            viewModel.onEvent(UiEvent.OnConditionSaved(createTestCondition(id = "c1")))
+            viewModel.satisfyWhenAndDo()
             viewModel.onEvent(UiEvent.OnNextStepClicked)
             viewModel.onEvent(UiEvent.OnNameChange("Kept"))
             viewModel.onEvent(UiEvent.OnPreviousStepClicked)
@@ -766,6 +782,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `a blank name blocks saving and a name unblocks it`() = runTest(testDispatcher) {
             viewModel.initialize()
+            viewModel.satisfyWhenAndDo()
             viewModel.uiState.value.blockingIssues shouldBe listOf(EditorIssue.NAME_REQUIRED)
             viewModel.uiState.value.canSave shouldBe false
 
@@ -843,20 +860,20 @@ class RuleEditorViewModelTest {
 
         @Test
         fun `dry run toggle updates the rule's dry-run flag`() {
-            // Given: dry-run is on by default for new rules
-            viewModel.uiState.value.rule.isDryRun shouldBe true
-
-            // When: disabling dry-run
-            viewModel.onEvent(UiEvent.OnDryRunToggle(false))
-
-            // Then: the rule's dry-run flag is disabled
+            // Given: dry-run is off by default for new rules
             viewModel.uiState.value.rule.isDryRun shouldBe false
 
-            // When: enabling it again
+            // When: enabling dry-run
             viewModel.onEvent(UiEvent.OnDryRunToggle(true))
 
-            // Then: the flag is set
+            // Then: the rule's dry-run flag is set
             viewModel.uiState.value.rule.isDryRun shouldBe true
+
+            // When: disabling it again
+            viewModel.onEvent(UiEvent.OnDryRunToggle(false))
+
+            // Then: the flag is cleared
+            viewModel.uiState.value.rule.isDryRun shouldBe false
         }
     }
 
@@ -1458,6 +1475,7 @@ class RuleEditorViewModelTest {
         fun `saving a new rule calls saveRule, posts a success message, and navigates back`() = runTest(testDispatcher) {
             // Given: a valid rule name and a repository that succeeds
             viewModel.onEvent(UiEvent.OnNameChange("My Rule"))
+            viewModel.satisfyWhenAndDo()
             coEvery { ruleRepository.saveRule(any()) } returns Result.success(Unit)
 
             appMessenger.messages.test {
@@ -1480,6 +1498,7 @@ class RuleEditorViewModelTest {
         @Test
         fun `a second save tap while saving is ignored`() = runTest(testDispatcher) {
             viewModel.onEvent(UiEvent.OnNameChange("My Rule"))
+            viewModel.satisfyWhenAndDo()
             coEvery { ruleRepository.saveRule(any()) } returns Result.success(Unit)
 
             viewModel.onEvent(UiEvent.OnSaveClicked)
@@ -1493,7 +1512,11 @@ class RuleEditorViewModelTest {
         @Test
         fun `saving an existing rule calls updateRule instead of saveRule`() = runTest(testDispatcher) {
             // Given: an existing rule loaded from the repository
-            val rule = createTestRule(id = "rule-1")
+            val rule = createTestRule(
+                id = "rule-1",
+                conditions = listOf(createTestCondition(value = "x")),
+                actions = listOf(createTestAction(type = ActionType.DISMISS_NOTIFICATION)),
+            )
             coEvery { ruleRepository.getRule("rule-1") } returns Result.success(rule)
             viewModel.initialize(ruleId = "rule-1")
             coEvery { ruleRepository.updateRule(any()) } returns Result.success(Unit)
@@ -1511,6 +1534,7 @@ class RuleEditorViewModelTest {
         fun `saving that fails sets a dismissible error and does not navigate back`() = runTest(testDispatcher) {
             // Given: a valid rule name and a repository that fails
             viewModel.onEvent(UiEvent.OnNameChange("My Rule"))
+            viewModel.satisfyWhenAndDo()
             coEvery { ruleRepository.saveRule(any()) } returns Result.failure(RuntimeException("write failed"))
 
             // When: saving
@@ -1651,6 +1675,288 @@ class RuleEditorViewModelTest {
             state.isAppSheetVisible shouldBe false
             state.editingConditionId shouldBe null
             state.editingActionId shouldBe null
+        }
+    }
+
+    @Nested
+    inner class ValidationGatingTests {
+
+        @Test
+        fun `next on the when step is blocked while the rule is too broad and explains why`() = runTest(testDispatcher) {
+            viewModel.initialize()
+
+            val state = viewModel.uiState.value
+            state.canGoNext shouldBe false
+            state.nextBlockedBy shouldBe EditorIssue.RULE_TOO_BROAD
+            state.nextBlockedBy?.nextBlockedMessage shouldBe R.string.rule_editor_next_blocked_too_broad
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
+        }
+
+        @Test
+        fun `specific included apps alone unlock next on the when step with a warning`() = runTest(testDispatcher) {
+            viewModel.initialize()
+
+            viewModel.onEvent(UiEvent.OnAppsSelected(persistentListOf(AppInfo("com.a", "A"))))
+
+            viewModel.uiState.value.canGoNext shouldBe true
+            viewModel.uiState.value.warnings shouldBe listOf(EditorWarning.MATCHES_EVERY_NOTIFICATION_OF_APPS)
+        }
+
+        @Test
+        fun `exclude mode without conditions keeps next blocked`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.onEvent(UiEvent.OnAppsSelected(persistentListOf(AppInfo("com.a", "A"))))
+
+            viewModel.onEvent(UiEvent.OnAppScopeModeChanged(isIncludeMode = false))
+
+            viewModel.uiState.value.canGoNext shouldBe false
+            viewModel.uiState.value.nextBlockedBy shouldBe EditorIssue.RULE_TOO_BROAD
+        }
+
+        @Test
+        fun `next on the do step needs an enabled action and says so`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.onEvent(UiEvent.OnConditionSaved(createTestCondition(id = "c1", value = "x")))
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.uiState.value.currentStep shouldBe EditorStep.DO
+            viewModel.uiState.value.nextBlockedBy shouldBe EditorIssue.ACTION_REQUIRED
+            viewModel.uiState.value.nextBlockedBy?.nextBlockedMessage shouldBe R.string.rule_editor_next_blocked_action_required
+
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.uiState.value.currentStep shouldBe EditorStep.DO
+
+            viewModel.onEvent(UiEvent.OnActionSaved(createTestAction(id = "a1", type = ActionType.DISMISS_NOTIFICATION, isEnabled = false)))
+            viewModel.uiState.value.canGoNext shouldBe false
+
+            viewModel.onEvent(UiEvent.OnToggleActionClicked("a1", enabled = true))
+            viewModel.uiState.value.canGoNext shouldBe true
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.uiState.value.currentStep shouldBe EditorStep.REVIEW
+        }
+
+        @Test
+        fun `the review step has no next gate and save needs only the remaining issues solved`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.satisfyWhenAndDo()
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+
+            viewModel.uiState.value.currentStep shouldBe EditorStep.REVIEW
+            viewModel.uiState.value.nextBlockedBy shouldBe null
+            viewModel.uiState.value.canSave shouldBe false
+
+            viewModel.onEvent(UiEvent.OnNameChange("Named"))
+            viewModel.uiState.value.canSave shouldBe true
+        }
+
+        @Test
+        fun `issues from earlier steps are surfaced on review and tapping one jumps to its step`() = runTest(testDispatcher) {
+            viewModel.initialize()
+            viewModel.satisfyWhenAndDo()
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            viewModel.onEvent(UiEvent.OnNextStepClicked)
+            // The user removes the action from outside the Do step (e.g. via a restored draft or edits elsewhere).
+            viewModel.onEvent(UiEvent.OnRemoveActionClicked("a-valid"))
+            viewModel.onEvent(UiEvent.OnRemoveConditionClicked("c-valid"))
+
+            viewModel.uiState.value.earlierStepIssues shouldBe listOf(EditorIssue.RULE_TOO_BROAD, EditorIssue.ACTION_REQUIRED)
+
+            viewModel.onEvent(UiEvent.OnIssueClicked(EditorIssue.ACTION_REQUIRED))
+            viewModel.uiState.value.currentStep shouldBe EditorStep.DO
+
+            viewModel.onEvent(UiEvent.OnIssueClicked(EditorIssue.RULE_TOO_BROAD))
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
+        }
+
+        @Test
+        fun `tapping an issue does not change anything in single page mode`() = runTest(testDispatcher) {
+            loadExisting()
+
+            viewModel.onEvent(UiEvent.OnIssueClicked(EditorIssue.ACTION_REQUIRED))
+
+            viewModel.uiState.value.currentStep shouldBe EditorStep.WHEN
+        }
+
+        @Test
+        fun `single page save stays disabled until every blocking issue is solved`() = runTest(testDispatcher) {
+            loadExisting()
+            viewModel.uiState.value.blockingIssues shouldBe listOf(EditorIssue.RULE_TOO_BROAD, EditorIssue.ACTION_REQUIRED)
+            viewModel.uiState.value.canSave shouldBe false
+
+            viewModel.satisfyWhenAndDo()
+
+            viewModel.uiState.value.canSave shouldBe true
+        }
+
+        @Test
+        fun `saving with a non-name issue sends its message and does not call the repository`() = runTest(testDispatcher) {
+            viewModel.onEvent(UiEvent.OnNameChange("Named"))
+
+            viewModel.effect.test {
+                viewModel.onEvent(UiEvent.OnSaveClicked)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                awaitItem().shouldBeInstanceOf<UiEffect.ShowError>().message.shouldBeInstanceOf<UiText.StringResource>().id shouldBe
+                    R.string.rule_editor_issue_too_broad
+                cancelAndIgnoreRemainingEvents()
+            }
+            coVerify(exactly = 0) { ruleRepository.saveRule(any()) }
+        }
+    }
+
+    @Nested
+    inner class NotificationPrefillTests {
+
+        @Test
+        fun `a notification prefills the app scope and one title condition and shows the hint`() = runTest(testDispatcher) {
+            val notification = createTestNotification(title = "Order shipped", content = "Body")
+            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
+
+            viewModel.initialize(notificationId = notification.id)
+
+            val state = viewModel.uiState.value
+            state.rule.targetApps shouldBe listOf(notification.app)
+            state.rule.isIncludeMode shouldBe true
+            val condition = state.rule.triggers.single().shouldBeInstanceOf<RuleCondition.ContentMatchCondition>()
+            condition.condition shouldBe MatchingCondition.TITLE
+            condition.value shouldBe "Order shipped"
+            state.showPrefillHint shouldBe true
+            state.sampleNotification shouldBe notification
+        }
+
+        @Test
+        fun `a notification without a title falls back to the first text line`() = runTest(testDispatcher) {
+            val notification = createTestNotification(title = null, content = "\nFirst line\nSecond")
+            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
+
+            viewModel.initialize(notificationId = notification.id)
+
+            val condition = viewModel.uiState.value.rule.triggers.single().shouldBeInstanceOf<RuleCondition.ContentMatchCondition>()
+            condition.condition shouldBe MatchingCondition.TEXT_CONTENT
+            condition.value shouldBe "First line"
+        }
+
+        @Test
+        fun `a blank notification prefills no condition and no hint`() = runTest(testDispatcher) {
+            val notification = createTestNotification(title = " ", content = " ")
+            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
+
+            viewModel.initialize(notificationId = notification.id)
+
+            viewModel.uiState.value.rule.triggers shouldBe emptyList()
+            viewModel.uiState.value.showPrefillHint shouldBe false
+        }
+
+        @Test
+        fun `the prefilled draft is clean and any edit makes it dirty`() = runTest(testDispatcher) {
+            val notification = createTestNotification()
+            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
+            viewModel.initialize(notificationId = notification.id)
+            viewModel.uiState.value.hasUnsavedChanges shouldBe false
+
+            viewModel.onEvent(UiEvent.OnRemoveConditionClicked(viewModel.uiState.value.rule.triggers.single().id))
+
+            viewModel.uiState.value.hasUnsavedChanges shouldBe true
+        }
+
+        @Test
+        fun `dismissing the prefill hint hides it without touching the draft`() = runTest(testDispatcher) {
+            val notification = createTestNotification()
+            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
+            viewModel.initialize(notificationId = notification.id)
+
+            viewModel.onEvent(UiEvent.OnPrefillHintDismissed)
+
+            viewModel.uiState.value.showPrefillHint shouldBe false
+            viewModel.uiState.value.hasUnsavedChanges shouldBe false
+        }
+
+        @Test
+        fun `the prefill hint survives process death`() = runTest(testDispatcher) {
+            val notification = createTestNotification()
+            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
+            val handle = SavedStateHandle()
+            val first = createViewModel(handle)
+            first.initialize(notificationId = notification.id)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val restored = createViewModel(handle)
+            restored.initialize(notificationId = notification.id)
+
+            restored.uiState.value.showPrefillHint shouldBe true
+        }
+
+        @Test
+        fun `a notification does not touch an existing rule's conditions or hint`() = runTest(testDispatcher) {
+            stubRule(createTestRule(id = "rule-1", name = "Rule", conditions = listOf(createTestCondition(id = "c", value = "x"))))
+            val notification = createTestNotification()
+            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
+
+            viewModel.initialize(ruleId = "rule-1", notificationId = notification.id)
+
+            viewModel.uiState.value.rule.triggers.map { it.id } shouldBe listOf("c")
+            viewModel.uiState.value.showPrefillHint shouldBe false
+        }
+    }
+
+    @Nested
+    inner class DryRunDefaultTests {
+
+        @Test
+        fun `a rule created from scratch is not in dry run`() = runTest(testDispatcher) {
+            viewModel.initialize()
+
+            viewModel.uiState.value.rule.isDryRun shouldBe false
+        }
+
+        @Test
+        fun `a rule created from a notification is not in dry run`() = runTest(testDispatcher) {
+            val notification = createTestNotification()
+            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
+
+            viewModel.initialize(notificationId = notification.id)
+
+            viewModel.uiState.value.rule.isDryRun shouldBe false
+        }
+
+        @Test
+        fun `a bundled template keeps its own live flag instead of the import dry run`() = runTest(testDispatcher) {
+            coEvery { ruleTemplateRepository.getTemplateText("t.json") } returns Result.success(templateJson())
+
+            viewModel.initialize(templateAssetFileName = "t.json")
+
+            viewModel.uiState.value.rule.isDryRun shouldBe false
+            viewModel.uiState.value.hasUnsavedChanges shouldBe false
+        }
+    }
+
+    @Nested
+    inner class TitleTests {
+
+        @Test
+        fun `an existing rule that fails to load still reads as editing`() = runTest(testDispatcher) {
+            coEvery { ruleRepository.getRule("gone") } returns Result.success(null)
+
+            viewModel.initialize(ruleId = "gone")
+
+            viewModel.uiState.value.loadError shouldNotBe null
+            viewModel.uiState.value.rule.id shouldBe null
+            viewModel.uiState.value.isExistingRule shouldBe true
+        }
+
+        @Test
+        fun `a new rule is not an existing rule`() = runTest(testDispatcher) {
+            viewModel.initialize()
+
+            viewModel.uiState.value.isExistingRule shouldBe false
+        }
+
+        @Test
+        fun `a loaded rule is an existing rule`() = runTest(testDispatcher) {
+            loadExisting()
+
+            viewModel.uiState.value.isExistingRule shouldBe true
         }
     }
 }
