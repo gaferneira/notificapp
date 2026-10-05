@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -122,7 +123,7 @@ private fun WebhookConfigSheetBody(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
-        ActionSheetDescription(ActionType.SEND_WEBHOOK.ui().description)
+        ActionSheetDescription(stringResource(ActionType.SEND_WEBHOOK.ui().descriptionRes))
 
         WebhookPickerSection(uiState = uiState, onEvent = onEvent)
 

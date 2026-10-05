@@ -52,10 +52,12 @@
     <!-- Home - Monitoring Banner -->
     <plurals name="home_banner_apps_monitored">
         <item quantity="one">%d aplicación monitoreada</item>
+        <item quantity="many">%d de aplicaciones monitoreadas</item>
         <item quantity="other">%d aplicaciones monitoreadas</item>
     </plurals>
     <plurals name="home_banner_rules">
         <item quantity="one">%d regla</item>
+        <item quantity="many">%d de reglas</item>
         <item quantity="other">%d reglas</item>
     </plurals>
     <string name="home_banner_manage_apps">Administrar apps monitoreadas</string>
@@ -90,6 +92,7 @@
     <string name="home_skip_similar">Omitir similares</string>
     <plurals name="home_suggestion_seen_times">
         <item quantity="one">Vista %d vez</item>
+        <item quantity="many">Vista %d de veces</item>
         <item quantity="other">Vista %d veces</item>
     </plurals>
 
@@ -99,6 +102,7 @@
     <string name="home_stat_rules_fired">Reglas activadas</string>
     <plurals name="home_week_summary">
         <item quantity="one">%d notificación gestionada por tus reglas esta semana</item>
+        <item quantity="many">%d de notificaciones gestionadas por tus reglas esta semana</item>
         <item quantity="other">%d notificaciones gestionadas por tus reglas esta semana</item>
     </plurals>
 
@@ -121,4 +125,48 @@
     <string name="home_battery_hint_message">Tu dispositivo podría detener Notificapp en segundo plano y perder notificaciones. Abre Batería y elige Sin restricciones.</string>
     <string name="home_battery_hint_button">Abrir ajustes de la app</string>
     <string name="home_error_dismiss_suggestion">No se pudo descartar la sugerencia</string>
+
+    <!-- Action types (rule editor + rule details) -->
+    <string name="action_type_save_data_label">Extraer datos</string>
+    <string name="action_type_save_data_description">Extrae y guarda campos de datos de la notificación</string>
+    <string name="action_type_create_alarm_label">Crear alarma</string>
+    <string name="action_type_create_alarm_description">Reproduce un sonido de alarma y vibra cuando esta regla coincide</string>
+    <string name="action_type_dismiss_label">Descartar notificación</string>
+    <string name="action_type_dismiss_description">Evita el spam</string>
+    <string name="action_type_snooze_label">Posponer notificación</string>
+    <string name="action_type_snooze_description">Descártala temporalmente y recuérdala más tarde</string>
+    <string name="action_type_flash_label">Alerta de flash</string>
+    <string name="action_type_flash_description">Hace parpadear el flash de la cámara cuando esta regla coincide</string>
+    <string name="action_type_webhook_label">Enviar webhook</string>
+    <string name="action_type_webhook_description">Envía los datos de la notificación mediante POST a un webhook configurado</string>
+    <string name="action_type_read_aloud_label">Leer en voz alta</string>
+    <string name="action_type_read_aloud_description">Dice un mensaje breve creado con los datos de la notificación</string>
+    <string name="action_type_send_reply_label">Enviar respuesta</string>
+    <string name="action_type_send_reply_description">Responde directamente a la notificación - mejor esfuerzo, solo funciona en apps compatibles</string>
+
+    <!-- Condition labels -->
+    <string name="condition_field_text">Texto</string>
+    <string name="condition_field_title">Título</string>
+    <string name="condition_field_app_name">Nombre de la app</string>
+    <string name="condition_field_package_name">Nombre del paquete</string>
+    <string name="condition_field_raw_content">Contenido sin procesar</string>
+    <string name="condition_operator_contains">contiene</string>
+    <string name="condition_operator_starts_with">empieza con</string>
+    <string name="condition_operator_ends_with">termina con</string>
+    <string name="condition_operator_equals">es igual a</string>
+    <string name="condition_operator_regex_match">coincide con la expresión regular</string>
+    <string name="condition_operator_not_contains">no contiene</string>
+    <string name="condition_type_content">Contenido</string>
+    <string name="condition_type_day_of_week">Día de la semana</string>
+    <string name="condition_type_time_range">Rango horario</string>
+    <string name="condition_combinator_all">Todas</string>
+    <string name="condition_combinator_any">Cualquiera</string>
+    <string name="condition_content_match">%1$s %2$s \'%3$s\'</string>
+    <string name="condition_days_none">Nunca (sin días seleccionados)</string>
+    <string name="condition_time_range">%1$02d:%2$02d–%3$02d:%4$02d</string>
+    <plurals name="condition_group_summary">
+        <item quantity="one">Grupo: %1$d condición (%2$s)</item>
+        <item quantity="many">Grupo: %1$d de condiciones (%2$s)</item>
+        <item quantity="other">Grupo: %1$d condiciones (%2$s)</item>
+    </plurals>
 </resources>

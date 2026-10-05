@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COOLDOWN_SECONDS
 import dev.gaferneira.notificapp.domain.model.DEFAULT_FLASH_COUNT
@@ -57,7 +58,7 @@ fun FlashBottomSheet(
         },
         onDismiss = onDismiss,
     ) {
-        ActionSheetDescription(ActionType.FLASH_ALERT.ui().description)
+        ActionSheetDescription(stringResource(ActionType.FLASH_ALERT.ui().descriptionRes))
         FlashOptionsSelector(
             flashCount = flashCount,
             flashDurationMs = flashDurationMs,

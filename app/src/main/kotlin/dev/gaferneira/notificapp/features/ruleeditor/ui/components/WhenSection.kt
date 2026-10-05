@@ -41,7 +41,6 @@ import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
-import dev.gaferneira.notificapp.features.ruleeditor.contract.displayText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -338,7 +337,7 @@ private fun ConditionCard(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        text = condition.displayText,
+                        text = condition.displayText(),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,

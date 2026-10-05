@@ -126,7 +126,7 @@ fun ExtractDataBottomSheet(
         },
         onDismiss = { viewModel.onEvent(UiEvent.OnDismiss) },
     ) {
-        ActionSheetDescription(ActionType.SAVE_DATA.ui().description)
+        ActionSheetDescription(stringResource(ActionType.SAVE_DATA.ui().descriptionRes))
         DataExtractionSection(
             entryNotification = notification,
             effectiveNotification = effectiveNotification,

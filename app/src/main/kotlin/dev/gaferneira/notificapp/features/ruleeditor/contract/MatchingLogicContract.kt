@@ -107,27 +107,3 @@ object MatchingLogicContract {
         data class ShowError(val message: String) : UiEffect()
     }
 }
-
-// Extension functions for display names
-internal fun MatchingCondition.displayName(): String = when (this) {
-    MatchingCondition.TEXT_CONTENT -> "Text"
-    MatchingCondition.TITLE -> "Title"
-    MatchingCondition.APP_NAME -> "App Name"
-    MatchingCondition.PACKAGE_NAME -> "Package Name"
-    MatchingCondition.RAW_CONTENT -> "Raw Content"
-}
-
-internal fun MatchingOperator.displayName(): String = when (this) {
-    MatchingOperator.CONTAINS -> "contains"
-    MatchingOperator.STARTS_WITH -> "starts with"
-    MatchingOperator.ENDS_WITH -> "ends with"
-    MatchingOperator.EQUALS -> "equals"
-    MatchingOperator.REGEX_MATCH -> "matches regex"
-    MatchingOperator.NOT_CONTAINS -> "does not contain"
-}
-
-internal fun MatchingLogicContract.ConditionType.displayName(): String = when (this) {
-    MatchingLogicContract.ConditionType.CONTENT -> "Content"
-    MatchingLogicContract.ConditionType.DAY_OF_WEEK -> "Day of week"
-    MatchingLogicContract.ConditionType.TIME_RANGE -> "Time range"
-}

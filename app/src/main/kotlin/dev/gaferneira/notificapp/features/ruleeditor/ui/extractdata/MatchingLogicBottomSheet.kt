@@ -48,7 +48,7 @@ import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.features.ruleeditor.contract.MatchingLogicContract
-import dev.gaferneira.notificapp.features.ruleeditor.contract.displayName
+import dev.gaferneira.notificapp.features.ruleeditor.ui.components.displayName
 import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.MatchingLogicViewModel
 import java.time.DayOfWeek
 import java.time.LocalTime
@@ -391,7 +391,7 @@ private fun <T> MatchingDropdown(
     selected: T,
     options: List<T>,
     onSelect: (T) -> Unit,
-    displayName: (T) -> String,
+    displayName: @Composable (T) -> String,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }

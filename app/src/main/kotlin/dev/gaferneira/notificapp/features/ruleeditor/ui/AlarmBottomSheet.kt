@@ -124,7 +124,7 @@ fun AlarmBottomSheet(
             onDismiss()
         },
     ) {
-        ActionSheetDescription(ActionType.CREATE_ALARM.ui().description)
+        ActionSheetDescription(stringResource(ActionType.CREATE_ALARM.ui().descriptionRes))
         AlarmOptionsSelector(
             options = uiState.toOptions(),
             onEvent = viewModel::onEvent,

@@ -306,4 +306,47 @@
     <string name="home_battery_hint_message">Your device may stop Notificapp in the background and miss notifications. Open Battery and choose Unrestricted.</string>
     <string name="home_battery_hint_button">Open app settings</string>
     <string name="home_error_dismiss_suggestion">Failed to dismiss suggestion</string>
+
+    <!-- Action types (rule editor + rule details) -->
+    <string name="action_type_save_data_label">Extract data</string>
+    <string name="action_type_save_data_description">Extract and store data fields from the notification</string>
+    <string name="action_type_create_alarm_label">Create alarm</string>
+    <string name="action_type_create_alarm_description">Play an alarm sound and vibrate when this rule matches</string>
+    <string name="action_type_dismiss_label">Dismiss notification</string>
+    <string name="action_type_dismiss_description">Avoid spamming</string>
+    <string name="action_type_snooze_label">Snooze notification</string>
+    <string name="action_type_snooze_description">Temporarily dismiss and remind later</string>
+    <string name="action_type_flash_label">Flash alert</string>
+    <string name="action_type_flash_description">Blink the camera flash when this rule matches</string>
+    <string name="action_type_webhook_label">Send webhook</string>
+    <string name="action_type_webhook_description">POST notification data to a configured webhook</string>
+    <string name="action_type_read_aloud_label">Read aloud</string>
+    <string name="action_type_read_aloud_description">Speak a short message built from the notification\'s data</string>
+    <string name="action_type_send_reply_label">Send reply</string>
+    <string name="action_type_send_reply_description">Reply to the notification directly - best-effort, only works on apps that support it</string>
+
+    <!-- Condition labels -->
+    <string name="condition_field_text">Text</string>
+    <string name="condition_field_title">Title</string>
+    <string name="condition_field_app_name">App name</string>
+    <string name="condition_field_package_name">Package name</string>
+    <string name="condition_field_raw_content">Raw content</string>
+    <string name="condition_operator_contains">contains</string>
+    <string name="condition_operator_starts_with">starts with</string>
+    <string name="condition_operator_ends_with">ends with</string>
+    <string name="condition_operator_equals">equals</string>
+    <string name="condition_operator_regex_match">matches regex</string>
+    <string name="condition_operator_not_contains">does not contain</string>
+    <string name="condition_type_content">Content</string>
+    <string name="condition_type_day_of_week">Day of week</string>
+    <string name="condition_type_time_range">Time range</string>
+    <string name="condition_combinator_all">All</string>
+    <string name="condition_combinator_any">Any</string>
+    <string name="condition_content_match">%1$s %2$s \'%3$s\'</string>
+    <string name="condition_days_none">Never (no days selected)</string>
+    <string name="condition_time_range">%1$02d:%2$02d–%3$02d:%4$02d</string>
+    <plurals name="condition_group_summary">
+        <item quantity="one">Group: %1$d condition (%2$s)</item>
+        <item quantity="other">Group: %1$d conditions (%2$s)</item>
+    </plurals>
 </resources>

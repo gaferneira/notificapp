@@ -213,15 +213,3 @@ object RuleEditorContract {
         data class ShowError(val message: String) : UiEffect()
     }
 }
-
-val RuleCondition.displayText: String
-    get() = when (this) {
-        is RuleCondition.ContentMatchCondition -> "${condition.displayName()} ${operator.displayName()} '$value'"
-        is RuleCondition.DayOfWeekCondition -> if (days.isEmpty()) {
-            "Never (no days selected)"
-        } else {
-            days.sortedBy { it.value }.joinToString(", ") { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }
-        }
-        is RuleCondition.TimeRangeCondition -> "%02d:%02d–%02d:%02d".format(start.hour, start.minute, end.hour, end.minute)
-        is RuleCondition.Group -> "Group: ${children.size} conditions (${combinator.name})"
-    }

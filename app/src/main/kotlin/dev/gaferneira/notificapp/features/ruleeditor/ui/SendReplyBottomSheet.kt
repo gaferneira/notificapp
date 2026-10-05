@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
@@ -114,7 +115,7 @@ private fun SendReplyHeader() {
     BetaBadge()
     Spacer(modifier = Modifier.height(8.dp))
 
-    ActionSheetDescription(ActionType.SEND_REPLY.ui().description)
+    ActionSheetDescription(stringResource(ActionType.SEND_REPLY.ui().descriptionRes))
 
     Text(
         text = "Only works on apps that support direct reply. If they don't, this action " +
@@ -142,7 +143,7 @@ private fun SendReplyBottomSheetPreview() {
                 BetaBadge()
             }
             Spacer(modifier = Modifier.height(8.dp))
-            ActionSheetDescription(ActionType.SEND_REPLY.ui().description)
+            ActionSheetDescription(stringResource(ActionType.SEND_REPLY.ui().descriptionRes))
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(text = "Insert field", style = MaterialTheme.typography.labelLarge)
                 TemplateFieldChipRow(

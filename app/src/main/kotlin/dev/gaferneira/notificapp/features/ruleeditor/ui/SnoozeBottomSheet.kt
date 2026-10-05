@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DEFAULT_SNOOZE_DURATION_MINUTES
@@ -81,7 +82,7 @@ fun SnoozeBottomSheet(
         },
         onDismiss = onDismiss,
     ) {
-        ActionSheetDescription(ActionType.SNOOZE_NOTIFICATION.ui().description)
+        ActionSheetDescription(stringResource(ActionType.SNOOZE_NOTIFICATION.ui().descriptionRes))
 
         SnoozeOutcomeSelector(
             selected = outcome,
