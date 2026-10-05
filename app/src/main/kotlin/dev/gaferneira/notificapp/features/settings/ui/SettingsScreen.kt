@@ -118,36 +118,16 @@ fun SettingsScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreenContent(
     uiState: UiState,
     onEvent: (UiEvent) -> Unit,
     navigateTo: (Screen, NavOptions?) -> Unit,
 ) {
-    val context = LocalContext.current
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            text = "Settings",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            text = "Manage your app preferences",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-            )
-        },
+        topBar = { SettingsTopBar() },
         bottomBar = {
             MainBottomNav(
                 selectedDestination = AppDestinations.SETTINGS,
@@ -173,49 +153,77 @@ private fun SettingsScreenContent(
                         modifier = Modifier.align(Alignment.Center),
                     )
                 }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        item {
-                            NotificationListenerStatusCard(
-                                isActive = uiState.isNotificationListenerActive,
-                                onEnableClick = { openNotificationListenerSettings(context) },
-                            )
-                        }
-
-                        item {
-                            MonitoredAppsCard(
-                                appsCount = uiState.monitoredAppsCount,
-                                onSelectApps = { onEvent(UiEvent.OnSelectAppsClicked) },
-                            )
-                        }
-
-                        item {
-                            WebhooksCard(
-                                onClick = { onEvent(UiEvent.OnWebhooksClicked) },
-                            )
-                        }
-
-                        item {
-                            PreferencesCard(
-                                uiState = uiState,
-                                onEvent = onEvent,
-                            )
-                        }
-
-                        item {
-                            StorageUsageCard(storageStats = uiState.storageStats)
-                        }
-
-                        item {
-                            AboutCard()
-                        }
-                    }
-                }
+                else -> SettingsCards(uiState = uiState, onEvent = onEvent)
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsTopBar() {
+    TopAppBar(
+        title = {
+            Column {
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "Manage your app preferences",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun SettingsCards(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+) {
+    val context = LocalContext.current
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        item {
+            NotificationListenerStatusCard(
+                isActive = uiState.isNotificationListenerActive,
+                onEnableClick = { openNotificationListenerSettings(context) },
+            )
+        }
+
+        item {
+            MonitoredAppsCard(
+                appsCount = uiState.monitoredAppsCount,
+                onSelectApps = { onEvent(UiEvent.OnSelectAppsClicked) },
+            )
+        }
+
+        item {
+            WebhooksCard(
+                onClick = { onEvent(UiEvent.OnWebhooksClicked) },
+            )
+        }
+
+        item {
+            PreferencesCard(
+                uiState = uiState,
+                onEvent = onEvent,
+            )
+        }
+
+        item {
+            StorageUsageCard(storageStats = uiState.storageStats)
+        }
+
+        item {
+            AboutCard()
         }
     }
 }

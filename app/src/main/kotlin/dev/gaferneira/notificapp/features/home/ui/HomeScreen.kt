@@ -1,7 +1,6 @@
 package dev.gaferneira.notificapp.features.home.ui
 
 import android.content.res.Configuration
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,18 +8,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.style.Style
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.BatteryAlert
 import androidx.compose.material.icons.outlined.Explore
-import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -31,27 +38,38 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.rulesharing.RuleTemplateInfo
 import dev.gaferneira.notificapp.core.rulesharing.RuleTemplates
+import dev.gaferneira.notificapp.core.ui.components.AppIcon
 import dev.gaferneira.notificapp.core.ui.components.RuleTemplateCard
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
@@ -60,8 +78,10 @@ import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
+import dev.gaferneira.notificapp.core.ui.theme.NotificappStyles
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.OnResumeEffect
+import dev.gaferneira.notificapp.domain.model.RuleCoverage
 import dev.gaferneira.notificapp.features.home.contract.HomeEffect
 import dev.gaferneira.notificapp.features.home.contract.HomeEvent
 import dev.gaferneira.notificapp.features.home.contract.HomeSection
@@ -71,6 +91,8 @@ import dev.gaferneira.notificapp.features.home.contract.RecentActivityUi
 import dev.gaferneira.notificapp.features.home.contract.RecurringSuggestionUi
 import dev.gaferneira.notificapp.features.home.contract.WeekStats
 import dev.gaferneira.notificapp.features.home.viewmodel.HomeViewModel
+import dev.gaferneira.notificapp.util.isIgnoringBatteryOptimizations
+import dev.gaferneira.notificapp.util.openBatteryOptimizationSettings
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -85,7 +107,14 @@ fun HomeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
-    OnResumeEffect { viewModel.onEvent(HomeEvent.OnResume) }
+    // Platform state read in the UI layer (keeps PowerManager out of the ViewModel); refreshed on every resume
+    // because the user toggles it in system settings and comes back.
+    var isBatteryOptimized by remember { mutableStateOf(false) }
+
+    OnResumeEffect {
+        isBatteryOptimized = !isIgnoringBatteryOptimizations(context)
+        viewModel.onEvent(HomeEvent.OnResume)
+    }
 
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
@@ -108,6 +137,8 @@ fun HomeScreen(
         snackbarHostState = snackbarHostState,
         onBrowseTemplates = { navigateTo(Routes.ruleTemplates(), null) },
         onEnableAccess = { openNotificationListenerSettings(context) },
+        isBatteryOptimized = isBatteryOptimized,
+        onOpenBatterySettings = { openBatteryOptimizationSettings(context) },
         onCreateFromTemplate = { template ->
             navigateTo(Routes.ruleEditor(templateAssetFileName = template.assetFileName), null)
         },
@@ -126,28 +157,31 @@ internal fun HomeScreenContent(
     onCreateFromTemplate: (RuleTemplateInfo) -> Unit = {},
     onCreateFromScratch: () -> Unit = {},
     onEnableAccess: () -> Unit = {},
+    isBatteryOptimized: Boolean = false,
+    onOpenBatterySettings: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = { HomeTopBar() },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            MainBottomNav(
-                selectedDestination = AppDestinations.HOME,
-                navigateTo = navigateTo,
-            )
-        },
+        bottomBar = { MainBottomNav(selectedDestination = AppDestinations.HOME, navigateTo = navigateTo) },
     ) { innerPadding ->
-        // Render nothing until the first emission: the initial state (listener off, no rules) would
-        // otherwise flash a misleading "Notification access is disabled" banner.
-        if (uiState.isLoading) return@Scaffold
+        // No content until the first emission, or the initial state flashes a misleading access-off banner.
+        if (uiState.isLoading) {
+            HomeLoadingState(modifier = Modifier.fillMaxSize().padding(innerPadding))
+            return@Scaffold
+        }
+        if (uiState.hasError) {
+            HomeErrorState(
+                onRetry = { onEvent(HomeEvent.OnRetry) },
+                modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp),
+            )
+            return@Scaffold
+        }
 
         // First run: the checklist is the whole story, so hide the empty stats and activity below it.
-        val isFirstRun = uiState.section is HomeSection.StarterRules &&
-            uiState.weekStats == WeekStats() &&
-            uiState.recentActivity.isEmpty()
-
+        val isFirstRun = uiState.isFirstRun()
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -155,16 +189,13 @@ internal fun HomeScreenContent(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            // While the first-run checklist is showing it already reports access/apps status.
-            if (uiState.section !is HomeSection.StarterRules) {
-                item {
-                    MonitoringStatusBanner(
-                        monitoring = uiState.monitoring,
-                        onManageApps = { navigateTo(Routes.appSelection(), null) },
-                        onEnableAccess = onEnableAccess,
-                    )
-                }
-            }
+            statusItems(
+                uiState = uiState,
+                showBatteryHint = isBatteryOptimized && !isFirstRun,
+                navigateTo = navigateTo,
+                onEnableAccess = onEnableAccess,
+                onOpenBatterySettings = onOpenBatterySettings,
+            )
 
             item {
                 HomeSectionContent(
@@ -178,20 +209,124 @@ internal fun HomeScreenContent(
                 )
             }
 
-            if (!isFirstRun) {
-                item { WeekStatsRow(weekStats = uiState.weekStats) }
+            if (!isFirstRun) activityItems(uiState, onEvent)
+        }
+    }
+}
 
-                item {
-                    RecentActivitySection(
-                        recentActivity = uiState.recentActivity,
-                        onRowClick = { onEvent(HomeEvent.OnRecentActivityClick(it)) },
-                        onSeeAll = { onEvent(HomeEvent.OnSeeAllActivity) },
+private fun LazyListScope.activityItems(uiState: HomeUiState, onEvent: (HomeEvent) -> Unit) {
+    item { WeekStatsRow(weekStats = uiState.weekStats) }
+    item {
+        RecentActivitySection(
+            recentActivity = uiState.recentActivity,
+            onRowClick = { onEvent(HomeEvent.OnRecentActivityClick(it)) },
+            onSeeAll = { onEvent(HomeEvent.OnSeeAllActivity) },
+        )
+    }
+}
+
+/** Monitoring banner and battery hint; the first-run checklist already reports access/apps status itself. */
+private fun LazyListScope.statusItems(
+    uiState: HomeUiState,
+    showBatteryHint: Boolean,
+    navigateTo: (Screen, NavOptions?) -> Unit,
+    onEnableAccess: () -> Unit,
+    onOpenBatterySettings: () -> Unit,
+) {
+    if (uiState.section !is HomeSection.StarterRules) {
+        item {
+            MonitoringStatusBanner(
+                monitoring = uiState.monitoring,
+                onManageApps = { navigateTo(Routes.appSelection(), null) },
+                onEnableAccess = onEnableAccess,
+            )
+        }
+    }
+    if (showBatteryHint && uiState.monitoring.isListenerEnabled) {
+        item { BatteryHintCard(onOpenSettings = onOpenBatterySettings) }
+    }
+}
+
+@Composable
+private fun HomeLoadingState(modifier: Modifier = Modifier) {
+    val description = stringResource(R.string.home_loading_description)
+    Box(
+        modifier = modifier.semantics(mergeDescendants = true) { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun HomeErrorState(onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Warning,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(40.dp),
+        )
+        Text(
+            text = stringResource(R.string.home_error_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = stringResource(R.string.home_error_message),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Button(onClick = onRetry, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(stringResource(R.string.home_error_retry))
+        }
+    }
+}
+
+@Composable
+private fun BatteryHintCard(onOpenSettings: () -> Unit) {
+    TonalCard(style = NotificappStyles.warningCardStyle) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.BatteryAlert,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = stringResource(R.string.home_battery_hint_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                    Text(
+                        text = stringResource(R.string.home_battery_hint_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
                     )
                 }
+            }
+            OutlinedButton(
+                onClick = onOpenSettings,
+                modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp),
+            ) {
+                Text(stringResource(R.string.home_battery_hint_button))
             }
         }
     }
 }
+
+private fun HomeUiState.isFirstRun(): Boolean = section is HomeSection.StarterRules && weekStats == WeekStats() && recentActivity.isEmpty()
 
 /** The state-dependent section: first-run checklist, recurring suggestions, or nothing. */
 @Composable
@@ -232,7 +367,7 @@ private fun HomeTopBar() {
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(
-                    imageVector = Icons.Outlined.Shield,
+                    imageVector = Icons.Outlined.NotificationsActive,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -243,6 +378,9 @@ private fun HomeTopBar() {
                 )
             }
         },
+        colors = TopAppBarDefaults.topAppBarColors().copy(
+            containerColor = Color.Transparent,
+        ),
     )
 }
 
@@ -252,37 +390,109 @@ private fun MonitoringStatusBanner(
     onManageApps: () -> Unit,
     onEnableAccess: () -> Unit,
 ) {
+    when {
+        !monitoring.isListenerEnabled -> AccessOffBanner(onEnableAccess = onEnableAccess)
+        monitoring.monitoredAppCount == 0 -> NoAppsBanner(onManageApps = onManageApps)
+        else -> ActiveMonitoringBanner(monitoring = monitoring, onManageApps = onManageApps)
+    }
+}
+
+@Composable
+private fun AccessOffBanner(onEnableAccess: () -> Unit) {
+    WarningBanner(
+        message = stringResource(R.string.home_banner_access_off_message),
+        description = stringResource(R.string.home_banner_access_off_description),
+        buttonText = stringResource(R.string.home_banner_enable_access_button),
+        onClick = onEnableAccess,
+    )
+}
+
+/** Access is on but no app is selected, so nothing would ever be captured. */
+@Composable
+private fun NoAppsBanner(onManageApps: () -> Unit) {
+    WarningBanner(
+        message = stringResource(R.string.home_banner_no_apps_message),
+        description = stringResource(R.string.home_banner_no_apps_description),
+        buttonText = stringResource(R.string.home_banner_no_apps_button),
+        onClick = onManageApps,
+    )
+}
+
+@Composable
+private fun WarningBanner(message: String, description: String, buttonText: String, onClick: () -> Unit) {
+    TonalCard(style = NotificappStyles.warningCardStyle) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.clearAndSetSemantics { contentDescription = description },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Button(
+                onClick = onClick,
+                modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError,
+                ),
+            ) {
+                Text(buttonText)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveMonitoringBanner(monitoring: MonitoringStatus, onManageApps: () -> Unit) {
     TonalCard(
         modifier = Modifier
             .clip(MaterialTheme.shapes.large)
             .clickable(
-                onClickLabel = stringResource(
-                    if (monitoring.isListenerEnabled) R.string.home_banner_manage_apps else R.string.home_banner_enable_access,
-                ),
-                onClick = if (monitoring.isListenerEnabled) onManageApps else onEnableAccess,
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.home_banner_manage_apps),
+                onClick = onManageApps,
             ),
     ) {
+        // The row is clickable as a whole and merged into one TalkBack sentence ("Monitoring active, 3 apps ...").
         Row(
+            modifier = Modifier.heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (monitoring.isListenerEnabled) {
-                            MaterialTheme.colorScheme.secondary
-                        } else {
-                            MaterialTheme.colorScheme.outline
-                        },
-                    ),
+            Icon(
+                imageVector = Icons.Filled.CheckCircle,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
             )
-            Text(
-                text = if (monitoring.isListenerEnabled) monitoringSummary(monitoring) else stringResource(R.string.home_banner_inactive),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.home_banner_monitoring_active),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = monitoringSummary(monitoring),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
@@ -304,10 +514,11 @@ private fun monitoringSummary(monitoring: MonitoringStatus): String {
 @Composable
 internal fun SectionEyebrow(text: String) {
     Text(
-        text = text.uppercase(),
+        text = text.uppercase(Locale.current.platformLocale),
         style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.secondary,
+        modifier = Modifier.semantics { heading() },
     )
 }
 
@@ -371,60 +582,61 @@ private fun RecurringSuggestionsSection(
             )
         }
         suggestions.forEach { suggestion ->
-            TonalCard {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AppLetterAvatar(appName = suggestion.appName)
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = suggestion.appName.uppercase(),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = suggestion.sampleTitle,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        suggestion.sampleContent?.takeIf { it.isNotBlank() }?.let {
-                            Text(
-                                text = it,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(
-                                onClick = { onCreateFromSuggestion(suggestion) },
-                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.secondary),
-                            ) {
-                                Text(stringResource(R.string.home_create_rule_from_this))
-                            }
-                            TextButton(onClick = { onSkipSimilar(suggestion) }) {
-                                Text(stringResource(R.string.home_skip_similar))
-                            }
-                        }
-                    }
-                }
-            }
+            SuggestionCard(
+                suggestion = suggestion,
+                onCreate = { onCreateFromSuggestion(suggestion) },
+                onSkip = { onSkipSimilar(suggestion) },
+            )
         }
     }
 }
 
 @Composable
-private fun AppLetterAvatar(appName: String) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.secondaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = appName.take(1).uppercase(),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
+private fun SuggestionCard(suggestion: RecurringSuggestionUi, onCreate: () -> Unit, onSkip: () -> Unit) {
+    TonalCard {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                AppIcon(packageName = suggestion.packageName, appName = suggestion.appName)
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = suggestion.appName.uppercase(Locale.current.platformLocale),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = suggestion.sampleTitle,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    suggestion.sampleContent?.takeIf { it.isNotBlank() }?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Text(
+                        text = pluralStringResource(R.plurals.home_suggestion_seen_times, suggestion.occurrences, suggestion.occurrences),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onSkip) { Text(stringResource(R.string.home_skip_similar)) }
+                FilledTonalButton(onClick = onCreate) { Text(stringResource(R.string.home_create_rule_from_this)) }
+            }
+        }
     }
 }
 
@@ -432,13 +644,18 @@ private fun AppLetterAvatar(appName: String) {
 private fun WeekStatsRow(weekStats: WeekStats) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionEyebrow(text = stringResource(R.string.home_this_week_title))
+        if (weekStats.rulesFired > 0) {
+            Text(
+                text = pluralStringResource(R.plurals.home_week_summary, weekStats.rulesFired, weekStats.rulesFired),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             StatTile(label = stringResource(R.string.home_stat_records), value = weekStats.records, modifier = Modifier.weight(1f))
             StatTile(label = stringResource(R.string.home_stat_rules_fired), value = weekStats.rulesFired, modifier = Modifier.weight(1f))
-            StatTile(label = stringResource(R.string.home_stat_apps_active), value = weekStats.appsActive, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -452,6 +669,7 @@ private fun StatTile(label: String, value: Int, modifier: Modifier = Modifier) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
+            maxLines = 1,
         )
         Text(
             text = label,
@@ -459,6 +677,8 @@ private fun StatTile(label: String, value: Int, modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -479,7 +699,7 @@ private fun RecentActivitySection(
             TextButton(onClick = onSeeAll) { Text(stringResource(R.string.home_see_all)) }
         }
         if (recentActivity.isEmpty()) {
-            Text(text = stringResource(R.string.home_recent_activity_empty), style = MaterialTheme.typography.bodyMedium)
+            RecentActivityEmptyState()
         } else {
             TonalCard {
                 recentActivity.forEachIndexed { index, activity ->
@@ -494,23 +714,66 @@ private fun RecentActivitySection(
 }
 
 @Composable
+private fun RecentActivityEmptyState() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.History,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(28.dp),
+        )
+        Column {
+            Text(
+                text = stringResource(R.string.home_recent_activity_empty),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = stringResource(R.string.home_recent_activity_empty_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
 private fun RecentActivityRow(activity: RecentActivityUi, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(
+                role = Role.Button,
+                onClickLabel = stringResource(R.string.home_recent_activity_open),
+                onClick = onClick,
+            )
+            .heightIn(min = 48.dp)
             .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = activity.ruleName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(
+                text = activity.ruleName,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             val detail = listOfNotNull(activity.subtitle, activity.appName).joinToString(" · ")
             if (detail.isNotBlank()) {
                 Text(
                     text = detail,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -585,5 +848,185 @@ private fun HomeScreenActivePreview() {
             navigateTo = { _, _ -> },
             onBrowseTemplates = {},
         )
+    }
+}
+
+private val previewSuggestions = persistentListOf(
+    RecurringSuggestionUi(
+        packageName = "com.example.bank",
+        appName = "Bank App",
+        normalizedTitleKey = "card purchase",
+        sampleTitle = "Card purchase approved",
+        sampleContent = "You spent 12.50 at Coffee Corner. Remaining balance and a very long trailing description follow here.",
+        sampleNotificationId = "n1",
+        occurrences = 7,
+        coverage = RuleCoverage.UNCOVERED,
+    ),
+)
+
+@Preview(name = "Access off", showBackground = true)
+@Preview(name = "Access off (dark)", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun HomeScreenAccessOffPreview() {
+    NotificappTheme(dynamicColor = false) {
+        HomeScreenContent(
+            uiState = HomeUiState(
+                monitoring = MonitoringStatus(isListenerEnabled = false, monitoredAppCount = 3, ruleCount = 2),
+                weekStats = WeekStats(records = 42, rulesFired = 12),
+                recentActivity = previewActivity,
+                isLoading = false,
+            ),
+            onEvent = {},
+            navigateTo = { _, _ -> },
+            onBrowseTemplates = {},
+        )
+    }
+}
+
+@Preview(name = "Active with suggestions", showBackground = true)
+@Preview(name = "Active with suggestions (dark)", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun HomeScreenSuggestionsPreview() {
+    NotificappTheme(dynamicColor = false) {
+        HomeScreenContent(
+            uiState = HomeUiState(
+                monitoring = previewMonitoring.copy(ruleCount = 2),
+                section = HomeSection.Recurring(previewSuggestions),
+                weekStats = WeekStats(records = 42, rulesFired = 1),
+                recentActivity = previewActivity,
+                isLoading = false,
+            ),
+            onEvent = {},
+            navigateTo = { _, _ -> },
+            onBrowseTemplates = {},
+        )
+    }
+}
+
+@Preview(name = "Active, empty activity", showBackground = true)
+@Preview(name = "Active, empty activity (dark)", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun HomeScreenEmptyActivityPreview() {
+    NotificappTheme(dynamicColor = false) {
+        HomeScreenContent(
+            uiState = HomeUiState(
+                monitoring = previewMonitoring.copy(ruleCount = 2),
+                weekStats = WeekStats(records = 5),
+                isLoading = false,
+            ),
+            onEvent = {},
+            navigateTo = { _, _ -> },
+            onBrowseTemplates = {},
+        )
+    }
+}
+
+@Preview(name = "Loading", showBackground = true)
+@Preview(name = "Loading (dark)", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun HomeScreenLoadingPreview() {
+    NotificappTheme(dynamicColor = false) {
+        HomeScreenContent(uiState = HomeUiState(), onEvent = {}, navigateTo = { _, _ -> }, onBrowseTemplates = {})
+    }
+}
+
+@Preview(name = "Error", showBackground = true)
+@Preview(name = "Error (dark)", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun HomeScreenErrorPreview() {
+    NotificappTheme(dynamicColor = false) {
+        HomeScreenContent(
+            uiState = HomeUiState(isLoading = false, hasError = true),
+            onEvent = {},
+            navigateTo = { _, _ -> },
+            onBrowseTemplates = {},
+        )
+    }
+}
+
+@Preview(name = "No apps monitored", showBackground = true)
+@Preview(name = "No apps monitored (dark)", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun HomeScreenNoAppsPreview() {
+    NotificappTheme(dynamicColor = false) {
+        HomeScreenContent(
+            uiState = HomeUiState(
+                monitoring = previewMonitoring.copy(monitoredAppCount = 0, ruleCount = 2),
+                isLoading = false,
+            ),
+            onEvent = {},
+            navigateTo = { _, _ -> },
+            onBrowseTemplates = {},
+        )
+    }
+}
+
+@Preview(name = "Battery hint", showBackground = true)
+@Preview(name = "Battery hint (dark)", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun HomeScreenBatteryHintPreview() {
+    NotificappTheme(dynamicColor = false) {
+        HomeScreenContent(
+            uiState = HomeUiState(
+                monitoring = previewMonitoring.copy(ruleCount = 5),
+                weekStats = WeekStats(records = 42, rulesFired = 12, appsActive = 3),
+                recentActivity = previewActivity,
+                isLoading = false,
+            ),
+            onEvent = {},
+            navigateTo = { _, _ -> },
+            onBrowseTemplates = {},
+            isBatteryOptimized = true,
+        )
+    }
+}
+
+private val previewLongActivity = RecentActivityUi(
+    notificationId = "long",
+    ruleName = "Descartar notificaciones promocionales repetidas de la aplicación bancaria",
+    title = "Compra con tarjeta aprobada",
+    subtitle = "Pagaste 12,50 en Coffee Corner. El saldo restante y una descripción final muy larga continúan aquí",
+    appName = "Aplicación bancaria de ejemplo",
+)
+
+@Preview(name = "Large font", showBackground = true, fontScale = 2f)
+@Composable
+private fun HomeScreenLargeFontPreview() {
+    NotificappTheme(dynamicColor = false) {
+        HomeScreenContent(
+            uiState = HomeUiState(
+                monitoring = previewMonitoring.copy(ruleCount = 5),
+                weekStats = WeekStats(records = 42, rulesFired = 12, appsActive = 3),
+                recentActivity = previewActivity,
+                isLoading = false,
+            ),
+            onEvent = {},
+            navigateTo = { _, _ -> },
+            onBrowseTemplates = {},
+        )
+    }
+}
+
+@Preview(name = "Long text", showBackground = true)
+@Composable
+private fun LongTextRowsPreview() {
+    NotificappTheme(dynamicColor = false) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            TonalCard { RecentActivityRow(activity = previewLongActivity, onClick = {}) }
+            SuggestionCard(
+                suggestion = RecurringSuggestionUi(
+                    packageName = "com.example.bank",
+                    appName = "Aplicación bancaria de ejemplo con nombre largo",
+                    normalizedTitleKey = "compra",
+                    sampleTitle = "Compra con tarjeta aprobada en un comercio con un nombre extremadamente largo",
+                    sampleContent = previewLongActivity.subtitle,
+                    sampleNotificationId = "n2",
+                    occurrences = 7,
+                    coverage = RuleCoverage.UNCOVERED,
+                ),
+                onCreate = {},
+                onSkip = {},
+            )
+        }
     }
 }

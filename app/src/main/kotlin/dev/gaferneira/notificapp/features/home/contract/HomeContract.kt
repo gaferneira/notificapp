@@ -14,6 +14,7 @@ data class HomeUiState(
     val recentActivity: ImmutableList<RecentActivityUi> = persistentListOf(),
     val section: HomeSection = HomeSection.None,
     val isLoading: Boolean = true,
+    val hasError: Boolean = false,
 )
 
 @Immutable
@@ -59,6 +60,7 @@ data class RecurringSuggestionUi(
 
 sealed interface HomeEvent {
     data object OnResume : HomeEvent
+    data object OnRetry : HomeEvent
     data object OnCreateRuleFromScratch : HomeEvent
     data class OnCreateRuleFromSuggestion(val suggestion: RecurringSuggestionUi) : HomeEvent
     data class OnSkipSimilar(val suggestion: RecurringSuggestionUi) : HomeEvent

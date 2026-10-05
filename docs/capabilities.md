@@ -98,9 +98,14 @@ Notificapp lets users create automation rules that act on the notifications thei
   templates ("Create rule from this" / "Create from scratch" / "See more templates") and replaces
   the banner; for users with rules, a "Recurring Notifications" section suggesting rules for
   repeated, un-automated notification patterns ("Create rule from this" / "Skip similar"); a "This
-  Week" stats row (records / rules fired / apps active); and a "Recent Activity" feed of recent
+  Week" summary (records / rules fired); a persistent "New rule" button (opens the templates screen; hidden while loading, on error, and during first run); and a "Recent Activity" feed of recent
   rule executions, each opening notification detail, with a "See all" action that pushes Inbox as a
-  stacked screen.
+  stacked screen. While data loads Home shows a centered progress indicator; if observation fails
+  it shows an error message with a "Retry" button instead of a blank screen. The banner turns into a
+  warning with an "Enable access" action when notification access is off, or a "Choose apps" action
+  when access is on but no app is monitored, and a battery
+  optimization hint (opens the system battery-optimization list) appears when access is on, past
+  first run, and the app is not exempt from battery optimization.
 * **System Trigger:** User opens the app.
 * **Technical Spec Reference:** `openspec/changes/home-screen-nav-replacement/specs/home-dashboard/`
 

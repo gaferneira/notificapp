@@ -244,8 +244,11 @@
         <item quantity="other">%d rules</item>
     </plurals>
     <string name="home_banner_manage_apps">Manage monitored apps</string>
-    <string name="home_banner_enable_access">Enable notification access</string>
-    <string name="home_banner_inactive">Notification access is disabled</string>
+    <string name="home_banner_access_off_message">Notificapp can\'t see notifications until you allow access.</string>
+    <string name="home_banner_enable_access_button">Enable access</string>
+    <string name="home_banner_monitoring_active">Monitoring active</string>
+    <string name="home_banner_access_off_description">Warning: Notificapp can\'t see notifications until you allow access.</string>
+    <string name="home_new_rule">New rule</string>
 
     <!-- Home - Starter Rules -->
     <string name="rule_template_card_click_label">Create rule from this</string>
@@ -260,6 +263,7 @@
     <string name="home_checklist_apps_todo">Choose apps to monitor</string>
     <string name="home_checklist_apps_action">Choose</string>
     <string name="home_checklist_rule_title">Create your first rule</string>
+    <string name="home_checklist_current_step">Current step</string>
     <string name="home_starter_rules_subtitle">Start with a template or build your own from scratch.</string>
     <string name="home_create_rule_from_this">Create rule from this</string>
     <string name="home_create_rule_from_scratch">Create rule from scratch</string>
@@ -269,18 +273,37 @@
     <string name="home_recurring_title">Recurring Notifications</string>
     <string name="home_recurring_subtitle">Automate or skip.</string>
     <string name="home_skip_similar">Skip similar</string>
+    <plurals name="home_suggestion_seen_times">
+        <item quantity="one">Seen %d time</item>
+        <item quantity="other">Seen %d times</item>
+    </plurals>
 
     <!-- Home - This Week Stats -->
     <string name="home_this_week_title">This Week</string>
     <string name="home_stat_records">Records</string>
     <string name="home_stat_rules_fired">Rules fired</string>
-    <string name="home_stat_apps_active">Apps active</string>
+    <plurals name="home_week_summary">
+        <item quantity="one">%d notification handled by your rules this week</item>
+        <item quantity="other">%d notifications handled by your rules this week</item>
+    </plurals>
 
     <!-- Home - Recent Activity -->
     <string name="home_recent_activity_title">Recent Activity</string>
     <string name="home_recent_activity_empty">No activity yet</string>
+    <string name="home_recent_activity_empty_hint">Activity shows up here when a rule handles a notification.</string>
+    <string name="home_recent_activity_open">Open notification details</string>
     <string name="home_see_all">See all</string>
 
     <!-- Home - Errors -->
+    <string name="home_loading_description">Loading</string>
+    <string name="home_error_title">Something went wrong</string>
+    <string name="home_error_message">We couldn\'t load your dashboard. Try again.</string>
+    <string name="home_error_retry">Retry</string>
+    <string name="home_banner_no_apps_message">No apps are being monitored, so nothing will be captured.</string>
+    <string name="home_banner_no_apps_description">Warning: no apps are being monitored, so nothing will be captured.</string>
+    <string name="home_banner_no_apps_button">Choose apps</string>
+    <string name="home_battery_hint_title">Battery optimization is on</string>
+    <string name="home_battery_hint_message">Your device may stop Notificapp in the background and miss notifications. Open Battery and choose Unrestricted.</string>
+    <string name="home_battery_hint_button">Open app settings</string>
     <string name="home_error_dismiss_suggestion">Failed to dismiss suggestion</string>
 </resources>

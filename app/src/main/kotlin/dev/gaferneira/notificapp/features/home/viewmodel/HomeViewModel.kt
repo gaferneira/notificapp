@@ -22,12 +22,16 @@ import dev.gaferneira.notificapp.features.home.contract.RecentActivityUi
 import dev.gaferneira.notificapp.features.home.contract.RecurringSuggestionUi
 import dev.gaferneira.notificapp.features.home.contract.WeekStats
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.time.Clock
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -50,6 +54,13 @@ class HomeViewModel @Inject constructor(
 
     private val isListenerEnabled = MutableStateFlow(false)
     private val zoneId: ZoneId = ZoneId.systemDefault()
+    private var observeJob: Job? = null
+
+    /** Time source for the week/suggestion windows; replaceable in tests (kept out of the Hilt constructor). */
+    internal var clock: Clock = Clock.system(zoneId)
+
+    /** Day the current time windows were computed for; a change triggers a re-observe on resume. */
+    private var windowsDay: LocalDate? = null
 
     init {
         checkListenerStatus()
@@ -58,7 +69,11 @@ class HomeViewModel @Inject constructor(
 
     override fun onEvent(event: HomeEvent) {
         when (event) {
-            HomeEvent.OnResume -> checkListenerStatus()
+            HomeEvent.OnResume -> {
+                checkListenerStatus()
+                if (windowsDay != LocalDate.now(clock)) observeHome()
+            }
+            HomeEvent.OnRetry -> retry()
             HomeEvent.OnCreateRuleFromScratch -> sendEffect(HomeEffect.NavigateToRuleEditor())
             is HomeEvent.OnCreateRuleFromSuggestion -> sendEffect(
                 HomeEffect.NavigateToRuleEditor(notificationId = event.suggestion.sampleNotificationId),
@@ -69,9 +84,17 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun retry() {
+        setState { copy(isLoading = true, hasError = false) }
+        observeHome()
+    }
+
     private fun observeHome() {
-        val weekStart = startOfCurrentWeekMillis(zoneId)
-        val suggestionWindowStart = Instant.now().minusSeconds(SUGGESTION_WINDOW_DAYS * SECONDS_PER_DAY).toEpochMilli()
+        observeJob?.cancel()
+        val today = LocalDate.now(clock)
+        windowsDay = today
+        val weekStart = startOfWeekMillis(today, zoneId)
+        val suggestionWindowStart = Instant.now(clock).minusSeconds(SUGGESTION_WINDOW_DAYS * SECONDS_PER_DAY).toEpochMilli()
         val rulesFlow = ruleRepository.observeAllRules()
 
         val statusFlow = combine(
@@ -82,14 +105,7 @@ class HomeViewModel @Inject constructor(
             Triple(rules, enabledApps, listenerEnabled)
         }
 
-        val statsFlow = combine(
-            ruleExecutionRepository.observeExecutionCountSince(weekStart),
-            notificationRepository.observeActiveAppCountSince(weekStart),
-            ruleExecutionRepository.observeRecentActivity(RECENT_ACTIVITY_LIMIT),
-            notificationRepository.observeCountSince(weekStart),
-        ) { rulesFired, appsActive, recentActivity, recordsCount ->
-            HomeStats(rulesFired, appsActive, recentActivity, recordsCount)
-        }
+        val statsFlow = observeStats(weekStart)
 
         val suggestionsFlow = combine(
             notificationRepository.observeRecentSince(suggestionWindowStart, SUGGESTION_SCAN_LIMIT),
@@ -104,7 +120,7 @@ class HomeViewModel @Inject constructor(
             )
         }
 
-        viewModelScope.launch {
+        observeJob = viewModelScope.launch {
             combine(statusFlow, statsFlow, suggestionsFlow) {
                     (rules, enabledApps, listenerEnabled),
                     stats,
@@ -122,10 +138,23 @@ class HomeViewModel @Inject constructor(
                         suggestions = suggestions,
                     ),
                 )
+            }.catch { e ->
+                if (e is CancellationException) throw e
+                Timber.e(e, "Failed to observe home data")
+                setState { copy(isLoading = false, hasError = true) }
             }.collectLatest { newState ->
                 setState { newState }
             }
         }
+    }
+
+    private fun observeStats(weekStart: Long) = combine(
+        ruleExecutionRepository.observeExecutionCountSince(weekStart),
+        notificationRepository.observeActiveAppCountSince(weekStart),
+        ruleExecutionRepository.observeRecentActivity(RECENT_ACTIVITY_LIMIT),
+        notificationRepository.observeCountSince(weekStart),
+    ) { rulesFired, appsActive, recentActivity, recordsCount ->
+        HomeStats(rulesFired, appsActive, recentActivity, recordsCount)
     }
 
     private fun buildState(params: HomeStateParams): HomeUiState = buildHomeUiState(params)
@@ -162,8 +191,7 @@ class HomeViewModel @Inject constructor(
 // the class (and therefore outside the companion object's visibility) for testability.
 private const val STARTER_TEMPLATE_COUNT = 3
 
-private fun startOfCurrentWeekMillis(zoneId: ZoneId): Long {
-    val today = LocalDate.now(zoneId)
+private fun startOfWeekMillis(today: LocalDate, zoneId: ZoneId): Long {
     val startOfWeek = today.minusDays((today.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
     return startOfWeek.atStartOfDay(zoneId).toInstant().toEpochMilli()
 }

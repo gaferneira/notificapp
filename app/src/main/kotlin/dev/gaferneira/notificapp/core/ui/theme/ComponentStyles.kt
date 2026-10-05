@@ -21,6 +21,13 @@ object NotificappStyles {
         contentPadding(tokens.spacing.lg)
     }
 
+    /** Warning-toned variant of [tonalCardStyle] for states that block the app from working. */
+    val warningCardStyle: Style = Style {
+        background(tokens.colorScheme.errorContainer)
+        shape(tokens.shapes.large)
+        contentPadding(tokens.spacing.lg)
+    }
+
     val innerPanelStyle: Style = Style {
         background(tokens.colorScheme.surface)
         shape(tokens.shapes.medium)

@@ -25,7 +25,12 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.rulesharing.RuleTemplateInfo
@@ -136,6 +141,7 @@ private fun CurrentStepContent(
 
 @Composable
 private fun ChecklistHeader(completedSteps: Int) {
+    val progressText = stringResource(R.string.home_checklist_progress, completedSteps, STEP_COUNT)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -144,7 +150,7 @@ private fun ChecklistHeader(completedSteps: Int) {
         ) {
             SectionEyebrow(text = stringResource(R.string.home_checklist_title))
             Text(
-                text = stringResource(R.string.home_checklist_progress, completedSteps, STEP_COUNT),
+                text = progressText,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -153,7 +159,8 @@ private fun ChecklistHeader(completedSteps: Int) {
             progress = { completedSteps / STEP_COUNT.toFloat() },
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(CircleShape),
+                .clip(CircleShape)
+                .semantics { contentDescription = progressText },
             color = MaterialTheme.colorScheme.secondary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
@@ -172,11 +179,21 @@ private fun ChecklistStepRow(
     onClick: (() -> Unit)?,
     current: Boolean = false,
 ) {
+    val currentStepLabel = if (current) stringResource(R.string.home_checklist_current_step) else null
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(role = Role.Button, onClickLabel = actionLabel ?: title, onClick = onClick)
+                } else {
+                    Modifier
+                },
+            )
+            .semantics(mergeDescendants = true) {
+                if (currentStepLabel != null) stateDescription = currentStepLabel
+            }
             .heightIn(min = 48.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(STEP_GAP),
@@ -195,6 +212,8 @@ private fun ChecklistStepRow(
             text = title,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (current) FontWeight.Bold else null,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         when {
