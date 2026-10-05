@@ -52,8 +52,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,6 +71,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
@@ -83,7 +87,6 @@ import dev.gaferneira.notificapp.features.inbox.contract.NotificationItem
 import dev.gaferneira.notificapp.features.inbox.viewmodel.InboxViewModel
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
 import kotlinx.coroutines.flow.flowOf
-import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
  * Inbox Screen displaying paginated notifications with 2-hour time headers.
@@ -139,14 +142,14 @@ private fun InboxScreenContent(
 ) {
     var showFilterSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val hasActiveFilters = uiState.selectedApps.isNotEmpty() || uiState.statusFilter != Status.ALL
+    val activeFilterCount = uiState.filter.activeFilterCount()
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             InboxTopBar(
-                hasActiveFilters = hasActiveFilters,
+                activeFilterCount = activeFilterCount,
                 onFilterClick = { showFilterSheet = true },
                 onBackClick = navigateBack,
             )
@@ -164,16 +167,10 @@ private fun InboxScreenContent(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
         ) {
-            if (!uiState.isNotificationListenerActive) {
-                PermissionRequiredBanner(
-                    onEnableClick = { openNotificationListenerSettings(context) },
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-
-            InboxSearchField(
-                query = uiState.searchQuery,
-                onQueryChange = { onEvent(InboxEvent.OnSearchQueryChange(it)) },
+            InboxHeader(
+                uiState = uiState,
+                onEvent = onEvent,
+                onEnableAccessClick = { openNotificationListenerSettings(context) },
             )
 
             // Notification list with paging
@@ -186,13 +183,12 @@ private fun InboxScreenContent(
             )
         }
 
-        // Filter Bottom Sheet
         if (showFilterSheet) {
             InboxFilterBottomSheet(
-                currentSelectedApps = uiState.selectedApps,
-                currentStatusFilter = uiState.statusFilter,
-                onFilterApplied = { selectedApps, statusFilter ->
-                    onEvent(InboxEvent.OnAppFilterChange(selectedApps, statusFilter))
+                currentFilter = uiState.filter,
+                searchQuery = uiState.searchQuery,
+                onFilterApplied = {
+                    onEvent(InboxEvent.OnFilterChange(it))
                     showFilterSheet = false
                 },
                 onDismiss = { showFilterSheet = false },
@@ -201,9 +197,35 @@ private fun InboxScreenContent(
     }
 }
 
+/** Permission banner, search field and the active-filter chips above the list. */
+@Composable
+private fun InboxHeader(
+    uiState: InboxUiState,
+    onEvent: (InboxEvent) -> Unit,
+    onEnableAccessClick: () -> Unit,
+) {
+    if (!uiState.isNotificationListenerActive) {
+        PermissionRequiredBanner(
+            onEnableClick = onEnableAccessClick,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+
+    InboxSearchField(
+        query = uiState.searchQuery,
+        onQueryChange = { onEvent(InboxEvent.OnSearchQueryChange(it)) },
+    )
+
+    InboxActiveFilterChips(
+        filter = uiState.filter,
+        appNames = uiState.appNames,
+        onRemove = { onEvent(InboxEvent.OnRemoveFilter(it)) },
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun InboxTopBar(hasActiveFilters: Boolean, onFilterClick: () -> Unit, onBackClick: () -> Unit) {
+private fun InboxTopBar(activeFilterCount: Int, onFilterClick: () -> Unit, onBackClick: () -> Unit) {
     TopAppBar(
         title = {
             Column {
@@ -225,13 +247,32 @@ private fun InboxTopBar(hasActiveFilters: Boolean, onFilterClick: () -> Unit, on
             }
         },
         actions = {
-            IconButton(onClick = onFilterClick) {
-                BadgedBox(
-                    badge = { if (hasActiveFilters) Badge() },
+            BadgedBox(
+                badge = {
+                    if (activeFilterCount > 0) {
+                        Badge {
+                            Text(
+                                activeFilterCount.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
+                },
+            ) {
+                val activeDescription = if (activeFilterCount > 0) {
+                    pluralStringResource(R.plurals.rules_filter_active_state, activeFilterCount, activeFilterCount)
+                } else {
+                    null
+                }
+                IconButton(
+                    onClick = onFilterClick,
+                    modifier = Modifier.semantics {
+                        activeDescription?.let { stateDescription = it }
+                    },
                 ) {
                     Icon(
                         imageVector = Icons.Default.Tune,
-                        contentDescription = "Filter and Sort",
+                        contentDescription = stringResource(R.string.inbox_filter_cd),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }

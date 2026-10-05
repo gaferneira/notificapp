@@ -115,9 +115,7 @@
     <string name="filter_rules_title">Filter &amp; Sort</string>
     <string name="filter_inbox_title">Filter Notifications</string>
     <string name="sort_by">Sort by</string>
-    <string name="filter_by_status">By Status</string>
     <string name="filter_by_category">By Category</string>
-    <string name="filter_by_app">By Target App</string>
     <string name="status_all">All</string>
     <string name="status_enabled">Enabled</string>
     <string name="status_disabled">Disabled</string>
@@ -157,6 +155,23 @@
     <plurals name="rules_filter_active_state">
         <item quantity="one">%d filter active</item>
         <item quantity="other">%d filters active</item>
+    </plurals>
+
+    <!-- Inbox filter sheet -->
+    <string name="inbox_filter_cd">Filter notifications</string>
+    <string name="inbox_filter_section_status">Status</string>
+    <string name="inbox_filter_section_apps">Apps</string>
+    <string name="inbox_filter_apps_any">Any app</string>
+    <string name="inbox_filter_apps_group_with">Apps with notifications</string>
+    <string name="inbox_filter_apps_group_without">No notifications</string>
+    <string name="inbox_filter_no_apps">No filter options available yet. Apps will appear here once they send notifications.</string>
+    <plurals name="inbox_filter_notification_count">
+        <item quantity="one">%d notification</item>
+        <item quantity="other">%d notifications</item>
+    </plurals>
+    <plurals name="inbox_filter_show_notifications">
+        <item quantity="one">Show %d notification</item>
+        <item quantity="other">Show %d notifications</item>
     </plurals>
 
     <!-- Shared app picker (core/ui) -->

@@ -120,8 +120,10 @@ Notificapp lets users create automation rules that act on the notifications thei
 ### Notification Inbox & Detail
 * **User Experience:** The user browses a time-grouped list of every captured notification, with:
   * Search by text
-  * Filter by app
-  * Filter by processed-status (All / Processed / Unprocessed)
+  * Filter bottom sheet (scrollable, with a pinned footer: Clear all + "Show N notifications" live match count; edits are a draft that only applies on confirm, and the applied filter is persisted):
+    * Status: single-select All / Processed / Unprocessed
+    * Apps: pick one or more source apps from a searchable list showing each app's notification count (notifications from ANY selected app)
+  * Active filters shown as dismissible chips under the search field (tap to remove one), with a count badge on the filter button
   * A warning banner if notification access has been revoked
   * Tapping an item opens its full content plus a history of which rules matched it, what data was extracted, and what actions ran (with outcome: Success, Failed, Skipped, or Suppressed)
   * From detail view: "Create rule" from this notification, or "Re-run rules" to manually recompute matches

@@ -243,9 +243,7 @@
     <string name="filter_rules_title">Filtrar y ordenar</string>
     <string name="filter_inbox_title">Filtrar notificaciones</string>
     <string name="sort_by">Ordenar por</string>
-    <string name="filter_by_status">Por estado</string>
     <string name="filter_by_category">Por categoría</string>
-    <string name="filter_by_app">Por app de destino</string>
     <string name="status_all">Todas</string>
     <string name="status_enabled">Activadas</string>
     <string name="status_disabled">Desactivadas</string>
@@ -288,6 +286,25 @@
         <item quantity="one">%d filtro activo</item>
         <item quantity="many">%d de filtros activos</item>
         <item quantity="other">%d filtros activos</item>
+    </plurals>
+
+    <!-- Inbox filter sheet -->
+    <string name="inbox_filter_cd">Filtrar notificaciones</string>
+    <string name="inbox_filter_section_status">Estado</string>
+    <string name="inbox_filter_section_apps">Apps</string>
+    <string name="inbox_filter_apps_any">Cualquier app</string>
+    <string name="inbox_filter_apps_group_with">Apps con notificaciones</string>
+    <string name="inbox_filter_apps_group_without">Sin notificaciones</string>
+    <string name="inbox_filter_no_apps">Aún no hay opciones de filtro. Las apps aparecerán aquí cuando envíen notificaciones.</string>
+    <plurals name="inbox_filter_notification_count">
+        <item quantity="one">%d notificación</item>
+        <item quantity="many">%d de notificaciones</item>
+        <item quantity="other">%d notificaciones</item>
+    </plurals>
+    <plurals name="inbox_filter_show_notifications">
+        <item quantity="one">Mostrar %d notificación</item>
+        <item quantity="many">Mostrar %d de notificaciones</item>
+        <item quantity="other">Mostrar %d notificaciones</item>
     </plurals>
 
     <!-- Shared app picker (core/ui) -->

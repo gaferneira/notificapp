@@ -11,11 +11,11 @@ import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.domain.model.Notification
-import dev.gaferneira.notificapp.domain.model.preferences.InboxFilterSettings
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEffect
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEvent
+import dev.gaferneira.notificapp.features.inbox.contract.InboxFilter
 import dev.gaferneira.notificapp.features.inbox.contract.InboxListItem
 import dev.gaferneira.notificapp.features.inbox.contract.InboxUiState
 import dev.gaferneira.notificapp.features.inbox.contract.NotificationItem
@@ -33,7 +33,6 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
-import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter as Status
 
 /**
  * ViewModel for the Inbox Screen with Pagination.
@@ -68,15 +67,10 @@ class InboxViewModel @Inject constructor(
      */
     val notifications: Flow<PagingData<InboxListItem>> =
         uiState
-            .map { Triple(it.searchQuery, it.selectedApps, it.statusFilter) }
+            .map { Triple(it.searchQuery, it.filter.selectedApps.sorted(), it.filter.status) }
             .distinctUntilChanged()
             .flatMapLatest { (searchQuery, selectedApps, statusFilter) ->
-                // Convert Status to Boolean? for repository
-                val isProcessed = when (statusFilter) {
-                    Status.PROCESSED -> true
-                    Status.UNPROCESSED -> false
-                    Status.ALL -> null
-                }
+                val isProcessed = statusFilter.toIsProcessed()
 
                 // Use search query if provided, otherwise use filtered paged
                 val pagingFlow = if (searchQuery.isBlank()) {
@@ -121,6 +115,7 @@ class InboxViewModel @Inject constructor(
 
     init {
         loadSavedFilters()
+        loadAppNames()
         checkNotificationListenerStatus()
     }
 
@@ -131,20 +126,24 @@ class InboxViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.observeInboxFilters()
                 .collect { filters ->
-                    setState {
-                        copy(
-                            selectedApps = filters.selectedApps,
-                            statusFilter = filters.statusFilter,
-                        )
-                    }
+                    setState { copy(filter = filters.toInboxFilter()) }
                 }
+        }
+    }
+
+    /** Display names for the active-filter chips. */
+    private fun loadAppNames() {
+        viewModelScope.launch {
+            notificationRepository.observeAppsWithNotifications()
+                .collect { apps -> setState { copy(appNames = apps.associate { it.packageName to it.name }) } }
         }
     }
 
     override fun onEvent(event: InboxEvent) {
         when (event) {
             is InboxEvent.OnSearchQueryChange -> updateSearchQuery(event.query)
-            is InboxEvent.OnAppFilterChange -> updateAppFilter(event.packageNames, event.statusFilter)
+            is InboxEvent.OnFilterChange -> saveFilter(event.filter)
+            is InboxEvent.OnRemoveFilter -> saveFilter(uiState.value.filter.without(event.chip))
             is InboxEvent.OnNotificationClick -> onNotificationClick(event.notificationId)
             is InboxEvent.OnResume -> checkNotificationListenerStatus()
         }
@@ -167,16 +166,10 @@ class InboxViewModel @Inject constructor(
         }
     }
 
-    private fun updateAppFilter(
-        packageNames: List<String>,
-        newStatusFilter: Status,
-    ) {
+    /** Persists [filter]; the saved-filters collector in [loadSavedFilters] feeds it back to the state. */
+    private fun saveFilter(filter: InboxFilter) {
         viewModelScope.launch {
-            val filters = InboxFilterSettings(
-                selectedApps = packageNames,
-                statusFilter = newStatusFilter,
-            )
-            userPreferencesRepository.setInboxFilters(filters)
+            userPreferencesRepository.setInboxFilters(filter.toSettings())
                 .onFailure { e ->
                     Timber.e(e, "Failed to save inbox filters")
                 }

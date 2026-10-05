@@ -21,7 +21,6 @@
     <ID>LongMethod:AppSelectionPicker.kt$@Composable private fun AppListItem( app: AppDisplayInfo, isSelected: Boolean, onToggle: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AppSelectionPicker.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AppSelectionPicker( selectedApps: ImmutableList&lt;AppInfo&gt;, enabledApps: ImmutableList&lt;AppInfo&gt;, onConfirm: (List&lt;AppInfo&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
     <ID>LongMethod:AppSelectionScreen.kt$@Composable private fun AppListItem( app: AppInfo, isSelected: Boolean, onToggled: (Boolean) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
-    <ID>LongMethod:InboxFilterBottomSheet.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun FilterBottomSheetContent( uiState: InboxFilterContract.UiState, onEvent: (InboxFilterContract.UiEvent) -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationCard( notification: NotificationItem, onClick: () -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationColumn( notifications: LazyPagingItems&lt;InboxListItem&gt;, onNotificationClick: (String) -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Preview(showBackground = true, name = "Inbox Preview - Direct Items") @Composable fun PreviewInboxScreenDirect()</ID>
