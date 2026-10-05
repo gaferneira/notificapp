@@ -153,10 +153,11 @@ class MainActivity : AppCompatActivity() {
 }
 
 /**
- * App flow states:
- * 1. ONBOARDING - No notification permission granted
- * 2. APP_SELECTION - Permission granted but no apps selected (initial setup)
- * 3. MAIN_APP - Permission granted and at least one app selected
+ * App flow states. Initial setup is "listener enabled + at least one saved app":
+ * 1. ONBOARDING - First-time user (no saved apps) without notification access
+ * 2. APP_SELECTION - Access granted but no apps saved yet (initial setup, opt-in selection)
+ * 3. MAIN_APP - At least one saved app. Access may have been revoked since; Home's access-off
+ *    banner handles that.
  */
 enum class AppFlowState {
     ONBOARDING,
@@ -174,7 +175,9 @@ fun Notificapp(
     val lifecycleOwner = LocalLifecycleOwner.current
     val appFlowState by viewModel.appFlowState.collectAsStateWithLifecycle()
 
-    // Re-check on every resume - but only before reaching the main app. Once in MAIN_APP,
+    // Re-check on every resume - but only during onboarding (waiting for notification access).
+    // APP_SELECTION is left via its own Continue action: selections persist on toggle, so a
+    // resume mid-selection would otherwise jump to MAIN_APP after the first app. Once past,
     // re-deriving the flow state on every resume would tear down and recreate the NavDisplay
     // below (rememberNavigationState resets its back stack whenever it's freshly composed),
     // wiping the user's navigation stack and any in-progress screen state every time the
@@ -182,7 +185,7 @@ fun Notificapp(
     // ActivityResultContract (e.g. a system picker).
     val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
     LaunchedEffect(lifecycleState) {
-        if (lifecycleState == Lifecycle.State.RESUMED && appFlowState != AppFlowState.MAIN_APP) {
+        if (lifecycleState == Lifecycle.State.RESUMED && appFlowState == AppFlowState.ONBOARDING) {
             viewModel.recheckFlowState(isNotificationListenerEnabled(context))
         }
     }
@@ -270,7 +273,7 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
     }
 
     entry<Screen.AppSelection> { screen ->
-        AppSelectionScreen()
+        AppSelectionScreen(isInitialSetup = screen.isInitialSetup)
     }
 
     mainTabEntries(navigator)

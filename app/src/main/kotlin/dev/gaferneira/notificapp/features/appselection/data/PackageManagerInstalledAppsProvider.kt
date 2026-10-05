@@ -78,27 +78,27 @@ internal class PackageManagerInstalledAppsProvider @Inject constructor(
                     packageName.contains("mail", ignoreCase = true) ||
                         packageName.contains("gmail", ignoreCase = true) ||
                         packageName.contains("outlook", ignoreCase = true) ||
-                        packageName.contains("yahoo", ignoreCase = true) -> "Email"
+                        packageName.contains("yahoo", ignoreCase = true) -> AppCategoryKey.EMAIL
                     packageName.contains("whatsapp", ignoreCase = true) ||
                         packageName.contains("telegram", ignoreCase = true) ||
                         packageName.contains("messenger", ignoreCase = true) ||
                         packageName.contains("slack", ignoreCase = true) ||
-                        packageName.contains("discord", ignoreCase = true) -> "Messaging"
+                        packageName.contains("discord", ignoreCase = true) -> AppCategoryKey.MESSAGING
                     packageName.contains("bank", ignoreCase = true) ||
                         packageName.contains("finance", ignoreCase = true) ||
                         packageName.contains("revolut", ignoreCase = true) ||
                         packageName.contains("paypal", ignoreCase = true) ||
-                        packageName.contains("crypto", ignoreCase = true) -> "Financial"
+                        packageName.contains("crypto", ignoreCase = true) -> AppCategoryKey.FINANCIAL
                     packageName.contains("shop", ignoreCase = true) ||
                         packageName.contains("amazon", ignoreCase = true) ||
                         packageName.contains("ebay", ignoreCase = true) ||
                         packageName.contains("aliexpress", ignoreCase = true) ||
                         packageName.contains("food", ignoreCase = true) ||
-                        packageName.contains("deliver", ignoreCase = true) -> "Shopping"
+                        packageName.contains("deliver", ignoreCase = true) -> AppCategoryKey.SHOPPING
                     packageName.contains("uber", ignoreCase = true) ||
                         packageName.contains("lyft", ignoreCase = true) ||
                         packageName.contains("transport", ignoreCase = true) ||
-                        packageName.contains("travel", ignoreCase = true) -> "Transport"
+                        packageName.contains("travel", ignoreCase = true) -> AppCategoryKey.TRANSPORT
                     else -> null
                 }
 

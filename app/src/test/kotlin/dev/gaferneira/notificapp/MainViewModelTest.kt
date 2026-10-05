@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp
 
+import app.cash.turbine.test
 import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import io.kotest.matchers.shouldBe
@@ -38,8 +39,12 @@ class MainViewModelTest {
         viewModel.appFlowState.value shouldBe null
     }
 
+    private fun savedApps() = Result.success(listOf(SelectedApp(packageName = "com.a", appName = "A", isEnabled = true)))
+
     @Test
-    fun `recheckFlowState resolves to ONBOARDING when the listener is disabled`() = runTest(testDispatcher) {
+    fun `first-time user without access resolves to ONBOARDING`() = runTest(testDispatcher) {
+        coEvery { repository.getAllApps() } returns Result.success(emptyList())
+
         viewModel.recheckFlowState(isListenerEnabled = false)
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -47,8 +52,28 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `recheckFlowState resolves to MAIN_APP when the listener is enabled and apps are selected`() = runTest(testDispatcher) {
-        coEvery { repository.getAllApps() } returns Result.success(listOf(SelectedApp(packageName = "com.a", appName = "A", isEnabled = true)))
+    fun `revoked access with saved apps resolves to MAIN_APP so Home can show its banner`() = runTest(testDispatcher) {
+        coEvery { repository.getAllApps() } returns savedApps()
+
+        viewModel.recheckFlowState(isListenerEnabled = false)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.appFlowState.value shouldBe AppFlowState.MAIN_APP
+    }
+
+    @Test
+    fun `no access and a failed repository read falls back to ONBOARDING`() = runTest(testDispatcher) {
+        coEvery { repository.getAllApps() } returns Result.failure(IllegalStateException("db error"))
+
+        viewModel.recheckFlowState(isListenerEnabled = false)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.appFlowState.value shouldBe AppFlowState.ONBOARDING
+    }
+
+    @Test
+    fun `access granted with apps resolves to MAIN_APP`() = runTest(testDispatcher) {
+        coEvery { repository.getAllApps() } returns savedApps()
 
         viewModel.recheckFlowState(isListenerEnabled = true)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -57,7 +82,7 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `recheckFlowState resolves to APP_SELECTION when the listener is enabled but no apps are selected`() = runTest(testDispatcher) {
+    fun `access granted with zero saved apps resolves to APP_SELECTION, never Home`() = runTest(testDispatcher) {
         coEvery { repository.getAllApps() } returns Result.success(emptyList())
 
         viewModel.recheckFlowState(isListenerEnabled = true)
@@ -67,12 +92,31 @@ class MainViewModelTest {
     }
 
     @Test
-    fun `recheckFlowState resolves to APP_SELECTION when the repository call fails`() = runTest(testDispatcher) {
+    fun `access granted with a failed repository read resolves to APP_SELECTION`() = runTest(testDispatcher) {
         coEvery { repository.getAllApps() } returns Result.failure(IllegalStateException("db error"))
 
         viewModel.recheckFlowState(isListenerEnabled = true)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.appFlowState.value shouldBe AppFlowState.APP_SELECTION
+    }
+
+    @Test
+    fun `granting access moves ONBOARDING to APP_SELECTION exactly once`() = runTest(testDispatcher) {
+        coEvery { repository.getAllApps() } returns Result.success(emptyList())
+
+        viewModel.appFlowState.test {
+            awaitItem() shouldBe null
+            viewModel.recheckFlowState(isListenerEnabled = false)
+            awaitItem() shouldBe AppFlowState.ONBOARDING
+
+            viewModel.recheckFlowState(isListenerEnabled = true)
+            awaitItem() shouldBe AppFlowState.APP_SELECTION
+
+            // A repeated resume re-check emits no duplicate transition
+            viewModel.recheckFlowState(isListenerEnabled = true)
+            testDispatcher.scheduler.advanceUntilIdle()
+            expectNoEvents()
+        }
     }
 }

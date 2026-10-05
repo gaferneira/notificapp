@@ -33,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -44,6 +46,7 @@ import dev.gaferneira.notificapp.core.ui.components.TonalCard
 import dev.gaferneira.notificapp.core.ui.theme.LocalAppTokens
 import dev.gaferneira.notificapp.core.ui.theme.NotificappStyles
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEvent
 
 /**
@@ -84,6 +87,14 @@ internal fun PermissionExplanationContent(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 PermissionDetails()
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = stringResource(R.string.onboarding_permission_data_disclosure),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LocalAppTokens.current.mutedOnBackground,
+                )
             }
 
             PermissionExplanationFooter(
@@ -145,7 +156,9 @@ private fun PermissionExplanationFooter(
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        PrivacyPolicyLink(modifier = Modifier.align(Alignment.CenterHorizontally))
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -168,13 +181,17 @@ private fun PermissionExplanationHeader(onBackClicked: () -> Unit) {
             text = stringResource(R.string.onboarding_permission_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .semantics { heading() },
             textAlign = TextAlign.Center,
         )
 
         // Empty space to balance the back button
         Spacer(modifier = Modifier.size(48.dp))
     }
+
+    StepProgressIndicator(currentStep = 1, totalSteps = OnboardingContract.TOTAL_SETUP_STEPS)
 
     Spacer(modifier = Modifier.height(24.dp))
 
@@ -184,6 +201,7 @@ private fun PermissionExplanationHeader(onBackClicked: () -> Unit) {
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onBackground,
         lineHeight = MaterialTheme.typography.headlineLarge.fontSize * 1.2,
+        modifier = Modifier.semantics { heading() },
     )
 }
 

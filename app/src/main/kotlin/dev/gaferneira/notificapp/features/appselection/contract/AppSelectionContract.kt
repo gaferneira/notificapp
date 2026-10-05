@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.appselection.contract
 
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -9,7 +10,7 @@ import kotlinx.collections.immutable.toImmutableList
  * Contract for the App Selection screen.
  *
  * Shows installed apps and allows user to select which ones to monitor.
- * This screen appears after onboarding if no apps are selected.
+ * Opt-in: initial setup starts with no app selected, and nothing is monitored until the user picks some.
  */
 object AppSelectionContract {
 
@@ -26,36 +27,24 @@ object AppSelectionContract {
         /** Whether data is loading */
         val isLoading: Boolean = true,
         /** Error message if loading failed */
-        val error: String? = null,
-        /** Whether this is the initial setup (no back button) or accessed from settings */
+        val error: UiText? = null,
+        /** Whether this is the initial setup (no back button) or accessed from settings; null until the screen reports it */
         val isInitialSetup: Boolean? = null,
     ) {
         /**
-         * Display order of apps - maintains stable positions during selection.
-         * Selected apps are shown at the top only on initial load.
-         * After that, apps stay in their positions to avoid jarring UI.
+         * Apps matching the search query, in stable display order. Lazy so the filtering runs at most
+         * once per state instance rather than on every read during composition.
          */
-        val displayApps: ImmutableList<AppInfo>
-            get() = availableApps
-
-        /** Filtered apps based on search query (maintains display order) */
-        val filteredApps: ImmutableList<AppInfo>
-            get() = if (searchQuery.isBlank()) {
-                displayApps
+        val filteredApps: ImmutableList<AppInfo> by lazy(LazyThreadSafetyMode.NONE) {
+            if (searchQuery.isBlank()) {
+                availableApps
             } else {
-                displayApps.filter { app ->
+                availableApps.filter { app ->
                     app.name.contains(searchQuery, ignoreCase = true) ||
                         app.packageName.contains(searchQuery, ignoreCase = true)
                 }.toImmutableList()
             }
-
-        /** Selected apps for display in the "Selected" section at top */
-        val selectedApps: ImmutableList<AppInfo>
-            get() = displayApps.filter { selectedPackageNames.contains(it.packageName) }.toImmutableList()
-
-        /** Unselected apps for display after selected ones */
-        val unselectedApps: ImmutableList<AppInfo>
-            get() = displayApps.filterNot { selectedPackageNames.contains(it.packageName) }.toImmutableList()
+        }
 
         /** Whether at least one app is selected */
         val hasSelection: Boolean
@@ -66,14 +55,18 @@ object AppSelectionContract {
             get() = selectedPackageNames.size
 
         /** Whether every app currently visible (post-search) is selected */
-        val areAllFilteredSelected: Boolean
-            get() = filteredApps.isNotEmpty() && filteredApps.all { selectedPackageNames.contains(it.packageName) }
+        val areAllFilteredSelected: Boolean by lazy(LazyThreadSafetyMode.NONE) {
+            filteredApps.isNotEmpty() && filteredApps.all { selectedPackageNames.contains(it.packageName) }
+        }
     }
 
     /**
      * UI Events from user interactions.
      */
     sealed class UiEvent {
+        /** Screen opened with the route's [isInitialSetup] flag; triggers the first load (once). */
+        data class OnScreenOpened(val isInitialSetup: Boolean) : UiEvent()
+
         /** User toggled an app's selection */
         data class OnAppToggled(val packageName: String, val isSelected: Boolean) : UiEvent()
 
@@ -92,7 +85,7 @@ object AppSelectionContract {
         /** User dismissed error */
         data object OnDismissError : UiEvent()
 
-        /** Refresh the app list */
+        /** Refresh the installed-app list silently, preserving the selection and list order */
         data object OnRefresh : UiEvent()
     }
 
@@ -101,6 +94,6 @@ object AppSelectionContract {
      */
     sealed class UiEffect {
         /** Show error message */
-        data class ShowError(val message: String) : UiEffect()
+        data class ShowError(val message: UiText) : UiEffect()
     }
 }

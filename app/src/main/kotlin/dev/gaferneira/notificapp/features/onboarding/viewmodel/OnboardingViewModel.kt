@@ -1,118 +1,77 @@
 package dev.gaferneira.notificapp.features.onboarding.viewmodel
 
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
-import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
-import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
-import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract
+import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.OnboardingStep
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEffect
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEvent
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiState
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * ViewModel for the Onboarding screen.
+ * ViewModel for the Onboarding screen (Value Statement and Permission Explanation steps).
  *
- * Manages the two-step onboarding flow:
- * 1. Value Statement - introduces the app
- * 2. Permission Explanation - requests notification access
+ * It does NOT navigate: once notification access is granted, `MainViewModel` re-derives the app
+ * flow state and swaps the start route to App Selection - the single owner of that transition.
+ * This ViewModel only drives the step UI and the "access not enabled yet" hint.
+ *
+ * The current step and the "user opened system settings" flag live in [SavedStateHandle] so they
+ * survive process death (the user is sent to system settings, where the OS may kill the app).
  *
  * @param listenerStatus Seam for checking notification-listener permission status
- * @param navigationHandler Handler for navigation commands
+ * @param savedStateHandle Persists the step and the settings-requested flag across process death
  */
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val listenerStatus: NotificationListenerStatusProvider,
-    private val navigationHandler: NavigationHandler,
-) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
+    private val savedStateHandle: SavedStateHandle,
+) : MviViewModel<UiState, UiEvent, UiEffect>(
+    UiState(currentStep = savedStateHandle.restoreStep()),
+) {
 
-    private var hasRequestedNotificationAccess = false
-
-    init {
-        checkPermissionStatus()
-    }
+    private var hasRequestedNotificationAccess: Boolean
+        get() = savedStateHandle[KEY_REQUESTED_ACCESS] ?: false
+        set(value) {
+            savedStateHandle[KEY_REQUESTED_ACCESS] = value
+        }
 
     override fun onEvent(event: UiEvent) {
         when (event) {
-            is UiEvent.OnGetStartedClicked -> {
-                transitionToPermissionStep()
-            }
-            is UiEvent.OnGrantAccessClicked -> {
-                openNotificationSettings()
-            }
-            is UiEvent.OnBackClicked -> {
-                goBackToValueStatement()
-            }
-            is UiEvent.CheckPermission -> {
-                checkPermissionStatus()
-            }
+            is UiEvent.OnGetStartedClicked -> showStep(OnboardingStep.PERMISSION_EXPLANATION)
+            is UiEvent.OnBackClicked -> showStep(OnboardingStep.VALUE_STATEMENT)
+            is UiEvent.OnGrantAccessClicked -> openNotificationSettings()
+            is UiEvent.CheckPermission -> checkPermissionStatus()
         }
     }
 
-    /**
-     * Transition from Value Statement to Permission Explanation.
-     */
-    private fun transitionToPermissionStep() {
-        setState {
-            copy(currentStep = OnboardingContract.OnboardingStep.PERMISSION_EXPLANATION)
-        }
+    private fun showStep(step: OnboardingStep) {
+        savedStateHandle[KEY_STEP] = step.name
+        setState { copy(currentStep = step) }
     }
 
-    /**
-     * Go back from Permission Explanation to Value Statement.
-     */
-    private fun goBackToValueStatement() {
-        setState {
-            copy(currentStep = OnboardingContract.OnboardingStep.VALUE_STATEMENT)
-        }
-    }
-
-    /**
-     * Open system notification listener settings.
-     */
     private fun openNotificationSettings() {
         hasRequestedNotificationAccess = true
         sendEffect(UiEffect.OpenNotificationSettings)
     }
 
     /**
-     * Navigate to main app after permission is granted.
-     */
-    private fun navigateToMainApp() {
-        viewModelScope.launch {
-            navigationHandler.clearAndNavigate(Routes.appSelection(isInitialSetup = true))
-        }
-    }
-
-    /**
-     * Check if notification listener permission is granted.
+     * Refresh the denied hint. Called once per resume (the only trigger), so returning from system
+     * settings without granting access shows the hint; if access WAS granted, `MainViewModel`'s
+     * own resume re-check swaps the route and this screen leaves composition.
      */
     private fun checkPermissionStatus() {
-        viewModelScope.launch {
-            setState { copy(isLoading = true) }
+        val hasPermission = listenerStatus.isEnabled()
+        setState { copy(showPermissionDeniedHint = hasRequestedNotificationAccess && !hasPermission) }
+    }
 
-            // Small delay to prevent UI flickering
-            delay(100)
+    private companion object {
+        const val KEY_STEP = "onboarding_step"
+        const val KEY_REQUESTED_ACCESS = "onboarding_requested_access"
 
-            val hasPermission = listenerStatus.isEnabled()
-
-            setState {
-                copy(
-                    hasNotificationPermission = hasPermission,
-                    isLoading = false,
-                    showPermissionDeniedHint = hasRequestedNotificationAccess && !hasPermission,
-                )
-            }
-
-            if (hasPermission) {
-                Timber.d("Notification permission granted, completing onboarding")
-                navigateToMainApp()
-            }
-        }
+        fun SavedStateHandle.restoreStep(): OnboardingStep = get<String>(KEY_STEP)
+            ?.let { name -> OnboardingStep.entries.firstOrNull { it.name == name } }
+            ?: OnboardingStep.VALUE_STATEMENT
     }
 }

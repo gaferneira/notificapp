@@ -1,5 +1,8 @@
 package dev.gaferneira.notificapp.features.appselection.viewmodel
 
+import app.cash.turbine.test
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.domain.model.AppInfo
@@ -44,10 +47,13 @@ class AppSelectionViewModelTest {
     private fun buildViewModel(
         apps: List<AppInfo>,
         preSelected: List<SelectedApp> = emptyList(),
+        isInitialSetup: Boolean = preSelected.isEmpty(),
     ): AppSelectionViewModel {
         appsProvider = mockk { coEvery { getMonitorableApps() } returns apps }
         selectedAppRepository = FakeSelectedAppRepository(initial = preSelected)
-        return AppSelectionViewModel(appsProvider, selectedAppRepository, navigationHandler, testDispatcher)
+        return AppSelectionViewModel(appsProvider, selectedAppRepository, navigationHandler, testDispatcher).also {
+            it.onEvent(UiEvent.OnScreenOpened(isInitialSetup))
+        }
     }
 
     @Nested
@@ -79,32 +85,60 @@ class AppSelectionViewModelTest {
         }
 
         @Test
-        fun `no pre-selected apps means initial setup`() = runTest(testDispatcher) {
-            val viewModel = buildViewModel(emptyList())
+        fun `route flag is respected regardless of persisted selection`() = runTest(testDispatcher) {
+            val viewModel = buildViewModel(
+                emptyList(),
+                preSelected = listOf(SelectedApp(packageName = "com.a", appName = "Alpha", isEnabled = true)),
+                isInitialSetup = true,
+            )
             testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.uiState.value.isInitialSetup shouldBe true
         }
 
         @Test
-        fun `initial setup defaults to every app selected and persisted`() = runTest(testDispatcher) {
+        fun `initial setup starts with no app selected and persists nothing`() = runTest(testDispatcher) {
             val apps = listOf(AppInfo("com.a", "Alpha"), AppInfo("com.b", "Bank"))
             val viewModel = buildViewModel(apps)
             testDispatcher.scheduler.advanceUntilIdle()
 
-            viewModel.uiState.value.selectedPackageNames shouldBe setOf("com.a", "com.b")
-            selectedAppRepository.currentApps().map { it.packageName }.toSet() shouldBe setOf("com.a", "com.b")
+            viewModel.uiState.value.selectedPackageNames shouldBe emptySet()
+            viewModel.uiState.value.hasSelection shouldBe false
+            selectedAppRepository.currentApps() shouldBe emptyList()
         }
 
         @Test
-        fun `pre-selected apps means not initial setup`() = runTest(testDispatcher) {
+        fun `settings route is not initial setup and never auto-adds apps`() = runTest(testDispatcher) {
             val viewModel = buildViewModel(
-                emptyList(),
+                listOf(AppInfo("com.a", "Alpha"), AppInfo("com.b", "Bank")),
                 preSelected = listOf(SelectedApp(packageName = "com.a", appName = "Alpha", isEnabled = true)),
+                isInitialSetup = false,
             )
             testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.uiState.value.isInitialSetup shouldBe false
+            selectedAppRepository.currentApps().map { it.packageName } shouldBe listOf("com.a")
+        }
+
+        @Test
+        fun `settings route with empty selection stays empty`() = runTest(testDispatcher) {
+            val viewModel = buildViewModel(listOf(AppInfo("com.a", "Alpha")), isInitialSetup = false)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.selectedPackageNames shouldBe emptySet()
+            selectedAppRepository.currentApps() shouldBe emptyList()
+        }
+
+        @Test
+        fun `a second OnScreenOpened does not reload or change the flag`() = runTest(testDispatcher) {
+            val viewModel = buildViewModel(listOf(AppInfo("com.a", "Alpha")), isInitialSetup = true)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(UiEvent.OnScreenOpened(isInitialSetup = false))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.isInitialSetup shouldBe true
+            coVerify(exactly = 1) { appsProvider.getMonitorableApps() }
         }
 
         @Test
@@ -116,6 +150,52 @@ class AppSelectionViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.uiState.value.availableApps shouldBe listOf(AppInfo("com.a", "Alpha"))
+        }
+
+        @Test
+        fun `OnRefresh preserves deselections and never modifies the saved selection`() = runTest(testDispatcher) {
+            val apps = listOf(AppInfo("com.a", "Alpha"), AppInfo("com.b", "Bank"))
+            val viewModel = buildViewModel(apps)
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.onEvent(UiEvent.OnSelectAllToggled)
+            viewModel.onEvent(UiEvent.OnAppToggled("com.b", isSelected = false))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(UiEvent.OnRefresh)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.selectedPackageNames shouldBe setOf("com.a")
+            selectedAppRepository.currentApps().map { it.packageName } shouldBe listOf("com.a")
+        }
+
+        @Test
+        fun `OnRefresh does not show the loading spinner and keeps list order`() = runTest(testDispatcher) {
+            val apps = listOf(AppInfo("com.a", "Alpha"), AppInfo("com.b", "Bank"))
+            val viewModel = buildViewModel(apps)
+            testDispatcher.scheduler.advanceUntilIdle()
+            val orderBefore = viewModel.uiState.value.availableApps.map { it.packageName }
+
+            viewModel.uiState.test {
+                awaitItem().isLoading shouldBe false
+                viewModel.onEvent(UiEvent.OnRefresh)
+                testDispatcher.scheduler.advanceUntilIdle()
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            viewModel.uiState.value.isLoading shouldBe false
+            viewModel.uiState.value.availableApps.map { it.packageName } shouldBe orderBefore
+        }
+
+        @Test
+        fun `OnRefresh before the screen is opened does nothing`() = runTest(testDispatcher) {
+            appsProvider = mockk { coEvery { getMonitorableApps() } returns emptyList() }
+            selectedAppRepository = FakeSelectedAppRepository()
+            val viewModel = AppSelectionViewModel(appsProvider, selectedAppRepository, navigationHandler, testDispatcher)
+
+            viewModel.onEvent(UiEvent.OnRefresh)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify(exactly = 0) { appsProvider.getMonitorableApps() }
         }
     }
 
@@ -160,6 +240,8 @@ class AppSelectionViewModelTest {
         fun `select all toggle deselects everything when all filtered apps are selected`() = runTest(testDispatcher) {
             val apps = listOf(AppInfo("com.a", "Alpha"), AppInfo("com.b", "Bank"))
             val viewModel = buildViewModel(apps)
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.onEvent(UiEvent.OnSelectAllToggled)
             testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.onEvent(UiEvent.OnSelectAllToggled)
@@ -224,9 +306,11 @@ class AppSelectionViewModelTest {
     inner class ContinueTests {
 
         @Test
-        fun `continue with no selection shows an error and does not navigate`() = runTest(testDispatcher) {
-            val viewModel = buildViewModel(emptyList())
+        fun `continue is disabled and a forced click does not navigate when nothing is selected`() = runTest(testDispatcher) {
+            val viewModel = buildViewModel(listOf(AppInfo("com.a", "Alpha")))
             testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.hasSelection shouldBe false
 
             viewModel.onEvent(UiEvent.OnContinueClicked)
             testDispatcher.scheduler.advanceUntilIdle()
@@ -248,10 +332,23 @@ class AppSelectionViewModelTest {
         }
 
         @Test
+        fun `back from settings navigates back and never to home`() = runTest(testDispatcher) {
+            val viewModel = buildViewModel(listOf(AppInfo("com.a", "Alpha")), isInitialSetup = false)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(UiEvent.OnBackClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify(exactly = 1) { navigationHandler.goBack() }
+            coVerify(exactly = 0) { navigationHandler.clearAndNavigate(any()) }
+        }
+
+        @Test
         fun `continue when accessed from settings navigates back instead`() = runTest(testDispatcher) {
             val viewModel = buildViewModel(
                 listOf(AppInfo("com.a", "Alpha")),
                 preSelected = listOf(SelectedApp(packageName = "com.a", appName = "Alpha", isEnabled = true)),
+                isInitialSetup = false,
             )
             testDispatcher.scheduler.advanceUntilIdle()
 
@@ -259,6 +356,7 @@ class AppSelectionViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
 
             coVerify(exactly = 1) { navigationHandler.goBack() }
+            coVerify(exactly = 0) { navigationHandler.clearAndNavigate(any()) }
         }
     }
 
@@ -270,11 +368,12 @@ class AppSelectionViewModelTest {
             appsProvider = mockk { coEvery { getMonitorableApps() } throws IllegalStateException("boom") }
             selectedAppRepository = FakeSelectedAppRepository()
             val viewModel = AppSelectionViewModel(appsProvider, selectedAppRepository, navigationHandler, testDispatcher)
+            viewModel.onEvent(UiEvent.OnScreenOpened(isInitialSetup = true))
             testDispatcher.scheduler.advanceUntilIdle()
 
             val state = viewModel.uiState.value
             state.isLoading shouldBe false
-            state.error shouldBe "Failed to load apps: boom"
+            state.error shouldBe UiText.StringResource(R.string.app_selection_error_load, arrayOf("boom"))
         }
 
         @Test
@@ -282,6 +381,7 @@ class AppSelectionViewModelTest {
             appsProvider = mockk { coEvery { getMonitorableApps() } throws IllegalStateException("boom") }
             selectedAppRepository = FakeSelectedAppRepository()
             val viewModel = AppSelectionViewModel(appsProvider, selectedAppRepository, navigationHandler, testDispatcher)
+            viewModel.onEvent(UiEvent.OnScreenOpened(isInitialSetup = true))
             testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.onEvent(UiEvent.OnDismissError)

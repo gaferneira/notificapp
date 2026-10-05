@@ -1,7 +1,6 @@
 package dev.gaferneira.notificapp.features.onboarding.ui
 
 import android.content.res.Configuration
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -32,21 +31,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
-import dev.gaferneira.notificapp.core.ui.AppLinks
 import dev.gaferneira.notificapp.core.ui.components.IconBadge
 import dev.gaferneira.notificapp.core.ui.components.PagerDot
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
 import dev.gaferneira.notificapp.core.ui.theme.LocalAppTokens
 import dev.gaferneira.notificapp.core.ui.theme.NotificappStyles
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
+import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEvent
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingHighlight
 import dev.gaferneira.notificapp.features.onboarding.contract.onboardingHighlights
@@ -77,7 +78,11 @@ internal fun FirstStepContent(
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            FirstStepTopBar()
+            Column {
+                FirstStepTopBar()
+                Spacer(modifier = Modifier.height(8.dp))
+                StepProgressIndicator(currentStep = 0, totalSteps = OnboardingContract.TOTAL_SETUP_STEPS)
+            }
 
             Column(
                 verticalArrangement = Arrangement.Center,
@@ -115,7 +120,7 @@ private fun FirstStepTopBar() {
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = "NOTIFICAPP",
+                text = stringResource(R.string.onboarding_brand_name),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -162,6 +167,7 @@ private fun FirstStepHero() {
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center,
             lineHeight = MaterialTheme.typography.headlineLarge.fontSize * 1.2,
+            modifier = Modifier.semantics { heading() },
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -170,7 +176,8 @@ private fun FirstStepHero() {
             text = stringResource(R.string.onboarding_description),
             style = MaterialTheme.typography.bodyMedium,
             color = LocalAppTokens.current.mutedOnBackground,
-            lineHeight = MaterialTheme.typography.bodyLarge.fontSize,
+            textAlign = TextAlign.Center,
+            lineHeight = MaterialTheme.typography.bodyMedium.fontSize * 1.4,
         )
     }
 }
@@ -222,20 +229,9 @@ private fun FirstStepFooter(onEvent: (UiEvent) -> Unit) {
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        PrivacyPolicyLink()
 
-        val uriHandler = LocalUriHandler.current
-        Text(
-            text = stringResource(R.string.onboarding_read_privacy_policy),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-            textDecoration = TextDecoration.Underline,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-                .clickable { uriHandler.openUri(AppLinks.PRIVACY_POLICY_URL) },
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -245,6 +241,11 @@ private fun FirstStepFooter(onEvent: (UiEvent) -> Unit) {
 @Composable
 private fun HighlightCarousel() {
     val pagerState = rememberPagerState(pageCount = { onboardingHighlights.size })
+    val pageState = stringResource(
+        R.string.onboarding_carousel_page_state,
+        pagerState.currentPage + 1,
+        onboardingHighlights.size,
+    )
 
     HorizontalPager(
         state = pagerState,
@@ -256,8 +257,11 @@ private fun HighlightCarousel() {
         )
     }
 
+    // The dots are decorative: expose one "Page X of Y" state instead of N unlabeled boxes.
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clearAndSetSemantics { stateDescription = pageState },
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {

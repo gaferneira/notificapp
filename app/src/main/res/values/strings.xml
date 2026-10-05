@@ -196,15 +196,16 @@
     <string name="monitoring_tile_subtitle_paused">Paused</string>
 
     <!-- Onboarding -->
-    <string name="onboarding_privacy_first">Privacy First</string>
+    <string name="onboarding_privacy_first">Privacy first</string>
     <string name="onboarding_headline">Turn your notifications into automated action.</string>
-    <string name="onboarding_description">Your rules, running locally. Total privacy</string>
-    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_description">Your rules, running locally. Total privacy.</string>
+    <string name="onboarding_get_started">Get started</string>
     <string name="onboarding_processed_locally">Processed locally on your device.</string>
-    <string name="onboarding_read_privacy_policy">Read our Privacy Policy</string>
+    <string name="onboarding_read_privacy_policy">Read our privacy policy</string>
+    <string name="onboarding_brand_name" translatable="false">NOTIFICAPP</string>
     <string name="onboarding_highlight_1_title">Track What Matters</string>
     <string name="onboarding_highlight_1_description">Extract amounts, dates, or codes from any notification — no copy-pasting.</string>
-    <string name="onboarding_highlight_1_trigger_label">com.bank.app</string>
+    <string name="onboarding_highlight_1_trigger_label" translatable="false">com.bank.app</string>
     <string name="onboarding_highlight_1_action_label">Amount extracted</string>
     <string name="onboarding_highlight_2_title">Smart Actions</string>
     <string name="onboarding_highlight_2_description">Take control. Dismiss spam, snooze reminders, or trigger an alarm — automatically.</string>
@@ -235,9 +236,12 @@
     <string name="onboarding_permission_detail_3_description">Local-first processing; webhooks only fire if you set one up.</string>
     <string name="onboarding_permission_toggle_title">Notification Access</string>
     <string name="onboarding_permission_toggle_subtitle">Allow app to read alerts</string>
-    <string name="onboarding_permission_toggle_status">Enabled in system settings</string>
-    <string name="onboarding_permission_denied_hint">Access not enabled yet — tap Grant Access to try again.</string>
-    <string name="onboarding_permission_grant_access">Grant Access</string>
+    <string name="onboarding_permission_toggle_status">Turn on in system settings</string>
+    <string name="onboarding_permission_denied_hint">Access not enabled yet — tap Grant access to try again.</string>
+    <string name="onboarding_permission_data_disclosure">Notification content from the apps you select, including messages and codes, is stored only on this device. There are no analytics, and data is sent out only through webhooks you set up.</string>
+    <string name="onboarding_step_indicator_cd">Step %1$d of %2$d</string>
+    <string name="onboarding_carousel_page_state">Page %1$d of %2$d</string>
+    <string name="onboarding_permission_grant_access">Grant access</string>
 
     <!-- Settings - Language -->
     <string name="settings_language_title">Language</string>
@@ -768,6 +772,29 @@
     <string name="inbox_back_cd">Go back</string>
     <string name="inbox_search_hint">Search notifications…</string>
     <string name="app_selection_search_hint">Search apps…</string>
+    <string name="app_selection_back_cd">Go back</string>
+    <string name="app_selection_title">Select apps</string>
+    <string name="app_selection_header_title">Select data sources</string>
+    <string name="app_selection_header_subtitle">Choose the apps you want to monitor. Nothing is monitored until you select at least one. You can change this later.</string>
+    <plurals name="app_selection_selected_count">
+        <item quantity="one">%d app selected</item>
+        <item quantity="other">%d apps selected</item>
+    </plurals>
+    <string name="app_selection_select_all">Select all</string>
+    <string name="app_selection_deselect_all">Deselect all</string>
+    <string name="app_selection_hint_select_one">Select at least one app to continue</string>
+    <string name="app_selection_continue">Continue</string>
+    <string name="app_selection_save_count">Save (%1$d selected)</string>
+    <string name="app_selection_footer_local">PROCESSED LOCALLY ON YOUR DEVICE</string>
+    <string name="app_selection_empty">No apps found</string>
+    <string name="app_selection_empty_search">No apps match \"%1$s\"</string>
+    <string name="app_selection_retry">Retry</string>
+    <string name="app_selection_error_load">Failed to load apps: %1$s</string>
+    <string name="app_selection_category_email">Email</string>
+    <string name="app_selection_category_messaging">Messaging</string>
+    <string name="app_selection_category_financial">Financial</string>
+    <string name="app_selection_category_shopping">Shopping</string>
+    <string name="app_selection_category_transport">Transport</string>
     <string name="filter_empty_title">Nothing matches your filters</string>
     <string name="filter_empty_message">Try changing or clearing the filters or the search.</string>
     <string name="filter_empty_clear">Clear filters</string>

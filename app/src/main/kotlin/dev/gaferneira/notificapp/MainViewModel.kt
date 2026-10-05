@@ -12,7 +12,8 @@ import javax.inject.Inject
 
 /**
  * ViewModel for MainActivity, owning the top-level app-flow state (onboarding vs. app selection
- * vs. main app).
+ * vs. main app). It is the single owner of the onboarding -> app selection transition: when access
+ * is granted the state flips and the Activity swaps the start route; no screen navigates itself.
  *
  * The repository is private - composables never touch it directly (per CLAUDE.md's "NEVER access
  * repositories directly from Composables"); they observe [appFlowState] and call
@@ -38,13 +39,18 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun determineAppFlowState(isListenerEnabled: Boolean): AppFlowState {
-        if (!isListenerEnabled) {
-            return AppFlowState.ONBOARDING
-        }
-
         // getAllApps() already wraps failures in Result.failure (ADR 006) rather than throwing,
         // so a failed/empty read and "no apps selected" fall to the same default here.
         val hasApps = repository.getAllApps().getOrNull()?.isNotEmpty() == true
-        return if (hasApps) AppFlowState.MAIN_APP else AppFlowState.APP_SELECTION
+
+        return when {
+            // Saved apps mean onboarding was completed once. If access was revoked since, go Home
+            // and let its "access off" banner handle it instead of replaying onboarding.
+            hasApps -> AppFlowState.MAIN_APP
+            // First-time user, access not granted yet.
+            !isListenerEnabled -> AppFlowState.ONBOARDING
+            // Access granted but nothing saved yet (opt-in selection): setup isn't finished.
+            else -> AppFlowState.APP_SELECTION
+        }
     }
 }

@@ -164,13 +164,13 @@ fun findArchViolations(srcDir: File): List<ArchViolation> {
         }
     }
 
-    // Rule 9: hardcoded-string — user-facing text in the rule editor and settings UI must come from string
+    // Rule 9: hardcoded-string — user-facing text in the rule editor, settings, app selection and onboarding UI must come from string
     // resources (ADR 014), never a Kotlin literal. Matches `Text("...")` and common text named
     // args (text/title/subtitle/placeholder/contentDescription/...) whose literal contains a
     // word of 3+ letters or whitespace-separated prose. @Preview functions are skipped; a line
     // may opt out with a trailing `// i18n-ignore` (technical samples such as JSON snippets).
     val hardcodedStringUiDirs =
-        listOf("ruleeditor", "settings").map { File(srcDir, "dev/gaferneira/notificapp/features/$it/ui") }
+        listOf("ruleeditor", "settings", "appselection", "onboarding").map { File(srcDir, "dev/gaferneira/notificapp/features/$it/ui") }
     hardcodedStringUiDirs.filter { it.exists() }.forEach { uiDir ->
         val literalRegex =
             Regex(

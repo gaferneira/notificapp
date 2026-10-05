@@ -17,7 +17,8 @@ Screens covered: Onboarding, App Selection, Inbox, Notification Detail, Rules, R
 > - Added merged semantics with a `contentDescription` combining title + subtitle on each `NotificationCardRow` in the preview cards group, so TalkBack announces the value proposition.
 > - Verified `UiEffect.NavigateToMainApp`'s empty collector branch is intentional — navigation is actually performed by `OnboardingViewModel.navigateToMainApp()` via `NavigationHandler.clearAndNavigate`, not stranded.
 > - New preview `OnboardingScreenPermissionDeniedPreview` added for the denied-hint state.
-> - Not done: no automated tests exist yet for `OnboardingViewModel` (matches current project-wide test debt) — consider adding coverage for the `showPermissionDeniedHint` transition.
+> - ~~Not done: no automated tests exist yet for `OnboardingViewModel`~~ **Resolved:** `OnboardingViewModelTest` and `MainViewModelTest` now cover step transitions, back, `SavedStateHandle` restore, the denied hint and flow-state routing.
+> - Superseded: `UiEffect.NavigateToMainApp` and `OnboardingViewModel.navigateToMainApp()` were removed; `MainViewModel` is the single owner of the post-grant transition to App Selection.
 
 1. **Core Usability & Flow Assessment**
 

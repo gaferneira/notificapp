@@ -1,10 +1,10 @@
 package dev.gaferneira.notificapp.features.appselection.ui
 
 import android.content.res.Configuration
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,18 +14,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
@@ -34,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,35 +50,40 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.SubcomposeAsyncImage
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.coil.AppIconData
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEffect
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiEvent
 import dev.gaferneira.notificapp.features.appselection.contract.AppSelectionContract.UiState
+import dev.gaferneira.notificapp.features.appselection.data.AppCategoryKey
 import dev.gaferneira.notificapp.features.appselection.viewmodel.AppSelectionViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -87,26 +94,34 @@ import kotlinx.collections.immutable.persistentListOf
  * Shows installed apps with search functionality and allows user to select
  * which apps to monitor for notification extraction.
  *
+ * @param isInitialSetup True when reached from onboarding (Continue goes Home); false when opened
+ * from Settings (Save/back return to the previous screen)
  * @param modifier Modifier for the screen
  * @param viewModel ViewModel for state management
  */
 @Composable
 fun AppSelectionScreen(
+    isInitialSetup: Boolean,
     modifier: Modifier = Modifier,
     viewModel: AppSelectionViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    LaunchedEffect(isInitialSetup) {
+        viewModel.onEvent(UiEvent.OnScreenOpened(isInitialSetup))
+    }
 
     // Handle effects
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
-            is UiEffect.ShowError -> snackbarHostState.showSnackbar(effect.message)
+            is UiEffect.ShowError -> snackbarHostState.showSnackbar(effect.message.asString(context))
         }
     }
 
-    // Refresh and reorder when returning to this screen (e.g., from settings)
+    // Silently re-sync the installed-app list when returning to this screen (selection is preserved)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -222,7 +237,8 @@ private fun AppSelectionFooter(uiState: UiState, onEvent: (UiEvent) -> Unit, mod
 private const val ONBOARDING_TOTAL_STEPS = 3
 private const val ONBOARDING_STEP_APP_SELECTION = 2
 
-private val SELECTION_BANNER_HEIGHT = 40.dp
+private val SELECTION_BANNER_MIN_HEIGHT = 40.dp
+private val CONTINUE_BUTTON_MIN_HEIGHT = 56.dp
 
 /** Back bar shown when this screen is reached from Settings rather than onboarding. */
 @Composable
@@ -241,15 +257,17 @@ private fun AppSelectionBackBar(onBackClick: () -> Unit, modifier: Modifier = Mo
             IconButton(onClick = onBackClick) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Go back",
+                    contentDescription = stringResource(R.string.app_selection_back_cd),
                     tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Text(
-                text = "Select Apps",
+                text = stringResource(R.string.app_selection_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 8.dp),
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .semantics { heading() },
             )
         }
     }
@@ -264,16 +282,17 @@ private fun InitialSetupHeader(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Select Data Sources",
+            text = stringResource(R.string.app_selection_header_title),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.semantics { heading() },
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Choose the apps you want to monitor. You can change this later.",
+            text = stringResource(R.string.app_selection_header_subtitle),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
         )
@@ -284,7 +303,7 @@ private fun InitialSetupHeader(modifier: Modifier = Modifier) {
 
 /**
  * Selected-apps count banner with a Select All/Deselect All action. Always reserves
- * [SELECTION_BANNER_HEIGHT] so toggling the first app doesn't push the search field/list
+ * [SELECTION_BANNER_MIN_HEIGHT] so toggling the first app doesn't push the search field/list
  * up and down, and the action button stays visible even with zero apps selected.
  */
 @Composable
@@ -296,7 +315,7 @@ private fun SelectionCountBanner(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().height(SELECTION_BANNER_HEIGHT),
+        modifier = modifier.fillMaxWidth().heightIn(min = SELECTION_BANNER_MIN_HEIGHT),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -321,7 +340,7 @@ private fun SelectionCountBanner(
                     )
                     Spacer(modifier = Modifier.size(8.dp))
                     Text(
-                        text = "$selectedCount app${if (selectedCount == 1) "" else "s"} selected",
+                        text = pluralStringResource(R.plurals.app_selection_selected_count, selectedCount, selectedCount),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium,
@@ -332,7 +351,9 @@ private fun SelectionCountBanner(
 
         TextButton(onClick = onSelectAllToggled) {
             Text(
-                text = if (areAllFilteredSelected) "Deselect All" else "Select All",
+                text = stringResource(
+                    if (areAllFilteredSelected) R.string.app_selection_deselect_all else R.string.app_selection_select_all,
+                ),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Medium,
             )
@@ -344,7 +365,7 @@ private fun SelectionCountBanner(
 @Composable
 private fun ContinueDisabledHint(modifier: Modifier = Modifier) {
     Text(
-        text = "Select at least one app to continue",
+        text = stringResource(R.string.app_selection_hint_select_one),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
         modifier = modifier.fillMaxWidth(),
@@ -366,7 +387,7 @@ private fun AppSelectionListContent(
             }
             uiState.error != null -> {
                 ErrorState(
-                    message = uiState.error,
+                    message = uiState.error.asString(),
                     onRetry = { onEvent(UiEvent.OnRefresh) },
                     modifier = Modifier.align(Alignment.Center),
                 )
@@ -479,10 +500,10 @@ private fun AppList(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        itemsIndexed(
+        items(
             items = apps,
-            key = { _, app -> app.packageName },
-        ) { _, app ->
+            key = { app -> app.packageName },
+        ) { app ->
             val isSelected = app.packageName in selectedPackages
             AppListItem(
                 app = app,
@@ -497,7 +518,8 @@ private fun AppList(
 }
 
 /**
- * Individual app list item.
+ * Individual app list item. The whole row is a single toggleable checkbox for accessibility; the
+ * visual checkbox is decorative (no click handler of its own).
  */
 @Composable
 private fun AppListItem(
@@ -506,32 +528,12 @@ private fun AppListItem(
     onToggled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-
-    // Load the app icon
-    val appIcon: ImageBitmap? = remember(app.packageName) {
-        try {
-            context.packageManager.getApplicationIcon(app.packageName)
-                .toBitmap()
-                .asImageBitmap()
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    // Fallback icon based on category
-    val fallbackIcon = remember(app.category) {
-        when (app.category) {
-            "Email" -> Icons.Default.CheckCircle
-            "Messaging" -> Icons.Default.CheckCircle
-            "Financial" -> Icons.Default.Lock
-            "Shopping" -> Icons.Default.ShoppingBag
-            else -> Icons.Default.CheckCircle
-        }
-    }
-
     Card(
-        modifier = modifier,
+        modifier = modifier.toggleable(
+            value = isSelected,
+            role = Role.Checkbox,
+            onValueChange = onToggled,
+        ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) {
@@ -540,7 +542,6 @@ private fun AppListItem(
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             },
         ),
-        onClick = { onToggled(!isSelected) },
     ) {
         Row(
             modifier = Modifier
@@ -549,77 +550,79 @@ private fun AppListItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // App icon
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = if (appIcon != null) Color.Transparent else MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                modifier = Modifier.size(44.dp),
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (appIcon != null) {
-                        Image(
-                            bitmap = appIcon,
-                            contentDescription = null,
-                            modifier = Modifier.size(40.dp),
-                        )
-                    } else {
-                        Icon(
-                            imageVector = fallbackIcon,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
+            AppIconBadge(packageName = app.packageName, category = app.category)
 
-            // App info
-            Column(
-                modifier = Modifier.weight(1f),
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = app.name,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                app.category?.let { category ->
-                    Text(
-                        text = category,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                app.category?.let { categoryKey ->
+                    categoryLabelRes(categoryKey)?.let { labelRes ->
+                        Text(
+                            text = stringResource(labelRes),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
 
-            // Checkbox
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = if (isSelected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
-                modifier = Modifier.size(24.dp),
-            ) {
-                AnimatedVisibility(
-                    visible = isSelected,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.padding(4.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                    )
-                }
-            }
+            Checkbox(checked = isSelected, onCheckedChange = null)
         }
     }
+}
+
+/**
+ * App icon loaded off the main thread and memory-cached by Coil; falls back to a category glyph
+ * while loading or when the package is not resolvable. Decorative (the name is next to it).
+ */
+@Composable
+private fun AppIconBadge(packageName: String, category: String?, modifier: Modifier = Modifier) {
+    val fallback = categoryFallbackIcon(category)
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+        modifier = modifier.size(44.dp),
+    ) {
+        SubcomposeAsyncImage(
+            model = AppIconData(packageName),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            loading = { FallbackGlyph(fallback) },
+            error = { FallbackGlyph(fallback) },
+        )
+    }
+}
+
+@Composable
+private fun FallbackGlyph(icon: ImageVector, modifier: Modifier = Modifier) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+private fun categoryFallbackIcon(category: String?): ImageVector = when (category) {
+    AppCategoryKey.FINANCIAL -> Icons.Default.Lock
+    AppCategoryKey.SHOPPING -> Icons.Default.ShoppingBag
+    else -> Icons.Default.CheckCircle
+}
+
+@StringRes
+private fun categoryLabelRes(categoryKey: String): Int? = when (categoryKey) {
+    AppCategoryKey.EMAIL -> R.string.app_selection_category_email
+    AppCategoryKey.MESSAGING -> R.string.app_selection_category_messaging
+    AppCategoryKey.FINANCIAL -> R.string.app_selection_category_financial
+    AppCategoryKey.SHOPPING -> R.string.app_selection_category_shopping
+    AppCategoryKey.TRANSPORT -> R.string.app_selection_category_transport
+    else -> null
 }
 
 /**
@@ -634,15 +637,15 @@ private fun ContinueButton(
     modifier: Modifier = Modifier,
 ) {
     val buttonText = if (isInitialSetup) {
-        "Continue"
+        stringResource(R.string.app_selection_continue)
     } else {
-        "Save ($selectedCount selected)"
+        stringResource(R.string.app_selection_save_count, selectedCount)
     }
 
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(56.dp),
+        modifier = modifier.heightIn(min = CONTINUE_BUTTON_MIN_HEIGHT),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
@@ -686,7 +689,7 @@ private fun SecurityFooter() {
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = "PROCESSED LOCALLY ON YOUR DEVICE",
+            text = stringResource(R.string.app_selection_footer_local),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 4.dp),
@@ -716,9 +719,9 @@ private fun EmptyState(
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = if (searchQuery.isBlank()) {
-                "No apps found"
+                stringResource(R.string.app_selection_empty)
             } else {
-                "No apps match \"$searchQuery\""
+                stringResource(R.string.app_selection_empty_search, searchQuery)
             },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -746,7 +749,7 @@ private fun ErrorState(
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onRetry) {
-            Text("Retry")
+            Text(stringResource(R.string.app_selection_retry))
         }
     }
 }
@@ -759,11 +762,11 @@ private fun AppSelectionScreenInitialSetupPreview() {
         AppSelectionScreenContent(
             uiState = UiState(
                 availableApps = persistentListOf(
-                    AppInfo("com.google.android.gm", "Gmail", "Email"),
-                    AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
-                    AppInfo("com.revolut.revolut", "Revolut", "Financial"),
-                    AppInfo("com.amazon.mShop.android.shopping", "Amazon", "Shopping"),
-                    AppInfo("com.microsoft.office.outlook", "Outlook", "Email"),
+                    AppInfo("com.google.android.gm", "Gmail", AppCategoryKey.EMAIL),
+                    AppInfo("com.whatsapp", "WhatsApp", AppCategoryKey.MESSAGING),
+                    AppInfo("com.revolut.revolut", "Revolut", AppCategoryKey.FINANCIAL),
+                    AppInfo("com.amazon.mShop.android.shopping", "Amazon", AppCategoryKey.SHOPPING),
+                    AppInfo("com.microsoft.office.outlook", "Outlook", AppCategoryKey.EMAIL),
                     AppInfo("com.uber", "Uber", null),
                 ),
                 selectedPackageNames = setOf("com.google.android.gm"),
@@ -782,11 +785,11 @@ private fun AppSelectionScreenInitialSetupPreviewDark() {
         AppSelectionScreenContent(
             uiState = UiState(
                 availableApps = persistentListOf(
-                    AppInfo("com.google.android.gm", "Gmail", "Email"),
-                    AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
-                    AppInfo("com.revolut.revolut", "Revolut", "Financial"),
-                    AppInfo("com.amazon.mShop.android.shopping", "Amazon", "Shopping"),
-                    AppInfo("com.microsoft.office.outlook", "Outlook", "Email"),
+                    AppInfo("com.google.android.gm", "Gmail", AppCategoryKey.EMAIL),
+                    AppInfo("com.whatsapp", "WhatsApp", AppCategoryKey.MESSAGING),
+                    AppInfo("com.revolut.revolut", "Revolut", AppCategoryKey.FINANCIAL),
+                    AppInfo("com.amazon.mShop.android.shopping", "Amazon", AppCategoryKey.SHOPPING),
+                    AppInfo("com.microsoft.office.outlook", "Outlook", AppCategoryKey.EMAIL),
                     AppInfo("com.uber", "Uber", null),
                 ),
                 selectedPackageNames = setOf("com.google.android.gm"),
@@ -805,9 +808,9 @@ private fun AppSelectionScreenFromSettingsPreview() {
         AppSelectionScreenContent(
             uiState = UiState(
                 availableApps = persistentListOf(
-                    AppInfo("com.google.android.gm", "Gmail", "Email"),
-                    AppInfo("com.whatsapp", "WhatsApp", "Messaging"),
-                    AppInfo("com.revolut.revolut", "Revolut", "Financial"),
+                    AppInfo("com.google.android.gm", "Gmail", AppCategoryKey.EMAIL),
+                    AppInfo("com.whatsapp", "WhatsApp", AppCategoryKey.MESSAGING),
+                    AppInfo("com.revolut.revolut", "Revolut", AppCategoryKey.FINANCIAL),
                 ),
                 selectedPackageNames = setOf("com.google.android.gm", "com.whatsapp"),
                 isLoading = false,

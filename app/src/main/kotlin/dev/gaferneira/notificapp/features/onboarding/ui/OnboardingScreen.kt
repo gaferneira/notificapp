@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.onboarding.ui
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -11,13 +12,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -33,7 +32,7 @@ import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract
 import dev.gaferneira.notificapp.features.onboarding.viewmodel.OnboardingViewModel
 
 /**
- * Onboarding screen with two states:
+ * Onboarding screen with two steps (App Selection, the third setup step, is its own screen):
  * 1. Value Statement - Shows app value proposition
  * 2. Permission Explanation - Explains and requests notification access
  *
@@ -54,9 +53,6 @@ fun OnboardingScreen(
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
             is UiEffect.OpenNotificationSettings -> onOpenNotificationSettings()
-            is UiEffect.NavigateToMainApp -> {
-                // Navigation handled by ViewModel via NavigationHandler
-            }
         }
     }
 
@@ -71,6 +67,12 @@ fun OnboardingScreen(
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+
+    // Step 2 is a sub-state of this single nav entry, so system/predictive back would otherwise
+    // pop the entry and exit the app. Route it to the in-screen "previous step" instead.
+    BackHandler(enabled = uiState.currentStep == OnboardingContract.OnboardingStep.PERMISSION_EXPLANATION) {
+        viewModel.onEvent(UiEvent.OnBackClicked)
     }
 
     OnboardingScreenContent(
@@ -95,13 +97,6 @@ private fun OnboardingScreenContent(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            // Loading indicator
-            if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            }
-
             // Animated content between steps
             AnimatedContent(
                 targetState = uiState.currentStep,

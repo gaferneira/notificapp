@@ -84,8 +84,10 @@ Notificapp lets users create automation rules that act on the notifications thei
 ## User Interface & Setup
 
 ### Onboarding
-* **User Experience:** On first launch, the user sees a short explanation of what the app does, then is guided to grant notification access via the system settings screen, returning automatically once permission is granted.
-* **System Trigger:** App opened for the first time; permission status is re-checked when the user returns from system settings.
+* **User Experience:** On first launch, the user sees a short explanation of what the app does (step 1 of 3), then a permission step (step 2 of 3) that explains why notification access is needed, discloses that notification content stays on the device (no analytics; only webhooks the user sets up send data out) and links to the Privacy Policy, and opens the app's own notification-access screen in system settings (API 30+ deep link, with fallbacks). Returning with access granted moves the user to App Selection (step 3 of 3). Setup is only "complete" once access is on AND at least one app is saved: app selection is opt-in and starts with nothing selected, so a user who quits on App Selection returns there on the next launch.
+* **Back / resume behavior:** System and predictive back on step 2 returns to step 1 instead of exiting the app. The current step and the "opened system settings" flag survive process death. If the user returns from settings without granting access, an inline hint explains it.
+* **Routing:** `MainViewModel` is the single owner of the onboarding -> App Selection -> Home transition. First-time users (no saved apps) see onboarding; users who already saved apps go straight to Home even if access was later revoked, where Home's access-off banner offers re-enabling.
+* **System Trigger:** App opened with no saved apps; permission status is re-checked each time the app resumes.
 
 ### App Selection
 * **User Experience:** The user picks which installed apps Notificapp should monitor, searching and toggling apps in a list. Only notifications from selected apps are captured and can be used in rules.

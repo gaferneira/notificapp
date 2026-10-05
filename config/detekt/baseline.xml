@@ -20,14 +20,11 @@
     <ID>LongMethod:AddFieldViewModel.kt$AddFieldViewModel$private fun initialize(field: RuleField?, notification: Notification?)</ID>
     <ID>LongMethod:AppSelectionPicker.kt$@Composable private fun AppListItem( app: AppDisplayInfo, isSelected: Boolean, onToggle: () -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:AppSelectionPicker.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun AppSelectionPicker( selectedApps: ImmutableList&lt;AppInfo&gt;, enabledApps: ImmutableList&lt;AppInfo&gt;, onConfirm: (List&lt;AppInfo&gt;) -&gt; Unit, onDismiss: () -&gt; Unit, )</ID>
-    <ID>LongMethod:AppSelectionScreen.kt$@Composable private fun AppListItem( app: AppInfo, isSelected: Boolean, onToggled: (Boolean) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationCard( notification: NotificationItem, onClick: () -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Composable private fun NotificationColumn( notifications: LazyPagingItems&lt;InboxListItem&gt;, onNotificationClick: (String) -&gt; Unit, )</ID>
     <ID>LongMethod:InboxScreen.kt$@Preview(showBackground = true, name = "Inbox Preview - Direct Items") @Composable fun PreviewInboxScreenDirect()</ID>
     <ID>LongMethod:NotificationDetailScreen.kt$@Composable private fun NotificationDataCard(notification: Notification)</ID>
     <ID>LongMethod:NotificationDetailScreen.kt$@OptIn(ExperimentalLayoutApi::class) @Composable private fun ExecutionCard(execution: ExecutionWithDetails)</ID>
-    <ID>LongMethod:OnboardingScreen.kt$@Composable private fun PermissionToggleCard()</ID>
-    <ID>LongMethod:OnboardingScreen.kt$@Composable private fun ValueStatementContent( onEvent: (UiEvent) -&gt; Unit, modifier: Modifier = Modifier, )</ID>
     <ID>LongMethod:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$override suspend fun getMonitorableApps(): List&lt;AppInfo&gt;</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun AboutCard()</ID>
     <ID>LongMethod:SettingsScreen.kt$@Composable private fun MonitoredAppsCard( appsCount: Int, onSelectApps: () -&gt; Unit, )</ID>
@@ -51,7 +48,6 @@
     <ID>SwallowedException:RuleMatcher.kt$RuleMatcher$e: Exception</ID>
     <ID>SwallowedException:UserPreferencesLocalDataSource.kt$UserPreferencesLocalDataSource$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AddFieldViewModel.kt$AddFieldViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:AppSelectionViewModel.kt$AppSelectionViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CollectOneOffEffects.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FieldExtractor.kt$FieldExtractor$e: Exception</ID>
     <ID>TooGenericExceptionCaught:InboxScreen.kt$e: Exception</ID>

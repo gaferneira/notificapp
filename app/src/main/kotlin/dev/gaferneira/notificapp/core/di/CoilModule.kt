@@ -9,6 +9,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dev.gaferneira.notificapp.core.ui.coil.AppIconFetcher
+import dev.gaferneira.notificapp.core.ui.coil.AppIconKeyer
 import javax.inject.Singleton
 
 /**
@@ -27,6 +29,10 @@ object CoilModule {
     @Provides
     @Singleton
     fun provideImageLoader(@ApplicationContext context: Context): ImageLoader = ImageLoader.Builder(context)
+        .components {
+            add(AppIconKeyer())
+            add(AppIconFetcher.Factory(context))
+        }
         .memoryCache {
             MemoryCache.Builder(context)
                 .maxSizePercent(0.25)

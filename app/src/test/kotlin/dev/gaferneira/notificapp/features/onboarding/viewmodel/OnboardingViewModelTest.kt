@@ -1,15 +1,12 @@
 package dev.gaferneira.notificapp.features.onboarding.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
-import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
-import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.OnboardingStep
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEffect
 import dev.gaferneira.notificapp.features.onboarding.contract.OnboardingContract.UiEvent
 import io.kotest.matchers.shouldBe
-import io.mockk.coVerify
-import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -26,12 +23,10 @@ class OnboardingViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var listenerStatus: NotificationListenerStatusProvider
-    private lateinit var navigationHandler: NavigationHandler
 
     @BeforeEach
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        navigationHandler = mockk(relaxed = true)
     }
 
     @AfterEach
@@ -39,9 +34,12 @@ class OnboardingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel(enabled: Boolean): OnboardingViewModel {
+    private fun createViewModel(
+        enabled: Boolean,
+        savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    ): OnboardingViewModel {
         listenerStatus = NotificationListenerStatusProvider { enabled }
-        return OnboardingViewModel(listenerStatus, navigationHandler)
+        return OnboardingViewModel(listenerStatus, savedStateHandle)
     }
 
     @Nested
@@ -100,32 +98,101 @@ class OnboardingViewModelTest {
     }
 
     @Nested
-    inner class PermissionCheckTests {
+    inner class BackTests {
 
         @Test
-        fun `granted permission navigates to app selection`() = runTest(testDispatcher) {
-            val viewModel = createViewModel(enabled = true)
-            testDispatcher.scheduler.advanceUntilIdle() // drives the delay(100) + navigate
+        fun `back event from permission step returns to value statement`() = runTest(testDispatcher) {
+            val viewModel = createViewModel(enabled = false)
+            viewModel.onEvent(UiEvent.OnGetStartedClicked)
 
-            viewModel.uiState.value.hasNotificationPermission shouldBe true
-            coVerify { navigationHandler.clearAndNavigate(Routes.appSelection(isInitialSetup = true)) }
+            viewModel.onEvent(UiEvent.OnBackClicked)
+
+            viewModel.uiState.value.currentStep shouldBe OnboardingStep.VALUE_STATEMENT
+        }
+    }
+
+    @Nested
+    inner class ProcessDeathTests {
+
+        @Test
+        fun `restores the permission step from saved state`() = runTest(testDispatcher) {
+            val handle = SavedStateHandle()
+            createViewModel(enabled = false, savedStateHandle = handle)
+                .onEvent(UiEvent.OnGetStartedClicked)
+
+            val restored = createViewModel(enabled = false, savedStateHandle = handle)
+
+            restored.uiState.value.currentStep shouldBe OnboardingStep.PERMISSION_EXPLANATION
         }
 
         @Test
-        fun `denied permission does not navigate`() = runTest(testDispatcher) {
-            createViewModel(enabled = false)
-            testDispatcher.scheduler.advanceUntilIdle()
+        fun `restores the value statement step after going back`() = runTest(testDispatcher) {
+            val handle = SavedStateHandle()
+            val first = createViewModel(enabled = false, savedStateHandle = handle)
+            first.onEvent(UiEvent.OnGetStartedClicked)
+            first.onEvent(UiEvent.OnBackClicked)
 
-            coVerify(exactly = 0) { navigationHandler.clearAndNavigate(any()) }
+            createViewModel(enabled = false, savedStateHandle = handle)
+                .uiState.value.currentStep shouldBe OnboardingStep.VALUE_STATEMENT
+        }
+
+        @Test
+        fun `falls back to value statement when saved step is unknown`() = runTest(testDispatcher) {
+            val handle = SavedStateHandle(mapOf("onboarding_step" to "REMOVED_STEP"))
+
+            createViewModel(enabled = false, savedStateHandle = handle)
+                .uiState.value.currentStep shouldBe OnboardingStep.VALUE_STATEMENT
+        }
+
+        @Test
+        fun `restored settings-requested flag shows the denied hint on next check`() = runTest(testDispatcher) {
+            val handle = SavedStateHandle()
+            createViewModel(enabled = false, savedStateHandle = handle)
+                .onEvent(UiEvent.OnGrantAccessClicked)
+
+            val restored = createViewModel(enabled = false, savedStateHandle = handle)
+            restored.onEvent(UiEvent.CheckPermission)
+
+            restored.uiState.value.showPermissionDeniedHint shouldBe true
+        }
+    }
+
+    @Nested
+    inner class PermissionCheckTests {
+
+        @Test
+        fun `initialization does not check the permission, only resume does`() = runTest(testDispatcher) {
+            var checks = 0
+            val viewModel = OnboardingViewModel(
+                {
+                    checks++
+                    false
+                },
+                SavedStateHandle(),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+            checks shouldBe 0
+
+            viewModel.onEvent(UiEvent.CheckPermission)
+
+            checks shouldBe 1
+        }
+
+        @Test
+        fun `granted permission leaves navigation to MainViewModel and shows no hint`() = runTest(testDispatcher) {
+            val viewModel = createViewModel(enabled = true)
+            viewModel.onEvent(UiEvent.OnGrantAccessClicked)
+
+            viewModel.onEvent(UiEvent.CheckPermission)
+
+            viewModel.uiState.value.showPermissionDeniedHint shouldBe false
         }
 
         @Test
         fun `denied hint stays hidden before access was ever requested`() = runTest(testDispatcher) {
             val viewModel = createViewModel(enabled = false)
-            testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.onEvent(UiEvent.CheckPermission)
-            testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.uiState.value.showPermissionDeniedHint shouldBe false
         }
@@ -133,11 +200,9 @@ class OnboardingViewModelTest {
         @Test
         fun `denied hint shows only after access was requested`() = runTest(testDispatcher) {
             val viewModel = createViewModel(enabled = false)
-            testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.onEvent(UiEvent.OnGrantAccessClicked) // sets hasRequestedNotificationAccess
             viewModel.onEvent(UiEvent.CheckPermission)
-            testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.uiState.value.showPermissionDeniedHint shouldBe true
         }
