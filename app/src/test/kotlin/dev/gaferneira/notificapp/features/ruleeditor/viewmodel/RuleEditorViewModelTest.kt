@@ -1,7 +1,11 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
+import dev.gaferneira.notificapp.core.ui.UiText
+import dev.gaferneira.notificapp.core.ui.messaging.AppMessenger
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
@@ -11,7 +15,9 @@ import dev.gaferneira.notificapp.domain.model.SelectedApp
 import dev.gaferneira.notificapp.domain.model.getThrottleResetAt
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
+import dev.gaferneira.notificapp.domain.repository.RuleTemplateRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
@@ -23,6 +29,7 @@ import dev.gaferneira.notificapp.testutil.createTestRule
 import dev.gaferneira.notificapp.testutil.createTestTimeRangeCondition
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -53,7 +60,9 @@ class RuleEditorViewModelTest {
     private lateinit var ruleRepository: RuleRepository
     private lateinit var notificationRepository: NotificationRepository
     private lateinit var selectedAppRepository: SelectedAppRepository
+    private lateinit var ruleTemplateRepository: RuleTemplateRepository
     private lateinit var navigationHandler: NavigationHandler
+    private lateinit var appMessenger: AppMessenger
     private lateinit var enabledAppsFlow: MutableStateFlow<List<SelectedApp>>
     private lateinit var viewModel: RuleEditorViewModel
 
@@ -65,20 +74,39 @@ class RuleEditorViewModelTest {
         notificationRepository = mockk()
         selectedAppRepository = mockk()
         navigationHandler = mockk()
+        ruleTemplateRepository = mockk()
+        appMessenger = AppMessenger()
 
         enabledAppsFlow = MutableStateFlow<List<SelectedApp>>(emptyList())
         every { selectedAppRepository.observeEnabledApps() } returns enabledAppsFlow
         coEvery { navigationHandler.goBack() } just Runs
 
-        viewModel = RuleEditorViewModel(
-            ruleRepository = ruleRepository,
-            notificationRepository = notificationRepository,
-            selectedAppRepository = selectedAppRepository,
-            ruleEngine = RuleEngine(),
-            navigationHandler = navigationHandler,
-            defaultDispatcher = testDispatcher,
-        )
+        viewModel = createViewModel()
+    }
+
+    private fun createViewModel(savedStateHandle: SavedStateHandle = SavedStateHandle()): RuleEditorViewModel = RuleEditorViewModel(
+        ruleRepository = ruleRepository,
+        notificationRepository = notificationRepository,
+        selectedAppRepository = selectedAppRepository,
+        ruleTemplateRepository = ruleTemplateRepository,
+        ruleEngine = RuleEngine(),
+        navigationHandler = navigationHandler,
+        appMessenger = appMessenger,
+        savedStateHandle = savedStateHandle,
+        defaultDispatcher = testDispatcher,
+    ).also { testDispatcher.scheduler.advanceUntilIdle() }
+
+    private fun RuleEditorViewModel.initialize(
+        ruleId: String? = null,
+        notificationId: String? = null,
+        templateAssetFileName: String? = null,
+    ) {
+        onEvent(UiEvent.Initialize(InitArgs(ruleId, notificationId, templateAssetFileName)))
         testDispatcher.scheduler.advanceUntilIdle()
+    }
+
+    private fun stubRule(rule: dev.gaferneira.notificapp.domain.model.Rule) {
+        coEvery { ruleRepository.getRule(rule.id) } returns Result.success(rule)
     }
 
     @AfterEach
@@ -104,63 +132,132 @@ class RuleEditorViewModelTest {
     inner class LoadRuleTests {
 
         @Test
-        fun `loading with a null rule id does nothing`() = runTest(testDispatcher) {
-            // When: loading with a null rule id
-            viewModel.onEvent(UiEvent.LoadRule(null))
-            testDispatcher.scheduler.advanceUntilIdle()
+        fun `initializing without any argument yields a clean blank rule and loads nothing`() = runTest(testDispatcher) {
+            // When: initializing with no args
+            viewModel.initialize()
 
-            // Then: no repository call happens and the state stays unchanged
+            // Then: no repository call happens and the blank rule is not dirty
             coVerify(exactly = 0) { ruleRepository.getRule(any()) }
-            viewModel.uiState.value.isLoading shouldBe false
+            val state = viewModel.uiState.value
+            state.isLoading shouldBe false
+            state.loadError shouldBe null
+            state.hasUnsavedChanges shouldBe false
         }
 
         @Test
         fun `loading an existing rule populates the ui model and shows optional fields`() = runTest(testDispatcher) {
             // Given: a stored rule with a category and description
             val rule = createTestRule(id = "rule-1", description = "desc", category = "Food")
-            coEvery { ruleRepository.getRule("rule-1") } returns Result.success(rule)
+            stubRule(rule)
 
-            // When: loading the rule
-            viewModel.onEvent(UiEvent.LoadRule("rule-1"))
-            testDispatcher.scheduler.advanceUntilIdle()
+            // When: initializing with its id
+            viewModel.initialize(ruleId = "rule-1")
 
-            // Then: the ui model is populated and optional fields are shown
+            // Then: the ui model is populated, optional fields are shown, and the snapshot matches
             val state = viewModel.uiState.value
             state.isLoading shouldBe false
             state.rule shouldBe RuleUiModel.fromDomain(rule)
+            state.initialRule shouldBe state.rule
             state.showCategory shouldBe true
             state.showDescription shouldBe true
         }
 
         @Test
-        fun `loading a rule that is not found sets an error`() = runTest(testDispatcher) {
+        fun `loading a rule that is not found shows a non-retryable load error`() = runTest(testDispatcher) {
             // Given: the repository returns no rule for the id
             coEvery { ruleRepository.getRule("missing") } returns Result.success(null)
 
-            // When: loading the rule
-            viewModel.onEvent(UiEvent.LoadRule("missing"))
-            testDispatcher.scheduler.advanceUntilIdle()
+            // When: initializing
+            viewModel.initialize(ruleId = "missing")
 
-            // Then: an error is set and loading stops
+            // Then: a blocking load error without retry is set
             val state = viewModel.uiState.value
             state.isLoading shouldBe false
-            state.error shouldBe "Rule not found"
+            state.loadError!!.message.shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rule_editor_error_not_found
+            state.loadError.canRetry shouldBe false
         }
 
         @Test
-        fun `loading a rule that fails sets an error with the failure message`() = runTest(testDispatcher) {
-            // Given: the repository lookup fails
-            val exception = RuntimeException("db error")
-            coEvery { ruleRepository.getRule("rule-1") } returns Result.failure(exception)
+        fun `loading a rule that fails shows a retryable load error and retry recovers`() = runTest(testDispatcher) {
+            // Given: the first lookup fails, the second succeeds
+            val rule = createTestRule(id = "rule-1")
+            coEvery { ruleRepository.getRule("rule-1") } returnsMany listOf(
+                Result.failure(RuntimeException("db error")),
+                Result.success(rule),
+            )
 
-            // When: loading the rule
-            viewModel.onEvent(UiEvent.LoadRule("rule-1"))
+            // When: initializing, then retrying
+            viewModel.initialize(ruleId = "rule-1")
+            val failed = viewModel.uiState.value
+            failed.loadError!!.message.shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rule_editor_error_load
+            failed.loadError.canRetry shouldBe true
+
+            viewModel.onEvent(UiEvent.OnRetryLoadClicked)
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // Then: an error is set with the exception message
+            // Then: the rule is loaded and the error cleared
             val state = viewModel.uiState.value
-            state.isLoading shouldBe false
-            state.error shouldBe "Failed to load rule: db error"
+            state.loadError shouldBe null
+            state.rule shouldBe RuleUiModel.fromDomain(rule)
+        }
+
+        @Test
+        fun `a second initialize with the same args does not overwrite edits`() = runTest(testDispatcher) {
+            // Given: a loaded rule that the user then renames
+            val rule = createTestRule(id = "rule-1", name = "Original")
+            stubRule(rule)
+            viewModel.initialize(ruleId = "rule-1")
+            viewModel.onEvent(UiEvent.OnNameChange("Edited"))
+
+            // When: the screen re-sends the same initialize (recomposition / rotation)
+            viewModel.initialize(ruleId = "rule-1")
+
+            // Then: the edit survives and the repository was hit only once
+            viewModel.uiState.value.rule.name shouldBe "Edited"
+            coVerify(exactly = 1) { ruleRepository.getRule("rule-1") }
+        }
+
+        @Test
+        fun `loading a template prefills an unsaved rule and is not dirty`() = runTest(testDispatcher) {
+            // Given: a valid template asset
+            val template = dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec.encode(createTestRule(id = "tpl", name = "Template"))
+            coEvery { ruleTemplateRepository.getTemplateText("tpl.json") } returns Result.success(template)
+
+            // When: initializing with the template
+            viewModel.initialize(templateAssetFileName = "tpl.json")
+
+            // Then: the editor is in create mode with the template content, untouched
+            val state = viewModel.uiState.value
+            state.rule.id shouldBe null
+            state.rule.name shouldBe "Template"
+            state.hasUnsavedChanges shouldBe false
+        }
+
+        @Test
+        fun `a missing template asset shows a specific non-retryable error`() = runTest(testDispatcher) {
+            // Given: the asset cannot be read
+            coEvery { ruleTemplateRepository.getTemplateText("gone.json") } returns Result.failure(RuntimeException("no asset"))
+
+            // When: initializing
+            viewModel.initialize(templateAssetFileName = "gone.json")
+
+            // Then: the error is the "template not available" one
+            val error = viewModel.uiState.value.loadError!!
+            error.message.shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rule_editor_error_template_missing
+            error.canRetry shouldBe false
+        }
+
+        @Test
+        fun `a malformed template shows the invalid template error`() = runTest(testDispatcher) {
+            // Given: the asset is not valid rule JSON
+            coEvery { ruleTemplateRepository.getTemplateText("bad.json") } returns Result.success("not json")
+
+            // When: initializing
+            viewModel.initialize(templateAssetFileName = "bad.json")
+
+            // Then: the invalid-template error is shown
+            viewModel.uiState.value.loadError!!.message.shouldBeInstanceOf<UiText.StringResource>().id shouldBe
+                R.string.rule_editor_error_template_invalid
         }
     }
 
@@ -168,44 +265,35 @@ class RuleEditorViewModelTest {
     inner class LoadSampleNotificationTests {
 
         @Test
-        fun `loading a sample notification for a new rule sets the target app and clears triggers`() = runTest(testDispatcher) {
-            // Given: a new rule (no id) with an existing trigger already configured
-            viewModel.onEvent(UiEvent.OnConditionSaved(createTestCondition(id = "cond-1")))
-            testDispatcher.scheduler.advanceUntilIdle()
-            viewModel.uiState.value.rule.triggers.size shouldBe 1
-
+        fun `a sample notification for a new rule sets the target app and the result is not dirty`() = runTest(testDispatcher) {
+            // Given: a sample notification
             val notification = createTestNotification(packageName = "com.a", appName = "App A")
             coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
 
-            // When: loading a sample notification
-            viewModel.onEvent(UiEvent.LoadSampleNotification(notification.id))
-            testDispatcher.scheduler.advanceUntilIdle()
+            // When: initializing a new rule from it
+            viewModel.initialize(notificationId = notification.id)
 
-            // Then: the sample notification is stored, the target app is set, and triggers are cleared
+            // Then: the sample is stored, the app preselected, and the prefill is the clean baseline
             val state = viewModel.uiState.value
             state.sampleNotification shouldBe notification
             state.rule.targetApps shouldBe listOf(notification.app)
             state.rule.triggers shouldBe emptyList()
+            state.hasUnsavedChanges shouldBe false
         }
 
         @Test
-        fun `loading a sample notification for an existing rule preserves target apps and triggers`() = runTest(testDispatcher) {
-            // Given: an existing rule already loaded with a trigger and a target app
+        fun `a sample notification for an existing rule preserves target apps and triggers`() = runTest(testDispatcher) {
+            // Given: an existing rule with a trigger and a target app
             val existingTrigger = createTestCondition(id = "cond-1")
             val existingTargetApp = AppInfo("com.existing", "Existing App")
-            val rule = createTestRule(id = "rule-1", conditions = listOf(existingTrigger), targetApps = listOf(existingTargetApp))
-            coEvery { ruleRepository.getRule("rule-1") } returns Result.success(rule)
-            viewModel.onEvent(UiEvent.LoadRule("rule-1"))
-            testDispatcher.scheduler.advanceUntilIdle()
-
+            stubRule(createTestRule(id = "rule-1", conditions = listOf(existingTrigger), targetApps = listOf(existingTargetApp)))
             val notification = createTestNotification(packageName = "com.b", appName = "App B")
             coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
 
-            // When: loading a sample notification
-            viewModel.onEvent(UiEvent.LoadSampleNotification(notification.id))
-            testDispatcher.scheduler.advanceUntilIdle()
+            // When: initializing with both
+            viewModel.initialize(ruleId = "rule-1", notificationId = notification.id)
 
-            // Then: the sample notification is stored but target apps and triggers are preserved
+            // Then: the sample is stored but target apps and triggers are preserved
             val state = viewModel.uiState.value
             state.sampleNotification shouldBe notification
             state.rule.targetApps shouldBe listOf(existingTargetApp)
@@ -213,29 +301,233 @@ class RuleEditorViewModelTest {
         }
 
         @Test
-        fun `loading a sample notification that is not found does not change the sample notification`() = runTest(testDispatcher) {
-            // Given: the repository returns no notification for the id
+        fun `a sample notification that is not found leaves the sample empty`() = runTest(testDispatcher) {
             coEvery { notificationRepository.getNotification("missing") } returns Result.success(null)
 
-            // When: loading the sample notification
-            viewModel.onEvent(UiEvent.LoadSampleNotification("missing"))
-            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.initialize(notificationId = "missing")
 
-            // Then: the sample notification stays null
             viewModel.uiState.value.sampleNotification shouldBe null
         }
 
         @Test
-        fun `loading a sample notification that fails does not crash and leaves state unchanged`() = runTest(testDispatcher) {
-            // Given: the repository lookup fails
+        fun `a sample notification that fails does not block the editor`() = runTest(testDispatcher) {
             coEvery { notificationRepository.getNotification("boom") } returns Result.failure(RuntimeException("io error"))
 
-            // When: loading the sample notification
-            viewModel.onEvent(UiEvent.LoadSampleNotification("boom"))
+            viewModel.initialize(notificationId = "boom")
+
+            val state = viewModel.uiState.value
+            state.sampleNotification shouldBe null
+            state.loadError shouldBe null
+        }
+    }
+
+    @Nested
+    inner class DirtyCheckTests {
+
+        private fun loadExisting() {
+            stubRule(
+                createTestRule(
+                    id = "rule-1",
+                    name = "Rule",
+                    description = "desc",
+                    category = "Cat",
+                    conditions = listOf(createTestCondition(id = "c1")),
+                    actions = listOf(createTestAction(id = "a1", type = ActionType.DISMISS_NOTIFICATION)),
+                ),
+            )
+            viewModel.initialize(ruleId = "rule-1")
+        }
+
+        private fun dirty() = viewModel.uiState.value.hasUnsavedChanges
+
+        @Test
+        fun `an untouched existing rule is clean`() {
+            loadExisting()
+            dirty() shouldBe false
+        }
+
+        @Test
+        fun `an untouched blank new rule is clean`() {
+            viewModel.initialize()
+            dirty() shouldBe false
+        }
+
+        @Test
+        fun `editing the name makes it dirty and reverting makes it clean again`() {
+            loadExisting()
+            viewModel.onEvent(UiEvent.OnNameChange("Other"))
+            dirty() shouldBe true
+            viewModel.onEvent(UiEvent.OnNameChange("Rule"))
+            dirty() shouldBe false
+        }
+
+        @Test
+        fun `editing description category and toggles makes it dirty`() {
+            loadExisting()
+            viewModel.onEvent(UiEvent.OnDescriptionChange("changed"))
+            dirty() shouldBe true
+            viewModel.onEvent(UiEvent.OnDescriptionChange("desc"))
+            viewModel.onEvent(UiEvent.OnCategoryChange("Other"))
+            dirty() shouldBe true
+            viewModel.onEvent(UiEvent.OnCategoryChange("Cat"))
+            dirty() shouldBe false
+            viewModel.onEvent(UiEvent.OnDryRunToggle(!viewModel.uiState.value.rule.isDryRun))
+            dirty() shouldBe true
+            viewModel.onEvent(UiEvent.OnDryRunToggle(!viewModel.uiState.value.rule.isDryRun))
+            viewModel.onEvent(UiEvent.OnDeleteRawContentToggle(true))
+            dirty() shouldBe true
+        }
+
+        @Test
+        fun `changing apps scope mode and condition logic makes it dirty`() {
+            loadExisting()
+            viewModel.onEvent(UiEvent.OnAppsSelected(kotlinx.collections.immutable.persistentListOf(AppInfo("com.a", "A"))))
+            dirty() shouldBe true
+            viewModel.onEvent(UiEvent.OnAppsSelected(kotlinx.collections.immutable.persistentListOf()))
+            dirty() shouldBe false
+            viewModel.onEvent(UiEvent.OnConditionLogicChanged(dev.gaferneira.notificapp.domain.model.ConditionCombinator.ANY))
+            dirty() shouldBe true
+        }
+
+        @Test
+        fun `adding or removing conditions and actions makes it dirty`() {
+            loadExisting()
+            viewModel.onEvent(UiEvent.OnRemoveConditionClicked("c1"))
+            dirty() shouldBe true
+            viewModel.onEvent(UiEvent.OnConditionSaved(createTestCondition(id = "c1")))
+            dirty() shouldBe false
+            viewModel.onEvent(UiEvent.OnToggleActionClicked("a1", false))
+            dirty() shouldBe true
+            viewModel.onEvent(UiEvent.OnToggleActionClicked("a1", true))
+            dirty() shouldBe false
+            viewModel.onEvent(UiEvent.OnRemoveActionClicked("a1"))
+            dirty() shouldBe true
+        }
+
+        @Test
+        fun `back with unsaved changes asks for confirmation instead of leaving`() = runTest(testDispatcher) {
+            loadExisting()
+            viewModel.onEvent(UiEvent.OnNameChange("Other"))
+
+            viewModel.onEvent(UiEvent.OnBackClicked)
             testDispatcher.scheduler.advanceUntilIdle()
 
-            // Then: the sample notification stays null and no exception propagates
-            viewModel.uiState.value.sampleNotification shouldBe null
+            viewModel.uiState.value.showUnsavedChangesDialog shouldBe true
+            coVerify(exactly = 0) { navigationHandler.goBack() }
+        }
+
+        @Test
+        fun `confirming discard leaves and keeping dismisses the dialog`() = runTest(testDispatcher) {
+            loadExisting()
+            viewModel.onEvent(UiEvent.OnNameChange("Other"))
+            viewModel.onEvent(UiEvent.OnBackClicked)
+
+            viewModel.onEvent(UiEvent.OnDiscardDismissed)
+            viewModel.uiState.value.showUnsavedChangesDialog shouldBe false
+            coVerify(exactly = 0) { navigationHandler.goBack() }
+
+            viewModel.onEvent(UiEvent.OnBackClicked)
+            viewModel.onEvent(UiEvent.OnDiscardConfirmed)
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.uiState.value.showUnsavedChangesDialog shouldBe false
+            coVerify(exactly = 1) { navigationHandler.goBack() }
+        }
+
+        @Test
+        fun `back from step two returns to step one even with unsaved changes`() = runTest(testDispatcher) {
+            loadExisting()
+            viewModel.onEvent(UiEvent.OnNameChange("Other"))
+            viewModel.onEvent(UiEvent.OnContinueClicked)
+
+            viewModel.onEvent(UiEvent.OnBackClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.currentStep shouldBe 1
+            viewModel.uiState.value.showUnsavedChangesDialog shouldBe false
+            coVerify(exactly = 0) { navigationHandler.goBack() }
+        }
+    }
+
+    @Nested
+    inner class SavedStateTests {
+
+        @Test
+        fun `edits are persisted to saved state and restored without reloading`() = runTest(testDispatcher) {
+            // Given: an existing rule edited by the user, with the step advanced
+            val handle = SavedStateHandle()
+            val first = createViewModel(handle)
+            stubRule(createTestRule(id = "rule-1", name = "Original"))
+            first.initialize(ruleId = "rule-1")
+            first.onEvent(UiEvent.OnNameChange("Edited"))
+            first.onEvent(UiEvent.OnContinueClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // When: the process dies and a new ViewModel is created from the same saved state
+            val restored = createViewModel(handle)
+            restored.initialize(ruleId = "rule-1")
+
+            // Then: the draft, baseline and step are restored, still dirty, and no reload happened
+            val state = restored.uiState.value
+            state.rule.id shouldBe "rule-1"
+            state.rule.name shouldBe "Edited"
+            state.initialRule.name shouldBe "Original"
+            state.currentStep shouldBe 2
+            state.hasUnsavedChanges shouldBe true
+            coVerify(exactly = 1) { ruleRepository.getRule("rule-1") }
+        }
+
+        @Test
+        fun `a restored new rule keeps a null id and a blank name`() = runTest(testDispatcher) {
+            val handle = SavedStateHandle()
+            val first = createViewModel(handle)
+            first.initialize()
+            first.onEvent(UiEvent.OnConditionSaved(createTestCondition(id = "c1")))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val restored = createViewModel(handle)
+
+            restored.uiState.value.rule.id shouldBe null
+            restored.uiState.value.rule.name shouldBe ""
+            restored.uiState.value.rule.triggers.size shouldBe 1
+            restored.uiState.value.hasUnsavedChanges shouldBe true
+        }
+
+        @Test
+        fun `nothing is persisted before the initial load completes`() = runTest(testDispatcher) {
+            val handle = SavedStateHandle()
+            val vm = createViewModel(handle)
+            vm.onEvent(UiEvent.OnNameChange("typed too early"))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            handle.contains("rule_editor_draft") shouldBe false
+        }
+
+        @Test
+        fun `a restored draft still re-fetches the sample notification`() = runTest(testDispatcher) {
+            val handle = SavedStateHandle()
+            val first = createViewModel(handle)
+            first.initialize()
+            first.onEvent(UiEvent.OnNameChange("Draft"))
+            testDispatcher.scheduler.advanceUntilIdle()
+            val notification = createTestNotification()
+            coEvery { notificationRepository.getNotification(notification.id) } returns Result.success(notification)
+
+            val restored = createViewModel(handle)
+            restored.initialize(notificationId = notification.id)
+
+            restored.uiState.value.sampleNotification shouldBe notification
+            restored.uiState.value.rule.name shouldBe "Draft"
+        }
+
+        @Test
+        fun `a corrupt saved state falls back to a normal load`() = runTest(testDispatcher) {
+            val handle = SavedStateHandle(mapOf("rule_editor_draft" to "garbage", "rule_editor_initial" to "garbage"))
+            stubRule(createTestRule(id = "rule-1", name = "Stored"))
+
+            val vm = createViewModel(handle)
+            vm.initialize(ruleId = "rule-1")
+
+            vm.uiState.value.rule.name shouldBe "Stored"
         }
     }
 
@@ -889,7 +1181,8 @@ class RuleEditorViewModelTest {
                 testDispatcher.scheduler.advanceUntilIdle()
 
                 // Then: a ShowError effect is sent and the loading state clears
-                awaitItem() shouldBe UiEffect.ShowError("Failed to test against history")
+                awaitItem().shouldBeInstanceOf<UiEffect.ShowError>().message.shouldBeInstanceOf<UiText.StringResource>().id shouldBe
+                    R.string.rule_editor_error_backtest
                 cancelAndIgnoreRemainingEvents()
             }
             viewModel.uiState.value.isBacktesting shouldBe false
@@ -921,32 +1214,49 @@ class RuleEditorViewModelTest {
                 testDispatcher.scheduler.advanceUntilIdle()
 
                 // Then: a validation error is set, a ShowError effect is sent, and no repository call happens
-                viewModel.uiState.value.validationErrors shouldBe mapOf("name" to "Rule name is required")
-                awaitItem() shouldBe UiEffect.ShowError("Please enter a rule name")
+                viewModel.uiState.value.validationErrors["name"].shouldBeInstanceOf<UiText.StringResource>().id shouldBe
+                    R.string.rule_editor_error_name_required
+                awaitItem().shouldBeInstanceOf<UiEffect.ShowError>().message.shouldBeInstanceOf<UiText.StringResource>().id shouldBe
+                    R.string.rule_editor_error_enter_name
                 cancelAndIgnoreRemainingEvents()
             }
             coVerify(exactly = 0) { ruleRepository.saveRule(any()) }
         }
 
         @Test
-        fun `saving a new rule calls saveRule, shows success, and navigates back`() = runTest(testDispatcher) {
+        fun `saving a new rule calls saveRule, posts a success message, and navigates back`() = runTest(testDispatcher) {
             // Given: a valid rule name and a repository that succeeds
             viewModel.onEvent(UiEvent.OnNameChange("My Rule"))
             coEvery { ruleRepository.saveRule(any()) } returns Result.success(Unit)
 
-            viewModel.effect.test {
+            appMessenger.messages.test {
                 // When: saving
                 viewModel.onEvent(UiEvent.OnSaveClicked)
                 testDispatcher.scheduler.advanceUntilIdle()
 
-                // Then: the repository saves a new rule, a success effect is sent, and navigation goes back
+                // Then: a new rule is saved, the success message is delivered app-wide, and navigation goes back
                 coVerify(exactly = 1) { ruleRepository.saveRule(any()) }
                 coVerify(exactly = 0) { ruleRepository.updateRule(any()) }
-                awaitItem() shouldBe UiEffect.ShowSuccess("Rule saved successfully")
+                awaitItem().shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rule_editor_saved
                 cancelAndIgnoreRemainingEvents()
             }
             coVerify(exactly = 1) { navigationHandler.goBack() }
-            viewModel.uiState.value.isLoading shouldBe false
+            val state = viewModel.uiState.value
+            state.isSaving shouldBe false
+            state.hasUnsavedChanges shouldBe false
+        }
+
+        @Test
+        fun `a second save tap while saving is ignored`() = runTest(testDispatcher) {
+            viewModel.onEvent(UiEvent.OnNameChange("My Rule"))
+            coEvery { ruleRepository.saveRule(any()) } returns Result.success(Unit)
+
+            viewModel.onEvent(UiEvent.OnSaveClicked)
+            viewModel.onEvent(UiEvent.OnSaveClicked)
+            viewModel.uiState.value.isSaving shouldBe true
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify(exactly = 1) { ruleRepository.saveRule(any()) }
         }
 
         @Test
@@ -954,8 +1264,7 @@ class RuleEditorViewModelTest {
             // Given: an existing rule loaded from the repository
             val rule = createTestRule(id = "rule-1")
             coEvery { ruleRepository.getRule("rule-1") } returns Result.success(rule)
-            viewModel.onEvent(UiEvent.LoadRule("rule-1"))
-            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.initialize(ruleId = "rule-1")
             coEvery { ruleRepository.updateRule(any()) } returns Result.success(Unit)
 
             // When: saving
@@ -968,25 +1277,23 @@ class RuleEditorViewModelTest {
         }
 
         @Test
-        fun `saving that fails sets an error and does not navigate back`() = runTest(testDispatcher) {
+        fun `saving that fails sets a dismissible error and does not navigate back`() = runTest(testDispatcher) {
             // Given: a valid rule name and a repository that fails
             viewModel.onEvent(UiEvent.OnNameChange("My Rule"))
-            val exception = RuntimeException("write failed")
-            coEvery { ruleRepository.saveRule(any()) } returns Result.failure(exception)
+            coEvery { ruleRepository.saveRule(any()) } returns Result.failure(RuntimeException("write failed"))
 
-            viewModel.effect.test {
-                // When: saving
-                viewModel.onEvent(UiEvent.OnSaveClicked)
-                testDispatcher.scheduler.advanceUntilIdle()
+            // When: saving
+            viewModel.onEvent(UiEvent.OnSaveClicked)
+            testDispatcher.scheduler.advanceUntilIdle()
 
-                // Then: an error is set and a ShowError effect is sent
-                val state = viewModel.uiState.value
-                state.isLoading shouldBe false
-                state.error shouldBe "Failed to save rule: write failed"
-                awaitItem() shouldBe UiEffect.ShowError("Failed to save rule")
-                cancelAndIgnoreRemainingEvents()
-            }
+            // Then: saving stops, a localized error is set, the draft stays dirty, and the error can be dismissed
+            val state = viewModel.uiState.value
+            state.isSaving shouldBe false
+            state.error.shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rule_editor_error_save
             coVerify(exactly = 0) { navigationHandler.goBack() }
+
+            viewModel.onEvent(UiEvent.OnDismissError)
+            viewModel.uiState.value.error shouldBe null
         }
     }
 
@@ -1028,25 +1335,23 @@ class RuleEditorViewModelTest {
         }
 
         @Test
-        fun `delete confirmed for an existing rule deletes it, shows success, and navigates back`() = runTest(testDispatcher) {
+        fun `delete confirmed for an existing rule deletes it, posts a message, and navigates back`() = runTest(testDispatcher) {
             // Given: an existing rule loaded from the repository
-            val rule = createTestRule(id = "rule-1")
-            coEvery { ruleRepository.getRule("rule-1") } returns Result.success(rule)
-            viewModel.onEvent(UiEvent.LoadRule("rule-1"))
-            testDispatcher.scheduler.advanceUntilIdle()
+            stubRule(createTestRule(id = "rule-1"))
+            viewModel.initialize(ruleId = "rule-1")
             coEvery { ruleRepository.deleteRule("rule-1") } returns Result.success(Unit)
             viewModel.onEvent(UiEvent.OnDeleteClicked)
 
-            viewModel.effect.test {
+            appMessenger.messages.test {
                 // When: confirming delete
                 viewModel.onEvent(UiEvent.OnDeleteConfirmed)
                 testDispatcher.scheduler.advanceUntilIdle()
 
-                // Then: the rule is deleted, the dialog closes, and a success effect is sent
+                // Then: the dialog closes and the success message is delivered app-wide
                 val state = viewModel.uiState.value
-                state.isLoading shouldBe false
+                state.isSaving shouldBe false
                 state.showDeleteConfirmation shouldBe false
-                awaitItem() shouldBe UiEffect.ShowSuccess("Rule deleted successfully")
+                awaitItem().shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rule_editor_deleted
                 cancelAndIgnoreRemainingEvents()
             }
             coVerify(exactly = 1) { navigationHandler.goBack() }
@@ -1054,27 +1359,20 @@ class RuleEditorViewModelTest {
 
         @Test
         fun `delete confirmed that fails sets an error and does not navigate back`() = runTest(testDispatcher) {
-            // Given: an existing rule loaded from the repository whose deletion fails
-            val rule = createTestRule(id = "rule-1")
-            coEvery { ruleRepository.getRule("rule-1") } returns Result.success(rule)
-            viewModel.onEvent(UiEvent.LoadRule("rule-1"))
-            testDispatcher.scheduler.advanceUntilIdle()
-            val exception = RuntimeException("delete failed")
-            coEvery { ruleRepository.deleteRule("rule-1") } returns Result.failure(exception)
+            // Given: an existing rule whose deletion fails
+            stubRule(createTestRule(id = "rule-1"))
+            viewModel.initialize(ruleId = "rule-1")
+            coEvery { ruleRepository.deleteRule("rule-1") } returns Result.failure(RuntimeException("delete failed"))
             viewModel.onEvent(UiEvent.OnDeleteClicked)
 
-            viewModel.effect.test {
-                // When: confirming delete
-                viewModel.onEvent(UiEvent.OnDeleteConfirmed)
-                testDispatcher.scheduler.advanceUntilIdle()
+            // When: confirming delete
+            viewModel.onEvent(UiEvent.OnDeleteConfirmed)
+            testDispatcher.scheduler.advanceUntilIdle()
 
-                // Then: an error is set and a ShowError effect is sent
-                val state = viewModel.uiState.value
-                state.isLoading shouldBe false
-                state.error shouldBe "Failed to delete rule: delete failed"
-                awaitItem() shouldBe UiEffect.ShowError("Failed to delete rule")
-                cancelAndIgnoreRemainingEvents()
-            }
+            // Then: a localized error is set and the editor stays open
+            val state = viewModel.uiState.value
+            state.isSaving shouldBe false
+            state.error.shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rule_editor_error_delete
             coVerify(exactly = 0) { navigationHandler.goBack() }
         }
     }
@@ -1093,15 +1391,16 @@ class RuleEditorViewModelTest {
         }
 
         @Test
-        fun `dismiss error clears the error`() {
-            // Given: an error set from a failed save
+        fun `dismiss error keeps validation errors`() {
+            // Given: a blank-name save attempt that produced a validation error
             viewModel.onEvent(UiEvent.OnSaveClicked)
 
             // When: dismissing the error
             viewModel.onEvent(UiEvent.OnDismissError)
 
-            // Then: the error clears (validation errors, which are separate, remain)
+            // Then: the error is clear and the inline validation error remains
             viewModel.uiState.value.error shouldBe null
+            viewModel.uiState.value.validationErrors.containsKey("name") shouldBe true
         }
 
         @Test

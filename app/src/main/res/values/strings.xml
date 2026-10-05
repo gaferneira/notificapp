@@ -508,4 +508,24 @@
         <item quantity="one">Group: %1$d condition (%2$s)</item>
         <item quantity="other">Group: %1$d conditions (%2$s)</item>
     </plurals>
+
+    <!-- Rule editor: feedback and guards -->
+    <string name="rule_editor_saved">Rule saved</string>
+    <string name="rule_editor_deleted">Rule deleted</string>
+    <string name="rule_editor_error_save">Couldn\'t save the rule. Please try again.</string>
+    <string name="rule_editor_error_delete">Couldn\'t delete the rule. Please try again.</string>
+    <string name="rule_editor_error_load">Couldn\'t load the rule.</string>
+    <string name="rule_editor_error_not_found">This rule no longer exists.</string>
+    <string name="rule_editor_error_template_missing">This template is not available.</string>
+    <string name="rule_editor_error_template_invalid">Couldn\'t load the template.</string>
+    <string name="rule_editor_error_name_required">Rule name is required</string>
+    <string name="rule_editor_error_enter_name">Please enter a rule name</string>
+    <string name="rule_editor_error_backtest">Failed to test against history</string>
+    <string name="rule_editor_load_retry">Retry</string>
+    <string name="rule_editor_load_back">Back</string>
+    <string name="rule_editor_saving">Saving rule</string>
+    <string name="rule_editor_discard_title">Discard changes?</string>
+    <string name="rule_editor_discard_message">You have unsaved changes. Leaving now will discard them.</string>
+    <string name="rule_editor_discard_confirm">Discard</string>
+    <string name="rule_editor_discard_keep">Keep editing</string>
 </resources>

@@ -35,15 +35,18 @@ object RuleJsonCodec {
      * problem - malformed JSON, an unsupported (newer) schema version, a blank name, or an
      * unrecognized condition/extraction method. Actions this app version doesn't recognize are
      * dropped rather than failing the import - see [RuleImportResult.skippedActions].
+     *
+     * Pass `requireName = false` to restore an in-progress editor draft, which may legitimately
+     * still have a blank name.
      */
-    fun decode(source: String): Result<RuleImportResult> = runCatching {
+    fun decode(source: String, requireName: Boolean = true): Result<RuleImportResult> = runCatching {
         val export = try {
             json.decodeFromString<RuleExportDto>(source)
         } catch (e: SerializationException) {
             throw RuleImportFailure.InvalidFile(e)
         }
         if (export.schemaVersion > RULE_EXPORT_SCHEMA_VERSION) throw RuleImportFailure.UnsupportedSchemaVersion(export.schemaVersion)
-        if (export.rule.name.isBlank()) throw RuleImportFailure.MissingName()
+        if (requireName && export.rule.name.isBlank()) throw RuleImportFailure.MissingName()
         export.toDomain()
     }
 

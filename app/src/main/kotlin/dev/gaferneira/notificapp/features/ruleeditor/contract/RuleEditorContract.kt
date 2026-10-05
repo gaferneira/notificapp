@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.ruleeditor.contract
 
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
 import dev.gaferneira.notificapp.domain.model.ConditionCombinator
@@ -30,12 +31,23 @@ object RuleEditorContract {
         val rule: RuleUiModel = RuleUiModel(),
         /** Sample notification for testing */
         val sampleNotification: Notification? = null,
-        /** Whether currently loading */
+        /** Whether the initial load (rule / template / sample notification) is in progress */
         val isLoading: Boolean = false,
-        /** Error message if any */
-        val error: String? = null,
+        /** Whether a save or delete is in flight (disables Save, shows a progress indicator) */
+        val isSaving: Boolean = false,
+        /** Save/delete failure to surface (snackbar), dismissed with [UiEvent.OnDismissError] */
+        val error: UiText? = null,
+        /** Blocking failure of the initial load; when set the form is replaced by an error state */
+        val loadError: LoadError? = null,
+        /**
+         * Snapshot of [rule] taken once the prefill (rule / template / sample notification) or a
+         * saved-state restore completed. [hasUnsavedChanges] compares the draft against it.
+         */
+        val initialRule: RuleUiModel = RuleUiModel(),
+        /** Whether the discard-changes confirmation is visible */
+        val showUnsavedChangesDialog: Boolean = false,
         /** Validation errors by field */
-        val validationErrors: Map<String, String> = emptyMap(),
+        val validationErrors: Map<String, UiText> = emptyMap(),
         /** List of enabled apps for filtering available apps in the picker */
         val enabledApps: ImmutableList<AppInfo> = persistentListOf(),
         /** Whether matching logic bottom sheet is visible */
@@ -68,6 +80,10 @@ object RuleEditorContract {
         val backtestTestedCount: Int = 0,
     ) {
 
+        /** True when the draft differs structurally from [initialRule]; reverting an edit makes it false again. */
+        val hasUnsavedChanges: Boolean
+            get() = rule != initialRule
+
         /** Whether we can test extraction */
         val canTestExtraction: Boolean
             get() = sampleNotification != null &&
@@ -83,17 +99,36 @@ object RuleEditorContract {
     }
 
     /**
+     * Blocking failure of the initial load.
+     *
+     * @property message user-facing explanation
+     * @property canRetry whether repeating the load can plausibly succeed (false for "not found")
+     */
+    data class LoadError(val message: UiText, val canRetry: Boolean)
+
+    /**
+     * Navigation arguments that determine what the editor pre-fills. Loading is idempotent per
+     * distinct [InitArgs], so re-sending [UiEvent.Initialize] after a recomposition or
+     * configuration change never overwrites in-progress edits.
+     */
+    data class InitArgs(
+        val ruleId: String? = null,
+        val notificationId: String? = null,
+        val templateAssetFileName: String? = null,
+    )
+
+    /**
      * UI Events from user interactions.
      */
     sealed class UiEvent {
-        /** Load existing rule by ID */
-        data class LoadRule(val ruleId: String?) : UiEvent()
+        /**
+         * Pre-fill the editor from the navigation arguments (existing rule, starter template and/or
+         * sample notification). Safe to send repeatedly: a second call with the same args is ignored.
+         */
+        data class Initialize(val args: InitArgs) : UiEvent()
 
-        /** Pre-populate an unsaved new rule from a starter template's JSON text */
-        data class LoadTemplate(val text: String) : UiEvent()
-
-        /** Load sample notification by ID */
-        data class LoadSampleNotification(val notificationId: String) : UiEvent()
+        /** Retry a failed initial load */
+        data object OnRetryLoadClicked : UiEvent()
 
         /** Navigate to next step (Continue clicked) */
         data object OnContinueClicked : UiEvent()
@@ -186,8 +221,17 @@ object RuleEditorContract {
         /** Save the rule */
         data object OnSaveClicked : UiEvent()
 
-        /** Navigate back */
+        /**
+         * Back intent (top-bar arrow or system back): step 2 returns to step 1, unsaved changes
+         * raise the discard dialog, otherwise the editor closes.
+         */
         data object OnBackClicked : UiEvent()
+
+        /** Discard the draft and close the editor */
+        data object OnDiscardConfirmed : UiEvent()
+
+        /** Keep editing (dismiss the discard dialog) */
+        data object OnDiscardDismissed : UiEvent()
 
         /** Dismiss error */
         data object OnDismissError : UiEvent()
@@ -203,13 +247,11 @@ object RuleEditorContract {
     }
 
     /**
-     * One-time effects for navigation and actions.
+     * One-time effects. Success feedback for save/delete is not an effect: the editor closes right
+     * after, so it goes through `AppMessenger` to be shown by the app-level host instead.
      */
     sealed class UiEffect {
-        /** Show success message */
-        data class ShowSuccess(val message: String) : UiEffect()
-
-        /** Show error message */
-        data class ShowError(val message: String) : UiEffect()
+        /** Show a transient error message (validation, backtest failure) */
+        data class ShowError(val message: UiText) : UiEffect()
     }
 }

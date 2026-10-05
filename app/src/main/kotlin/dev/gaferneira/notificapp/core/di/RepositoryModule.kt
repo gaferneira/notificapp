@@ -8,6 +8,7 @@ import dev.gaferneira.notificapp.core.data.repository.DataBrowserRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.NotificationRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.RuleExecutionRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.RuleRepositoryImpl
+import dev.gaferneira.notificapp.core.data.repository.RuleTemplateRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.SelectedAppRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.StorageStatsRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.SuggestionDismissalRepositoryImpl
@@ -18,6 +19,7 @@ import dev.gaferneira.notificapp.domain.repository.DataBrowserRepository
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
+import dev.gaferneira.notificapp.domain.repository.RuleTemplateRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
 import dev.gaferneira.notificapp.domain.repository.StorageStatsRepository
 import dev.gaferneira.notificapp.domain.repository.SuggestionDismissalRepository
@@ -49,6 +51,12 @@ internal abstract class RepositoryModule {
      */
     @Binds
     abstract fun bindRuleRepository(impl: RuleRepositoryImpl): RuleRepository
+
+    /**
+     * Binds RuleTemplateRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindRuleTemplateRepository(impl: RuleTemplateRepositoryImpl): RuleTemplateRepository
 
     /**
      * Binds UserPreferencesRepository interface to its implementation.

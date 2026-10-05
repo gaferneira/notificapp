@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -8,6 +9,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -27,9 +29,11 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -43,21 +47,25 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
-import dev.gaferneira.notificapp.core.ui.utils.LocalIoDispatcher
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
@@ -66,6 +74,8 @@ import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LoadError
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
@@ -84,7 +94,6 @@ import dev.gaferneira.notificapp.features.ruleeditor.viewmodel.RuleEditorViewMod
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun RuleEditorScreen(
@@ -98,30 +107,17 @@ fun RuleEditorScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-    val ioDispatcher = LocalIoDispatcher.current
 
-    // Load initial data
+    // Idempotent: the ViewModel ignores a repeat of the same args (rotation, recomposition).
     LaunchedEffect(ruleId, notificationId, templateAssetFileName) {
-        viewModel.onEvent(UiEvent.LoadRule(ruleId))
-        notificationId?.let { viewModel.onEvent(UiEvent.LoadSampleNotification(it)) }
-        templateAssetFileName?.let { fileName ->
-            val text = withContext(ioDispatcher) {
-                runCatching {
-                    context.assets.open("rules/$fileName").bufferedReader().use { it.readText() }
-                }.getOrNull()
-            }
-            viewModel.onEvent(UiEvent.LoadTemplate(text.orEmpty()))
-        }
+        viewModel.onEvent(UiEvent.Initialize(InitArgs(ruleId, notificationId, templateAssetFileName)))
     }
 
     // Collect effects
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
-            is UiEffect.ShowSuccess -> {
-                coroutineScope.launch { snackbarHostState.showSnackbar(effect.message) }
-            }
             is UiEffect.ShowError -> {
-                coroutineScope.launch { snackbarHostState.showSnackbar(effect.message) }
+                coroutineScope.launch { snackbarHostState.showSnackbar(effect.message.asString(context)) }
             }
         }
     }
@@ -143,8 +139,26 @@ private fun RuleEditorScreenContent(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val scrollState = rememberScrollState()
-    var showUnsavedChangesDialog by remember { mutableStateOf(false) }
-    val hasUnsavedChanges = uiState.rule.triggers.isNotEmpty() || uiState.rule.actions.isNotEmpty()
+    val context = LocalContext.current
+
+    // Sheets and dialogs own their back press; the editor's back logic only applies underneath them.
+    val isOverlayVisible = uiState.isMatchingLogicSheetVisible ||
+        uiState.isAppSheetVisible ||
+        uiState.isActionTypePickerVisible ||
+        uiState.isActionSheetVisible ||
+        uiState.pendingExtractDataRemovalId != null ||
+        uiState.backtestResults != null ||
+        uiState.showDeleteConfirmation ||
+        uiState.showUnsavedChangesDialog
+    BackHandler(enabled = !isOverlayVisible) { onEvent(UiEvent.OnBackClicked) }
+
+    // Save/delete failures: shown once, then cleared through OnDismissError.
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(message = error.asString(context), withDismissAction = true)
+            onEvent(UiEvent.OnDismissError)
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -153,13 +167,7 @@ private fun RuleEditorScreenContent(
             RuleEditorTopBar(
                 uiState = uiState,
                 onEvent = onEvent,
-                onBackClicked = {
-                    when {
-                        uiState.currentStep == 2 -> onEvent(UiEvent.OnBackToLogicClicked)
-                        hasUnsavedChanges -> showUnsavedChangesDialog = true
-                        else -> onEvent(UiEvent.OnBackClicked)
-                    }
-                },
+                onBackClicked = { onEvent(UiEvent.OnBackClicked) },
             )
         },
     ) { paddingValues ->
@@ -168,13 +176,10 @@ private fun RuleEditorScreenContent(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            RuleEditorSteps(
+            RuleEditorBody(
                 uiState = uiState,
                 onEvent = onEvent,
                 scrollState = scrollState,
-                onCancelClicked = {
-                    if (hasUnsavedChanges) showUnsavedChangesDialog = true else onEvent(UiEvent.OnBackClicked)
-                },
             )
 
             RuleEditorBottomSheets(
@@ -185,10 +190,42 @@ private fun RuleEditorScreenContent(
             RuleEditorDialogs(
                 uiState = uiState,
                 onEvent = onEvent,
-                showUnsavedChangesDialog = showUnsavedChangesDialog,
-                onDismissUnsavedChangesDialog = { showUnsavedChangesDialog = false },
             )
         }
+    }
+}
+
+/** Form (or progress / blocking load error) plus the saving indicator. */
+@Composable
+private fun BoxScope.RuleEditorBody(
+    uiState: UiState,
+    onEvent: (UiEvent) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState,
+) {
+    when {
+        uiState.loadError != null -> LoadErrorState(
+            error = uiState.loadError,
+            onRetry = { onEvent(UiEvent.OnRetryLoadClicked) },
+            onBack = { onEvent(UiEvent.OnBackClicked) },
+            modifier = Modifier.align(Alignment.Center),
+        )
+        uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        else -> RuleEditorSteps(
+            uiState = uiState,
+            onEvent = onEvent,
+            scrollState = scrollState,
+            onCancelClicked = { onEvent(UiEvent.OnBackClicked) },
+        )
+    }
+
+    if (uiState.isSaving) {
+        val savingDescription = stringResource(R.string.rule_editor_saving)
+        LinearProgressIndicator(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .semantics { contentDescription = savingDescription },
+        )
     }
 }
 
@@ -265,7 +302,7 @@ private fun RuleEditorTopBar(
         actions = {
             // Show delete icon only when editing an existing rule
             if (uiState.rule.id != null) {
-                IconButton(onClick = { onEvent(UiEvent.OnDeleteClicked) }) {
+                IconButton(onClick = { onEvent(UiEvent.OnDeleteClicked) }, enabled = !uiState.isSaving) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete rule",
@@ -275,7 +312,7 @@ private fun RuleEditorTopBar(
             if (uiState.currentStep == 2) {
                 TextButton(
                     onClick = { onEvent(UiEvent.OnSaveClicked) },
-                    enabled = uiState.rule.name.isNotBlank() && !uiState.isLoading,
+                    enabled = uiState.rule.name.isNotBlank() && !uiState.isLoading && !uiState.isSaving,
                 ) {
                     Text("Save")
                 }
@@ -288,8 +325,6 @@ private fun RuleEditorTopBar(
 private fun RuleEditorDialogs(
     uiState: UiState,
     onEvent: (UiEvent) -> Unit,
-    showUnsavedChangesDialog: Boolean,
-    onDismissUnsavedChangesDialog: () -> Unit,
 ) {
     if (uiState.showDeleteConfirmation) {
         AlertDialog(
@@ -309,27 +344,48 @@ private fun RuleEditorDialogs(
         )
     }
 
-    if (showUnsavedChangesDialog) {
+    if (uiState.showUnsavedChangesDialog) {
         AlertDialog(
-            onDismissRequest = onDismissUnsavedChangesDialog,
-            title = { Text("Discard this rule?") },
-            text = { Text("You have unsaved conditions or actions. Leaving now will discard them.") },
+            onDismissRequest = { onEvent(UiEvent.OnDiscardDismissed) },
+            title = { Text(stringResource(R.string.rule_editor_discard_title)) },
+            text = { Text(stringResource(R.string.rule_editor_discard_message)) },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDismissUnsavedChangesDialog()
-                        onEvent(UiEvent.OnBackClicked)
-                    },
-                ) {
-                    Text("Discard", color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = { onEvent(UiEvent.OnDiscardConfirmed) }) {
+                    Text(stringResource(R.string.rule_editor_discard_confirm), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismissUnsavedChangesDialog) {
-                    Text("Keep editing")
+                TextButton(onClick = { onEvent(UiEvent.OnDiscardDismissed) }) {
+                    Text(stringResource(R.string.rule_editor_discard_keep))
                 }
             },
         )
+    }
+}
+
+/** Blocking state shown instead of the form when the initial load fails. */
+@Composable
+private fun LoadErrorState(
+    error: LoadError,
+    onRetry: () -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = error.message.asString(),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.error,
+            textAlign = TextAlign.Center,
+        )
+        if (error.canRetry) {
+            Button(onClick = onRetry) { Text(stringResource(R.string.rule_editor_load_retry)) }
+        }
+        TextButton(onClick = onBack) { Text(stringResource(R.string.rule_editor_load_back)) }
     }
 }
 
@@ -625,7 +681,7 @@ private fun MetadataStep(
             label = { Text("Name*") },
             placeholder = { Text("e.g., ICA Banken Purchase") },
             isError = uiState.validationErrors.containsKey("name"),
-            supportingText = uiState.validationErrors["name"]?.let { { Text(it) } },
+            supportingText = uiState.validationErrors["name"]?.let { { Text(it.asString()) } },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
@@ -953,6 +1009,27 @@ private fun RuleEditorScreenStep2Preview() {
                         ),
                     ),
                 ),
+            ),
+            onEvent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, device = "id:pixel_5")
+@Composable
+private fun RuleEditorScreenLoadingPreview() {
+    NotificappTheme {
+        RuleEditorScreenContent(uiState = UiState(isLoading = true), onEvent = {})
+    }
+}
+
+@Preview(showBackground = true, device = "id:pixel_5")
+@Composable
+private fun RuleEditorScreenLoadErrorPreview() {
+    NotificappTheme {
+        RuleEditorScreenContent(
+            uiState = UiState(
+                loadError = LoadError(UiText.StringResource(R.string.rule_editor_error_load), canRetry = true),
             ),
             onEvent = {},
         )

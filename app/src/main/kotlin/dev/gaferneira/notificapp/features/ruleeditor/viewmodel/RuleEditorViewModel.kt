@@ -1,16 +1,21 @@
 package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.extraction.RuleEngine
 import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec
 import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec.withFreshIdentityForImport
+import dev.gaferneira.notificapp.core.ui.UiText
+import dev.gaferneira.notificapp.core.ui.messaging.AppMessenger
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.model.Notification
 import dev.gaferneira.notificapp.domain.model.RuleAction
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import dev.gaferneira.notificapp.domain.model.RuleField
@@ -19,16 +24,25 @@ import dev.gaferneira.notificapp.domain.model.SnoozeMode
 import dev.gaferneira.notificapp.domain.model.getSnoozeMode
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
+import dev.gaferneira.notificapp.domain.repository.RuleTemplateRepository
 import dev.gaferneira.notificapp.domain.repository.SelectedAppRepository
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.InitArgs
+import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.LoadError
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEffect
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiEvent
 import dev.gaferneira.notificapp.features.ruleeditor.contract.RuleEditorContract.UiState
 import dev.gaferneira.notificapp.features.ruleeditor.domain.BacktestMatch
+import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleDraftCodec
 import dev.gaferneira.notificapp.features.ruleeditor.domain.RuleUiModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -43,19 +57,82 @@ import kotlin.collections.plus
  *
  * Manages rule creation/editing with form handling, validation,
  * and extraction testing. The matching logic bottom sheet has its own ViewModel.
+ *
+ * Draft lifecycle:
+ * - **Load once.** [UiEvent.Initialize] prefills the draft (rule, template, sample notification) and
+ *   then snapshots it as [UiState.initialRule]; repeating it with the same [InitArgs] is a no-op, so
+ *   a recomposition or configuration change can never wipe in-progress edits. A blocking failure
+ *   surfaces as [UiState.loadError] and [UiEvent.OnRetryLoadClicked] repeats the load.
+ * - **Dirty check.** [UiState.hasUnsavedChanges] compares the draft against that snapshot.
+ * - **Process death.** The draft, its snapshot and the current step are mirrored into
+ *   [SavedStateHandle] (debounced) using the shareable rule wire format ([RuleDraftCodec]). On
+ *   recreation the draft is restored and the nav-arg prefill is skipped. Transient UI state (open
+ *   sheets, dialogs, backtest results) and the sample notification payload are not persisted; the
+ *   sample notification is re-fetched by id.
+ * - **Feedback.** Save/delete errors live in [UiState.error] (dismissible). Success messages go
+ *   through [AppMessenger] because this screen is popped immediately afterwards, so a snackbar
+ *   hosted by it would never be seen.
  */
+@Suppress("LongParameterList") // Hilt ViewModel: repositories + messenger + SavedStateHandle + injected dispatcher, same precedent as ProcessNotificationUseCase
 @HiltViewModel
 class RuleEditorViewModel @Inject constructor(
     private val ruleRepository: RuleRepository,
     private val notificationRepository: NotificationRepository,
     private val selectedAppRepository: SelectedAppRepository,
+    private val ruleTemplateRepository: RuleTemplateRepository,
     private val ruleEngine: RuleEngine,
     private val navigationHandler: NavigationHandler,
+    private val appMessenger: AppMessenger,
+    private val savedStateHandle: SavedStateHandle,
     @Dispatcher(DispatcherType.Default) private val defaultDispatcher: CoroutineDispatcher,
 ) : MviViewModel<UiState, UiEvent, UiEffect>(UiState()) {
 
+    private var initArgs: InitArgs? = null
+    private var loadJob: Job? = null
+    private var restoredFromSavedState = false
+
+    /** Draft persistence starts only once the prefill completed (or a draft was restored). */
+    private var isDraftTrackable = false
+
     init {
+        restoreFromSavedState()
         observeEnabledApps()
+        persistDraftOnChange()
+    }
+
+    private fun restoreFromSavedState() {
+        val draft = savedStateHandle.get<String>(KEY_DRAFT)?.let(RuleDraftCodec::decode) ?: return
+        val initial = savedStateHandle.get<String>(KEY_INITIAL)?.let(RuleDraftCodec::decode) ?: return
+        restoredFromSavedState = true
+        isDraftTrackable = true
+        setState {
+            copy(
+                rule = draft,
+                initialRule = initial,
+                currentStep = savedStateHandle.get<Int>(KEY_STEP) ?: 1,
+                showCategory = draft.category.isNotBlank(),
+                showDescription = draft.description.isNotBlank(),
+            )
+        }
+    }
+
+    @OptIn(FlowPreview::class)
+    private fun persistDraftOnChange() {
+        viewModelScope.launch {
+            uiState
+                .map { DraftSnapshot(it.rule, it.initialRule, it.currentStep) }
+                .distinctUntilChanged()
+                .debounce(PERSIST_DEBOUNCE_MS)
+                .collect { snapshot ->
+                    if (!isDraftTrackable) return@collect
+                    val (draftJson, initialJson) = withContext(defaultDispatcher) {
+                        RuleDraftCodec.encode(snapshot.draft) to RuleDraftCodec.encode(snapshot.initial)
+                    }
+                    savedStateHandle[KEY_DRAFT] = draftJson
+                    savedStateHandle[KEY_INITIAL] = initialJson
+                    savedStateHandle[KEY_STEP] = snapshot.step
+                }
+        }
     }
 
     private fun observeEnabledApps() {
@@ -73,9 +150,8 @@ class RuleEditorViewModel @Inject constructor(
 
     override fun onEvent(event: UiEvent) {
         when (event) {
-            is UiEvent.LoadRule -> loadRule(event.ruleId)
-            is UiEvent.LoadTemplate -> loadTemplate(event.text)
-            is UiEvent.LoadSampleNotification -> loadSampleNotification(event.notificationId)
+            is UiEvent.Initialize -> initialize(event.args)
+            UiEvent.OnRetryLoadClicked -> retryLoad()
             is UiEvent.OnContinueClicked -> navigateToStep(2)
             is UiEvent.OnBackToLogicClicked -> navigateToStep(1)
             is UiEvent.OnNameChange -> updateName(event.name)
@@ -107,6 +183,11 @@ class RuleEditorViewModel @Inject constructor(
             UiEvent.OnDismissBacktestResults -> dismissBacktestResults()
             is UiEvent.OnSaveClicked -> saveRule()
             is UiEvent.OnBackClicked -> onBackClicked()
+            UiEvent.OnDiscardConfirmed -> {
+                setState { copy(showUnsavedChangesDialog = false) }
+                leaveEditor()
+            }
+            UiEvent.OnDiscardDismissed -> setState { copy(showUnsavedChangesDialog = false) }
             is UiEvent.OnDismissError -> dismissError()
             UiEvent.OnDismissSheet -> dismissBottomSheet()
             UiEvent.OnDeleteClicked -> showDeleteConfirmation()
@@ -115,100 +196,120 @@ class RuleEditorViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Back intent shared by the top-bar arrow and the system back: step 2 returns to step 1,
+     * unsaved changes ask for confirmation, otherwise the editor closes. Ignored while saving.
+     */
     private fun onBackClicked() {
-        viewModelScope.launch {
-            navigationHandler.goBack()
+        val state = uiState.value
+        when {
+            state.isSaving -> Unit
+            state.currentStep == 2 -> navigateToStep(1)
+            state.hasUnsavedChanges -> setState { copy(showUnsavedChangesDialog = true) }
+            else -> leaveEditor()
         }
     }
 
-    private fun loadRule(ruleId: String?) {
-        if (ruleId == null) {
+    private fun leaveEditor() {
+        viewModelScope.launch { navigationHandler.goBack() }
+    }
+
+    private fun initialize(args: InitArgs) {
+        if (initArgs == args && uiState.value.loadError == null) return
+        initArgs = args
+        if (restoredFromSavedState) {
+            // The draft came back from saved state: keep the user's edits, only re-fetch the
+            // sample notification (it is not persisted) for the Extract-data test panel.
+            args.notificationId?.let { id -> viewModelScope.launch { fetchSampleNotification(id)?.let { n -> setState { copy(sampleNotification = n) } } } }
             return
         }
-        viewModelScope.launch {
-            setState { copy(isLoading = true) }
+        startLoad(args)
+    }
 
-            ruleRepository.getRule(ruleId)
-                .onSuccess { rule ->
-                    if (rule != null) {
-                        val uiModel = RuleUiModel.fromDomain(rule)
-                        setState {
-                            copy(
-                                rule = uiModel,
-                                isLoading = false,
-                                showCategory = uiModel.category.isNotBlank(),
-                                showDescription = uiModel.description.isNotBlank(),
-                            )
-                        }
-                    } else {
-                        setState {
-                            copy(
-                                isLoading = false,
-                                error = "Rule not found",
-                            )
-                        }
-                    }
-                }
-                .onFailure { e ->
-                    Timber.e(e, "Failed to load rule: $ruleId")
-                    setState {
-                        copy(
-                            isLoading = false,
-                            error = "Failed to load rule: ${e.message}",
-                        )
-                    }
-                }
+    private fun retryLoad() {
+        val args = initArgs ?: return
+        startLoad(args)
+    }
+
+    private fun startLoad(args: InitArgs) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            setState { copy(isLoading = true, loadError = null) }
+
+            val prefill = when {
+                args.ruleId != null -> loadExistingRule(args.ruleId)
+                args.templateAssetFileName != null -> loadTemplate(args.templateAssetFileName)
+                else -> Prefill.Ready(RuleUiModel())
+            }
+            if (prefill is Prefill.Failed) {
+                setState { copy(isLoading = false, loadError = prefill.error) }
+                return@launch
+            }
+
+            var rule = (prefill as Prefill.Ready).rule
+            val sample = args.notificationId?.let { fetchSampleNotification(it) }
+            if (sample != null && rule.id == null) {
+                rule = rule.copy(targetApps = persistentListOf(sample.app), triggers = persistentListOf())
+            }
+            isDraftTrackable = true
+            setState {
+                copy(
+                    rule = rule,
+                    initialRule = rule,
+                    sampleNotification = sample,
+                    isLoading = false,
+                    showCategory = rule.category.isNotBlank(),
+                    showDescription = rule.description.isNotBlank(),
+                )
+            }
         }
     }
+
+    private suspend fun loadExistingRule(ruleId: String): Prefill = ruleRepository.getRule(ruleId).fold(
+        onSuccess = { rule ->
+            if (rule != null) {
+                Prefill.Ready(RuleUiModel.fromDomain(rule))
+            } else {
+                Prefill.Failed(LoadError(UiText.StringResource(R.string.rule_editor_error_not_found), canRetry = false))
+            }
+        },
+        onFailure = { e ->
+            Timber.e(e, "Failed to load rule: $ruleId")
+            Prefill.Failed(LoadError(UiText.StringResource(R.string.rule_editor_error_load), canRetry = true))
+        },
+    )
 
     /**
      * Populates the form from a template without persisting anything: `id = null` keeps the
      * editor in "create" mode, so the rule is only saved when the user taps Save.
      */
-    private fun loadTemplate(text: String) {
-        RuleJsonCodec.decode(text)
-            .onSuccess { result ->
-                val uiModel = RuleUiModel.fromDomain(result.rule.withFreshIdentityForImport()).copy(id = null)
-                setState {
-                    copy(
-                        rule = uiModel,
-                        showCategory = uiModel.category.isNotBlank(),
-                        showDescription = uiModel.description.isNotBlank(),
-                    )
-                }
-            }
-            .onFailure { e ->
-                Timber.w(e, "Failed to decode rule template")
-                sendEffect(UiEffect.ShowError("Couldn't load the template"))
-            }
+    private suspend fun loadTemplate(assetFileName: String): Prefill {
+        val text = ruleTemplateRepository.getTemplateText(assetFileName).getOrElse { e ->
+            Timber.w(e, "Rule template unavailable: $assetFileName")
+            return Prefill.Failed(LoadError(UiText.StringResource(R.string.rule_editor_error_template_missing), canRetry = false))
+        }
+        return RuleJsonCodec.decode(text).fold(
+            onSuccess = { result ->
+                Prefill.Ready(RuleUiModel.fromDomain(result.rule.withFreshIdentityForImport()).copy(id = null))
+            },
+            onFailure = { e ->
+                Timber.w(e, "Failed to decode rule template: $assetFileName")
+                Prefill.Failed(LoadError(UiText.StringResource(R.string.rule_editor_error_template_invalid), canRetry = false))
+            },
+        )
     }
 
-    private fun loadSampleNotification(notificationId: String) {
-        viewModelScope.launch {
-            notificationRepository.getNotification(notificationId)
-                .onSuccess { notification ->
-                    if (notification != null) {
-                        setState {
-                            val currentRule = rule
-                            copy(
-                                sampleNotification = notification,
-                                rule = currentRule.copy(
-                                    targetApps = if (currentRule.id == null) persistentListOf(notification.app) else currentRule.targetApps,
-                                    triggers = if (currentRule.id == null) {
-                                        persistentListOf()
-                                    } else {
-                                        currentRule.triggers
-                                    },
-                                ),
-                            )
-                        }
-                    }
-                }
-                .onFailure { e ->
-                    Timber.e(e, "Failed to load sample notification: $notificationId")
-                }
-        }
+    /** The sample notification is a non-blocking extra: a failure is logged and the editor opens without it. */
+    private suspend fun fetchSampleNotification(notificationId: String): Notification? = notificationRepository.getNotification(notificationId)
+        .onFailure { e -> Timber.e(e, "Failed to load sample notification: $notificationId") }
+        .getOrNull()
+
+    private sealed interface Prefill {
+        data class Ready(val rule: RuleUiModel) : Prefill
+        data class Failed(val error: LoadError) : Prefill
     }
+
+    private data class DraftSnapshot(val draft: RuleUiModel, val initial: RuleUiModel, val step: Int)
 
     private fun updateName(name: String) {
         setState {
@@ -498,7 +599,7 @@ class RuleEditorViewModel @Inject constructor(
                 .onFailure { e ->
                     Timber.e(e, "Failed to test rule against history")
                     setState { copy(isBacktesting = false) }
-                    sendEffect(UiEffect.ShowError("Failed to test against history"))
+                    sendEffect(UiEffect.ShowError(UiText.StringResource(R.string.rule_editor_error_backtest)))
                 }
         }
     }
@@ -509,23 +610,24 @@ class RuleEditorViewModel @Inject constructor(
 
     private fun saveRule() {
         val currentState = uiState.value
+        if (currentState.isSaving || currentState.isLoading) return
         val ruleUiModel = currentState.rule
 
         // Validate - only name is required in the new design
-        val errors = mutableMapOf<String, String>()
+        val errors = mutableMapOf<String, UiText>()
         if (ruleUiModel.name.isBlank()) {
-            errors["name"] = "Rule name is required"
+            errors["name"] = UiText.StringResource(R.string.rule_editor_error_name_required)
         }
 
         if (errors.isNotEmpty()) {
             setState { copy(validationErrors = errors) }
-            sendEffect(UiEffect.ShowError("Please enter a rule name"))
+            sendEffect(UiEffect.ShowError(UiText.StringResource(R.string.rule_editor_error_enter_name)))
             return
         }
 
+        // Flag synchronously so a rapid second tap is ignored before the coroutine starts.
+        setState { copy(isSaving = true, error = null) }
         viewModelScope.launch {
-            setState { copy(isLoading = true) }
-
             val rule = ruleUiModel.toEntity()
 
             val result = if (ruleUiModel.id != null) {
@@ -536,19 +638,14 @@ class RuleEditorViewModel @Inject constructor(
 
             result
                 .onSuccess {
-                    setState { copy(isLoading = false) }
-                    sendEffect(UiEffect.ShowSuccess("Rule saved successfully"))
+                    // Saved: the draft is now the baseline, so nothing is left to discard.
+                    setState { copy(isSaving = false, initialRule = ruleUiModel) }
+                    appMessenger.post(UiText.StringResource(R.string.rule_editor_saved))
                     navigationHandler.goBack()
                 }
                 .onFailure { e ->
                     Timber.e(e, "Failed to save rule")
-                    setState {
-                        copy(
-                            isLoading = false,
-                            error = "Failed to save rule: ${e.message}",
-                        )
-                    }
-                    sendEffect(UiEffect.ShowError("Failed to save rule"))
+                    setState { copy(isSaving = false, error = UiText.StringResource(R.string.rule_editor_error_save)) }
                 }
         }
     }
@@ -580,26 +677,20 @@ class RuleEditorViewModel @Inject constructor(
 
     private fun deleteRule() {
         val ruleId = uiState.value.rule.id ?: return
+        if (uiState.value.isSaving) return
 
+        setState { copy(isSaving = true, error = null, showDeleteConfirmation = false) }
         viewModelScope.launch {
-            setState { copy(isLoading = true, showDeleteConfirmation = false) }
-
             ruleRepository.deleteRule(ruleId)
                 .onSuccess {
                     Timber.d("Rule deleted: $ruleId")
-                    setState { copy(isLoading = false) }
-                    sendEffect(UiEffect.ShowSuccess("Rule deleted successfully"))
+                    setState { copy(isSaving = false, initialRule = rule) }
+                    appMessenger.post(UiText.StringResource(R.string.rule_editor_deleted))
                     navigationHandler.goBack()
                 }
                 .onFailure { e ->
                     Timber.e(e, "Failed to delete rule: $ruleId")
-                    setState {
-                        copy(
-                            isLoading = false,
-                            error = "Failed to delete rule: ${e.message}",
-                        )
-                    }
-                    sendEffect(UiEffect.ShowError("Failed to delete rule"))
+                    setState { copy(isSaving = false, error = UiText.StringResource(R.string.rule_editor_error_delete)) }
                 }
         }
     }
@@ -607,5 +698,10 @@ class RuleEditorViewModel @Inject constructor(
     private companion object {
         /** Caps "Test against history" to the most recent notifications so it can't OOM or freeze. */
         const val BACKTEST_NOTIFICATION_LIMIT = 500
+
+        const val PERSIST_DEBOUNCE_MS = 300L
+        const val KEY_DRAFT = "rule_editor_draft"
+        const val KEY_INITIAL = "rule_editor_initial"
+        const val KEY_STEP = "rule_editor_step"
     }
 }
