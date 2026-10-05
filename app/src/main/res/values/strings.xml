@@ -133,6 +133,13 @@
     <string name="clear_all">Clear All</string>
     <string name="apply">Apply</string>
     <string name="no_filters_available">No filter options available. Create more rules with different categories or target apps.</string>
+    <string name="app_picker_choose">Choose apps</string>
+    <string name="app_picker_title">Choose apps</string>
+    <string name="app_picker_search">Search apps</string>
+    <string name="app_picker_search_clear">Clear search</string>
+    <string name="app_picker_done">Done</string>
+    <string name="app_picker_empty">No apps match your search.</string>
+    <string name="app_picker_remove_cd">Remove %1$s</string>
 
     <!-- Alarm action (ringing notification) -->
     <string name="alarm_channel_name">Alarms</string>

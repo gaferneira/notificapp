@@ -261,6 +261,13 @@
     <string name="clear_all">Borrar todo</string>
     <string name="apply">Aplicar</string>
     <string name="no_filters_available">No hay opciones de filtro. Crea más reglas con distintas categorías o apps de destino.</string>
+    <string name="app_picker_choose">Elegir apps</string>
+    <string name="app_picker_title">Elegir apps</string>
+    <string name="app_picker_search">Buscar apps</string>
+    <string name="app_picker_search_clear">Borrar búsqueda</string>
+    <string name="app_picker_done">Listo</string>
+    <string name="app_picker_empty">Ninguna app coincide con tu búsqueda.</string>
+    <string name="app_picker_remove_cd">Quitar %1$s</string>
 
     <!-- Action types (rule editor + rule details) -->
     <string name="action_type_save_data_label">Extraer datos</string>
