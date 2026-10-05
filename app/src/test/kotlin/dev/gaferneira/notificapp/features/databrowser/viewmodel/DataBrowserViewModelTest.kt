@@ -2,14 +2,24 @@ package dev.gaferneira.notificapp.features.databrowser.viewmodel
 
 import androidx.paging.PagingData
 import app.cash.turbine.test
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DataBrowserFilter
 import dev.gaferneira.notificapp.domain.model.DataBrowserRow
 import dev.gaferneira.notificapp.domain.model.DataSort
 import dev.gaferneira.notificapp.domain.model.DataStatistics
 import dev.gaferneira.notificapp.domain.model.ExportFormat
+import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.repository.DataBrowserRepository
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserEffect
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserEvent
+import dev.gaferneira.notificapp.features.databrowser.contract.DataFilterChip
+import dev.gaferneira.notificapp.features.databrowser.contract.FilterOption
+import dev.gaferneira.notificapp.testutil.createTestAction
+import dev.gaferneira.notificapp.testutil.createTestField
+import dev.gaferneira.notificapp.testutil.createTestNotification
+import dev.gaferneira.notificapp.testutil.createTestRule
+import dev.gaferneira.notificapp.testutil.fakes.FakeNotificationRepository
+import dev.gaferneira.notificapp.testutil.fakes.FakeRuleRepository
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,9 +54,16 @@ class DataBrowserViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel(): DataBrowserViewModel = DataBrowserViewModel(
+    private fun createViewModel(
+        ruleRepository: FakeRuleRepository = FakeRuleRepository(),
+        notificationRepository: FakeNotificationRepository = FakeNotificationRepository(),
+    ): DataBrowserViewModel = DataBrowserViewModel(
         dataBrowserRepository = repository,
+        ruleRepository = ruleRepository,
+        notificationRepository = notificationRepository,
     )
+
+    private val extractField = createTestField(method = RuleField.ExtractionMethod.SmartAmountDetection)
 
     @Nested
     inner class PagingTests {
@@ -115,6 +132,96 @@ class DataBrowserViewModelTest {
             viewModel.onEvent(DataBrowserEvent.OnClearFilters)
 
             viewModel.uiState.value.filter shouldBe DataBrowserFilter()
+        }
+    }
+
+    @Nested
+    inner class OptionsTests {
+
+        @Test
+        fun `ruleOptions lists only rules with at least one Extract data field`() = runTest(testDispatcher) {
+            val rules = FakeRuleRepository(
+                listOf(
+                    createTestRule(id = "A", name = "Rule A", actions = listOf(createTestAction(type = ActionType.SAVE_DATA, fields = listOf(extractField)))),
+                    createTestRule(id = "B", name = "Rule B", actions = listOf(createTestAction(type = ActionType.DISMISS_NOTIFICATION))),
+                    createTestRule(id = "C", name = "Rule C", actions = listOf(createTestAction(type = ActionType.SAVE_DATA, fields = emptyList()))),
+                    createTestRule(
+                        id = "D",
+                        name = "Rule D",
+                        actions = listOf(createTestAction(type = ActionType.SAVE_DATA, isEnabled = false, fields = listOf(extractField))),
+                    ),
+                ),
+            )
+
+            val viewModel = createViewModel(ruleRepository = rules)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.ruleOptions shouldBe listOf(FilterOption("A", "Rule A"))
+        }
+
+        @Test
+        fun `ruleOptions follow rule changes and are sorted by name`() = runTest(testDispatcher) {
+            val action = createTestAction(type = ActionType.SAVE_DATA, fields = listOf(extractField))
+            val rules = FakeRuleRepository(listOf(createTestRule(id = "z", name = "Zeta", actions = listOf(action))))
+            val viewModel = createViewModel(ruleRepository = rules)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            rules.saveRule(createTestRule(id = "a", name = "alpha", actions = listOf(action)))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.ruleOptions shouldBe listOf(FilterOption("a", "alpha"), FilterOption("z", "Zeta"))
+        }
+
+        @Test
+        fun `appOptions come from the apps with notifications`() = runTest(testDispatcher) {
+            val notifications = FakeNotificationRepository(
+                listOf(
+                    createTestNotification(id = "1", packageName = "com.b", appName = "Bank"),
+                    createTestNotification(id = "2", packageName = "com.a", appName = "Alpha"),
+                ),
+            )
+
+            val viewModel = createViewModel(notificationRepository = notifications)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.appOptions shouldBe listOf(FilterOption("com.a", "Alpha"), FilterOption("com.b", "Bank"))
+        }
+    }
+
+    @Nested
+    inner class RemoveChipTests {
+
+        private val applied = DataBrowserFilter(
+            ruleIds = listOf("r1"),
+            packageNames = listOf("com.a", "com.b"),
+            dateFrom = 10L,
+            dateTo = 20L,
+            sort = DataSort.APP_ASC,
+        )
+
+        @Test
+        fun `OnRemoveFilterChip removes only that value and reloads the stats`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            viewModel.onEvent(DataBrowserEvent.OnFilterChange(applied))
+            testDispatcher.scheduler.advanceUntilIdle()
+            repository.statisticsCalls.clear()
+
+            viewModel.onEvent(DataBrowserEvent.OnRemoveFilterChip(DataFilterChip.App("com.a")))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val expected = applied.copy(packageNames = listOf("com.b"))
+            viewModel.uiState.value.filter shouldBe expected
+            repository.statisticsCalls shouldBe listOf(expected)
+        }
+
+        @Test
+        fun `removing the date chip keeps rules and apps`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            viewModel.onEvent(DataBrowserEvent.OnFilterChange(applied))
+
+            viewModel.onEvent(DataBrowserEvent.OnRemoveFilterChip(DataFilterChip.DateRange))
+
+            viewModel.uiState.value.filter shouldBe applied.copy(dateFrom = null, dateTo = null)
         }
     }
 

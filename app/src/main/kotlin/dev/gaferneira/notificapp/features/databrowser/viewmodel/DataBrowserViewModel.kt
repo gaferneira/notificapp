@@ -8,10 +8,16 @@ import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.DataBrowserFilter
 import dev.gaferneira.notificapp.domain.model.DataBrowserRow
 import dev.gaferneira.notificapp.domain.model.ExportFormat
+import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.domain.repository.DataBrowserRepository
+import dev.gaferneira.notificapp.domain.repository.NotificationRepository
+import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserEffect
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserEvent
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserUiState
+import dev.gaferneira.notificapp.features.databrowser.contract.FilterOption
+import dev.gaferneira.notificapp.features.databrowser.contract.without
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -45,6 +51,8 @@ import javax.inject.Inject
 @HiltViewModel
 class DataBrowserViewModel @Inject constructor(
     private val dataBrowserRepository: DataBrowserRepository,
+    private val ruleRepository: RuleRepository,
+    private val notificationRepository: NotificationRepository,
 ) : MviViewModel<DataBrowserUiState, DataBrowserEvent, DataBrowserEffect>(DataBrowserUiState()) {
 
     /** The last ID list resolved by [onBulkDeleteClick]; [onConfirmBulkDelete] deletes exactly this set. */
@@ -70,6 +78,7 @@ class DataBrowserViewModel @Inject constructor(
 
     init {
         loadStats()
+        observeFilterOptions()
     }
 
     override fun onEvent(event: DataBrowserEvent) {
@@ -81,6 +90,7 @@ class DataBrowserViewModel @Inject constructor(
             }
             is DataBrowserEvent.OnSortChange -> updateFilter { copy(sort = event.sort) }
             DataBrowserEvent.OnRefreshStats -> loadStats()
+            is DataBrowserEvent.OnRemoveFilterChip -> updateFilter { without(event.chip) }
             DataBrowserEvent.OnClearFilters -> updateFilter { DataBrowserFilter(sort = sort) }
             is DataBrowserEvent.OnExportClick -> onExportClick(event.format)
             is DataBrowserEvent.OnDeleteRowClick -> onDeleteRowClick(event.valueId)
@@ -93,6 +103,30 @@ class DataBrowserViewModel @Inject constructor(
     private inline fun updateFilter(crossinline reducer: DataBrowserFilter.() -> DataBrowserFilter) {
         setState { copy(filter = filter.reducer()) }
         loadStats()
+    }
+
+    /**
+     * Feeds the filter sheet: rules limited to those that extract at least one field (so every
+     * offered rule can return results) and apps that have captured notifications.
+     */
+    private fun observeFilterOptions() {
+        viewModelScope.launch {
+            ruleRepository.observeAllRules().collect { rules ->
+                val options = rules
+                    .filter { it.saveDataFields().isNotEmpty() }
+                    .map { FilterOption(id = it.id, label = it.name) }
+                    .sortedBy { it.label.lowercase() }
+                setState { copy(ruleOptions = options.toImmutableList()) }
+            }
+        }
+        viewModelScope.launch {
+            notificationRepository.observeAppsWithNotifications().collect { apps ->
+                val options = apps
+                    .map { FilterOption(id = it.packageName, label = it.name) }
+                    .sortedBy { it.label.lowercase() }
+                setState { copy(appOptions = options.toImmutableList()) }
+            }
+        }
     }
 
     private fun loadStats() {

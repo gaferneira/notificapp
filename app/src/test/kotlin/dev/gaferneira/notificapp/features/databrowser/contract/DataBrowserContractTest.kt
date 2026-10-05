@@ -42,6 +42,75 @@ class DataBrowserContractTest {
     }
 
     @Nested
+    inner class ActiveChipsTests {
+
+        private val full = DataBrowserFilter(
+            ruleIds = listOf("r1", "r2"),
+            packageNames = listOf("com.a"),
+            dateFrom = 10L,
+            dateTo = 20L,
+        )
+
+        @Test
+        fun `a default filter has no chips`() {
+            DataBrowserFilter().activeChips() shouldBe emptyList()
+        }
+
+        @Test
+        fun `one chip per rule, per app and one for the date range, in display order`() {
+            full.activeChips() shouldBe listOf(
+                DataFilterChip.Rule("r1"),
+                DataFilterChip.Rule("r2"),
+                DataFilterChip.App("com.a"),
+                DataFilterChip.DateRange,
+            )
+        }
+
+        @Test
+        fun `a single date bound still yields the date range chip`() {
+            DataBrowserFilter(dateTo = 5L).activeChips() shouldBe listOf(DataFilterChip.DateRange)
+        }
+
+        @Test
+        fun `removing a rule chip removes only that rule`() {
+            full.without(DataFilterChip.Rule("r1")) shouldBe full.copy(ruleIds = listOf("r2"))
+        }
+
+        @Test
+        fun `removing an app chip removes only that app`() {
+            full.without(DataFilterChip.App("com.a")) shouldBe full.copy(packageNames = emptyList())
+        }
+
+        @Test
+        fun `removing the date chip clears both bounds and keeps the rest`() {
+            full.without(DataFilterChip.DateRange) shouldBe full.copy(dateFrom = null, dateTo = null)
+        }
+
+        @Test
+        fun `removing the last chip leaves an unnarrowed filter that keeps its sort`() {
+            val only = DataBrowserFilter(ruleIds = listOf("r1"), sort = DataSort.APP_DESC)
+
+            only.without(DataFilterChip.Rule("r1")) shouldBe DataBrowserFilter(sort = DataSort.APP_DESC)
+        }
+    }
+
+    @Nested
+    inner class ActiveFilterCountTests {
+
+        @Test
+        fun `counts rule, app and date dimensions once each regardless of how many values`() {
+            DataBrowserFilter().activeFilterCount() shouldBe 0
+            DataBrowserFilter(ruleIds = listOf("a", "b")).activeFilterCount() shouldBe 1
+            DataBrowserFilter(ruleIds = listOf("a"), packageNames = listOf("p"), dateFrom = 1L).activeFilterCount() shouldBe 3
+        }
+
+        @Test
+        fun `search and sort are not filter dimensions`() {
+            DataBrowserFilter(searchQuery = "x", sort = DataSort.RULE_DESC).activeFilterCount() shouldBe 0
+        }
+    }
+
+    @Nested
     inner class DataListContentTests {
 
         private val narrowed = DataBrowserFilter(ruleIds = listOf("r1"))

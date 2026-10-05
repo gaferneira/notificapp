@@ -5,6 +5,8 @@ import dev.gaferneira.notificapp.domain.model.DataBrowserFilter
 import dev.gaferneira.notificapp.domain.model.DataSort
 import dev.gaferneira.notificapp.domain.model.DataStatistics
 import dev.gaferneira.notificapp.domain.model.ExportFormat
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 /**
  * UI state for the Data Browser screen. The paged row list itself is exposed as a separate
@@ -21,18 +23,47 @@ data class DataBrowserUiState(
     /** Count of entries a bulk delete would remove, shown in the confirmation dialog. Null = dialog hidden. */
     val pendingDeleteCount: Int? = null,
     val isExporting: Boolean = false,
+    /** Rules the filter sheet offers: only rules that extract at least one field (Extract data). */
+    val ruleOptions: ImmutableList<FilterOption> = persistentListOf(),
+    /** Apps the filter sheet offers: apps that have captured notifications. */
+    val appOptions: ImmutableList<FilterOption> = persistentListOf(),
 )
+
+/** One selectable entry (rule or app) offered by the filter sheet; [label] is the display text. */
+data class FilterOption(val id: String, val label: String)
+
+/** One dismissible entry of the active-filter chips row. */
+sealed interface DataFilterChip {
+    data class Rule(val id: String) : DataFilterChip
+    data class App(val packageName: String) : DataFilterChip
+    data object DateRange : DataFilterChip
+}
+
+/** The individual active filters, in display order (rules, apps, date range). */
+fun DataBrowserFilter.activeChips(): List<DataFilterChip> = buildList {
+    ruleIds.forEach { add(DataFilterChip.Rule(it)) }
+    packageNames.forEach { add(DataFilterChip.App(it)) }
+    if (dateFrom != null || dateTo != null) add(DataFilterChip.DateRange)
+}
+
+/** This filter without the single value represented by [chip]; everything else (incl. sort) is kept. */
+fun DataBrowserFilter.without(chip: DataFilterChip): DataBrowserFilter = when (chip) {
+    is DataFilterChip.Rule -> copy(ruleIds = ruleIds - chip.id)
+    is DataFilterChip.App -> copy(packageNames = packageNames - chip.packageName)
+    DataFilterChip.DateRange -> copy(dateFrom = null, dateTo = null)
+}
+
+/** Count of active filter dimensions (rule, app, date range), each counted once, for the badge. */
+fun DataBrowserFilter.activeFilterCount(): Int = (if (ruleIds.isNotEmpty()) 1 else 0) +
+    (if (packageNames.isNotEmpty()) 1 else 0) +
+    (if (dateFrom != null || dateTo != null) 1 else 0)
 
 /**
  * True when the user narrowed the list by a rule, app, date bound or a non-blank search. Sort and the
  * (UI-hidden) field-type filter do not count, so "nothing matches" is only reported when the user
  * can actually undo something.
  */
-fun DataBrowserFilter.isNarrowed(): Boolean = ruleIds.isNotEmpty() ||
-    packageNames.isNotEmpty() ||
-    dateFrom != null ||
-    dateTo != null ||
-    searchQuery.isNotBlank()
+fun DataBrowserFilter.isNarrowed(): Boolean = activeFilterCount() > 0 || searchQuery.isNotBlank()
 
 /** What the Data list area renders for a given paging refresh state. */
 enum class DataListContent { Loading, Error, FilterEmpty, NoData, Rows }
@@ -57,6 +88,9 @@ sealed interface DataBrowserEvent {
 
     /** Resets rule, app, date, field-type filters and the search query; keeps the sort. */
     data object OnClearFilters : DataBrowserEvent
+
+    /** Removes the single filter value behind a chip. */
+    data class OnRemoveFilterChip(val chip: DataFilterChip) : DataBrowserEvent
     data class OnExportClick(val format: ExportFormat) : DataBrowserEvent
     data class OnDeleteRowClick(val valueId: String) : DataBrowserEvent
     data object OnBulkDeleteClick : DataBrowserEvent
