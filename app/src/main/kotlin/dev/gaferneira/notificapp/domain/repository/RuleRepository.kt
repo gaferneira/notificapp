@@ -14,6 +14,11 @@ interface RuleRepository {
     fun observeAllRules(): Flow<List<Rule>>
 
     /**
+     * Observe a single rule as a Flow. Emits `null` when the rule does not exist or is deleted.
+     */
+    fun observeRule(id: String): Flow<Rule?>
+
+    /**
      * Get all rules.
      */
     suspend fun getAllRules(): Result<List<Rule>>

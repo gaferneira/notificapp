@@ -6,6 +6,7 @@ import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 /**
@@ -25,6 +26,8 @@ class FakeRuleRepository(initial: List<Rule> = emptyList()) : RuleRepository {
     fun currentRules(): List<Rule> = rules.value
 
     override fun observeAllRules(): Flow<List<Rule>> = rules.asStateFlow()
+
+    override fun observeRule(id: String): Flow<Rule?> = rules.map { list -> list.find { it.id == id } }
 
     override suspend fun getAllRules(): Result<List<Rule>> = Result.success(rules.value)
 

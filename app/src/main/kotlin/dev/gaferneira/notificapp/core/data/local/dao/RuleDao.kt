@@ -27,6 +27,12 @@ internal interface RuleDao {
     fun observeAll(): Flow<List<RuleEntity>>
 
     /**
+     * Observe a single rule row by ID; emits `null` once the row no longer exists.
+     */
+    @Query("SELECT * FROM rules WHERE id = :id")
+    fun observeById(id: String): Flow<RuleEntity?>
+
+    /**
      * Get all rules.
      */
     @Query("SELECT * FROM rules ORDER BY updated_at DESC")

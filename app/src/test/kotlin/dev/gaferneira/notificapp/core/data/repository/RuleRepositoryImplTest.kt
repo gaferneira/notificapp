@@ -121,6 +121,25 @@ class RuleRepositoryImplTest {
     }
 
     @Test
+    fun `observeRule assembles the rule and then emits null once the row is gone`() = runTest(testDispatcher) {
+        val row = MutableStateFlow<RuleEntity?>(ruleEntity(id = "r1"))
+        coEvery { ruleDao.observeById("r1") } returns row
+        coEvery { ruleDao.getConditionsForRules(listOf("r1")) } returns emptyList()
+        coEvery { ruleDao.getActionsForRules(listOf("r1")) } returns emptyList()
+        coEvery { ruleDao.getFieldsForActions(emptyList()) } returns emptyList()
+        coEvery { ruleDao.getTargetAppsForRules(listOf("r1")) } returns emptyList()
+
+        repository.observeRule("r1").test {
+            awaitItem()?.id shouldBe "r1"
+
+            row.value = null
+
+            awaitItem() shouldBe null
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun `getRule returns null when the dao has no matching row`() = runTest(testDispatcher) {
         coEvery { ruleDao.getById("missing") } returns null
 

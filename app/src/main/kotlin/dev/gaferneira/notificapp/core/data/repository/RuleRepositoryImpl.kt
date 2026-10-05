@@ -39,6 +39,10 @@ internal class RuleRepositoryImpl @Inject constructor(
         .map { entities -> assembleRules(entities) }
         .flowOn(ioDispatcher)
 
+    override fun observeRule(id: String): Flow<Rule?> = ruleDao.observeById(id)
+        .map { entity -> entity?.let { assembleRules(listOf(it)).single() } }
+        .flowOn(ioDispatcher)
+
     override suspend fun getAllRules(): Result<List<Rule>> = withContext(ioDispatcher) {
         dbCatching("Failed to get all rules") { assembleRules(ruleDao.getAll()) }
     }
