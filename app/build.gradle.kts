@@ -207,6 +207,7 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.kotest.assertions.core)
     androidTestImplementation(libs.room.testing)
     androidTestImplementation(libs.androidx.work.testing)
     kspAndroidTest(libs.hilt.compiler)
