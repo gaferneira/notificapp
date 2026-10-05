@@ -160,7 +160,9 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ### Data Browser
 * **User Experience:** The user browses every piece of data their rules have extracted (field name, value, source app, rule, timestamp), in a paginated list newest-first by default. They can:
-  * Filter by any combination of rule, source app, date range, and field type
+  * Filter by any combination of rule, source app, and date range from a filter bottom sheet (edits are a draft that only applies on Apply; no live result count). The rule picker lists only rules that extract at least one field (Extract data), so every choice can return results; dates are chosen with a Material date range picker, inclusive of the first and last selected day in local time. Field type remains a domain-level filter and is not exposed in the UI
+  * See the active filters as dismissible chips under the search field (one per rule, per app, and the date range; tap to remove just that value) with a count badge on the filter button, so the scope of Export, bulk delete, and stats is always visible
+  * The filter and search are session-only: held in the Data screen state, lost when leaving the tab, never persisted
   * Search extracted values with free-text search (FTS4-backed)
   * Sort by date, rule name, app, or field name
   * See a plain-text stats header: total extractions, extractions this week, most active rule (no chart rendering yet — trend data is computed but not visualized, see `docs/roadmap.md`)

@@ -771,4 +771,18 @@
     <string name="data_empty_title">Aún no hay datos extraídos</string>
     <string name="data_empty_explanation">Los datos aparecen cuando una regla declara campos con la acción Extraer datos y una notificación coincide con ella.</string>
     <string name="data_empty_go_to_rules">Ir a Reglas</string>
+    <string name="data_filter_cd">Filtrar datos</string>
+    <string name="data_filter_title">Filtrar datos</string>
+    <string name="data_filter_section_rules">Reglas</string>
+    <string name="data_filter_rules_none">Ninguna regla extrae datos todavía. Añade una acción Extraer datos a una regla para filtrar por ella.</string>
+    <string name="data_filter_section_apps">Apps</string>
+    <string name="data_filter_apps_any">Cualquier app</string>
+    <string name="data_filter_apps_group">Apps con notificaciones</string>
+    <string name="data_filter_section_date">Rango de fechas</string>
+    <string name="data_filter_date_any">Cualquier fecha</string>
+    <string name="data_filter_date_choose">Elegir fechas</string>
+    <string name="data_filter_date_clear">Borrar fechas</string>
+    <string name="data_filter_apply">Aplicar</string>
+    <string name="data_filter_unknown_rule">Regla desconocida</string>
+    <string name="data_filter_date_range_chip">%1$s – %2$s</string>
 </resources>

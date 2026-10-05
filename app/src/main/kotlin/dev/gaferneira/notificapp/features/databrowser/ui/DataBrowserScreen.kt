@@ -18,10 +18,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,11 +47,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -82,6 +89,7 @@ import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserEffect
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserEvent
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserUiState
 import dev.gaferneira.notificapp.features.databrowser.contract.DataListContent
+import dev.gaferneira.notificapp.features.databrowser.contract.activeFilterCount
 import dev.gaferneira.notificapp.features.databrowser.contract.dataListContent
 import dev.gaferneira.notificapp.features.databrowser.viewmodel.DataBrowserViewModel
 import dev.gaferneira.notificapp.util.formatNotificationTime
@@ -183,12 +191,16 @@ private fun DataBrowserScreenContent(
     navigateTo: (Screen, NavOptions?) -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
+    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             DataBrowserTopBar(
                 isExporting = uiState.isExporting,
+                activeFilterCount = uiState.filter.activeFilterCount(),
+                onFilterClick = { showFilterSheet = true },
                 onEvent = onEvent,
             )
         },
@@ -210,10 +222,7 @@ private fun DataBrowserScreenContent(
                 onQueryChange = { onEvent(DataBrowserEvent.OnSearchQueryChange(it)) },
             )
 
-            if (uiState.isStatsLoading || (uiState.stats?.total ?: 0) > 0) {
-                StatsHeader(stats = uiState.stats, isLoading = uiState.isStatsLoading)
-                Spacer(modifier = Modifier.height(8.dp))
-            }
+            DataBrowserListHeader(uiState = uiState, onEvent = onEvent)
 
             DataRowList(
                 rows = rows,
@@ -225,6 +234,10 @@ private fun DataBrowserScreenContent(
         }
     }
 
+    if (showFilterSheet) {
+        FilterSheetHost(uiState = uiState, onEvent = onEvent, onClose = { showFilterSheet = false })
+    }
+
     uiState.pendingDeleteCount?.let { count ->
         BulkDeleteConfirmDialog(
             count = count,
@@ -234,10 +247,43 @@ private fun DataBrowserScreenContent(
     }
 }
 
+/** Hosts the filter sheet; applying a draft forwards it to the ViewModel and closes the sheet. */
+@Composable
+private fun FilterSheetHost(uiState: DataBrowserUiState, onEvent: (DataBrowserEvent) -> Unit, onClose: () -> Unit) {
+    DataBrowserFilterBottomSheet(
+        currentFilter = uiState.filter,
+        ruleOptions = uiState.ruleOptions,
+        appOptions = uiState.appOptions,
+        onFilterApplied = {
+            onEvent(DataBrowserEvent.OnFilterChange(it))
+            onClose()
+        },
+        onDismiss = onClose,
+    )
+}
+
+/** Active-filter chips and the stats card shown above the list. */
+@Composable
+private fun DataBrowserListHeader(uiState: DataBrowserUiState, onEvent: (DataBrowserEvent) -> Unit) {
+    DataBrowserActiveFilterChips(
+        filter = uiState.filter,
+        ruleOptions = uiState.ruleOptions,
+        appOptions = uiState.appOptions,
+        onRemove = { onEvent(DataBrowserEvent.OnRemoveFilterChip(it)) },
+    )
+
+    if (uiState.isStatsLoading || (uiState.stats?.total ?: 0) > 0) {
+        StatsHeader(stats = uiState.stats, isLoading = uiState.isStatsLoading)
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DataBrowserTopBar(
     isExporting: Boolean,
+    activeFilterCount: Int,
+    onFilterClick: () -> Unit,
     onEvent: (DataBrowserEvent) -> Unit,
 ) {
     var showSortMenu by remember { mutableStateOf(false) }
@@ -252,6 +298,8 @@ private fun DataBrowserTopBar(
             )
         },
         actions = {
+            FilterAction(activeFilterCount = activeFilterCount, onClick = onFilterClick)
+
             IconButton(onClick = { showSortMenu = true }) {
                 Icon(imageVector = Icons.Default.Tune, contentDescription = "Sort")
             }
@@ -296,6 +344,34 @@ private fun DataBrowserTopBar(
             }
         },
     )
+}
+
+/** Filter button with a badge showing how many filter dimensions are active. */
+@Composable
+private fun FilterAction(activeFilterCount: Int, onClick: () -> Unit) {
+    BadgedBox(
+        badge = {
+            if (activeFilterCount > 0) {
+                Badge { Text(activeFilterCount.toString(), style = MaterialTheme.typography.labelSmall) }
+            }
+        },
+    ) {
+        val activeDescription = if (activeFilterCount > 0) {
+            pluralStringResource(R.plurals.rules_filter_active_state, activeFilterCount, activeFilterCount)
+        } else {
+            null
+        }
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.semantics { activeDescription?.let { stateDescription = it } },
+        ) {
+            Icon(
+                imageVector = Icons.Default.FilterList,
+                contentDescription = stringResource(R.string.data_filter_cd),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
 }
 
 private fun DataSort.label(): String = when (this) {

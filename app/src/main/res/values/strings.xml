@@ -774,4 +774,18 @@
     <string name="data_empty_title">No extracted data yet</string>
     <string name="data_empty_explanation">Data fills up when a rule declares fields with the Extract data action and a notification matches it.</string>
     <string name="data_empty_go_to_rules">Go to Rules</string>
+    <string name="data_filter_cd">Filter data</string>
+    <string name="data_filter_title">Filter data</string>
+    <string name="data_filter_section_rules">Rules</string>
+    <string name="data_filter_rules_none">No rules extract data yet. Add an Extract data action to a rule to filter by it.</string>
+    <string name="data_filter_section_apps">Apps</string>
+    <string name="data_filter_apps_any">Any app</string>
+    <string name="data_filter_apps_group">Apps with notifications</string>
+    <string name="data_filter_section_date">Date range</string>
+    <string name="data_filter_date_any">Any date</string>
+    <string name="data_filter_date_choose">Choose dates</string>
+    <string name="data_filter_date_clear">Clear dates</string>
+    <string name="data_filter_apply">Apply</string>
+    <string name="data_filter_unknown_rule">Unknown rule</string>
+    <string name="data_filter_date_range_chip">%1$s – %2$s</string>
 </resources>
