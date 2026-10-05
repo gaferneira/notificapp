@@ -186,11 +186,81 @@
     <string name="rule_details_error_toggle">No se pudo actualizar la regla</string>
     <string name="rule_details_error_share">No se pudo compartir la regla</string>
     <string name="rule_details_error_delete">No se pudo eliminar la regla</string>
+
+    <!-- Rules list -->
+    <string name="rules_title">Reglas</string>
+    <string name="rules_filter_cd">Filtrar y ordenar</string>
+    <string name="rules_more_options">Más opciones</string>
+    <string name="rules_import_from_file">Importar desde archivo</string>
+    <string name="rules_import_from_clipboard">Importar desde el portapapeles</string>
+    <string name="rules_import_from_templates">Importar desde plantillas</string>
+    <string name="rules_new_rule">Nueva regla</string>
+    <string name="rules_search_placeholder">Buscar reglas…</string>
+    <string name="rules_search_clear">Borrar búsqueda</string>
+    <string name="rules_empty_title">Aún no hay reglas</string>
+    <string name="rules_empty_message">Crea tu primera regla con Nueva regla, o empieza desde una plantilla.</string>
+    <string name="rules_browse_templates">Ver plantillas</string>
+    <string name="rules_no_results_title">No hay reglas que coincidan</string>
+    <string name="rules_no_results_message">Prueba con otra búsqueda o cambia los filtros.</string>
+    <string name="rules_clear_filters">Borrar filtros</string>
+    <string name="rules_load_error_title">No se pudieron cargar las reglas</string>
+    <string name="rules_load_error_message">Ocurrió un error al cargar tus reglas.</string>
+    <string name="rules_retry">Reintentar</string>
+    <string name="rules_ok">Aceptar</string>
+    <string name="rules_cancel">Cancelar</string>
+    <string name="rules_group_uncategorized">Sin categoría</string>
+    <string name="rules_scope_all_apps">Todas las apps</string>
+    <string name="rules_scope_all_except">Todas las apps excepto %1$d</string>
+    <string name="rules_scope_one_app">1 app</string>
+    <string name="rules_scope_n_apps">%1$d apps</string>
+    <string name="rules_card_scope_category">%1$s · %2$s</string>
+    <string name="rules_card_toggle_cd">Activar la regla %1$s</string>
+    <string name="rules_error_refresh">No se pudieron actualizar las reglas</string>
+    <string name="rules_error_toggle">No se pudo actualizar la regla</string>
+    <string name="rules_error_import">No se pudo importar la regla</string>
+    <string name="rules_imported_dry_run">Se importó \"%1$s\" en modo de prueba</string>
+    <string name="rules_import_invalid">Este archivo no parece una regla válida</string>
     <string name="rules_import_error_newer_version">Esta regla se exportó desde una versión más reciente de Notificapp y no se puede importar aquí.</string>
     <string name="rules_import_error_missing_name">Esta regla no tiene nombre.</string>
     <string name="rules_import_error_unknown_value">Esta regla usa una opción que esta versión de Notificapp no reconoce (\"%1$s\"). Puede requerir una versión más reciente.</string>
     <string name="rules_import_error_too_deep">Las condiciones de esta regla están anidadas demasiado profundo (máx. %1$d niveles) y no se puede importar.</string>
     <string name="rules_import_error_title">No se pudo importar la regla</string>
+    <string name="rules_import_title">¿Importar \"%1$s\"?</string>
+    <string name="rules_import_confirm">Importar</string>
+    <string name="rules_import_apps_all">Apps: todas las apps</string>
+    <string name="rules_import_apps_include">Apps: %1$s</string>
+    <string name="rules_import_apps_exclude">Apps: todas las apps excepto %1$s</string>
+    <string name="rules_import_summary">Condiciones: %1$d · Campos: %2$d · Acciones: %3$d</string>
+    <plurals name="rules_import_skipped_actions">
+        <item quantity="one">%1$d acción requiere una versión más reciente de Notificapp y se omitirá.</item>
+        <item quantity="many">%1$d acciones requieren una versión más reciente de Notificapp y se omitirán.</item>
+        <item quantity="other">%1$d acciones requieren una versión más reciente de Notificapp y se omitirán.</item>
+    </plurals>
+    <string name="rules_import_dry_run_note">Esta regla comenzará en modo de prueba: registrará las coincidencias, pero no descartará, pospondrá ni alertará hasta que revises los resultados y desactives el modo de prueba.</string>
+    <string name="dry_run_badge">MODO PRUEBA</string>
+
+    <!-- Filter Bottom Sheet (rules) -->
+    <string name="filter_rules_title">Filtrar y ordenar</string>
+    <string name="filter_inbox_title">Filtrar notificaciones</string>
+    <string name="sort_by">Ordenar por</string>
+    <string name="filter_by_status">Por estado</string>
+    <string name="filter_by_category">Por categoría</string>
+    <string name="filter_by_app">Por app de destino</string>
+    <string name="status_all">Todas</string>
+    <string name="status_enabled">Activadas</string>
+    <string name="status_disabled">Desactivadas</string>
+    <string name="status_processed">Procesadas</string>
+    <string name="status_unprocessed">Sin procesar</string>
+    <string name="sort_category">Categoría</string>
+    <string name="sort_name_asc">Nombre A-Z</string>
+    <string name="sort_name_desc">Nombre Z-A</string>
+    <string name="sort_created_newest">Más recientes primero</string>
+    <string name="sort_created_oldest">Más antiguas primero</string>
+    <string name="sort_updated_recent">Actualizadas recientemente</string>
+    <string name="sort_status">Por estado</string>
+    <string name="clear_all">Borrar todo</string>
+    <string name="apply">Aplicar</string>
+    <string name="no_filters_available">No hay opciones de filtro. Crea más reglas con distintas categorías o apps de destino.</string>
 
     <!-- Action types (rule editor + rule details) -->
     <string name="action_type_save_data_label">Extraer datos</string>

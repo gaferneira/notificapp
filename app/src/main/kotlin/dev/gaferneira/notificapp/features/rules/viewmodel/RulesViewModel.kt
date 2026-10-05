@@ -2,9 +2,13 @@ package dev.gaferneira.notificapp.features.rules.viewmodel
 
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.common.Failure
+import dev.gaferneira.notificapp.core.rulesharing.RuleImportFailure
 import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec
 import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec.withFreshIdentityForImport
 import dev.gaferneira.notificapp.core.ui.Resource
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.appliesToPackage
@@ -18,6 +22,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -47,19 +52,26 @@ class RulesViewModel @Inject constructor(
 
         // Combine all state flows to produce filtered rules
         viewModelScope.launch {
-            combine(allRules, searchQuery, filter) { rules, query, currentFilter ->
-                Triple(rules, query, currentFilter)
-            }.collectLatest { (rules, query, currentFilter) ->
-                val filteredRules = applyFilters(rules, query, currentFilter)
-                setState {
-                    copy(
-                        rules = Resource.Success(filteredRules),
-                        allRules = rules,
-                        searchQuery = query,
-                        filter = currentFilter,
-                    )
+            combine(allRules, searchQuery, filter) { _, _, _ -> }
+                .collectLatest {
+                    // A failed load stays visible until the user retries.
+                    if (uiState.value.rules !is Resource.Error) publishRules()
                 }
-            }
+        }
+    }
+
+    private fun publishRules() {
+        val rules = allRules.value
+        val query = searchQuery.value
+        val currentFilter = filter.value
+        val filteredRules = applyFilters(rules, query, currentFilter)
+        setState {
+            copy(
+                rules = Resource.Success(filteredRules),
+                allRules = rules,
+                searchQuery = query,
+                filter = currentFilter,
+            )
         }
     }
 
@@ -72,7 +84,7 @@ class RulesViewModel @Inject constructor(
             is RulesEvent.OnAddRuleClick -> onAddRuleClick()
             is RulesEvent.OnSearchQueryChange -> onSearchQueryChange(event.query)
             is RulesEvent.OnFilterChange -> onFilterChange(event.filter)
-            is RulesEvent.OnExportRuleClick -> onExportRuleClick(event.ruleId)
+            RulesEvent.OnClearFilters -> onClearFilters()
             is RulesEvent.OnRuleTextReceived -> onRuleTextReceived(event.text)
             RulesEvent.OnImportConfirmed -> onImportConfirmed()
             RulesEvent.OnImportCancelled -> setState { copy(importPreview = null, importSkippedActions = emptyList()) }
@@ -89,20 +101,17 @@ class RulesViewModel @Inject constructor(
 
         observeRulesJob?.cancel()
         observeRulesJob = viewModelScope.launch {
-            try {
-                ruleRepository.observeAllRules()
-                    .collectLatest { rules ->
-                        allRules.value = rules.toImmutableList()
-                    }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to load rules")
-                setState {
-                    copy(
-                        rules = Resource.Loading(),
-                    )
+            ruleRepository.observeAllRules()
+                .catch { e ->
+                    Timber.e(e, "Failed to load rules")
+                    setState { copy(rules = Resource.Error(Failure.UnknownException(e))) }
                 }
-                sendEffect(RulesEffect.ShowError("Failed to load rules"))
-            }
+                .collectLatest { rules ->
+                    allRules.value = rules.toImmutableList()
+                    // After a failed load + retry the list may be unchanged, so the combine in
+                    // init does not re-emit; leave the Loading/Error state explicitly.
+                    if (uiState.value.rules !is Resource.Success) publishRules()
+                }
         }
     }
 
@@ -114,7 +123,7 @@ class RulesViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     Timber.e(e, "Failed to refresh rules")
-                    sendEffect(RulesEffect.ShowError("Failed to refresh rules"))
+                    sendEffect(RulesEffect.ShowError(UiText.StringResource(R.string.rules_error_refresh)))
                 }
         }
     }
@@ -199,8 +208,13 @@ class RulesViewModel @Inject constructor(
         filter.value = newFilter
     }
 
+    private fun onClearFilters() {
+        searchQuery.value = ""
+        filter.value = RuleFilter()
+    }
+
     private fun onRuleClick(ruleId: String) {
-        sendEffect(RulesEffect.NavigateToRuleEditor(ruleId))
+        sendEffect(RulesEffect.NavigateToRuleDetails(ruleId))
     }
 
     private fun onRuleToggleActive(ruleId: String) {
@@ -211,30 +225,13 @@ class RulesViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     Timber.e(e, "Failed to toggle rule: $ruleId")
-                    sendEffect(RulesEffect.ShowError("Failed to toggle rule"))
+                    sendEffect(RulesEffect.ShowError(UiText.StringResource(R.string.rules_error_toggle)))
                 }
         }
     }
 
     private fun onAddRuleClick() {
         sendEffect(RulesEffect.NavigateToRuleEditor())
-    }
-
-    private fun onExportRuleClick(ruleId: String) {
-        viewModelScope.launch {
-            ruleRepository.getRule(ruleId)
-                .onSuccess { rule ->
-                    if (rule == null) {
-                        sendEffect(RulesEffect.ShowError("Rule not found"))
-                        return@onSuccess
-                    }
-                    sendEffect(RulesEffect.ShareRule(ruleName = rule.name, json = RuleJsonCodec.encode(rule)))
-                }
-                .onFailure { e ->
-                    Timber.e(e, "Failed to load rule for export: $ruleId")
-                    sendEffect(RulesEffect.ShowError("Failed to export rule"))
-                }
-        }
     }
 
     private fun onRuleTextReceived(text: String) {
@@ -250,7 +247,7 @@ class RulesViewModel @Inject constructor(
             }
             .onFailure { e ->
                 Timber.w(e, "Failed to decode imported rule")
-                setState { copy(importError = e.message ?: "This doesn't look like a valid rule file") }
+                setState { copy(importError = e.toImportErrorText()) }
             }
     }
 
@@ -261,12 +258,25 @@ class RulesViewModel @Inject constructor(
             ruleRepository.saveRule(rule)
                 .onSuccess {
                     Timber.d("Imported rule: ${rule.id}")
-                    sendEffect(RulesEffect.ShowSuccess("Imported \"${rule.name}\" in dry-run mode"))
+                    sendEffect(RulesEffect.ShowSuccess(UiText.StringResource(R.string.rules_imported_dry_run, arrayOf(rule.name))))
                 }
                 .onFailure { e ->
                     Timber.e(e, "Failed to save imported rule")
-                    sendEffect(RulesEffect.ShowError("Failed to import rule"))
+                    sendEffect(RulesEffect.ShowError(UiText.StringResource(R.string.rules_error_import)))
                 }
         }
     }
+}
+
+/**
+ * Maps a [RuleJsonCodec.decode] failure to a localized message. The codec's English `message` is
+ * a technical detail for logs only and is never shown; unknown failures fall back to the generic
+ * "not a valid rule" text.
+ */
+internal fun Throwable.toImportErrorText(): UiText = when (this) {
+    is RuleImportFailure.UnsupportedSchemaVersion -> UiText.StringResource(R.string.rules_import_error_newer_version)
+    is RuleImportFailure.MissingName -> UiText.StringResource(R.string.rules_import_error_missing_name)
+    is RuleImportFailure.UnknownValue -> UiText.StringResource(R.string.rules_import_error_unknown_value, arrayOf(value))
+    is RuleImportFailure.NestedTooDeeply -> UiText.StringResource(R.string.rules_import_error_too_deep, arrayOf(maxDepth))
+    else -> UiText.StringResource(R.string.rules_import_invalid)
 }

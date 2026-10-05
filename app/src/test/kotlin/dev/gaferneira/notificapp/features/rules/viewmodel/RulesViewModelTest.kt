@@ -1,9 +1,14 @@
 package dev.gaferneira.notificapp.features.rules.viewmodel
 
 import app.cash.turbine.test
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.rulesharing.RuleImportFailure
 import dev.gaferneira.notificapp.core.rulesharing.RuleJsonCodec
+import dev.gaferneira.notificapp.core.ui.Resource
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.AppInfo
+import dev.gaferneira.notificapp.domain.repository.RuleRepository
 import dev.gaferneira.notificapp.features.rules.contract.RuleFilter
 import dev.gaferneira.notificapp.features.rules.contract.RulesEffect
 import dev.gaferneira.notificapp.features.rules.contract.RulesEvent
@@ -12,9 +17,14 @@ import dev.gaferneira.notificapp.testutil.createTestRule
 import dev.gaferneira.notificapp.testutil.fakes.FakeRuleRepository
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -46,36 +56,30 @@ class RulesViewModelTest {
     }
 
     @Nested
-    inner class ExportTests {
+    inner class NavigationTests {
 
         @Test
-        fun `export sends a ShareRule effect with the rule's encoded JSON`() = runTest(testDispatcher) {
-            // Given: an existing rule
-            val rule = createTestRule(id = "rule-1", name = "Bank payment")
-            ruleRepository.saveRule(rule)
-
+        fun `clicking a rule sends a NavigateToRuleDetails effect`() = runTest(testDispatcher) {
             viewModel.effect.test {
-                // When: exporting it
-                viewModel.onEvent(RulesEvent.OnExportRuleClick("rule-1"))
+                // When: tapping a rule row
+                viewModel.onEvent(RulesEvent.OnRuleClick("rule-1"))
                 testDispatcher.scheduler.advanceUntilIdle()
 
-                // Then: a ShareRule effect carries the rule's name and encoded JSON
-                awaitItem() shouldBe RulesEffect.ShareRule(ruleName = "Bank payment", json = RuleJsonCodec.encode(rule))
+                // Then: it opens the read-only details screen, not the editor
+                awaitItem() shouldBe RulesEffect.NavigateToRuleDetails("rule-1")
                 cancelAndIgnoreRemainingEvents()
             }
         }
 
         @Test
-        fun `export of a missing rule sends ShowError`() = runTest(testDispatcher) {
-            // Given: no rule with this id exists (fake starts empty)
-
+        fun `adding a rule still sends a NavigateToRuleEditor effect with no id`() = runTest(testDispatcher) {
             viewModel.effect.test {
-                // When: exporting it
-                viewModel.onEvent(RulesEvent.OnExportRuleClick("missing"))
+                // When: tapping the add action
+                viewModel.onEvent(RulesEvent.OnAddRuleClick)
                 testDispatcher.scheduler.advanceUntilIdle()
 
-                // Then: an error effect is sent
-                awaitItem() shouldBe RulesEffect.ShowError("Rule not found")
+                // Then
+                awaitItem() shouldBe RulesEffect.NavigateToRuleEditor()
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -133,7 +137,33 @@ class RulesViewModelTest {
             // Then: an error is set and there is no preview to confirm
             val state = viewModel.uiState.value
             state.importPreview shouldBe null
-            state.importError.shouldNotBeNull()
+            state.importError.shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rules_import_invalid
+        }
+
+        @Test
+        fun `a rule exported from a newer schema version sets a localized import error`() {
+            // Given: an envelope from a future schema version
+            val json = RuleJsonCodec.encode(createTestRule(name = "Bank payment"))
+                .replace("\"schemaVersion\": 1", "\"schemaVersion\": 999")
+
+            // When: the text is received
+            viewModel.onEvent(RulesEvent.OnRuleTextReceived(json))
+
+            // Then: the error is a string resource, not the codec's English message
+            viewModel.uiState.value.importError.shouldBeInstanceOf<UiText.StringResource>().id shouldBe
+                R.string.rules_import_error_newer_version
+        }
+
+        @Test
+        fun `codec failures map to their localized messages`() {
+            RuleImportFailure.MissingName().toImportErrorText()
+                .shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rules_import_error_missing_name
+            RuleImportFailure.UnknownValue("operator", "fuzzy").toImportErrorText()
+                .shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rules_import_error_unknown_value
+            RuleImportFailure.NestedTooDeeply(5).toImportErrorText()
+                .shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rules_import_error_too_deep
+            IllegalStateException("boom").toImportErrorText()
+                .shouldBeInstanceOf<UiText.StringResource>().id shouldBe R.string.rules_import_invalid
         }
 
         @Test
@@ -228,6 +258,73 @@ class RulesViewModelTest {
 
             // Then: the exclude-mode rule is hidden because it does not fire for com.b
             viewModel.uiState.value.rules.getDataOrThrow() shouldBe persistentListOf()
+        }
+    }
+
+    @Nested
+    inner class SearchAndClearTests {
+
+        @Test
+        fun `search matches name, description and category`() = runTest(testDispatcher) {
+            // Given
+            ruleRepository.saveRule(createTestRule(id = "a", name = "Alpha", description = "bank alerts", category = "Misc"))
+            ruleRepository.saveRule(createTestRule(id = "b", name = "Beta", description = "x", category = "Finance"))
+            ruleRepository.saveRule(createTestRule(id = "c", name = "Gamma", description = "x", category = "Misc"))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // When / Then: description match
+            viewModel.onEvent(RulesEvent.OnSearchQueryChange("bank"))
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.uiState.value.rules.getDataOrThrow().map { it.id } shouldBe listOf("a")
+
+            // When / Then: category match
+            viewModel.onEvent(RulesEvent.OnSearchQueryChange("finance"))
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.uiState.value.rules.getDataOrThrow().map { it.id } shouldBe listOf("b")
+        }
+
+        @Test
+        fun `clearing filters resets search and filter but keeps all rules`() = runTest(testDispatcher) {
+            // Given: a rule hidden by both a search query and a status filter
+            ruleRepository.saveRule(createTestRule(id = "a", name = "Alpha", isActive = true))
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.onEvent(RulesEvent.OnSearchQueryChange("zzz"))
+            viewModel.onEvent(RulesEvent.OnFilterChange(RuleFilter(status = RuleFilter.Status.DISABLED)))
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.uiState.value.rules.getDataOrThrow() shouldBe persistentListOf()
+            viewModel.uiState.value.allRules.size shouldBe 1
+
+            // When
+            viewModel.onEvent(RulesEvent.OnClearFilters)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then
+            val state = viewModel.uiState.value
+            state.searchQuery shouldBe ""
+            state.filter shouldBe RuleFilter()
+            state.rules.getDataOrThrow().map { it.id } shouldBe listOf("a")
+        }
+    }
+
+    @Nested
+    inner class LoadErrorTests {
+
+        @Test
+        fun `a failing rules stream surfaces an error state and retry recovers`() = runTest(testDispatcher) {
+            // Given: a repository whose stream fails
+            val repository = mockk<RuleRepository>()
+            every { repository.observeAllRules() } returns flow { throw IllegalStateException("boom") }
+            val vm = RulesViewModel(repository)
+            testDispatcher.scheduler.advanceUntilIdle()
+            vm.uiState.value.rules.shouldBeInstanceOf<Resource.Error<*>>()
+
+            // When: the stream recovers and the user retries
+            every { repository.observeAllRules() } returns flowOf(listOf(createTestRule(id = "a")))
+            vm.onEvent(RulesEvent.LoadRules)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then
+            vm.uiState.value.rules.getDataOrThrow().map { it.id } shouldBe listOf("a")
         }
     }
 }

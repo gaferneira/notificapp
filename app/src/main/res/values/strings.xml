@@ -365,11 +365,57 @@
     <string name="rule_details_error_toggle">Failed to update rule</string>
     <string name="rule_details_error_share">Failed to share rule</string>
     <string name="rule_details_error_delete">Failed to delete rule</string>
+
+    <!-- Rules list -->
+    <string name="rules_title">Rules</string>
+    <string name="rules_filter_cd">Filter and sort</string>
+    <string name="rules_more_options">More options</string>
+    <string name="rules_import_from_file">Import from file</string>
+    <string name="rules_import_from_clipboard">Import from clipboard</string>
+    <string name="rules_import_from_templates">Import from templates</string>
+    <string name="rules_new_rule">New rule</string>
+    <string name="rules_search_placeholder">Search rules…</string>
+    <string name="rules_search_clear">Clear search</string>
+    <string name="rules_empty_title">No rules yet</string>
+    <string name="rules_empty_message">Create your first rule with New rule, or start from a template.</string>
+    <string name="rules_browse_templates">Browse templates</string>
+    <string name="rules_no_results_title">No matching rules</string>
+    <string name="rules_no_results_message">Try a different search or change the filters.</string>
+    <string name="rules_clear_filters">Clear filters</string>
+    <string name="rules_load_error_title">Couldn\'t load rules</string>
+    <string name="rules_load_error_message">Something went wrong while loading your rules.</string>
+    <string name="rules_retry">Retry</string>
+    <string name="rules_ok">OK</string>
+    <string name="rules_cancel">Cancel</string>
+    <string name="rules_group_uncategorized">Uncategorized</string>
+    <string name="rules_scope_all_apps">All apps</string>
+    <string name="rules_scope_all_except">All apps except %1$d</string>
+    <string name="rules_scope_one_app">1 app</string>
+    <string name="rules_scope_n_apps">%1$d apps</string>
+    <string name="rules_card_scope_category">%1$s · %2$s</string>
+    <string name="rules_card_toggle_cd">Enable rule %1$s</string>
+    <string name="rules_error_refresh">Failed to refresh rules</string>
+    <string name="rules_error_toggle">Failed to update rule</string>
+    <string name="rules_error_import">Failed to import rule</string>
+    <string name="rules_imported_dry_run">Imported \"%1$s\" in dry-run mode</string>
+    <string name="rules_import_invalid">This doesn\'t look like a valid rule file</string>
     <string name="rules_import_error_newer_version">This rule was exported from a newer version of Notificapp and can\'t be imported here.</string>
     <string name="rules_import_error_missing_name">This rule has no name.</string>
     <string name="rules_import_error_unknown_value">This rule uses an option this version of Notificapp doesn\'t recognize (\"%1$s\"). It may require a newer version.</string>
     <string name="rules_import_error_too_deep">This rule\'s conditions are nested too deeply (max %1$d levels) and can\'t be imported.</string>
     <string name="rules_import_error_title">Couldn\'t import rule</string>
+    <string name="rules_import_title">Import \"%1$s\"?</string>
+    <string name="rules_import_confirm">Import</string>
+    <string name="rules_import_apps_all">Apps: All apps</string>
+    <string name="rules_import_apps_include">Apps: %1$s</string>
+    <string name="rules_import_apps_exclude">Apps: All apps except %1$s</string>
+    <string name="rules_import_summary">Conditions: %1$d · Fields: %2$d · Actions: %3$d</string>
+    <plurals name="rules_import_skipped_actions">
+        <item quantity="one">%1$d action requires a newer version of Notificapp and will be skipped.</item>
+        <item quantity="other">%1$d actions require a newer version of Notificapp and will be skipped.</item>
+    </plurals>
+    <string name="rules_import_dry_run_note">This rule will start in dry-run mode: it will log matches but won\'t dismiss, snooze, or alert until you review the results and turn dry-run off.</string>
+    <string name="dry_run_badge">DRY RUN</string>
 
     <!-- Action types (rule editor + rule details) -->
     <string name="action_type_save_data_label">Extract data</string>

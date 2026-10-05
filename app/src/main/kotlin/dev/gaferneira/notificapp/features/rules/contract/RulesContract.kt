@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.features.rules.contract
 
 import dev.gaferneira.notificapp.core.ui.Resource
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.Rule
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -23,7 +24,7 @@ data class RulesUiState(
     /** Wire names of actions dropped from [importPreview] because this app version doesn't recognize them */
     val importSkippedActions: List<String> = emptyList(),
     /** Message to show when decoding an imported rule fails */
-    val importError: String? = null,
+    val importError: UiText? = null,
 )
 
 /**
@@ -37,7 +38,9 @@ sealed interface RulesEvent {
     data object OnAddRuleClick : RulesEvent
     data class OnSearchQueryChange(val query: String) : RulesEvent
     data class OnFilterChange(val filter: RuleFilter) : RulesEvent
-    data class OnExportRuleClick(val ruleId: String) : RulesEvent
+
+    /** Resets the search query and the filter/sort selection ("no results" empty state action). */
+    data object OnClearFilters : RulesEvent
     data class OnRuleTextReceived(val text: String) : RulesEvent
     data object OnImportConfirmed : RulesEvent
     data object OnImportCancelled : RulesEvent
@@ -48,10 +51,10 @@ sealed interface RulesEvent {
  * UI Effects (one-time events) for RulesScreen.
  */
 sealed interface RulesEffect {
+    data class NavigateToRuleDetails(val ruleId: String) : RulesEffect
     data class NavigateToRuleEditor(val ruleId: String? = null) : RulesEffect
-    data class ShowError(val message: String) : RulesEffect
-    data class ShareRule(val ruleName: String, val json: String) : RulesEffect
-    data class ShowSuccess(val message: String) : RulesEffect
+    data class ShowError(val message: UiText) : RulesEffect
+    data class ShowSuccess(val message: UiText) : RulesEffect
 }
 
 /**

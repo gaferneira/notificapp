@@ -129,11 +129,12 @@ Notificapp lets users create automation rules that act on the notifications thei
 
 ### Rules Management
 * **User Experience:** The user views all their rules in one list, with:
-  * Search by name
+  * Search by name, description, or category (with a clear button)
   * Filter by category, target app, or status (bottom sheet)
   * Sort by: category, name A-Z/Z-A, newest/oldest created, recently updated, or status-first
-  * Inline enable/disable toggle without deleting the rule
-  * Export/Import (see "Rule Sharing" below)
+  * Compact rows: icon, name (with a dry-run badge when applicable), one-line description, and app scope plus category; the inline enable/disable toggle works without deleting the rule
+  * Distinct empty states: "No rules yet" (with a link to templates) versus "No matching rules" when a search or filter hides everything (with "Clear filters")
+  * Tapping a rule opens its read-only Rule Details screen (see "Rule Details" below); Import is available from the top bar (see "Rule Sharing" below)
 * **App Scope:** Each rule can target apps in one of three modes:
   * All apps — no app restriction
   * Include-list — rule fires only for the listed apps

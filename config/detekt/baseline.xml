@@ -55,7 +55,6 @@
     <ID>SwallowedException:NotificationDetailScreen.kt$e: Exception</ID>
     <ID>SwallowedException:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$e: Exception</ID>
     <ID>SwallowedException:RuleMatcher.kt$RuleMatcher$e: Exception</ID>
-    <ID>SwallowedException:RulesScreen.kt$e: Exception</ID>
     <ID>SwallowedException:UserPreferencesLocalDataSource.kt$UserPreferencesLocalDataSource$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AddFieldViewModel.kt$AddFieldViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AppSelectionViewModel.kt$AppSelectionViewModel$e: Exception</ID>
@@ -71,8 +70,6 @@
     <ID>TooGenericExceptionCaught:Resource.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RuleExecutionRepositoryImpl.kt$RuleExecutionRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:RuleMatcher.kt$RuleMatcher$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:RulesScreen.kt$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:RulesViewModel.kt$RulesViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SelectedAppRepositoryImpl.kt$SelectedAppRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SettingsViewModel.kt$SettingsViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:UserPreferencesLocalDataSource.kt$UserPreferencesLocalDataSource$e: Exception</ID>
