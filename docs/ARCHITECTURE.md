@@ -126,6 +126,7 @@ core/notification → core/extraction (notification processing)
 
 **Rules:**
 - Features depend on domain models, repository interfaces, core/ui, and pure-Kotlin `core/*` services (e.g. `RuleEditorViewModel` → `RuleEngine` for backtesting, `RulesViewModel` → `RuleJsonCodec` for import/export) — never on `core/data` (DAOs/entities) or Android-facing `core/notification` internals directly
+- `core/**` never imports `features/**` (enforced by `architectureCheck` rule `core-no-features`; `core/di` Hilt modules are the exempt composition root)
 - core/data implements domain repository interfaces
 - core/extraction and core/rulesharing are pure Kotlin with no Android dependencies
 - No circular dependencies between packages

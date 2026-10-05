@@ -33,6 +33,8 @@
 #   contract-purity  — a feature's contract/ (its public UiState/Event/Effect
 #                       surface) must not import core.extraction internals
 #                       (ARCH-008)
+#   core-no-features — core/** (except core/di, the Hilt composition root) must
+#                       never import features/**; starts with an empty baseline
 #   design-system-styling — core/ui/components/* must not reintroduce the
 #                       ad-hoc `.copy(alpha = ...)` tonal-color hack the
 #                       Styles API migration removed; use NotificappStyles /

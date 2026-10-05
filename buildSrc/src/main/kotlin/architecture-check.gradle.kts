@@ -195,6 +195,24 @@ fun findArchViolations(srcDir: File): List<ArchViolation> {
         }
     }
 
+    // Rule 10: core-no-features — core/** is shared infrastructure that features build on, so it
+    // must never import features/** (that would create a core <-> feature package cycle). The only
+    // exception is core/di: Hilt modules are the composition root and must bind feature-owned
+    // implementations.
+    val coreNoFeaturesRegex = Regex("""^import dev\.gaferneira\.notificapp\.features\.""")
+    val coreDir = File(srcDir, "dev/gaferneira/notificapp/core")
+    if (coreDir.exists()) {
+        ktFiles(coreDir)
+            .filter { !relPath(it).startsWith("dev/gaferneira/notificapp/core/di/") }
+            .forEach { f ->
+                f.readLines().forEachIndexed { idx, line ->
+                    if (coreNoFeaturesRegex.containsMatchIn(line)) {
+                        violations += ArchViolation("core-no-features", relPath(f), idx + 1)
+                    }
+                }
+            }
+    }
+
     return violations.distinct().sortedBy { it.toString() }
 }
 
@@ -204,7 +222,7 @@ val architectureCheck =
         description = "Fails on NEW violations of Notificapp architecture rules not covered by Detekt " +
             "(data-layer visibility, dispatcher injection, MVI effect collection, platform statics in " +
             "ViewModels/domain, domain/features dependency direction, unmapped repository exceptions, " +
-            "contract purity, design-system styling, hardcoded rule-editor UI strings). Pre-existing violations are grandfathered in " +
+            "contract purity, design-system styling, hardcoded rule-editor UI strings, core -> features imports). Pre-existing violations are grandfathered in " +
             "config/architecture/baseline.txt."
 
         val srcDir = file("src/main/kotlin")
