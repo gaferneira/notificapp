@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.CsvSource
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.TimeZone
 
 /**
  * Focuses on the locale-aware currency parsing in [ExtractedFieldValueMapper] (exercised through
@@ -141,9 +142,9 @@ class ExtractedFieldValueMapperTest {
         method = RuleField.ExtractionMethod.SmartDateDetection,
     )
 
-    private fun millis(year: Int, month: Int, day: Int, zone: ZoneId = utc): Long = LocalDate.of(year, month, day).atStartOfDay(zone).toInstant().toEpochMilli()
+    private fun epochDay(year: Int, month: Int, day: Int): Long = LocalDate.of(year, month, day).toEpochDay()
 
-    private fun parseDate(raw: String): Long? = map(dateField, raw).valueDate
+    private fun parseDate(raw: String): Long? = map(dateField, raw).valueEpochDay
 
     @ParameterizedTest
     @CsvSource(
@@ -159,33 +160,45 @@ class ExtractedFieldValueMapperTest {
         "'Jan 15th, 2024'",
         "'15/01/24'",
     )
-    fun `DATE parses detected formats to start of day`(raw: String) {
-        parseDate(raw) shouldBe millis(2024, 1, 15)
+    fun `DATE parses detected formats to an epoch day`(raw: String) {
+        parseDate(raw) shouldBe epochDay(2024, 1, 15)
     }
 
     @Test
-    fun `DATE keeps the epoch millis path`() {
-        parseDate("1705276800000") shouldBe 1705276800000L
+    fun `DATE reads epoch millis as a calendar day in the supplied zone`() {
+        // 2024-01-15T00:00:00Z is still Jan 14 in Bogota (UTC-5).
+        map(dateField, "1705276800000", utc).valueEpochDay shouldBe epochDay(2024, 1, 15)
+        map(dateField, "1705276800000", ZoneId.of("America/Bogota")).valueEpochDay shouldBe epochDay(2024, 1, 14)
     }
 
     @Test
-    fun `DATE anchors to the supplied zone`() {
-        val zone = ZoneId.of("America/Bogota")
+    fun `DATE stores the same epoch day regardless of the default time zone`() {
+        val original = TimeZone.getDefault()
+        try {
+            val stored = listOf("Pacific/Kiritimati", "Pacific/Pago_Pago").map { id ->
+                TimeZone.setDefault(TimeZone.getTimeZone(id))
+                ExtractedFieldValueMapper
+                    .fromExtractedData("exec-1", mapOf(fieldId to "2024-01-15"), listOf(dateField))
+                    .single().valueEpochDay
+            }
 
-        map(dateField, "2024-01-15", zone).valueDate shouldBe millis(2024, 1, 15, zone)
+            stored shouldBe listOf(epochDay(2024, 1, 15), epochDay(2024, 1, 15))
+        } finally {
+            TimeZone.setDefault(original)
+        }
     }
 
     @Test
-    fun `DATE with ambiguous day and month leaves valueDate null but keeps text`() {
+    fun `DATE with ambiguous day and month leaves valueEpochDay null but keeps text`() {
         val entity = map(dateField, "03/04/2024")
 
-        entity.valueDate shouldBe null
+        entity.valueEpochDay shouldBe null
         entity.valueText shouldBe "03/04/2024"
     }
 
     @Test
     fun `DATE two-digit year maps to 2000s`() {
-        parseDate("25/12/99") shouldBe millis(2099, 12, 25)
+        parseDate("25/12/99") shouldBe epochDay(2099, 12, 25)
     }
 
     @ParameterizedTest

@@ -46,7 +46,7 @@ internal object DataJsonSerializer {
         fieldType = fieldType.name,
         valueText = valueText,
         valueNumber = valueNumber,
-        valueDate = valueDate,
+        valueDate = valueDate?.toString(),
         notificationTitle = notificationTitle,
         notificationContent = notificationContent,
         createdAt = createdAt,
@@ -54,7 +54,7 @@ internal object DataJsonSerializer {
 }
 
 /**
- * JSON wire shape for one exported row. Deliberately separate from the domain [DataBrowserRow] (a
+ * JSON wire shape for one exported row (`valueDate` is an ISO-8601 `yyyy-MM-dd` calendar day). Deliberately separate from the domain [DataBrowserRow] (a
  * plain `String` `fieldType` rather than the enum) so the export file format doesn't silently
  * change if the domain model's shape or enum `@SerialName`s ever change.
  */
@@ -69,7 +69,7 @@ private data class DataBrowserRowDto(
     val fieldType: String,
     val valueText: String?,
     val valueNumber: Double?,
-    val valueDate: Long?,
+    val valueDate: String?,
     val notificationTitle: String?,
     val notificationContent: String?,
     val createdAt: Long,

@@ -57,19 +57,20 @@ internal interface ExtractedFieldValueDao {
     ): List<ExtractedFieldValueEntity>
 
     /**
-     * Get date values in a range for a specific field.
+     * Get date values in an inclusive range of epoch days (`LocalDate.toEpochDay()`) for a specific field.
+     * Callers convert their bounds in the user's zone at query time; stored values are zone-independent.
      */
     @Query(
         """
         SELECT * FROM extracted_field_values 
         WHERE rule_field_id = :ruleFieldId 
-        AND value_date BETWEEN :startDate AND :endDate
+        AND value_epoch_day BETWEEN :startEpochDay AND :endEpochDay
         """,
     )
     suspend fun getDateValuesInRange(
         ruleFieldId: String,
-        startDate: Long,
-        endDate: Long,
+        startEpochDay: Long,
+        endEpochDay: Long,
     ): List<ExtractedFieldValueEntity>
 
     /**

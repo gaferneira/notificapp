@@ -20,7 +20,7 @@ import androidx.room.PrimaryKey
  * @property fieldType Snapshot of the field's `FieldType` enum name at extraction time
  * @property valueText String value for STRING/CURRENCY types
  * @property valueNumber Numeric value for NUMBER type
- * @property valueDate Timestamp for DATE type
+ * @property valueEpochDay `LocalDate.toEpochDay()` for DATE type (zone-independent calendar day)
  */
 @Entity(
     tableName = "extracted_field_values",
@@ -42,7 +42,7 @@ import androidx.room.PrimaryKey
         Index(value = ["rule_execution_id"]), // For querying values by execution
         Index(value = ["rule_field_id"]), // For querying values by field
         Index(value = ["value_number"]), // For numeric range queries
-        Index(value = ["value_date"]), // For date range queries
+        Index(value = ["value_epoch_day"]), // For date range queries
     ],
 )
 internal data class ExtractedFieldValueEntity(
@@ -68,6 +68,6 @@ internal data class ExtractedFieldValueEntity(
     @ColumnInfo(name = "value_number")
     val valueNumber: Double?,
 
-    @ColumnInfo(name = "value_date")
-    val valueDate: Long?,
+    @ColumnInfo(name = "value_epoch_day")
+    val valueEpochDay: Long?,
 )

@@ -1,5 +1,7 @@
 package dev.gaferneira.notificapp.domain.model
 
+import java.time.LocalDate
+
 /**
  * Flat, joined projection of one extracted value for the Data Browser: [ExtractedFieldValue]
  * joined with its owning [RuleField] (name/type), [RuleExecution] (timestamp), [Rule] (name), and
@@ -16,7 +18,7 @@ package dev.gaferneira.notificapp.domain.model
  * @property fieldType Type of the extraction field, snapshotted at extraction time
  * @property valueText String value, populated for STRING/CURRENCY fields
  * @property valueNumber Numeric value, populated for NUMBER fields
- * @property valueDate Timestamp value, populated for DATE fields
+ * @property valueDate Calendar day, populated for DATE fields (zone-independent)
  * @property notificationTitle Title of the source notification, if any
  * @property notificationContent Content of the source notification, if any
  * @property createdAt When the owning rule execution occurred (epoch millis)
@@ -32,7 +34,7 @@ data class DataBrowserRow(
     val fieldType: RuleField.FieldType,
     val valueText: String?,
     val valueNumber: Double?,
-    val valueDate: Long?,
+    val valueDate: LocalDate?,
     val notificationTitle: String?,
     val notificationContent: String?,
     val createdAt: Long,

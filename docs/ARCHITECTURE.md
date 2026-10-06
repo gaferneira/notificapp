@@ -359,7 +359,7 @@ data class ExtractedFieldValue(
     val fieldType: RuleField.FieldType,
     val valueText: String?,
     val valueNumber: Double?,
-    val valueDate: Long?,
+    val valueDate: java.time.LocalDate?,
 )
 ```
 

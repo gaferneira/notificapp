@@ -5,7 +5,6 @@ import dev.gaferneira.notificapp.domain.model.RuleField
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -16,7 +15,7 @@ class DataValueFormatTest {
         type: RuleField.FieldType,
         text: String? = null,
         number: Double? = null,
-        date: Long? = null,
+        date: LocalDate? = null,
     ) = DataBrowserRow(
         valueId = "v",
         executionId = "e",
@@ -59,19 +58,15 @@ class DataValueFormatTest {
 
     @Test
     fun `an extracted date is an absolute localized date even when it is today`() {
-        val zone = ZoneId.of("UTC")
-        val today = LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
+        val today = LocalDate.now()
 
-        val text = formatDataValue(row(RuleField.FieldType.DATE, date = today), Locale.US, zone)
+        val text = formatDataValue(row(RuleField.FieldType.DATE, date = today), Locale.US)
 
-        text shouldBe DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.US).format(LocalDate.now(zone))
+        text shouldBe DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(Locale.US).format(today)
     }
 
     @Test
     fun `an extracted date uses the given locale`() {
-        val zone = ZoneId.of("UTC")
-        val millis = LocalDate.of(2026, 3, 5).atStartOfDay(zone).toInstant().toEpochMilli()
-
-        formatDataValue(row(RuleField.FieldType.DATE, date = millis), Locale.US, zone) shouldBe "Mar 5, 2026"
+        formatDataValue(row(RuleField.FieldType.DATE, date = LocalDate.of(2026, 3, 5)), Locale.US) shouldBe "Mar 5, 2026"
     }
 }

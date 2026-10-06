@@ -110,7 +110,7 @@ class ParentUpsertSurvivalTest {
                     fieldType = "STRING",
                     valueText = "x",
                     valueNumber = null,
-                    valueDate = null,
+                    valueEpochDay = null,
                 ),
             ),
         )

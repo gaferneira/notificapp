@@ -3,8 +3,6 @@ package dev.gaferneira.notificapp.features.databrowser.ui
 import dev.gaferneira.notificapp.domain.model.DataBrowserRow
 import dev.gaferneira.notificapp.domain.model.RuleField
 import java.text.NumberFormat
-import java.time.Instant
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -18,7 +16,7 @@ private const val NUMBER_MAX_FRACTION_DIGITS = 6
  * use the locale's grouping, dates use an absolute localized date (never the relative notification time,
  * which would show "12:00 AM" for today); anything else falls back to the stored text.
  */
-internal fun formatDataValue(row: DataBrowserRow, locale: Locale, zone: ZoneId = ZoneId.systemDefault()): String? {
+internal fun formatDataValue(row: DataBrowserRow, locale: Locale): String? {
     val number = row.valueNumber
     return when {
         row.fieldType == RuleField.FieldType.CURRENCY && !row.valueText.isNullOrBlank() -> row.valueText
@@ -32,7 +30,7 @@ internal fun formatDataValue(row: DataBrowserRow, locale: Locale, zone: ZoneId =
             NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = NUMBER_MAX_FRACTION_DIGITS }.format(number)
         }
         row.valueDate != null -> DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
-            .format(Instant.ofEpochMilli(row.valueDate).atZone(zone))
+            .format(row.valueDate)
         else -> row.valueText ?: number?.let { NumberFormat.getNumberInstance(locale).format(it) }
     }
 }

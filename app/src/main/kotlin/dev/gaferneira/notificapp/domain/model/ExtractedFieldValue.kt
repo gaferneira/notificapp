@@ -1,5 +1,7 @@
 package dev.gaferneira.notificapp.domain.model
 
+import java.time.LocalDate
+
 /**
  * Domain model representing a single extracted field value.
  *
@@ -12,7 +14,7 @@ package dev.gaferneira.notificapp.domain.model
  * @property fieldType Snapshot of the field's type at extraction time
  * @property valueText String value for STRING/CURRENCY types
  * @property valueNumber Numeric value for NUMBER type
- * @property valueDate Timestamp for DATE type
+ * @property valueDate Calendar day for DATE type (zone-independent)
  */
 data class ExtractedFieldValue(
     val id: String,
@@ -22,5 +24,5 @@ data class ExtractedFieldValue(
     val fieldType: RuleField.FieldType,
     val valueText: String?,
     val valueNumber: Double?,
-    val valueDate: Long?,
+    val valueDate: LocalDate?,
 )

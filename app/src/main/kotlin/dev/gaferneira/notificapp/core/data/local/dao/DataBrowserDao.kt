@@ -225,7 +225,7 @@ private const val ROW_SELECT = """
         efv.field_type AS fieldType,
         efv.value_text AS valueText,
         efv.value_number AS valueNumber,
-        efv.value_date AS valueDate,
+        efv.value_epoch_day AS valueDate,
         n.title AS notificationTitle,
         n.content AS notificationContent,
         re.created_at AS createdAt

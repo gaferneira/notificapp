@@ -3,6 +3,7 @@ package dev.gaferneira.notificapp.core.data.local.mapper
 import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
 import dev.gaferneira.notificapp.domain.model.ExtractedFieldValue
 import dev.gaferneira.notificapp.domain.model.RuleField
+import java.time.Instant
 import java.time.LocalDate
 import java.time.Month
 import java.time.ZoneId
@@ -36,7 +37,7 @@ internal object ExtractedFieldValueMapper {
         fieldType = domain.fieldType.name,
         valueText = domain.valueText,
         valueNumber = domain.valueNumber,
-        valueDate = domain.valueDate,
+        valueEpochDay = domain.valueDate?.toEpochDay(),
     )
 
     /**
@@ -53,7 +54,7 @@ internal object ExtractedFieldValueMapper {
         fieldType = RuleField.FieldType.entries.firstOrNull { it.name == entity.fieldType } ?: RuleField.FieldType.STRING,
         valueText = entity.valueText,
         valueNumber = entity.valueNumber,
-        valueDate = entity.valueDate,
+        valueDate = entity.valueEpochDay?.let(LocalDate::ofEpochDay),
     )
 
     /**
@@ -62,7 +63,7 @@ internal object ExtractedFieldValueMapper {
      * @param executionId The rule execution ID
      * @param extractedData Map of field IDs to extracted string values
      * @param fields List of field definitions with their types
-     * @param zone Zone whose start of day anchors parsed dates (matches how the UI renders `valueDate`)
+     * @param zone Zone used only to read an epoch-millis input as a calendar day; parsed date strings are zone-independent
      * @return List of entities with properly typed values
      */
     fun fromExtractedData(
@@ -96,13 +97,13 @@ internal object ExtractedFieldValueMapper {
                 fieldType = field.fieldType.name,
                 valueText = stringValue,
                 valueNumber = number,
-                valueDate = null,
+                valueEpochDay = null,
             )
         }
 
         RuleField.FieldType.DATE -> {
-            // Epoch millis, or a detected date string; otherwise store as text only
-            val date = parseDateMillis(stringValue, zone)
+            // Epoch millis (read in [zone]), or a detected date string; stored as a zone-independent epoch day, otherwise text only
+            val date = parseLocalDateValue(stringValue, zone)
             ExtractedFieldValueEntity(
                 id = UUID.randomUUID().toString(),
                 ruleExecutionId = executionId,
@@ -111,7 +112,7 @@ internal object ExtractedFieldValueMapper {
                 fieldType = field.fieldType.name,
                 valueText = stringValue,
                 valueNumber = null,
-                valueDate = date,
+                valueEpochDay = date?.toEpochDay(),
             )
         }
 
@@ -126,7 +127,7 @@ internal object ExtractedFieldValueMapper {
                 fieldType = field.fieldType.name,
                 valueText = stringValue,
                 valueNumber = number,
-                valueDate = null,
+                valueEpochDay = null,
             )
         }
 
@@ -139,7 +140,7 @@ internal object ExtractedFieldValueMapper {
                 fieldType = field.fieldType.name,
                 valueText = stringValue,
                 valueNumber = null,
-                valueDate = null,
+                valueEpochDay = null,
             )
         }
     }
@@ -170,18 +171,20 @@ internal object ExtractedFieldValueMapper {
     }
 
     /**
-     * Parse [value] into epoch millis at the start of day in [zone], or null when it is not a
-     * recognized, unambiguous date. Never throws.
+     * Parse [value] into a calendar day, or null when it is not a recognized, unambiguous date.
+     * An epoch-millis input is read as a calendar day in [zone]; every other format carries its own
+     * calendar day and ignores [zone]. Never throws.
      *
      * Accepts an epoch-millis long, ISO `yyyy-MM-dd`, English month-name formats ("Jan 12, 2024",
      * "12 January 2024", "Jan 12th, 2024") and numeric `d/m/y` with `/ - .` separators — the latter
      * only when one of the first two parts exceeds 12 (otherwise day/month order is ambiguous).
      * Two-digit years map to 2000+yy.
      */
-    private fun parseDateMillis(value: String, zone: ZoneId): Long? {
+    private fun parseLocalDateValue(value: String, zone: ZoneId): LocalDate? {
         val text = value.trim()
-        return text.toLongOrNull()
-            ?: parseLocalDate(text)?.atStartOfDay(zone)?.toInstant()?.toEpochMilli()
+        return text.toLongOrNull()?.let { millis ->
+            runCatching { Instant.ofEpochMilli(millis).atZone(zone).toLocalDate() }.getOrNull()
+        } ?: parseLocalDate(text)
     }
 
     private fun parseLocalDate(text: String): LocalDate? = runCatching {

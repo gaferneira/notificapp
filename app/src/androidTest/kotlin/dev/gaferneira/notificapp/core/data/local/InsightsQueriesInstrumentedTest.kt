@@ -201,7 +201,7 @@ class InsightsQueriesInstrumentedTest {
         fieldType = FIELD_SNAPSHOTS.getValue(fieldId).second,
         valueText = null,
         valueNumber = number,
-        valueDate = null,
+        valueEpochDay = null,
     )
 
     private fun millisAt(day: LocalDate, hour: Int, minute: Int = 0): Long = day.atTime(hour, minute).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()

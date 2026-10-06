@@ -142,7 +142,7 @@ class RuleExecutionRepositoryImplTest {
             fieldType = "NUMBER",
             valueText = "42",
             valueNumber = 42.0,
-            valueDate = null,
+            valueEpochDay = null,
         )
         every { ruleExecutionDao.observeExecutionsForNotification("notif-e1") } returns
             flowOf(listOf(RuleExecutionWithValues(executionEntity("e1", createdAt = 1_000L, actionOutcomes = null), listOf(removedFieldValue))))

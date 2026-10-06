@@ -5,6 +5,7 @@ import dev.gaferneira.notificapp.domain.model.RuleField
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import java.io.StringWriter
+import java.time.LocalDate
 
 class DataCsvSerializerTest {
 
@@ -15,7 +16,7 @@ class DataCsvSerializerTest {
         fieldType: RuleField.FieldType = RuleField.FieldType.NUMBER,
         valueText: String? = null,
         valueNumber: Double? = 42.5,
-        valueDate: Long? = null,
+        valueDate: LocalDate? = null,
         appName: String = "Test App",
         ruleName: String = "Rule",
         createdAt: Long = 1_000L,
@@ -149,14 +150,14 @@ class DataCsvSerializerTest {
     }
 
     @Test
-    fun `a DATE field falls back to the raw epoch-millis value column`() {
+    fun `a DATE field falls back to the ISO calendar day`() {
         val writer = StringWriter()
 
         DataCsvSerializer.writeRows(
             writer,
-            listOf(row(fieldType = RuleField.FieldType.DATE, valueNumber = null, valueDate = 999_999L)),
+            listOf(row(fieldType = RuleField.FieldType.DATE, valueNumber = null, valueDate = LocalDate.of(2024, 1, 15))),
         )
 
-        writer.toString() shouldBe "Amount,DATE,999999,Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,DATE,2024-01-15,Test App,Rule,1000\r\n"
     }
 }

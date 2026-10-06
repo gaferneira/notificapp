@@ -4,6 +4,7 @@ import androidx.room.TypeConverter
 import dev.gaferneira.notificapp.domain.model.HttpMethod
 import dev.gaferneira.notificapp.domain.model.RuleField
 import kotlinx.serialization.json.Json
+import java.time.LocalDate
 
 /**
  * Room TypeConverters for complex rule-related types.
@@ -41,6 +42,13 @@ class RuleTypeConverters {
 
     @TypeConverter
     fun toFieldType(value: String): RuleField.FieldType = RuleField.FieldType.valueOf(value)
+
+    // ========== LocalDate (for the DataBrowserRow raw-query projection of value_epoch_day) ==========
+    @TypeConverter
+    fun fromLocalDate(date: LocalDate?): Long? = date?.toEpochDay()
+
+    @TypeConverter
+    fun toLocalDate(epochDay: Long?): LocalDate? = epochDay?.let(LocalDate::ofEpochDay)
 
     // ========== HttpMethod (for Webhook HTTP verb) ==========
     @TypeConverter

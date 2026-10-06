@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "0764d4b15636d22cbfe78b657b590313",
+    "identityHash": "c060bf623a877d22243fd75dd3c3a0ac",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -625,7 +625,7 @@
       },
       {
         "tableName": "extracted_field_values",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `rule_execution_id` TEXT NOT NULL, `rule_field_id` TEXT, `field_name` TEXT NOT NULL, `field_type` TEXT NOT NULL, `value_text` TEXT, `value_number` REAL, `value_date` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`rule_execution_id`) REFERENCES `rule_executions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`rule_field_id`) REFERENCES `rule_fields`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `rule_execution_id` TEXT NOT NULL, `rule_field_id` TEXT, `field_name` TEXT NOT NULL, `field_type` TEXT NOT NULL, `value_text` TEXT, `value_number` REAL, `value_epoch_day` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`rule_execution_id`) REFERENCES `rule_executions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`rule_field_id`) REFERENCES `rule_fields`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
         "fields": [
           {
             "fieldPath": "id",
@@ -667,8 +667,8 @@
             "affinity": "REAL"
           },
           {
-            "fieldPath": "valueDate",
-            "columnName": "value_date",
+            "fieldPath": "valueEpochDay",
+            "columnName": "value_epoch_day",
             "affinity": "INTEGER"
           }
         ],
@@ -707,13 +707,13 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_extracted_field_values_value_number` ON `${TABLE_NAME}` (`value_number`)"
           },
           {
-            "name": "index_extracted_field_values_value_date",
+            "name": "index_extracted_field_values_value_epoch_day",
             "unique": false,
             "columnNames": [
-              "value_date"
+              "value_epoch_day"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_extracted_field_values_value_date` ON `${TABLE_NAME}` (`value_date`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_extracted_field_values_value_epoch_day` ON `${TABLE_NAME}` (`value_epoch_day`)"
           }
         ],
         "foreignKeys": [
@@ -1018,7 +1018,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0764d4b15636d22cbfe78b657b590313')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c060bf623a877d22243fd75dd3c3a0ac')"
     ]
   }
 }

@@ -248,7 +248,7 @@ class HistorySurvivalTest {
         fieldType = type,
         valueText = "x",
         valueNumber = number,
-        valueDate = null,
+        valueEpochDay = null,
     )
 
     private fun rule() = RuleEntity(id = RULE_ID, name = "Bank purchases", description = null, category = null)
