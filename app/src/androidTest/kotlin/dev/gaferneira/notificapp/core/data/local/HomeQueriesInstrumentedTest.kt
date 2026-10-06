@@ -42,7 +42,7 @@ class HomeQueriesInstrumentedTest {
     }
 
     @Test
-    fun suggestionDismissalDao_replaces_on_repeated_dismissal_of_the_same_key() = runBlocking {
+    fun suggestionDismissalDao_replaces_on_repeated_dismissal_of_the_same_key() = runBlocking<Unit> {
         val dao = database.suggestionDismissalDao()
         dao.dismiss(SuggestionDismissalEntity(packageName = "com.a", normalizedTitleKey = "key-1", dismissedAt = 1_000L))
 
@@ -54,7 +54,7 @@ class HomeQueriesInstrumentedTest {
     }
 
     @Test
-    fun suggestionDismissalDao_keeps_distinct_keys_for_the_same_package_separate() = runBlocking {
+    fun suggestionDismissalDao_keeps_distinct_keys_for_the_same_package_separate() = runBlocking<Unit> {
         val dao = database.suggestionDismissalDao()
         dao.dismiss(SuggestionDismissalEntity(packageName = "com.a", normalizedTitleKey = "key-1", dismissedAt = 1_000L))
         dao.dismiss(SuggestionDismissalEntity(packageName = "com.a", normalizedTitleKey = "key-2", dismissedAt = 1_000L))
@@ -64,7 +64,7 @@ class HomeQueriesInstrumentedTest {
     }
 
     @Test
-    fun ruleExecutionDao_observeExecutionCountSince_excludes_dry_run_and_out_of_window_rows() = runBlocking {
+    fun ruleExecutionDao_observeExecutionCountSince_excludes_dry_run_and_out_of_window_rows() = runBlocking<Unit> {
         insertMinimalRuleAndNotification(ruleId = "r1", notificationId = "n1")
         val ruleExecutionDao = database.ruleExecutionDao()
         ruleExecutionDao.upsert(testExecution(id = "e1", ruleId = "r1", notificationId = "n1", createdAt = 5_000L, wasDryRun = false))
@@ -77,7 +77,7 @@ class HomeQueriesInstrumentedTest {
     }
 
     @Test
-    fun ruleExecutionDao_observeRecentActivity_returns_joined_rows_respecting_limit_and_order() = runBlocking {
+    fun ruleExecutionDao_observeRecentActivity_returns_joined_rows_respecting_limit_and_order() = runBlocking<Unit> {
         insertMinimalRuleAndNotification(ruleId = "r1", notificationId = "n1")
         val ruleExecutionDao = database.ruleExecutionDao()
         ruleExecutionDao.upsert(testExecution(id = "e1", ruleId = "r1", notificationId = "n1", createdAt = 1_000L, wasDryRun = false))
@@ -91,7 +91,7 @@ class HomeQueriesInstrumentedTest {
     }
 
     @Test
-    fun notificationDao_observeActiveAppCountSince_and_observeRecentSince_respect_the_window() = runBlocking {
+    fun notificationDao_observeActiveAppCountSince_and_observeRecentSince_respect_the_window() = runBlocking<Unit> {
         val notificationDao = database.notificationDao()
         notificationDao.upsert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L))
         notificationDao.upsert(testNotification(id = "n2", packageName = "com.b", timestamp = 1_000L))
@@ -105,7 +105,7 @@ class HomeQueriesInstrumentedTest {
     }
 
     @Test
-    fun notificationDao_home_counts_match_the_inbox_list_for_the_same_window() = runBlocking {
+    fun notificationDao_home_counts_match_the_inbox_list_for_the_same_window() = runBlocking<Unit> {
         val notificationDao = database.notificationDao()
         notificationDao.upsert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L, isProcessed = true))
         notificationDao.upsert(testNotification(id = "n2", packageName = "com.a", timestamp = 4_000L, isProcessed = false))
@@ -123,7 +123,7 @@ class HomeQueriesInstrumentedTest {
     }
 
     @Test
-    fun notificationDao_getFilteredPaged_without_since_lists_every_notification() = runBlocking {
+    fun notificationDao_getFilteredPaged_without_since_lists_every_notification() = runBlocking<Unit> {
         val notificationDao = database.notificationDao()
         notificationDao.upsert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L))
         notificationDao.upsert(testNotification(id = "n2", packageName = "com.a", timestamp = 1_000L))

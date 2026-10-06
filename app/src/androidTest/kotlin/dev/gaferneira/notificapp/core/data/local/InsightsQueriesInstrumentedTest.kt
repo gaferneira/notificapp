@@ -42,7 +42,7 @@ class InsightsQueriesInstrumentedTest {
     }
 
     @Test
-    fun observeDailyCountsSince_excludes_dry_runs() = runBlocking {
+    fun observeDailyCountsSince_excludes_dry_runs() = runBlocking<Unit> {
         seedRule("r1", "Rule")
         seedNotification("n1", "com.a", "App", 1_000L)
         val dao = database.ruleExecutionDao()
@@ -55,7 +55,7 @@ class InsightsQueriesInstrumentedTest {
     }
 
     @Test
-    fun observeDailyCountsSince_buckets_by_local_day_across_the_midnight_boundary() = runBlocking {
+    fun observeDailyCountsSince_buckets_by_local_day_across_the_midnight_boundary() = runBlocking<Unit> {
         seedRule("r1", "Rule")
         seedNotification("n1", "com.a", "App", 1_000L)
         val dao = database.ruleExecutionDao()
@@ -69,7 +69,7 @@ class InsightsQueriesInstrumentedTest {
     }
 
     @Test
-    fun observeNumericTotalsSince_sums_only_non_null_NUMBER_and_CURRENCY_values() = runBlocking {
+    fun observeNumericTotalsSince_sums_only_non_null_NUMBER_and_CURRENCY_values() = runBlocking<Unit> {
         seedRule("r1", "Rule")
         seedNotification("n1", "com.a", "App", 1_000L)
         database.ruleDao().upsertActions(listOf(RuleActionEntity(id = "a1", ruleId = "r1", type = "SAVE_DATA")))
@@ -104,7 +104,7 @@ class InsightsQueriesInstrumentedTest {
     }
 
     @Test
-    fun observeQuietRulesSince_lists_only_active_rules_without_a_recent_real_execution() = runBlocking {
+    fun observeQuietRulesSince_lists_only_active_rules_without_a_recent_real_execution() = runBlocking<Unit> {
         seedRule("busy", "Busy")
         seedRule("quiet", "Quiet")
         seedRule("dry-only", "Dry only")
@@ -122,7 +122,7 @@ class InsightsQueriesInstrumentedTest {
     }
 
     @Test
-    fun observeTopRulesSince_breaks_ties_by_name_then_id() = runBlocking {
+    fun observeTopRulesSince_breaks_ties_by_name_then_id() = runBlocking<Unit> {
         seedRule("r3", "Beta")
         seedRule("r2", "Beta")
         seedRule("r1", "Alpha")
@@ -139,7 +139,7 @@ class InsightsQueriesInstrumentedTest {
     }
 
     @Test
-    fun observeTopAppsSince_uses_the_latest_app_name_and_breaks_ties_by_package() = runBlocking {
+    fun observeTopAppsSince_uses_the_latest_app_name_and_breaks_ties_by_package() = runBlocking<Unit> {
         val dao = database.notificationDao()
         dao.upsert(seedNotificationEntity("n1", "com.b", "Old B", 1_000L))
         dao.upsert(seedNotificationEntity("n2", "com.b", "New B", 3_000L))
