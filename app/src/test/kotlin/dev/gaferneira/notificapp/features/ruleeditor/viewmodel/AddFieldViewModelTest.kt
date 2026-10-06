@@ -580,6 +580,111 @@ class AddFieldViewModelTest {
     }
 
     @Nested
+    inner class FieldTypePickerTests {
+
+        private fun initNew() {
+            viewModel.onEvent(UiEvent.Initialize(field = null, notification = null))
+            testDispatcher.scheduler.advanceUntilIdle()
+        }
+
+        private fun savedField(): RuleField {
+            viewModel.onEvent(UiEvent.OnFieldNameChange("Amount"))
+            viewModel.onEvent(UiEvent.OnStartAnchorChange("a"))
+            viewModel.onEvent(UiEvent.OnEndAnchorChange("b"))
+            testDispatcher.scheduler.advanceUntilIdle()
+            return viewModel.uiState.value.extractionField
+        }
+
+        @Test
+        fun `new field defaults to string and untouched type`() {
+            initNew()
+
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.STRING
+            viewModel.uiState.value.typeTouched shouldBe false
+        }
+
+        @Test
+        fun `selecting a type updates state and the saved field carries it`() = runTest(testDispatcher) {
+            initNew()
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.NUMBER))
+            savedField()
+
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.NUMBER
+            viewModel.uiState.value.typeTouched shouldBe true
+
+            viewModel.effect.test {
+                viewModel.onEvent(UiEvent.OnSaveClicked)
+                testDispatcher.scheduler.advanceUntilIdle()
+                awaitItem().shouldBeInstanceOf<UiEffect.ReturnWithField>().field.fieldType shouldBe RuleField.FieldType.NUMBER
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
+        fun `switching to a non numeric type drops the unit from the saved field`() {
+            initNew()
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.NUMBER))
+            viewModel.onEvent(UiEvent.OnUnitChange("km"))
+
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.DATE))
+
+            viewModel.uiState.value.supportsUnit shouldBe false
+            savedField().defaultUnit shouldBe null
+        }
+
+        @Test
+        fun `switching between number and currency keeps the typed unit`() {
+            initNew()
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.NUMBER))
+            viewModel.onEvent(UiEvent.OnUnitChange("sek"))
+
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.CURRENCY))
+
+            viewModel.uiState.value.unit shouldBe "sek"
+            savedField().defaultUnit shouldBe "SEK"
+        }
+
+        @Test
+        fun `editing preselects the field type and treats it as touched`() {
+            viewModel.onEvent(
+                UiEvent.Initialize(
+                    field = createTestField(fieldType = RuleField.FieldType.BOOLEAN, method = ExtractionMethod.SmartDateDetection),
+                    notification = null,
+                ),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.BOOLEAN
+            viewModel.onEvent(UiEvent.OnMethodTypeChange(MethodType.SMART_AMOUNT))
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.BOOLEAN
+        }
+
+        @Test
+        fun `smart methods suggest a type until the user picks one`() {
+            initNew()
+
+            viewModel.onEvent(UiEvent.OnMethodTypeChange(MethodType.SMART_AMOUNT))
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.CURRENCY
+
+            viewModel.onEvent(UiEvent.OnMethodTypeChange(MethodType.SMART_DATE))
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.DATE
+
+            viewModel.onEvent(UiEvent.OnMethodTypeChange(MethodType.REGEX))
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.STRING
+        }
+
+        @Test
+        fun `an explicitly picked type is not overridden by a smart method`() {
+            initNew()
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.NUMBER))
+
+            viewModel.onEvent(UiEvent.OnMethodTypeChange(MethodType.SMART_AMOUNT))
+
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.NUMBER
+        }
+    }
+
+    @Nested
     inner class MiscellaneousEventTests {
 
         @Test

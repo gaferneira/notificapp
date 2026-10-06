@@ -1,8 +1,12 @@
 package dev.gaferneira.notificapp.features.ruleeditor.ui.extractdata
 
+import android.content.res.Configuration
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.components.SelectableFilterChip
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.Notification
@@ -213,6 +218,12 @@ private fun AddFieldBottomSheetContent(
                 keyboardActions = rememberClearFocusKeyboardActions(),
                 isError = uiState.validationErrors.contains("fieldName"),
                 supportingText = uiState.validationErrors["fieldName"]?.let { { Text(it.asString()) } },
+            )
+
+            // Field type selection
+            FieldTypePicker(
+                selectedType = uiState.fieldType,
+                onTypeChange = { onEvent(UiEvent.OnFieldTypeChange(it)) },
             )
 
             // Method Type Selection
@@ -399,6 +410,40 @@ private fun AddFieldBottomSheetContent(
     }
 }
 
+@StringRes
+private fun RuleField.FieldType.labelRes(): Int = when (this) {
+    RuleField.FieldType.STRING -> R.string.add_field_type_string
+    RuleField.FieldType.NUMBER -> R.string.add_field_type_number
+    RuleField.FieldType.DATE -> R.string.add_field_type_date
+    RuleField.FieldType.CURRENCY -> R.string.add_field_type_currency
+    RuleField.FieldType.BOOLEAN -> R.string.add_field_type_boolean
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FieldTypePicker(
+    selectedType: RuleField.FieldType,
+    onTypeChange: (RuleField.FieldType) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.add_field_type),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RuleField.FieldType.entries.forEach { type ->
+                SelectableFilterChip(
+                    selected = type == selectedType,
+                    onClick = { onTypeChange(type) },
+                    label = stringResource(type.labelRes()),
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MethodTypeDropdown(
@@ -578,22 +623,33 @@ private fun PreviewResultCard(
 @Preview(showBackground = true)
 @Composable
 private fun AddFieldBottomSheetContentPreview() {
-    NotificappTheme {
-        AddFieldBottomSheetContent(
-            uiState = UiState(
-                sampleText = "Your purchase of 153,50 kr at ICA Supermarket was successful.",
-                fieldName = "Amount",
-                selectedMethodType = AddFieldContract.MethodType.TEXT_BETWEEN_ANCHORS,
-                startAnchor = "purchase of ",
-                endAnchor = " kr",
-                previewResult = AddFieldContract.PreviewResult.Success(
-                    value = "153,50",
-                    startIndex = 16,
-                    endIndex = 22,
-                ),
+    NotificappTheme { AddFieldPreviewContent() }
+}
+
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun AddFieldBottomSheetContentDarkPreview() {
+    NotificappTheme(darkTheme = true) { AddFieldPreviewContent() }
+}
+
+@Composable
+private fun AddFieldPreviewContent() {
+    AddFieldBottomSheetContent(
+        uiState = UiState(
+            sampleText = "Your purchase of 153,50 kr at ICA Supermarket was successful.",
+            fieldName = "Amount",
+            fieldType = RuleField.FieldType.CURRENCY,
+            unit = "SEK",
+            selectedMethodType = AddFieldContract.MethodType.TEXT_BETWEEN_ANCHORS,
+            startAnchor = "purchase of ",
+            endAnchor = " kr",
+            previewResult = AddFieldContract.PreviewResult.Success(
+                value = "153,50",
+                startIndex = 16,
+                endIndex = 22,
             ),
-            onEvent = {},
-            onClose = {},
-        )
-    }
+        ),
+        onEvent = {},
+        onClose = {},
+    )
 }

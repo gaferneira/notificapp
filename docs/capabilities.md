@@ -40,7 +40,7 @@ Notificapp lets users create automation rules that act on the notifications thei
     * Smart amount detection — automatically finds a currency amount, no configuration needed
     * Smart date detection — automatically finds a date, no configuration needed
     * Smart code detection — automatically finds a one-time / verification code (OTP), no configuration needed
-  * Each extracted field also has a data type: String, Number, Date, Currency, or Boolean.
+  * Each extracted field also has a data type: String, Number, Date, Currency, or Boolean, chosen in the Add/Edit field sheet with a chip picker beside the field name (preselected when editing). Until the user picks a type, choosing Smart amount suggests Currency and Smart date suggests Date. The Unit input appears only for Number and Currency; switching to any other type stores no unit.
   * Number and Currency fields can carry an optional default **unit** (e.g. `km`, `GB`, `%`, or an ISO currency code such as `SEK`). Each extracted value stores its own unit: for Currency an unambiguous symbol or code in the text wins (`€` becomes EUR, `R$` BRL, `SEK` stays SEK); an ambiguous `$` or `kr`, or no marker, falls back to the field's default unit; Number uses the default unit. Other types store none.
 * **System Trigger:** User adds an "Extract data" action while building or editing a rule; the extraction itself runs automatically in the background whenever a matching notification arrives.
 * **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`

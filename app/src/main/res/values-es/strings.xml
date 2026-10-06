@@ -517,6 +517,12 @@
     <string name="add_field_cancel">Cancelar</string>
     <string name="add_field_name">Nombre del campo</string>
     <string name="add_field_name_hint">p. ej., Monto, Fecha, ID de pedido</string>
+    <string name="add_field_type">Tipo</string>
+    <string name="add_field_type_string">Texto</string>
+    <string name="add_field_type_number">Número</string>
+    <string name="add_field_type_date">Fecha</string>
+    <string name="add_field_type_currency">Moneda</string>
+    <string name="add_field_type_boolean">Sí/No</string>
     <string name="add_field_unit">Unidad (opcional)</string>
     <string name="add_field_unit_hint_currency">p. ej., SEK</string>
     <string name="add_field_unit_hint_number">p. ej., km, GB, %</string>

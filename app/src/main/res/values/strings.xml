@@ -11,6 +11,12 @@
     <string name="add_field_cancel">Cancel</string>
     <string name="add_field_name">Field Name</string>
     <string name="add_field_name_hint">e.g., Amount, Date, Order ID</string>
+    <string name="add_field_type">Type</string>
+    <string name="add_field_type_string">Text</string>
+    <string name="add_field_type_number">Number</string>
+    <string name="add_field_type_date">Date</string>
+    <string name="add_field_type_currency">Currency</string>
+    <string name="add_field_type_boolean">Yes/No</string>
     <string name="add_field_unit">Unit (optional)</string>
     <string name="add_field_unit_hint_currency">e.g., SEK</string>
     <string name="add_field_unit_hint_number">e.g., km, GB, %</string>

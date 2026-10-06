@@ -26,11 +26,13 @@ object AddFieldContract {
         val fieldId: String = UUID.randomUUID().toString(),
         /** Field name */
         val fieldName: String = "",
-        /**
-         * Type of the field being built. The sheet has no type picker; it carries the edited field's type
-         * through unchanged so saving never downgrades a NUMBER/CURRENCY field.
-         */
+        /** Type of the field being built, chosen with the type picker (preselected when editing). */
         val fieldType: RuleField.FieldType = RuleField.FieldType.STRING,
+        /**
+         * Whether the type is pinned: the user picked it, or the field is being edited. While false,
+         * choosing a smart extraction method suggests a matching type (amount -> CURRENCY, date -> DATE).
+         */
+        val typeTouched: Boolean = false,
         /** Default unit text as typed (ISO code for CURRENCY, e.g. "km" for NUMBER); only meaningful for numeric types */
         val unit: String = "",
         /** Selected extraction method type */
@@ -209,6 +211,9 @@ object AddFieldContract {
 
         /** Update field name */
         data class OnFieldNameChange(val name: String) : UiEvent()
+
+        /** Select the field's type */
+        data class OnFieldTypeChange(val type: RuleField.FieldType) : UiEvent()
 
         /** Update the optional default unit (NUMBER/CURRENCY fields) */
         data class OnUnitChange(val unit: String) : UiEvent()
