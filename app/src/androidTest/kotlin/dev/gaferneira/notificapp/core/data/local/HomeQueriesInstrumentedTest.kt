@@ -67,9 +67,9 @@ class HomeQueriesInstrumentedTest {
     fun ruleExecutionDao_observeExecutionCountSince_excludes_dry_run_and_out_of_window_rows() = runBlocking {
         insertMinimalRuleAndNotification(ruleId = "r1", notificationId = "n1")
         val ruleExecutionDao = database.ruleExecutionDao()
-        ruleExecutionDao.insert(testExecution(id = "e1", ruleId = "r1", notificationId = "n1", createdAt = 5_000L, wasDryRun = false))
-        ruleExecutionDao.insert(testExecution(id = "e2", ruleId = "r1", notificationId = "n1", createdAt = 5_000L, wasDryRun = true))
-        ruleExecutionDao.insert(testExecution(id = "e3", ruleId = "r1", notificationId = "n1", createdAt = 1_000L, wasDryRun = false))
+        ruleExecutionDao.upsert(testExecution(id = "e1", ruleId = "r1", notificationId = "n1", createdAt = 5_000L, wasDryRun = false))
+        ruleExecutionDao.upsert(testExecution(id = "e2", ruleId = "r1", notificationId = "n1", createdAt = 5_000L, wasDryRun = true))
+        ruleExecutionDao.upsert(testExecution(id = "e3", ruleId = "r1", notificationId = "n1", createdAt = 1_000L, wasDryRun = false))
 
         val count = ruleExecutionDao.observeExecutionCountSince(4_000L).first()
 
@@ -80,8 +80,8 @@ class HomeQueriesInstrumentedTest {
     fun ruleExecutionDao_observeRecentActivity_returns_joined_rows_respecting_limit_and_order() = runBlocking {
         insertMinimalRuleAndNotification(ruleId = "r1", notificationId = "n1")
         val ruleExecutionDao = database.ruleExecutionDao()
-        ruleExecutionDao.insert(testExecution(id = "e1", ruleId = "r1", notificationId = "n1", createdAt = 1_000L, wasDryRun = false))
-        ruleExecutionDao.insert(testExecution(id = "e2", ruleId = "r1", notificationId = "n1", createdAt = 2_000L, wasDryRun = false))
+        ruleExecutionDao.upsert(testExecution(id = "e1", ruleId = "r1", notificationId = "n1", createdAt = 1_000L, wasDryRun = false))
+        ruleExecutionDao.upsert(testExecution(id = "e2", ruleId = "r1", notificationId = "n1", createdAt = 2_000L, wasDryRun = false))
 
         val rows = ruleExecutionDao.observeRecentActivity(limit = 1).first()
 
@@ -93,8 +93,8 @@ class HomeQueriesInstrumentedTest {
     @Test
     fun notificationDao_observeActiveAppCountSince_and_observeRecentSince_respect_the_window() = runBlocking {
         val notificationDao = database.notificationDao()
-        notificationDao.insert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L))
-        notificationDao.insert(testNotification(id = "n2", packageName = "com.b", timestamp = 1_000L))
+        notificationDao.upsert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L))
+        notificationDao.upsert(testNotification(id = "n2", packageName = "com.b", timestamp = 1_000L))
 
         val appCount = notificationDao.observeActiveAppCountSince(4_000L).first()
         val recent = notificationDao.observeRecentSince(4_000L, limit = 10).first()
@@ -107,9 +107,9 @@ class HomeQueriesInstrumentedTest {
     @Test
     fun notificationDao_home_counts_match_the_inbox_list_for_the_same_window() = runBlocking {
         val notificationDao = database.notificationDao()
-        notificationDao.insert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L, isProcessed = true))
-        notificationDao.insert(testNotification(id = "n2", packageName = "com.a", timestamp = 4_000L, isProcessed = false))
-        notificationDao.insert(testNotification(id = "n3", packageName = "com.b", timestamp = 1_000L, isProcessed = true))
+        notificationDao.upsert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L, isProcessed = true))
+        notificationDao.upsert(testNotification(id = "n2", packageName = "com.a", timestamp = 4_000L, isProcessed = false))
+        notificationDao.upsert(testNotification(id = "n3", packageName = "com.b", timestamp = 1_000L, isProcessed = true))
 
         val captured = notificationDao.observeCountSince(4_000L).first()
         val handled = notificationDao.observeProcessedCountSince(4_000L).first()
@@ -125,8 +125,8 @@ class HomeQueriesInstrumentedTest {
     @Test
     fun notificationDao_getFilteredPaged_without_since_lists_every_notification() = runBlocking {
         val notificationDao = database.notificationDao()
-        notificationDao.insert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L))
-        notificationDao.insert(testNotification(id = "n2", packageName = "com.a", timestamp = 1_000L))
+        notificationDao.upsert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L))
+        notificationDao.upsert(testNotification(id = "n2", packageName = "com.a", timestamp = 1_000L))
 
         val ids = notificationDao.getFilteredPaged(emptyList(), hasPackageFilter = false, isProcessed = null, since = null).loadIds()
 
@@ -140,7 +140,7 @@ class HomeQueriesInstrumentedTest {
 
     private suspend fun insertMinimalRuleAndNotification(ruleId: String, notificationId: String) {
         database.ruleDao().upsert(testRule(id = ruleId))
-        database.notificationDao().insert(testNotification(id = notificationId, packageName = "com.a", timestamp = 1_000L))
+        database.notificationDao().upsert(testNotification(id = notificationId, packageName = "com.a", timestamp = 1_000L))
     }
 }
 

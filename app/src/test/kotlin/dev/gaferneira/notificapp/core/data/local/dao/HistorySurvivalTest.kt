@@ -109,7 +109,7 @@ class HistorySurvivalTest {
     @Test
     fun `deleting a rule leaves executions that were already orphaned untouched`() = runBlocking<Unit> {
         seed()
-        database.ruleExecutionDao().insert(execution("execution-2", ruleId = null, ruleName = "Gone rule"))
+        database.ruleExecutionDao().upsert(execution("execution-2", ruleId = null, ruleName = "Gone rule"))
 
         ruleDao.deleteRuleWithRelatedData(RULE_ID)
 
@@ -170,7 +170,7 @@ class HistorySurvivalTest {
     }
 
     private suspend fun seed() {
-        database.notificationDao().insert(
+        database.notificationDao().upsert(
             NotificationEntity(
                 id = NOTIFICATION_ID,
                 packageName = "com.example",
@@ -188,7 +188,7 @@ class HistorySurvivalTest {
             actions = listOf(action()),
             apps = listOf("com.example"),
         )
-        database.ruleExecutionDao().insert(execution(EXECUTION_ID, ruleId = RULE_ID, ruleName = "Bank purchases"))
+        database.ruleExecutionDao().upsert(execution(EXECUTION_ID, ruleId = RULE_ID, ruleName = "Bank purchases"))
         database.extractedFieldValueDao().insertAll(
             listOf(
                 value("value-amount", FIELD_AMOUNT, "Amount", "CURRENCY", number = 42.5),

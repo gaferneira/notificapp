@@ -161,7 +161,7 @@ internal class NotificationRepositoryImpl @Inject constructor(
 
     override suspend fun saveNotification(notification: Notification): Result<Unit> = withContext(ioDispatcher) {
         try {
-            dao.insert(notification.toEntity())
+            dao.upsert(notification.toEntity())
             Result.success(Unit)
         } catch (e: Exception) {
             Timber.e(e, "Failed to save notification: ${notification.id}")

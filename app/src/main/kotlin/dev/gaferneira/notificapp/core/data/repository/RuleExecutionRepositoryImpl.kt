@@ -59,7 +59,7 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
         try {
             database.withTransaction {
                 val executionEntity = RuleExecutionMapper.toEntity(execution)
-                ruleExecutionDao.insert(executionEntity)
+                ruleExecutionDao.upsert(executionEntity)
 
                 val fieldValues = ExtractedFieldValueMapper.fromExtractedData(
                     executionId = execution.id,

@@ -3,9 +3,8 @@ package dev.gaferneira.notificapp.core.data.local.dao
 import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import dev.gaferneira.notificapp.core.data.local.entity.NotificationEntity
 import dev.gaferneira.notificapp.domain.model.CountBucket
 import kotlinx.coroutines.flow.Flow
@@ -156,17 +155,21 @@ internal interface NotificationDao {
     suspend fun search(ftsQuery: String): List<NotificationEntity>
 
     /**
-     * Insert a new notification.
-     * Replaces on conflict (UPSERT behavior).
+     * Insert a notification, or update it in place when the id already exists.
+     *
+     * Must be an in-place upsert, never `OnConflictStrategy.REPLACE`: REPLACE deletes the parent row
+     * first, which would cascade-delete the notification's `rule_executions` (and their extracted
+     * values). An in-place update also keeps the `rowid` that the `notifications_fts` external-content
+     * index is keyed on, so Room's FTS sync triggers stay consistent.
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(notification: NotificationEntity)
+    @Upsert
+    suspend fun upsert(notification: NotificationEntity)
 
     /**
-     * Insert multiple notifications.
+     * Insert or update multiple notifications in place (see [upsert]).
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(notifications: List<NotificationEntity>)
+    @Upsert
+    suspend fun upsertAll(notifications: List<NotificationEntity>)
 
     /**
      * Mark a notification as processed.

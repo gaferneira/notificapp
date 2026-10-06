@@ -46,8 +46,8 @@ class InsightsQueriesInstrumentedTest {
         seedRule("r1", "Rule")
         seedNotification("n1", "com.a", "App", 1_000L)
         val dao = database.ruleExecutionDao()
-        dao.insert(execution("e1", "r1", "n1", createdAt = millisAt(DAY, 10), dryRun = false))
-        dao.insert(execution("e2", "r1", "n1", createdAt = millisAt(DAY, 11), dryRun = true))
+        dao.upsert(execution("e1", "r1", "n1", createdAt = millisAt(DAY, 10), dryRun = false))
+        dao.upsert(execution("e2", "r1", "n1", createdAt = millisAt(DAY, 11), dryRun = true))
 
         val daily = dao.observeDailyCountsSince(0L).first()
 
@@ -59,9 +59,9 @@ class InsightsQueriesInstrumentedTest {
         seedRule("r1", "Rule")
         seedNotification("n1", "com.a", "App", 1_000L)
         val dao = database.ruleExecutionDao()
-        dao.insert(execution("e1", "r1", "n1", createdAt = millisAt(DAY, 23, 59)))
-        dao.insert(execution("e2", "r1", "n1", createdAt = millisAt(DAY.plusDays(1), 0, 1)))
-        dao.insert(execution("e3", "r1", "n1", createdAt = millisAt(DAY.plusDays(1), 12)))
+        dao.upsert(execution("e1", "r1", "n1", createdAt = millisAt(DAY, 23, 59)))
+        dao.upsert(execution("e2", "r1", "n1", createdAt = millisAt(DAY.plusDays(1), 0, 1)))
+        dao.upsert(execution("e3", "r1", "n1", createdAt = millisAt(DAY.plusDays(1), 12)))
 
         val daily = dao.observeDailyCountsSince(0L).first()
 
@@ -81,9 +81,9 @@ class InsightsQueriesInstrumentedTest {
             ),
         )
         val executions = database.ruleExecutionDao()
-        executions.insert(execution("e1", "r1", "n1", createdAt = 5_000L))
-        executions.insert(execution("e2", "r1", "n1", createdAt = 6_000L))
-        executions.insert(execution("e3", "r1", "n1", createdAt = 7_000L, dryRun = true))
+        executions.upsert(execution("e1", "r1", "n1", createdAt = 5_000L))
+        executions.upsert(execution("e2", "r1", "n1", createdAt = 6_000L))
+        executions.upsert(execution("e3", "r1", "n1", createdAt = 7_000L, dryRun = true))
         database.extractedFieldValueDao().insertAll(
             listOf(
                 value("v1", "e1", "f-amount", number = 10.0),
@@ -112,9 +112,9 @@ class InsightsQueriesInstrumentedTest {
         seedRule("off", "Off", isActive = false)
         seedNotification("n1", "com.a", "App", 1_000L)
         val executions = database.ruleExecutionDao()
-        executions.insert(execution("e1", "busy", "n1", createdAt = 9_000L))
-        executions.insert(execution("e2", "dry-only", "n1", createdAt = 9_000L, dryRun = true))
-        executions.insert(execution("e3", "old", "n1", createdAt = 1_000L))
+        executions.upsert(execution("e1", "busy", "n1", createdAt = 9_000L))
+        executions.upsert(execution("e2", "dry-only", "n1", createdAt = 9_000L, dryRun = true))
+        executions.upsert(execution("e3", "old", "n1", createdAt = 1_000L))
 
         val quiet = database.ruleDao().observeQuietRulesSince(5_000L).first()
 
@@ -129,9 +129,9 @@ class InsightsQueriesInstrumentedTest {
         seedRule("r4", "Gamma")
         seedNotification("n1", "com.a", "App", 1_000L)
         val executions = database.ruleExecutionDao()
-        listOf("r1", "r2", "r3").forEachIndexed { i, ruleId -> executions.insert(execution("e$i", ruleId, "n1", createdAt = 5_000L)) }
-        executions.insert(execution("e-extra", "r4", "n1", createdAt = 5_000L))
-        executions.insert(execution("e-extra2", "r4", "n1", createdAt = 5_000L))
+        listOf("r1", "r2", "r3").forEachIndexed { i, ruleId -> executions.upsert(execution("e$i", ruleId, "n1", createdAt = 5_000L)) }
+        executions.upsert(execution("e-extra", "r4", "n1", createdAt = 5_000L))
+        executions.upsert(execution("e-extra2", "r4", "n1", createdAt = 5_000L))
 
         val top = executions.observeTopRulesSince(0L, 10).first()
 
@@ -141,14 +141,14 @@ class InsightsQueriesInstrumentedTest {
     @Test
     fun observeTopAppsSince_uses_the_latest_app_name_and_breaks_ties_by_package() = runBlocking {
         val dao = database.notificationDao()
-        dao.insert(seedNotificationEntity("n1", "com.b", "Old B", 1_000L))
-        dao.insert(seedNotificationEntity("n2", "com.b", "New B", 3_000L))
-        dao.insert(seedNotificationEntity("n3", "com.b", "Mid B", 2_000L))
-        dao.insert(seedNotificationEntity("n4", "com.a", "App A", 2_000L))
-        dao.insert(seedNotificationEntity("n5", "com.a", "App A", 2_500L))
-        dao.insert(seedNotificationEntity("n6", "com.c", "Too old", 100L))
-        dao.insert(seedNotificationEntity("n7", "com.d", "App D", 2_000L))
-        dao.insert(seedNotificationEntity("n8", "com.d", "App D", 2_100L))
+        dao.upsert(seedNotificationEntity("n1", "com.b", "Old B", 1_000L))
+        dao.upsert(seedNotificationEntity("n2", "com.b", "New B", 3_000L))
+        dao.upsert(seedNotificationEntity("n3", "com.b", "Mid B", 2_000L))
+        dao.upsert(seedNotificationEntity("n4", "com.a", "App A", 2_000L))
+        dao.upsert(seedNotificationEntity("n5", "com.a", "App A", 2_500L))
+        dao.upsert(seedNotificationEntity("n6", "com.c", "Too old", 100L))
+        dao.upsert(seedNotificationEntity("n7", "com.d", "App D", 2_000L))
+        dao.upsert(seedNotificationEntity("n8", "com.d", "App D", 2_100L))
 
         val top = dao.observeTopAppsSince(500L, 5).first()
 
@@ -161,7 +161,7 @@ class InsightsQueriesInstrumentedTest {
     }
 
     private suspend fun seedNotification(id: String, pkg: String, appName: String, timestamp: Long) {
-        database.notificationDao().insert(seedNotificationEntity(id, pkg, appName, timestamp))
+        database.notificationDao().upsert(seedNotificationEntity(id, pkg, appName, timestamp))
     }
 
     private fun seedNotificationEntity(id: String, pkg: String, appName: String, timestamp: Long) = NotificationEntity(

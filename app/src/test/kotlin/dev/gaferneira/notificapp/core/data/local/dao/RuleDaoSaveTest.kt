@@ -86,7 +86,7 @@ class RuleDaoSaveTest {
     }
 
     private suspend fun seedRuleWithHistory(fields: List<String>) {
-        database.notificationDao().insert(
+        database.notificationDao().upsert(
             NotificationEntity(
                 id = NOTIFICATION_ID,
                 packageName = "com.example",
@@ -104,7 +104,7 @@ class RuleDaoSaveTest {
             actions = listOf(action()),
             apps = listOf("com.example"),
         )
-        database.ruleExecutionDao().insert(
+        database.ruleExecutionDao().upsert(
             RuleExecutionEntity(
                 id = EXECUTION_ID,
                 notificationId = NOTIFICATION_ID,

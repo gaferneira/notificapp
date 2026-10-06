@@ -1,9 +1,8 @@
 package dev.gaferneira.notificapp.core.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.domain.model.RuleActivity
 import dev.gaferneira.notificapp.domain.model.TrendPoint
@@ -70,16 +69,19 @@ internal interface RuleExecutionDao {
     suspend fun getRecentExecutionsForPackageSince(packageName: String, since: Long): List<RuleExecutionEntity>
 
     /**
-     * Insert a rule execution.
+     * Insert a rule execution, or update it in place when the id already exists.
+     *
+     * Must be an in-place upsert, never `OnConflictStrategy.REPLACE`: REPLACE deletes the parent row
+     * first, which would cascade-delete the execution's `extracted_field_values`.
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(execution: RuleExecutionEntity)
+    @Upsert
+    suspend fun upsert(execution: RuleExecutionEntity)
 
     /**
-     * Insert multiple rule executions.
+     * Insert or update multiple rule executions in place (see [upsert]).
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(executions: List<RuleExecutionEntity>)
+    @Upsert
+    suspend fun upsertAll(executions: List<RuleExecutionEntity>)
 
     /**
      * Replace only the serialized `extracted_data` of one execution. Outcomes, triggered actions,

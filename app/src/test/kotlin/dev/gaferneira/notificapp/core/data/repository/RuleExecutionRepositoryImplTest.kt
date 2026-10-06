@@ -211,7 +211,7 @@ class RuleExecutionRepositoryImplTest {
             coVerify { ruleExecutionDao.updateExtractedData("exec-1", """{"f1":"42","orphan":"kept"}""") }
             coVerify { extractedFieldValueDao.deleteValuesForExecutionFields("exec-1", listOf("f1")) }
             coVerify { extractedFieldValueDao.insertAll(match { it.single().ruleFieldId == "f1" && it.single().valueNumber == 42.0 }) }
-            coVerify(exactly = 0) { ruleExecutionDao.insert(any()) }
+            coVerify(exactly = 0) { ruleExecutionDao.upsert(any()) }
             coVerify(exactly = 0) { ruleExecutionDao.delete(any()) }
             coVerify(exactly = 0) { notificationDao.incrementAppliedRulesCount(any()) }
         } finally {
