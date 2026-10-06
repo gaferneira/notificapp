@@ -30,6 +30,11 @@ import dev.gaferneira.notificapp.core.data.local.entity.WebhookEntity
 
 /**
  * Room database for Notificapp.
+ *
+ * Evolution policy (ADR 015): the v1 schema is frozen at the first public release. After that,
+ * every version bump must be additive, ship an `@AutoMigration` or a hand-written `Migration` in
+ * `APP_DATABASE_MIGRATIONS`, commit the exported `app/schemas/**/N.json`, and add a case to
+ * `DatabaseMigrationTest`. Never use `OnConflictStrategy.REPLACE` on tables with cascade children.
  */
 @Database(
     entities = [

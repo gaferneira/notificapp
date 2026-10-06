@@ -394,6 +394,8 @@ data class ExtractedFieldValue(
 - Provide reactive streams (Flow)
 - **History outlives rules**: `rule_executions.rule_id` and `extracted_field_values.rule_field_id` are nullable with `ON DELETE SET NULL`; deleting a notification still cascades (retention). Each row snapshots what the UI needs (`rule_executions.rule_name`, `extracted_field_values.field_name` / `field_type`), so queries that read history `LEFT JOIN rules` / `rule_fields` and `COALESCE` to the snapshot (live name wins while the rule/field exists), and field-type filters read the snapshot `field_type`. Per-rule queries (stats, quiet rules) stay on the plain `rule_id`. UI must treat a null `ruleId` as "deleted": show the snapshot name, no navigation to the rule.
 
+**Schema evolution:** the Room schema is frozen at the first public release; later changes must be additive, migrated (`@AutoMigration` or a tested `Migration`), and never use `OnConflictStrategy.REPLACE` on tables with cascade children. See [ADR 015](adr/015-database-evolution-policy.md).
+
 ### 4. Extraction Layer (`core/extraction`)
 
 **Responsibilities:**

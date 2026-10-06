@@ -214,6 +214,22 @@ fun findArchViolations(srcDir: File): List<ArchViolation> {
             }
     }
 
+    // Rule 11: no-replace-on-conflict — `OnConflictStrategy.REPLACE` is delete+insert, which fires
+    // ON DELETE CASCADE / SET NULL on child rows (silently wiping history). Parent tables must use
+    // `@Upsert` (ADR 015). Leaf tables (no FK children) may opt out with a trailing
+    // `// replace-ok: reason` on the annotation line.
+    val replaceRegex = Regex("""onConflict\s*=\s*OnConflictStrategy\.REPLACE""")
+    val daoDir = File(srcDir, "dev/gaferneira/notificapp/core/data/local/dao")
+    if (daoDir.exists()) {
+        ktFiles(daoDir).forEach { f ->
+            f.readLines().forEachIndexed { idx, line ->
+                if (replaceRegex.containsMatchIn(line) && !line.contains("replace-ok")) {
+                    violations += ArchViolation("no-replace-on-conflict", relPath(f), idx + 1)
+                }
+            }
+        }
+    }
+
     return violations.distinct().sortedBy { it.toString() }
 }
 
@@ -223,7 +239,7 @@ val architectureCheck =
         description = "Fails on NEW violations of Notificapp architecture rules not covered by Detekt " +
             "(data-layer visibility, dispatcher injection, MVI effect collection, platform statics in " +
             "ViewModels/domain, domain/features dependency direction, unmapped repository exceptions, " +
-            "contract purity, design-system styling, hardcoded rule-editor/settings/app-selection/onboarding/notification-detail UI strings, core -> features imports). Pre-existing violations are grandfathered in " +
+            "contract purity, design-system styling, hardcoded rule-editor/settings/app-selection/onboarding/notification-detail UI strings, core -> features imports, OnConflictStrategy.REPLACE in DAOs). Pre-existing violations are grandfathered in " +
             "config/architecture/baseline.txt."
 
         val srcDir = file("src/main/kotlin")

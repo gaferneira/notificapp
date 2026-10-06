@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 internal interface WebhookDeliveryDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) // replace-ok: leaf table, no cascade children
     suspend fun insert(delivery: WebhookDeliveryEntity)
 
     @Query("SELECT * FROM webhook_deliveries WHERE id = :id LIMIT 1")

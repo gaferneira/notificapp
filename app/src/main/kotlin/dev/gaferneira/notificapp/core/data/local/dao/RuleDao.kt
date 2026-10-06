@@ -99,7 +99,7 @@ internal interface RuleDao {
     /**
      * Insert or update target app associations.
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) // replace-ok: leaf table, no cascade children
     suspend fun insertTargetApps(apps: List<RuleTargetAppEntity>)
 
     /**

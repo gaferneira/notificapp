@@ -88,13 +88,13 @@ internal interface ExtractedFieldValueDao {
     /**
      * Insert a single field value.
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) // replace-ok: leaf table, no cascade children
     suspend fun insert(value: ExtractedFieldValueEntity)
 
     /**
      * Insert multiple field values.
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) // replace-ok: leaf table, no cascade children
     suspend fun insertAll(values: List<ExtractedFieldValueEntity>)
 
     /**
