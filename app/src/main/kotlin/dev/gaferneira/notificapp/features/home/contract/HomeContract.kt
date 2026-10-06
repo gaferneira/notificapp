@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import dev.gaferneira.notificapp.core.rulesharing.RuleTemplateInfo
 import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.RuleCoverage
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -25,11 +26,11 @@ data class MonitoringStatus(
     val ruleCount: Int = 0,
 )
 
+/** Rolling last-7-days counters behind the Home stat tiles. */
 @Immutable
 data class WeekStats(
-    val records: Int = 0,
+    val captured: Int = 0,
     val rulesFired: Int = 0,
-    val appsActive: Int = 0,
 )
 
 @Immutable
@@ -38,7 +39,10 @@ data class RecentActivityUi(
     val ruleName: String,
     val title: String?,
     val subtitle: String?,
+    val packageName: String,
     val appName: String,
+    /** When the rule fired (epoch millis), shown as a relative time. */
+    val executedAt: Long,
 )
 
 sealed interface HomeSection {
@@ -68,11 +72,15 @@ sealed interface HomeEvent {
     data class OnRecentActivityClick(val notificationId: String) : HomeEvent
     data object OnSeeAllActivity : HomeEvent
     data object OnResumeMonitoring : HomeEvent
+    data object OnCapturedClick : HomeEvent
+    data object OnRulesFiredClick : HomeEvent
 }
 
 sealed interface HomeEffect {
     data class NavigateToRuleEditor(val ruleId: String? = null, val notificationId: String? = null) : HomeEffect
     data class NavigateToNotificationDetail(val notificationId: String) : HomeEffect
-    data object NavigateToInbox : HomeEffect
+
+    /** [initialStatus] overrides the saved inbox filter for that visit only; null keeps it. */
+    data class NavigateToInbox(val initialStatus: NotificationStatusFilter? = null) : HomeEffect
     data class ShowError(val message: UiText) : HomeEffect
 }

@@ -98,14 +98,16 @@
         <item quantity="other">Vista %d veces</item>
     </plurals>
 
-    <!-- Home - This Week Stats -->
-    <string name="home_this_week_title">Esta semana</string>
-    <string name="home_stat_records">Registros</string>
+    <!-- Home - Last 7 Days Stats -->
+    <string name="home_last_7_days_title">Últimos 7 días</string>
+    <string name="home_stat_captured">Capturadas</string>
     <string name="home_stat_rules_fired">Reglas activadas</string>
+    <string name="home_stat_captured_open">Abrir notificaciones capturadas</string>
+    <string name="home_stat_rules_fired_open">Abrir notificaciones gestionadas por reglas</string>
     <plurals name="home_week_summary">
-        <item quantity="one">%d notificación gestionada por tus reglas esta semana</item>
-        <item quantity="many">%d de notificaciones gestionadas por tus reglas esta semana</item>
-        <item quantity="other">%d notificaciones gestionadas por tus reglas esta semana</item>
+        <item quantity="one">%d notificación gestionada por tus reglas en los últimos 7 días</item>
+        <item quantity="many">%d de notificaciones gestionadas por tus reglas en los últimos 7 días</item>
+        <item quantity="other">%d notificaciones gestionadas por tus reglas en los últimos 7 días</item>
     </plurals>
 
     <!-- Home - Recent Activity -->

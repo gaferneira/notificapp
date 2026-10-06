@@ -80,6 +80,7 @@ import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.OnResumeEffect
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEffect
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEvent
 import dev.gaferneira.notificapp.features.inbox.contract.InboxListItem
@@ -102,7 +103,9 @@ import kotlinx.coroutines.flow.flowOf
 fun InboxScreen(
     navigateTo: (Screen, NavOptions?) -> Unit,
     navigateBack: () -> Unit,
-    viewModel: InboxViewModel = hiltViewModel(),
+    // Route arg: a per-visit status override (e.g. Home's "Rules fired" tile), seeded at ViewModel creation.
+    initialStatus: NotificationStatusFilter? = null,
+    viewModel: InboxViewModel = hiltViewModel<InboxViewModel, InboxViewModel.Factory> { it.create(initialStatus) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val notifications = viewModel.notifications.collectAsLazyPagingItems()

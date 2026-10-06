@@ -1,5 +1,7 @@
 package dev.gaferneira.notificapp.core.ui.navigation
 
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter
+
 /**
  * Centralized route factory for type-safe navigation.
  *
@@ -22,8 +24,10 @@ package dev.gaferneira.notificapp.core.ui.navigation
 object Routes {
     /**
      * Inbox screen - main screen showing captured notifications.
+     *
+     * @param initialStatus Status filter for this visit only (not persisted); null keeps the saved filter
      */
-    fun inbox(): Screen = Screen.Inbox
+    fun inbox(initialStatus: NotificationStatusFilter? = null): Screen = Screen.Inbox(initialStatus)
 
     /**
      * Home dashboard - the app's first bottom-nav destination.

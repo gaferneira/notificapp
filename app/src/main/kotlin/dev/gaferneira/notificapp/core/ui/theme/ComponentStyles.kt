@@ -28,6 +28,13 @@ object NotificappStyles {
         contentPadding(tokens.spacing.lg)
     }
 
+    /** Primary-container hero variant of [tonalCardStyle] for the screen's headline status (e.g. Home monitoring). */
+    val heroCardStyle: Style = Style {
+        background(tokens.colorScheme.primaryContainer)
+        shape(tokens.shapes.large)
+        contentPadding(tokens.spacing.lg)
+    }
+
     val innerPanelStyle: Style = Style {
         background(tokens.colorScheme.surface)
         shape(tokens.shapes.medium)

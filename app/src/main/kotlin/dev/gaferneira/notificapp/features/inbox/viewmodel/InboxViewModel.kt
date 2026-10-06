@@ -1,16 +1,21 @@
 package dev.gaferneira.notificapp.features.inbox.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.insertSeparators
 import androidx.paging.map
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.ui.mvi.MviViewModel
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.domain.model.Notification
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEffect
@@ -32,7 +37,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import javax.inject.Inject
 
 /**
  * ViewModel for the Inbox Screen with Pagination.
@@ -53,13 +57,23 @@ import javax.inject.Inject
  * Spec: openspec/specs/inbox/001-inbox-screen.md
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltViewModel
-class InboxViewModel @Inject constructor(
+@HiltViewModel(assistedFactory = InboxViewModel.Factory::class)
+class InboxViewModel @AssistedInject constructor(
+    @Assisted initialStatus: NotificationStatusFilter?,
+    private val savedStateHandle: SavedStateHandle,
     private val listenerStatus: NotificationListenerStatusProvider,
     private val notificationRepository: NotificationRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     @Dispatcher(DispatcherType.IO) private val ioDispatcher: CoroutineDispatcher,
-) : MviViewModel<InboxUiState, InboxEvent, InboxEffect>(InboxUiState()) {
+) : MviViewModel<InboxUiState, InboxEvent, InboxEffect>(
+    InboxUiState(filter = savedStateHandle.resolveStatusOverride(initialStatus)?.let { InboxFilter(status = it) } ?: InboxFilter()),
+) {
+
+    @AssistedFactory
+    interface Factory {
+        /** [initialStatus] is the route's per-visit status override; null keeps the saved filter. */
+        fun create(initialStatus: NotificationStatusFilter?): InboxViewModel
+    }
 
     /**
      * The paginated notification stream with 2-hour time headers.
@@ -113,6 +127,17 @@ class InboxViewModel @Inject constructor(
             }
             .cachedIn(viewModelScope)
 
+    /**
+     * Per-visit status from the route (e.g. Home's "Rules fired" tile). While set it replaces the
+     * saved filter in the state but is never persisted; the first filter edit drops it. Kept in
+     * [SavedStateHandle] so process death doesn't re-apply the route's status over the user's edits.
+     */
+    private var initialStatusOverride: NotificationStatusFilter?
+        get() = savedStateHandle[KEY_STATUS_OVERRIDE]
+        set(value) {
+            savedStateHandle[KEY_STATUS_OVERRIDE] = value
+        }
+
     init {
         loadSavedFilters()
         loadAppNames()
@@ -126,7 +151,8 @@ class InboxViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.observeInboxFilters()
                 .collect { filters ->
-                    setState { copy(filter = filters.toInboxFilter()) }
+                    val override = initialStatusOverride
+                    setState { copy(filter = override?.let { InboxFilter(status = it) } ?: filters.toInboxFilter()) }
                 }
         }
     }
@@ -172,6 +198,12 @@ class InboxViewModel @Inject constructor(
 
     /** Persists [filter]; the saved-filters collector in [loadSavedFilters] feeds it back to the state. */
     private fun saveFilter(filter: InboxFilter) {
+        if (initialStatusOverride != null) {
+            // Leaving the per-visit override: show the edit now, since persisting a value equal to
+            // the saved one wouldn't re-emit through the saved-filters collector.
+            initialStatusOverride = null
+            setState { copy(filter = filter) }
+        }
         viewModelScope.launch {
             userPreferencesRepository.setInboxFilters(filter.toSettings())
                 .onFailure { e ->
@@ -183,6 +215,18 @@ class InboxViewModel @Inject constructor(
     private fun onNotificationClick(notificationId: String) {
         sendEffect(InboxEffect.NavigateToNotificationDetail(notificationId))
     }
+}
+
+// File-scoped so the constructor's super-call argument (resolveStatusOverride) can reach it.
+private const val KEY_STATUS_OVERRIDE = "inbox_status_override"
+
+/**
+ * Seeds the override from the route on first creation only; once the key exists (including a
+ * null left by a filter edit) the saved value wins, so a restored ViewModel keeps the user's choice.
+ */
+private fun SavedStateHandle.resolveStatusOverride(initialStatus: NotificationStatusFilter?): NotificationStatusFilter? {
+    if (!contains(KEY_STATUS_OVERRIDE)) set(KEY_STATUS_OVERRIDE, initialStatus)
+    return get(KEY_STATUS_OVERRIDE)
 }
 
 /**

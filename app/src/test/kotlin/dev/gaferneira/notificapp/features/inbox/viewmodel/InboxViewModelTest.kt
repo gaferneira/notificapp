@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.features.inbox.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.domain.model.AppInfo
@@ -56,7 +57,13 @@ class InboxViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel(listenerEnabled: Boolean = true): InboxViewModel = InboxViewModel(
+    private fun createViewModel(
+        listenerEnabled: Boolean = true,
+        initialStatus: Status? = null,
+        savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    ): InboxViewModel = InboxViewModel(
+        initialStatus = initialStatus,
+        savedStateHandle = savedStateHandle,
         listenerStatus = NotificationListenerStatusProvider { listenerEnabled },
         notificationRepository = notificationRepository,
         userPreferencesRepository = userPreferencesRepository,
@@ -196,6 +203,69 @@ class InboxViewModelTest {
     }
 
     @Nested
+    inner class InitialStatusTests {
+
+        @Test
+        fun `initial status is the filter from the very first state`() {
+            savedFiltersFlow.value = InboxFilterSettings(listOf("com.bank"), Status.UNPROCESSED)
+
+            val viewModel = createViewModel(initialStatus = Status.PROCESSED)
+
+            viewModel.uiState.value.filter shouldBe InboxFilter(status = Status.PROCESSED)
+        }
+
+        @Test
+        fun `initial status overrides the saved filter and is not persisted`() = runTest(testDispatcher) {
+            savedFiltersFlow.value = InboxFilterSettings(listOf("com.bank"), Status.UNPROCESSED)
+            val viewModel = createViewModel(initialStatus = Status.PROCESSED)
+
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe InboxFilter(status = Status.PROCESSED)
+            coVerify(exactly = 0) { userPreferencesRepository.setInboxFilters(any()) }
+        }
+
+        @Test
+        fun `initial status survives a later saved-filter emission`() = runTest(testDispatcher) {
+            val viewModel = createViewModel(initialStatus = Status.PROCESSED)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            savedFiltersFlow.value = InboxFilterSettings(listOf("com.a"), Status.UNPROCESSED)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe InboxFilter(status = Status.PROCESSED)
+        }
+
+        @Test
+        fun `a restored ViewModel keeps the user's edit instead of re-applying the route status`() = runTest(testDispatcher) {
+            val savedStateHandle = SavedStateHandle()
+            val viewModel = createViewModel(initialStatus = Status.PROCESSED, savedStateHandle = savedStateHandle)
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.onEvent(InboxEvent.OnFilterChange(InboxFilter(status = Status.UNPROCESSED)))
+            savedFiltersFlow.value = InboxFilterSettings(statusFilter = Status.UNPROCESSED)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Same route arg, same saved state: what process-death restoration hands the new instance.
+            val restored = createViewModel(initialStatus = Status.PROCESSED, savedStateHandle = savedStateHandle)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            restored.uiState.value.filter shouldBe InboxFilter(status = Status.UNPROCESSED)
+        }
+
+        @Test
+        fun `a filter edit after the initial status is persisted and shown`() = runTest(testDispatcher) {
+            val viewModel = createViewModel(initialStatus = Status.PROCESSED)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(InboxEvent.OnFilterChange(InboxFilter(setOf("com.a"), Status.PROCESSED)))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe InboxFilter(setOf("com.a"), Status.PROCESSED)
+            coVerify { userPreferencesRepository.setInboxFilters(InboxFilterSettings(listOf("com.a"), Status.PROCESSED)) }
+        }
+    }
+
+    @Nested
     inner class NavigationTests {
 
         @Test
@@ -230,6 +300,8 @@ class InboxViewModelTest {
         fun `OnResume with revoked permission sets listener inactive`() = runTest(testDispatcher) {
             var enabled = true
             val viewModel = InboxViewModel(
+                initialStatus = null,
+                savedStateHandle = SavedStateHandle(),
                 listenerStatus = NotificationListenerStatusProvider { enabled },
                 notificationRepository = notificationRepository,
                 userPreferencesRepository = userPreferencesRepository,

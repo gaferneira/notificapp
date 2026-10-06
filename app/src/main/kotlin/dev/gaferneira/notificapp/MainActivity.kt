@@ -175,7 +175,8 @@ fun Notificapp(
     val lifecycleOwner = LocalLifecycleOwner.current
     val appFlowState by viewModel.appFlowState.collectAsStateWithLifecycle()
 
-    // Re-check on every resume - but only during onboarding (waiting for notification access).
+    // Resolve the initial flow state, then re-check on every resume - but only during onboarding
+    // (waiting for notification access).
     // APP_SELECTION is left via its own Continue action: selections persist on toggle, so a
     // resume mid-selection would otherwise jump to MAIN_APP after the first app. Once past,
     // re-deriving the flow state on every resume would tear down and recreate the NavDisplay
@@ -185,7 +186,9 @@ fun Notificapp(
     // ActivityResultContract (e.g. a system picker).
     val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
     LaunchedEffect(lifecycleState) {
-        if (lifecycleState == Lifecycle.State.RESUMED && appFlowState == AppFlowState.ONBOARDING) {
+        // null = initial check still pending, so it must also pass or the state never resolves.
+        val needsCheck = appFlowState == null || appFlowState == AppFlowState.ONBOARDING
+        if (lifecycleState == Lifecycle.State.RESUMED && needsCheck) {
             viewModel.recheckFlowState(isNotificationListenerEnabled(context))
         }
     }
@@ -328,8 +331,9 @@ private fun EntryProviderScope<NavKey>.mainTabEntries(navigator: Navigator) {
         )
     }
 
-    entry<Screen.Inbox> {
+    entry<Screen.Inbox> { screen ->
         InboxScreen(
+            initialStatus = screen.initialStatus,
             navigateTo = navigator::navigate,
             navigateBack = navigator::goBack,
         )

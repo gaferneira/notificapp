@@ -5,9 +5,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,8 +23,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.BatteryAlert
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -70,6 +76,7 @@ import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.rulesharing.RuleTemplateInfo
 import dev.gaferneira.notificapp.core.rulesharing.RuleTemplates
 import dev.gaferneira.notificapp.core.ui.components.AppIcon
+import dev.gaferneira.notificapp.core.ui.components.IconBadge
 import dev.gaferneira.notificapp.core.ui.components.RuleTemplateCard
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
@@ -94,9 +101,11 @@ import dev.gaferneira.notificapp.features.home.viewmodel.HomeViewModel
 import dev.gaferneira.notificapp.util.isIgnoringBatteryOptimizations
 import dev.gaferneira.notificapp.util.openBatteryOptimizationSettings
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
+import dev.gaferneira.notificapp.util.timeAgo
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import java.util.Date
 
 @Composable
 fun HomeScreen(
@@ -124,7 +133,7 @@ fun HomeScreen(
             is HomeEffect.NavigateToNotificationDetail ->
                 navigateTo(Routes.notificationDetails(effect.notificationId), null)
 
-            HomeEffect.NavigateToInbox -> navigateTo(Routes.inbox(), null)
+            is HomeEffect.NavigateToInbox -> navigateTo(Routes.inbox(initialStatus = effect.initialStatus), null)
 
             is HomeEffect.ShowError -> snackbarHostState.showSnackbar(effect.message.asString(context))
         }
@@ -218,7 +227,15 @@ internal fun HomeScreenContent(
 }
 
 private fun LazyListScope.activityItems(uiState: HomeUiState, onEvent: (HomeEvent) -> Unit) {
-    item { WeekStatsRow(weekStats = uiState.weekStats) }
+    item {
+        WeekStatsRow(
+            weekStats = uiState.weekStats,
+            actions = StatTileActions(
+                onCapturedClick = { onEvent(HomeEvent.OnCapturedClick) },
+                onRulesFiredClick = { onEvent(HomeEvent.OnRulesFiredClick) },
+            ),
+        )
+    }
     item {
         RecentActivitySection(
             recentActivity = uiState.recentActivity,
@@ -404,7 +421,7 @@ private fun MonitoringStatusBanner(
         monitoring.isPaused -> PausedBanner(onResume = onResumeMonitoring)
         !monitoring.isListenerEnabled -> AccessOffBanner(onEnableAccess = onEnableAccess)
         monitoring.monitoredAppCount == 0 -> NoAppsBanner(onManageApps = onManageApps)
-        else -> ActiveMonitoringBanner(monitoring = monitoring, onManageApps = onManageApps)
+        else -> MonitoringHeroCard(monitoring = monitoring, onManageApps = onManageApps)
     }
 }
 
@@ -478,8 +495,9 @@ private fun WarningBanner(message: String, description: String, buttonText: Stri
     }
 }
 
+/** Hero status card: the healthy, monitoring state as the screen's headline. */
 @Composable
-private fun ActiveMonitoringBanner(monitoring: MonitoringStatus, onManageApps: () -> Unit) {
+private fun MonitoringHeroCard(monitoring: MonitoringStatus, onManageApps: () -> Unit) {
     TonalCard(
         modifier = Modifier
             .clip(MaterialTheme.shapes.large)
@@ -488,30 +506,33 @@ private fun ActiveMonitoringBanner(monitoring: MonitoringStatus, onManageApps: (
                 onClickLabel = stringResource(R.string.home_banner_manage_apps),
                 onClick = onManageApps,
             ),
+        style = NotificappStyles.heroCardStyle,
     ) {
         // The row is clickable as a whole and merged into one TalkBack sentence ("Monitoring active, 3 apps ...").
         Row(
             modifier = Modifier.heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
+            IconBadge(
+                icon = Icons.Filled.CheckCircle,
+                modifier = Modifier.size(56.dp),
+                iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
+                iconSize = 32.dp,
             )
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = stringResource(R.string.home_banner_monitoring_active),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = monitoringSummary(monitoring),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -519,7 +540,7 @@ private fun ActiveMonitoringBanner(monitoring: MonitoringStatus, onManageApps: (
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         }
     }
@@ -663,10 +684,15 @@ private fun SuggestionCard(suggestion: RecurringSuggestionUi, onCreate: () -> Un
     }
 }
 
+private class StatTileActions(
+    val onCapturedClick: () -> Unit,
+    val onRulesFiredClick: () -> Unit,
+)
+
 @Composable
-private fun WeekStatsRow(weekStats: WeekStats) {
+private fun WeekStatsRow(weekStats: WeekStats, actions: StatTileActions) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionEyebrow(text = stringResource(R.string.home_this_week_title))
+        SectionEyebrow(text = stringResource(R.string.home_last_7_days_title))
         if (weekStats.rulesFired > 0) {
             Text(
                 text = pluralStringResource(R.plurals.home_week_summary, weekStats.rulesFired, weekStats.rulesFired),
@@ -674,32 +700,72 @@ private fun WeekStatsRow(weekStats: WeekStats) {
             )
         }
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Max),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            StatTile(label = stringResource(R.string.home_stat_records), value = weekStats.records, modifier = Modifier.weight(1f))
-            StatTile(label = stringResource(R.string.home_stat_rules_fired), value = weekStats.rulesFired, modifier = Modifier.weight(1f))
+            val tileModifier = Modifier.weight(1f).fillMaxHeight()
+            StatTile(
+                icon = Icons.Outlined.Inbox,
+                label = stringResource(R.string.home_stat_captured),
+                value = weekStats.captured,
+                onClickLabel = stringResource(R.string.home_stat_captured_open),
+                onClick = actions.onCapturedClick,
+                modifier = tileModifier,
+            )
+            StatTile(
+                icon = Icons.Outlined.Bolt,
+                label = stringResource(R.string.home_stat_rules_fired),
+                value = weekStats.rulesFired,
+                onClickLabel = stringResource(R.string.home_stat_rules_fired_open),
+                onClick = actions.onRulesFiredClick,
+                modifier = tileModifier,
+            )
         }
     }
 }
 
+/** A navigation tile: icon badge, big number and label, with a chevron so it reads as tappable. */
 @Composable
-private fun StatTile(label: String, value: Int, modifier: Modifier = Modifier) {
-    TonalCard(modifier = modifier) {
+private fun StatTile(
+    icon: ImageVector,
+    label: String,
+    value: Int,
+    onClickLabel: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    TonalCard(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.large)
+            .clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = onClick)
+            .heightIn(min = 48.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconBadge(icon = icon, style = NotificappStyles.iconBadgeSubtleStyle, modifier = Modifier.size(32.dp), iconSize = 18.dp)
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
         Text(
             text = value.toString(),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp),
             maxLines = 1,
         )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
@@ -768,6 +834,8 @@ private fun RecentActivityEmptyState() {
 
 @Composable
 private fun RecentActivityRow(activity: RecentActivityUi, onClick: () -> Unit) {
+    val locale = Locale.current.platformLocale
+    val relativeTime = remember(activity.executedAt, locale) { Date(activity.executedAt).timeAgo(locale = locale) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -778,17 +846,30 @@ private fun RecentActivityRow(activity: RecentActivityUi, onClick: () -> Unit) {
             )
             .heightIn(min = 48.dp)
             .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        AppIcon(packageName = activity.packageName, appName = activity.appName)
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = activity.ruleName,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = activity.ruleName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Text(
+                    text = relativeTime,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
             val detail = listOfNotNull(activity.subtitle, activity.appName).joinToString(" · ")
             if (detail.isNotBlank()) {
                 Text(
@@ -816,9 +897,13 @@ private val previewActivity = persistentListOf(
         ruleName = "Dismiss spam",
         title = "You have a new message",
         subtitle = null,
+        packageName = "com.example.messaging",
         appName = "Messaging App",
+        executedAt = System.currentTimeMillis() - PREVIEW_ACTIVITY_AGE_MILLIS,
     ),
 )
+
+private const val PREVIEW_ACTIVITY_AGE_MILLIS = 5 * 60 * 1000L
 
 @Preview(name = "First run", showBackground = true)
 @Preview(name = "First run (dark)", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
@@ -863,7 +948,7 @@ private fun HomeScreenActivePreview() {
         HomeScreenContent(
             uiState = HomeUiState(
                 monitoring = previewMonitoring.copy(ruleCount = 5),
-                weekStats = WeekStats(records = 42, rulesFired = 12, appsActive = 3),
+                weekStats = WeekStats(captured = 42, rulesFired = 12),
                 recentActivity = previewActivity,
                 isLoading = false,
             ),
@@ -895,7 +980,7 @@ private fun HomeScreenAccessOffPreview() {
         HomeScreenContent(
             uiState = HomeUiState(
                 monitoring = MonitoringStatus(isListenerEnabled = false, monitoredAppCount = 3, ruleCount = 2),
-                weekStats = WeekStats(records = 42, rulesFired = 12),
+                weekStats = WeekStats(captured = 42, rulesFired = 12),
                 recentActivity = previewActivity,
                 isLoading = false,
             ),
@@ -915,7 +1000,7 @@ private fun HomeScreenSuggestionsPreview() {
             uiState = HomeUiState(
                 monitoring = previewMonitoring.copy(ruleCount = 2),
                 section = HomeSection.Recurring(previewSuggestions),
-                weekStats = WeekStats(records = 42, rulesFired = 1),
+                weekStats = WeekStats(captured = 42, rulesFired = 1),
                 recentActivity = previewActivity,
                 isLoading = false,
             ),
@@ -934,7 +1019,7 @@ private fun HomeScreenEmptyActivityPreview() {
         HomeScreenContent(
             uiState = HomeUiState(
                 monitoring = previewMonitoring.copy(ruleCount = 2),
-                weekStats = WeekStats(records = 5),
+                weekStats = WeekStats(captured = 5),
                 isLoading = false,
             ),
             onEvent = {},
@@ -992,7 +1077,7 @@ private fun HomeScreenBatteryHintPreview() {
         HomeScreenContent(
             uiState = HomeUiState(
                 monitoring = previewMonitoring.copy(ruleCount = 5),
-                weekStats = WeekStats(records = 42, rulesFired = 12, appsActive = 3),
+                weekStats = WeekStats(captured = 42, rulesFired = 12),
                 recentActivity = previewActivity,
                 isLoading = false,
             ),
@@ -1009,7 +1094,9 @@ private val previewLongActivity = RecentActivityUi(
     ruleName = "Descartar notificaciones promocionales repetidas de la aplicación bancaria",
     title = "Compra con tarjeta aprobada",
     subtitle = "Pagaste 12,50 en Coffee Corner. El saldo restante y una descripción final muy larga continúan aquí",
+    packageName = "com.example.bank",
     appName = "Aplicación bancaria de ejemplo",
+    executedAt = System.currentTimeMillis() - PREVIEW_ACTIVITY_AGE_MILLIS,
 )
 
 @Preview(name = "Large font", showBackground = true, fontScale = 2f)
@@ -1019,7 +1106,7 @@ private fun HomeScreenLargeFontPreview() {
         HomeScreenContent(
             uiState = HomeUiState(
                 monitoring = previewMonitoring.copy(ruleCount = 5),
-                weekStats = WeekStats(records = 42, rulesFired = 12, appsActive = 3),
+                weekStats = WeekStats(captured = 42, rulesFired = 12),
                 recentActivity = previewActivity,
                 isLoading = false,
             ),

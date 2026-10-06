@@ -97,6 +97,7 @@ Additive and migration-safe by design (new action types use schemaless config; n
 
 ### Data & insights
 
+- **Activity log screen (`rule_executions` history)** — a chronological, filterable log of every rule firing, including action-only firings (dismiss, snooze) that extract nothing. v1 routes Home's "Rules fired" tile to the Inbox with the Processed filter instead
 - **Trend chart rendering** — visualize the already-computed 7/30-day trend series as a bar/line chart in the Data Browser
 - **Daily/weekly digest notification** — "This week: 23 transactions, €412 total", computed locally from extracted values
 - **Per-rule health stats** — the Rule Details screen now shows a Statistics card (7/30-day, total, last triggered, test vs live); still open: a "matched 0 times in 30 days" indicator in the Rules list; a dead rule silently not firing violates "never fail silently", and the `RuleExecution` data already exists

@@ -8,6 +8,7 @@ import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.NotificationListenerStatusProvider
 import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleCoverage
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.time.Clock
+import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -77,7 +79,6 @@ class HomeViewModelTest {
             every { observeRecentActivity(any()) } returns flowOf(emptyList())
         }
         notificationRepository = mockk {
-            every { observeActiveAppCountSince(any()) } returns flowOf(0)
             every { observeRecentSince(any(), any()) } returns flowOf(emptyList())
             every { observeCountSince(any()) } returns flowOf(0)
         }
@@ -293,6 +294,21 @@ class HomeViewModelTest {
     inner class TimeWindowTests {
 
         @Test
+        fun `stats use a rolling 7-day window ending now`() = runTest(testDispatcher) {
+            val zone = ZoneId.systemDefault()
+            // A Monday morning: a calendar-week window would start at 00:00 today and show zeros.
+            val now = LocalDate.parse("2026-01-12").atTime(8, 0).atZone(zone).toInstant()
+            val viewModel = createViewModel()
+            viewModel.clock = Clock.fixed(now, zone)
+            viewModel.onEvent(HomeEvent.OnRetry)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val sevenDaysAgo = now.minus(Duration.ofDays(7)).toEpochMilli()
+            verify { ruleExecutionRepository.observeExecutionCountSince(sevenDaysAgo) }
+            verify { notificationRepository.observeCountSince(sevenDaysAgo) }
+        }
+
+        @Test
         fun `time windows are recomputed on OnResume only after the day changes`() = runTest(testDispatcher) {
             val zone = ZoneId.systemDefault()
             val day1 = LocalDate.parse("2026-01-07").atTime(10, 0).atZone(zone).toInstant()
@@ -301,20 +317,24 @@ class HomeViewModelTest {
             // Re-observe with the injected clock so the initial windows are anchored to day1.
             viewModel.onEvent(HomeEvent.OnRetry)
             testDispatcher.scheduler.advanceUntilIdle()
-            val weekStart1 = LocalDate.parse("2026-01-05").atStartOfDay(zone).toInstant().toEpochMilli()
-            verify(exactly = 1) { ruleExecutionRepository.observeExecutionCountSince(weekStart1) }
+            val windowStart1 = day1.minus(Duration.ofDays(7)).toEpochMilli()
+            verify(exactly = 1) { ruleExecutionRepository.observeExecutionCountSince(windowStart1) }
 
+            // Same day: no re-observe, so the window is unchanged.
             viewModel.clock = Clock.fixed(day1.plusSeconds(3_600), zone)
             viewModel.onEvent(HomeEvent.OnResume)
             testDispatcher.scheduler.advanceUntilIdle()
-            verify(exactly = 1) { ruleExecutionRepository.observeExecutionCountSince(weekStart1) }
+            verify(exactly = 1) { ruleExecutionRepository.observeExecutionCountSince(windowStart1) }
+            verify(exactly = 0) {
+                ruleExecutionRepository.observeExecutionCountSince(day1.plusSeconds(3_600).minus(Duration.ofDays(7)).toEpochMilli())
+            }
 
-            // Next Monday: the week window rolls over.
-            viewModel.clock = Clock.fixed(LocalDate.parse("2026-01-12").atTime(8, 0).atZone(zone).toInstant(), zone)
+            // Next day: the window rolls forward.
+            val day2 = LocalDate.parse("2026-01-08").atTime(8, 0).atZone(zone).toInstant()
+            viewModel.clock = Clock.fixed(day2, zone)
             viewModel.onEvent(HomeEvent.OnResume)
             testDispatcher.scheduler.advanceUntilIdle()
-            val weekStart2 = LocalDate.parse("2026-01-12").atStartOfDay(zone).toInstant().toEpochMilli()
-            verify(atLeast = 1) { ruleExecutionRepository.observeExecutionCountSince(weekStart2) }
+            verify(atLeast = 1) { ruleExecutionRepository.observeExecutionCountSince(day2.minus(Duration.ofDays(7)).toEpochMilli()) }
         }
     }
 
@@ -367,7 +387,35 @@ class HomeViewModelTest {
                 viewModel.onEvent(HomeEvent.OnSeeAllActivity)
                 testDispatcher.scheduler.advanceUntilIdle()
 
-                awaitItem() shouldBe HomeEffect.NavigateToInbox
+                awaitItem() shouldBe HomeEffect.NavigateToInbox()
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
+        fun `OnCapturedClick emits NavigateToInbox with the ALL status`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.effect.test {
+                viewModel.onEvent(HomeEvent.OnCapturedClick)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                awaitItem() shouldBe HomeEffect.NavigateToInbox(NotificationStatusFilter.ALL)
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
+        fun `OnRulesFiredClick emits NavigateToInbox with the PROCESSED status`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.effect.test {
+                viewModel.onEvent(HomeEvent.OnRulesFiredClick)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                awaitItem() shouldBe HomeEffect.NavigateToInbox(NotificationStatusFilter.PROCESSED)
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -434,14 +482,13 @@ class HomeViewModelTest {
     inner class StatsMappingTests {
 
         @Test
-        fun `week stats map records, rules fired and apps active from their sources`() = runTest(testDispatcher) {
+        fun `week stats map captured and rules fired from their sources`() = runTest(testDispatcher) {
             every { notificationRepository.observeCountSince(any()) } returns flowOf(12)
             every { ruleExecutionRepository.observeExecutionCountSince(any()) } returns flowOf(7)
-            every { notificationRepository.observeActiveAppCountSince(any()) } returns flowOf(3)
             val viewModel = createViewModel()
             testDispatcher.scheduler.advanceUntilIdle()
 
-            viewModel.uiState.value.weekStats shouldBe WeekStats(records = 12, rulesFired = 7, appsActive = 3)
+            viewModel.uiState.value.weekStats shouldBe WeekStats(captured = 12, rulesFired = 7)
         }
 
         @Test
@@ -462,7 +509,9 @@ class HomeViewModelTest {
                 ruleName = "Rule",
                 title = "Hello",
                 subtitle = "World",
+                packageName = "com.test.app",
                 appName = "Test App",
+                executedAt = 0L,
             )
             items[1].subtitle shouldBe null
         }

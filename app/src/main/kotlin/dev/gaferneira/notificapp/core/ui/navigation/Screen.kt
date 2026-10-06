@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.ui.navigation
 
 import androidx.navigation3.runtime.NavKey
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter
 import kotlinx.serialization.Serializable
 
 /**
@@ -13,9 +14,12 @@ sealed class Screen : NavKey {
 
     /**
      * Inbox screen - main screen showing captured notifications.
+     *
+     * @property initialStatus Status filter applied for this visit only, overriding (and never
+     * replacing) the saved inbox filter; null keeps the saved filter.
      */
     @Serializable
-    data object Inbox : Screen()
+    data class Inbox(val initialStatus: NotificationStatusFilter? = null) : Screen()
 
     /**
      * Home dashboard - launch summary: monitoring status, starter rules or recurring-notification

@@ -373,13 +373,15 @@
         <item quantity="other">Seen %d times</item>
     </plurals>
 
-    <!-- Home - This Week Stats -->
-    <string name="home_this_week_title">This Week</string>
-    <string name="home_stat_records">Records</string>
+    <!-- Home - Last 7 Days Stats -->
+    <string name="home_last_7_days_title">Last 7 days</string>
+    <string name="home_stat_captured">Captured</string>
     <string name="home_stat_rules_fired">Rules fired</string>
+    <string name="home_stat_captured_open">Open captured notifications</string>
+    <string name="home_stat_rules_fired_open">Open notifications handled by rules</string>
     <plurals name="home_week_summary">
-        <item quantity="one">%d notification handled by your rules this week</item>
-        <item quantity="other">%d notifications handled by your rules this week</item>
+        <item quantity="one">%d notification handled by your rules in the last 7 days</item>
+        <item quantity="other">%d notifications handled by your rules in the last 7 days</item>
     </plurals>
 
     <!-- Home - Recent Activity -->

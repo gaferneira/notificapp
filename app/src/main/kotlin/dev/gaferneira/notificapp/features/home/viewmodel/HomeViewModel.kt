@@ -15,6 +15,7 @@ import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RecurringSuggestion
 import dev.gaferneira.notificapp.domain.model.Rule
 import dev.gaferneira.notificapp.domain.model.SelectedApp
+import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter
 import dev.gaferneira.notificapp.domain.repository.UserPreferencesRepository
 import dev.gaferneira.notificapp.features.home.contract.HomeEffect
 import dev.gaferneira.notificapp.features.home.contract.HomeEvent
@@ -35,7 +36,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.time.Clock
-import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -60,7 +60,7 @@ class HomeViewModel @Inject constructor(
     private val zoneId: ZoneId = ZoneId.systemDefault()
     private var observeJob: Job? = null
 
-    /** Time source for the week/suggestion windows; replaceable in tests (kept out of the Hilt constructor). */
+    /** Time source for the stats/suggestion windows; replaceable in tests (kept out of the Hilt constructor). */
     internal var clock: Clock = Clock.system(zoneId)
 
     /** Day the current time windows were computed for; a change triggers a re-observe on resume. */
@@ -84,8 +84,10 @@ class HomeViewModel @Inject constructor(
             )
             is HomeEvent.OnSkipSimilar -> onSkipSimilar(event.suggestion)
             is HomeEvent.OnRecentActivityClick -> sendEffect(HomeEffect.NavigateToNotificationDetail(event.notificationId))
-            HomeEvent.OnSeeAllActivity -> sendEffect(HomeEffect.NavigateToInbox)
+            HomeEvent.OnSeeAllActivity -> sendEffect(HomeEffect.NavigateToInbox())
             HomeEvent.OnResumeMonitoring -> resumeMonitoring()
+            HomeEvent.OnCapturedClick -> sendEffect(HomeEffect.NavigateToInbox(NotificationStatusFilter.ALL))
+            HomeEvent.OnRulesFiredClick -> sendEffect(HomeEffect.NavigateToInbox(NotificationStatusFilter.PROCESSED))
         }
     }
 
@@ -98,8 +100,10 @@ class HomeViewModel @Inject constructor(
         observeJob?.cancel()
         val today = LocalDate.now(clock)
         windowsDay = today
-        val weekStart = startOfWeekMillis(today, zoneId)
-        val suggestionWindowStart = Instant.now(clock).minusSeconds(SUGGESTION_WINDOW_DAYS * SECONDS_PER_DAY).toEpochMilli()
+        val now = Instant.now(clock)
+        // Rolling window (not calendar week) so Monday morning never resets the tiles to zero; matches RuleDetails.
+        val statsWindowStart = now.minusSeconds(STATS_WINDOW_DAYS * SECONDS_PER_DAY).toEpochMilli()
+        val suggestionWindowStart = now.minusSeconds(SUGGESTION_WINDOW_DAYS * SECONDS_PER_DAY).toEpochMilli()
         val rulesFlow = ruleRepository.observeAllRules()
 
         val statusFlow = combine(
@@ -111,7 +115,7 @@ class HomeViewModel @Inject constructor(
             HomeStatus(rules, enabledApps, listenerEnabled, paused)
         }
 
-        val statsFlow = observeStats(weekStart)
+        val statsFlow = observeStats(statsWindowStart)
 
         val suggestionsFlow = combine(
             notificationRepository.observeRecentSince(suggestionWindowStart, SUGGESTION_SCAN_LIMIT),
@@ -139,9 +143,8 @@ class HomeViewModel @Inject constructor(
                         listenerEnabled = status.listenerEnabled,
                         paused = status.paused,
                         rulesFired = stats.rulesFired,
-                        appsActive = stats.appsActive,
                         recentActivity = stats.recentActivity,
-                        recordsCount = stats.recordsCount,
+                        capturedCount = stats.capturedCount,
                         suggestions = suggestions,
                     ),
                 )
@@ -155,13 +158,12 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun observeStats(weekStart: Long) = combine(
-        ruleExecutionRepository.observeExecutionCountSince(weekStart),
-        notificationRepository.observeActiveAppCountSince(weekStart),
+    private fun observeStats(since: Long) = combine(
+        ruleExecutionRepository.observeExecutionCountSince(since),
         ruleExecutionRepository.observeRecentActivity(RECENT_ACTIVITY_LIMIT),
-        notificationRepository.observeCountSince(weekStart),
-    ) { rulesFired, appsActive, recentActivity, recordsCount ->
-        HomeStats(rulesFired, appsActive, recentActivity, recordsCount)
+        notificationRepository.observeCountSince(since),
+    ) { rulesFired, recentActivity, capturedCount ->
+        HomeStats(rulesFired, recentActivity, capturedCount)
     }
 
     private fun buildState(params: HomeStateParams): HomeUiState = buildHomeUiState(params)
@@ -195,6 +197,7 @@ class HomeViewModel @Inject constructor(
 
     companion object {
         private const val RECENT_ACTIVITY_LIMIT = 5
+        private const val STATS_WINDOW_DAYS = 7L
         private const val SUGGESTION_WINDOW_DAYS = 14L
         private const val SUGGESTION_SCAN_LIMIT = 500
         private const val SECONDS_PER_DAY = 86_400L
@@ -204,11 +207,6 @@ class HomeViewModel @Inject constructor(
 // File-scoped so it's reachable from the top-level buildHomeUiState() below, which lives outside
 // the class (and therefore outside the companion object's visibility) for testability.
 private const val STARTER_TEMPLATE_COUNT = 3
-
-private fun startOfWeekMillis(today: LocalDate, zoneId: ZoneId): Long {
-    val startOfWeek = today.minusDays((today.dayOfWeek.value - DayOfWeek.MONDAY.value).toLong())
-    return startOfWeek.atStartOfDay(zoneId).toInstant().toEpochMilli()
-}
 
 private fun RecurringSuggestion.toUi(): RecurringSuggestionUi = RecurringSuggestionUi(
     packageName = packageName,
@@ -226,7 +224,9 @@ private fun RecentActivity.toUi(): RecentActivityUi = RecentActivityUi(
     ruleName = ruleName,
     title = notificationTitle,
     subtitle = notificationContent,
+    packageName = packageName,
     appName = appName,
+    executedAt = executedAt,
 )
 
 private data class HomeStatus(
@@ -238,9 +238,8 @@ private data class HomeStatus(
 
 private data class HomeStats(
     val rulesFired: Int,
-    val appsActive: Int,
     val recentActivity: List<RecentActivity>,
-    val recordsCount: Int,
+    val capturedCount: Int,
 )
 
 private data class HomeStateParams(
@@ -249,9 +248,8 @@ private data class HomeStateParams(
     val listenerEnabled: Boolean,
     val paused: Boolean,
     val rulesFired: Int,
-    val appsActive: Int,
     val recentActivity: List<RecentActivity>,
-    val recordsCount: Int,
+    val capturedCount: Int,
     val suggestions: List<RecurringSuggestion>,
 )
 
@@ -270,9 +268,8 @@ private fun buildHomeUiState(params: HomeStateParams): HomeUiState {
             ruleCount = params.ruleCount,
         ),
         weekStats = WeekStats(
-            records = params.recordsCount,
+            captured = params.capturedCount,
             rulesFired = params.rulesFired,
-            appsActive = params.appsActive,
         ),
         recentActivity = params.recentActivity.map { it.toUi() }.toImmutableList(),
         section = section,
