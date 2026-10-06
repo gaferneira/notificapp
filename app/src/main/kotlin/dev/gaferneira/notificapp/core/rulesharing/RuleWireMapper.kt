@@ -190,6 +190,7 @@ private fun ExtractionMethod.toDto(): ExtractionMethodDto = when (this) {
     is ExtractionMethod.JsonPath -> ExtractionMethodDto.JsonPath(path)
     ExtractionMethod.SmartAmountDetection -> ExtractionMethodDto.SmartAmountDetection
     ExtractionMethod.SmartDateDetection -> ExtractionMethodDto.SmartDateDetection
+    ExtractionMethod.SmartCodeDetection -> ExtractionMethodDto.SmartCodeDetection
 }
 
 private fun ExtractionMethodDto.toDomain(): ExtractionMethod = when (this) {
@@ -203,6 +204,7 @@ private fun ExtractionMethodDto.toDomain(): ExtractionMethod = when (this) {
     is ExtractionMethodDto.JsonPath -> ExtractionMethod.JsonPath(path)
     ExtractionMethodDto.SmartAmountDetection -> ExtractionMethod.SmartAmountDetection
     ExtractionMethodDto.SmartDateDetection -> ExtractionMethod.SmartDateDetection
+    ExtractionMethodDto.SmartCodeDetection -> ExtractionMethod.SmartCodeDetection
 }
 
 private fun RuleAction.toDto(): ActionDto = ActionDto(

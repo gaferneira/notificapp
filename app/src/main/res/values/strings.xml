@@ -38,6 +38,8 @@
     <string name="method_smart_amount_desc">Auto-detect currency amounts</string>
     <string name="method_smart_date">Smart date detection</string>
     <string name="method_smart_date_desc">Auto-detect dates</string>
+    <string name="method_smart_code">Smart code detection</string>
+    <string name="method_smart_code_desc">Auto-detect verification codes (OTP)</string>
 
     <!-- Field Configuration Labels -->
     <string name="config_start_index">Start Index</string>
@@ -707,6 +709,7 @@
     <string name="add_field_smart_detection">SMART DETECTION</string>
     <string name="add_field_smart_amount_text">This method will automatically detect currency amounts in the text.</string>
     <string name="add_field_smart_date_text">This method will automatically detect dates in the text.</string>
+    <string name="add_field_smart_code_text">This method will automatically detect verification codes (OTP, PIN) in the text.</string>
     <string name="add_field_preview_failed_label">EXTRACTION FAILED</string>
     <string name="field_config_keyword_section">KEYWORD</string>
     <string name="config_keyword_hint">Text to search for</string>

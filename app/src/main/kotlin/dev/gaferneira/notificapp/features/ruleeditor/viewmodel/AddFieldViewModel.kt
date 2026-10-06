@@ -173,6 +173,7 @@ class AddFieldViewModel @Inject constructor(
         is ExtractionMethod.JsonPath -> AddFieldContract.MethodType.JSON_PATH
         is ExtractionMethod.SmartAmountDetection -> AddFieldContract.MethodType.SMART_AMOUNT
         is ExtractionMethod.SmartDateDetection -> AddFieldContract.MethodType.SMART_DATE
+        is ExtractionMethod.SmartCodeDetection -> AddFieldContract.MethodType.SMART_CODE
     }
 
     private fun updateFieldName(name: String) {

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
@@ -303,6 +304,17 @@ private fun AddFieldBottomSheetContent(
                     )
                     Text(
                         text = stringResource(R.string.add_field_smart_date_text),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                AddFieldContract.MethodType.SMART_CODE -> {
+                    SectionHeader(
+                        icon = Icons.Default.Lock,
+                        title = stringResource(R.string.add_field_smart_detection),
+                    )
+                    Text(
+                        text = stringResource(R.string.add_field_smart_code_text),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

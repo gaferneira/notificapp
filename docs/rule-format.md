@@ -107,6 +107,7 @@ A `group` condition nests its own `children` array (any mix of `content_match`, 
 | `json_path`            | `path`                     |
 | `smart_amount`         | (none)                     |
 | `smart_date`           | (none)                     |
+| `smart_code`           | (none)                     |
 
 ## Full example
 

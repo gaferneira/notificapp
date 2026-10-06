@@ -3,12 +3,24 @@ package dev.gaferneira.notificapp.core.data.local.mapper
 import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
 import dev.gaferneira.notificapp.domain.model.ExtractedFieldValue
 import dev.gaferneira.notificapp.domain.model.RuleField
+import java.time.LocalDate
+import java.time.Month
+import java.time.ZoneId
 import java.util.UUID
 
 /**
  * Mapper functions for converting between ExtractedFieldValue domain models and database entities.
  */
 internal object ExtractedFieldValueMapper {
+
+    private const val MAX_MONTH = 12
+    private const val YEAR_BASE = 2000
+
+    private val NUMBER_RUN = Regex("""(?:(?<![\p{L}\d])(-)\p{Sc}?)?(\d(?:[\d.,]*\d)?)""")
+    private val ISO_DATE = Regex("""(\d{4})-(\d{1,2})-(\d{1,2})""")
+    private val MONTH_FIRST = Regex("""([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})""", RegexOption.IGNORE_CASE)
+    private val DAY_FIRST = Regex("""(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})""", RegexOption.IGNORE_CASE)
+    private val NUMERIC_DATE = Regex("""(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4}|\d{2})""")
 
     /**
      * Convert an ExtractedFieldValue domain model to an entity.
@@ -46,16 +58,18 @@ internal object ExtractedFieldValueMapper {
      * @param executionId The rule execution ID
      * @param extractedData Map of field IDs to extracted string values
      * @param fields List of field definitions with their types
+     * @param zone Zone whose start of day anchors parsed dates (matches how the UI renders `valueDate`)
      * @return List of entities with properly typed values
      */
     fun fromExtractedData(
         executionId: String,
         extractedData: Map<String, String>,
         fields: List<RuleField>,
+        zone: ZoneId = ZoneId.systemDefault(),
     ): List<ExtractedFieldValueEntity> {
         return extractedData.mapNotNull { (fieldId, stringValue) ->
             val field = fields.find { it.id == fieldId } ?: return@mapNotNull null
-            createEntity(executionId, fieldId, stringValue, field.fieldType)
+            createEntity(executionId, fieldId, stringValue, field.fieldType, zone)
         }
     }
 
@@ -67,9 +81,10 @@ internal object ExtractedFieldValueMapper {
         fieldId: String,
         stringValue: String,
         fieldType: RuleField.FieldType,
+        zone: ZoneId,
     ): ExtractedFieldValueEntity = when (fieldType) {
         RuleField.FieldType.NUMBER -> {
-            val number = stringValue.replace(",", ".").toDoubleOrNull()
+            val number = extractNumericValue(stringValue)
             ExtractedFieldValueEntity(
                 id = UUID.randomUUID().toString(),
                 ruleExecutionId = executionId,
@@ -81,8 +96,8 @@ internal object ExtractedFieldValueMapper {
         }
 
         RuleField.FieldType.DATE -> {
-            // Try to parse as timestamp, otherwise store as text only
-            val date = stringValue.toLongOrNull()
+            // Epoch millis, or a detected date string; otherwise store as text only
+            val date = parseDateMillis(stringValue, zone)
             ExtractedFieldValueEntity(
                 id = UUID.randomUUID().toString(),
                 ruleExecutionId = executionId,
@@ -95,7 +110,7 @@ internal object ExtractedFieldValueMapper {
 
         RuleField.FieldType.CURRENCY -> {
             // Extract numeric value from currency string (e.g., "153.50 kr" -> 153.50)
-            val number = extractCurrencyValue(stringValue)
+            val number = extractNumericValue(stringValue)
             ExtractedFieldValueEntity(
                 id = UUID.randomUUID().toString(),
                 ruleExecutionId = executionId,
@@ -119,11 +134,12 @@ internal object ExtractedFieldValueMapper {
     }
 
     /**
-     * Attempt to extract a numeric value from a currency string, locale-tolerantly.
+     * Attempt to extract a numeric value from a NUMBER/CURRENCY string, locale-tolerantly.
      *
      * Handles both separator conventions so the expense-tracking use case works on real bank
      * notifications: US/UK `"$1,234.56"` and European/Spanish `"1.234,56 EUR"` both yield
-     * `1234.56`, and `"153,50 kr"` yields `153.5`. Returns null when there is no parseable number.
+     * `1234.56`, and `"153,50 kr"` yields `153.5`. A minus sign directly before the number
+     * (`"-12.50"`) makes it negative. Returns null when there is no parseable number.
      *
      * Disambiguation heuristic within the first number run:
      * - Both `.` and `,` present: the one that appears *last* is the decimal separator (thousands
@@ -133,16 +149,68 @@ internal object ExtractedFieldValueMapper {
      *   digits (`"1,234"` → 1234), which reads as thousands grouping — the standard convention for
      *   currency, where 3-decimal amounts are vanishingly rare.
      */
-    private fun extractCurrencyValue(value: String): Double? {
+    private fun extractNumericValue(value: String): Double? {
         // First contiguous run of digits and separators, e.g. "1.234,56" out of "€1.234,56 EUR".
-        // The run never captures a trailing separator, so it always ends on a digit.
-        val numberRun = Regex("""\d(?:[\d.,]*\d)?""").find(value)?.value ?: return null
-        return normalizeSeparators(numberRun).toDoubleOrNull()
+        // The run never captures a trailing separator, so it always ends on a digit. A leading
+        // minus (optionally before a currency symbol) counts only when it is not glued to a preceding letter/digit (e.g. "2024-01").
+        val match = NUMBER_RUN.find(value) ?: return null
+        val magnitude = normalizeSeparators(match.groupValues[2]).toDoubleOrNull()
+        return if (match.groupValues[1].isNotEmpty()) magnitude?.unaryMinus() else magnitude
+    }
+
+    /**
+     * Parse [value] into epoch millis at the start of day in [zone], or null when it is not a
+     * recognized, unambiguous date. Never throws.
+     *
+     * Accepts an epoch-millis long, ISO `yyyy-MM-dd`, English month-name formats ("Jan 12, 2024",
+     * "12 January 2024", "Jan 12th, 2024") and numeric `d/m/y` with `/ - .` separators — the latter
+     * only when one of the first two parts exceeds 12 (otherwise day/month order is ambiguous).
+     * Two-digit years map to 2000+yy.
+     */
+    private fun parseDateMillis(value: String, zone: ZoneId): Long? {
+        val text = value.trim()
+        return text.toLongOrNull()
+            ?: parseLocalDate(text)?.atStartOfDay(zone)?.toInstant()?.toEpochMilli()
+    }
+
+    private fun parseLocalDate(text: String): LocalDate? = runCatching {
+        ISO_DATE.matchEntire(text)?.let { m ->
+            return@runCatching LocalDate.of(m.groupValues[1].toInt(), m.groupValues[2].toInt(), m.groupValues[3].toInt())
+        }
+        MONTH_FIRST.matchEntire(text)?.let { m ->
+            val month = monthOf(m.groupValues[1]) ?: return@runCatching null
+            return@runCatching LocalDate.of(expandYear(m.groupValues[3]), month, m.groupValues[2].toInt())
+        }
+        DAY_FIRST.matchEntire(text)?.let { m ->
+            val month = monthOf(m.groupValues[2]) ?: return@runCatching null
+            return@runCatching LocalDate.of(expandYear(m.groupValues[3]), month, m.groupValues[1].toInt())
+        }
+        NUMERIC_DATE.matchEntire(text)?.let { m ->
+            val first = m.groupValues[1].toInt()
+            val second = m.groupValues[2].toInt()
+            val year = expandYear(m.groupValues[3])
+            return@runCatching when {
+                first > MAX_MONTH && second <= MAX_MONTH -> LocalDate.of(year, second, first)
+                second > MAX_MONTH && first <= MAX_MONTH -> LocalDate.of(year, first, second)
+                else -> null // ambiguous (both <= 12) or impossible (both > 12)
+            }
+        }
+        null
+    }.getOrNull()
+
+    private fun expandYear(raw: String): Int = raw.toInt().let { if (raw.length <= 2) YEAR_BASE + it else it }
+
+    private fun monthOf(name: String): Int? {
+        val key = name.lowercase()
+        return Month.entries.firstOrNull { month ->
+            val full = month.name.lowercase()
+            key == full || key == full.take(3) || (month == Month.SEPTEMBER && key == "sept")
+        }?.value
     }
 
     /**
      * Collapse locale-specific thousands/decimal separators in [numberRun] into a plain
-     * `.`-decimal string parseable by [String.toDoubleOrNull]. See [extractCurrencyValue] for the
+     * `.`-decimal string parseable by [String.toDoubleOrNull]. See [extractNumericValue] for the
      * heuristic.
      */
     private fun normalizeSeparators(numberRun: String): String {

@@ -39,6 +39,7 @@ Notificapp lets users create automation rules that act on the notifications thei
     * JSON path — a value from structured/JSON-shaped content by dot-notation path
     * Smart amount detection — automatically finds a currency amount, no configuration needed
     * Smart date detection — automatically finds a date, no configuration needed
+    * Smart code detection — automatically finds a one-time / verification code (OTP), no configuration needed
   * Each extracted field also has a data type: String, Number, Date, Currency, or Boolean.
 * **System Trigger:** User adds an "Extract data" action while building or editing a rule; the extraction itself runs automatically in the background whenever a matching notification arrives.
 * **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`

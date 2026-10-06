@@ -87,4 +87,8 @@ sealed class ExtractionMethodDto {
     @Serializable
     @SerialName("smart_date")
     data object SmartDateDetection : ExtractionMethodDto()
+
+    @Serializable
+    @SerialName("smart_code")
+    data object SmartCodeDetection : ExtractionMethodDto()
 }

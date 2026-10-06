@@ -40,6 +40,7 @@ class RuleJsonCodecGoldenFileTest {
         createTestField(id = "field-json", name = "Json Path", fieldType = FieldType.STRING, method = ExtractionMethod.JsonPath(path = "$.amount")),
         createTestField(id = "field-smart-amount", name = "Smart Amount", fieldType = FieldType.CURRENCY, method = ExtractionMethod.SmartAmountDetection),
         createTestField(id = "field-smart-date", name = "Smart Date", fieldType = FieldType.DATE, method = ExtractionMethod.SmartDateDetection),
+        createTestField(id = "field-smart-code", name = "Smart Code", fieldType = FieldType.STRING, method = ExtractionMethod.SmartCodeDetection),
     )
 
     private val fixtureRule = createTestRule(

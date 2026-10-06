@@ -171,6 +171,19 @@ class AddFieldViewModelTest {
             // Then: the method type is mapped to SMART_AMOUNT
             viewModel.uiState.value.selectedMethodType shouldBe MethodType.SMART_AMOUNT
         }
+
+        @Test
+        fun `initialize maps smart code detection to SMART_CODE`() = runTest(testDispatcher) {
+            // Given: an existing field using SmartCodeDetection
+            val field = createTestField(method = ExtractionMethod.SmartCodeDetection)
+
+            // When: initializing with the field
+            viewModel.onEvent(UiEvent.Initialize(field = field, notification = null))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: the method type is mapped to SMART_CODE
+            viewModel.uiState.value.selectedMethodType shouldBe MethodType.SMART_CODE
+        }
     }
 
     @Nested

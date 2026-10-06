@@ -521,6 +521,7 @@
     <string name="add_field_smart_detection">DETECCIÓN INTELIGENTE</string>
     <string name="add_field_smart_amount_text">Este método detectará automáticamente los montos de dinero en el texto.</string>
     <string name="add_field_smart_date_text">Este método detectará automáticamente las fechas en el texto.</string>
+    <string name="add_field_smart_code_text">Este método detectará automáticamente los códigos de verificación (OTP, PIN) en el texto.</string>
     <string name="add_field_preview_result">RESULTADO DE LA VISTA PREVIA</string>
     <string name="add_field_sample_text">Muestra de notificación:</string>
     <string name="add_field_preview_success">VALOR EXTRAÍDO</string>
@@ -546,6 +547,8 @@
     <string name="method_smart_amount_desc">Detecta automáticamente montos de dinero</string>
     <string name="method_smart_date">Detección inteligente de fechas</string>
     <string name="method_smart_date_desc">Detecta automáticamente fechas</string>
+    <string name="method_smart_code">Detección inteligente de códigos</string>
+    <string name="method_smart_code_desc">Detecta automáticamente códigos de verificación (OTP)</string>
     <string name="error_field_name_required">El nombre del campo es obligatorio</string>
     <string name="error_start_anchor_required">El ancla inicial es obligatoria</string>
     <string name="error_end_anchor_required">El ancla final es obligatoria</string>

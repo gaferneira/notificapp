@@ -94,6 +94,7 @@ object AddFieldContract {
                     jsonPath.isNotBlank()
                 MethodType.SMART_AMOUNT,
                 MethodType.SMART_DATE,
+                MethodType.SMART_CODE,
                 -> true // No required input fields
             }
 
@@ -131,6 +132,7 @@ object AddFieldContract {
                 )
                 MethodType.SMART_AMOUNT -> ExtractionMethod.SmartAmountDetection
                 MethodType.SMART_DATE -> ExtractionMethod.SmartDateDetection
+                MethodType.SMART_CODE -> ExtractionMethod.SmartCodeDetection
             }
 
         /** Build RuleField from current state */
@@ -157,6 +159,7 @@ object AddFieldContract {
         JSON_PATH(R.string.method_json_path, R.string.method_json_path_desc),
         SMART_AMOUNT(R.string.method_smart_amount, R.string.method_smart_amount_desc),
         SMART_DATE(R.string.method_smart_date, R.string.method_smart_date_desc),
+        SMART_CODE(R.string.method_smart_code, R.string.method_smart_code_desc),
     }
 
     /**

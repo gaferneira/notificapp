@@ -136,5 +136,14 @@ data class RuleField(
         data object SmartDateDetection : ExtractionMethod() {
             override val type = "smart_date"
         }
+
+        /**
+         * Smart detection for one-time / verification codes (OTP, PIN, 2FA codes).
+         */
+        @Serializable
+        @SerialName("smart_code")
+        data object SmartCodeDetection : ExtractionMethod() {
+            override val type = "smart_code"
+        }
     }
 }

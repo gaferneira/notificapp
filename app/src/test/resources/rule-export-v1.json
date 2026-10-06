@@ -189,6 +189,15 @@
                         "method": {
                             "type": "smart_date"
                         }
+                    },
+                    {
+                        "id": "field-smart-code",
+                        "name": "Smart Code",
+                        "fieldType": "string",
+                        "isRequired": false,
+                        "method": {
+                            "type": "smart_code"
+                        }
                     }
                 ]
             },
