@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "69f5e6435592fb1e01989a0ad2974ff8",
+    "identityHash": "3dd7a9a20e289209c5ec655161aefe26",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -911,7 +911,7 @@
       },
       {
         "tableName": "webhook_deliveries",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `webhook_id` TEXT NOT NULL, `payload` TEXT NOT NULL, `failure_type` TEXT, `attempt_count` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `last_attempt_at` INTEGER, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `webhook_id` TEXT NOT NULL, `payload` TEXT NOT NULL, `failure_type` TEXT, `attempt_count` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `last_attempt_at` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`webhook_id`) REFERENCES `webhooks`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -959,7 +959,31 @@
           "columnNames": [
             "id"
           ]
-        }
+        },
+        "indices": [
+          {
+            "name": "index_webhook_deliveries_webhook_id",
+            "unique": false,
+            "columnNames": [
+              "webhook_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_webhook_deliveries_webhook_id` ON `${TABLE_NAME}` (`webhook_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "webhooks",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "webhook_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
       },
       {
         "tableName": "suggestion_dismissals",
@@ -1006,7 +1030,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '69f5e6435592fb1e01989a0ad2974ff8')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3dd7a9a20e289209c5ec655161aefe26')"
     ]
   }
 }

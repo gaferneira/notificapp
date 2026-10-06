@@ -58,12 +58,12 @@ class WebhookRepositoryImplTest {
 
     @Test
     fun `saveWebhook persists the mapped entity for a valid webhook`() = runTest(testDispatcher) {
-        coEvery { dao.insert(any()) } returns Unit
+        coEvery { dao.upsert(any()) } returns Unit
 
         val result = repository.saveWebhook(webhook())
 
         result.isSuccess shouldBe true
-        coVerify(exactly = 1) { dao.insert(any()) }
+        coVerify(exactly = 1) { dao.upsert(any()) }
     }
 
     @Test
@@ -73,12 +73,12 @@ class WebhookRepositoryImplTest {
         val result = repository.saveWebhook(invalid)
 
         result.isFailure shouldBe true
-        coVerify(exactly = 0) { dao.insert(any()) }
+        coVerify(exactly = 0) { dao.upsert(any()) }
     }
 
     @Test
     fun `saveWebhook maps a dao exception to Result_failure without throwing`() = runTest(testDispatcher) {
-        coEvery { dao.insert(any()) } throws SQLException("db locked")
+        coEvery { dao.upsert(any()) } throws SQLException("db locked")
 
         val result = repository.saveWebhook(webhook())
 

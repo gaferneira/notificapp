@@ -49,7 +49,7 @@ internal class WebhookRepositoryImpl @Inject constructor(
             return@withContext Failure.ApplicationException("Webhook failed validation: $validationErrors").asResult()
         }
         dbCatching("Failed to save webhook: ${webhook.id}") {
-            dao.insert(WebhookMapper.toEntity(webhook))
+            dao.upsert(WebhookMapper.toEntity(webhook))
         }
     }
 
