@@ -26,8 +26,9 @@ object Routes {
      * Inbox screen - main screen showing captured notifications.
      *
      * @param initialStatus Status filter for this visit only (not persisted); null keeps the saved filter
+     * @param since Date window (inclusive epoch-millis lower bound) for this visit only; null = no bound
      */
-    fun inbox(initialStatus: NotificationStatusFilter? = null): Screen = Screen.Inbox(initialStatus)
+    fun inbox(initialStatus: NotificationStatusFilter? = null, since: Long? = null): Screen = Screen.Inbox(initialStatus, since)
 
     /**
      * Home dashboard - the app's first bottom-nav destination.
@@ -38,6 +39,14 @@ object Routes {
      * Rules screen - list of extraction rules.
      */
     fun rules(): Screen = Screen.Rules
+
+    /**
+     * Data Browser screen - browse, filter, search, and export extracted rule data.
+     *
+     * @param ruleId Limits the browser to one rule's data; null browses everything
+     * @param since Removable "from" date bound (inclusive epoch millis) for this visit only; null = no bound
+     */
+    fun dataBrowser(ruleId: String? = null, since: Long? = null): Screen = Screen.DataBrowser(ruleId, since)
 
     /**
      * Settings screen - app settings and configuration.

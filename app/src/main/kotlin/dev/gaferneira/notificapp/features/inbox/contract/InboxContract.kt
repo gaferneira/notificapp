@@ -22,21 +22,28 @@ data class InboxUiState(
 
 /**
  * The Inbox filter: notifications of a given processing [status] coming from any of the
- * [selectedApps] (OR across apps; empty selection = every app). There is no sort option, so every
- * field counts as a filter.
+ * [selectedApps] (OR across apps; empty selection = every app), optionally logged at or after
+ * [since]. There is no sort option, so every field counts as a filter.
+ *
+ * [since] is a per-visit date window (epoch millis, inclusive) set by the route (e.g. Home's
+ * "Last 7 days" tiles); it is never persisted with the saved filter.
  */
 data class InboxFilter(
     val selectedApps: Set<String> = emptySet(),
     val status: Status = Status.ALL,
+    val since: Long? = null,
 ) {
-    /** Count of active filter dimensions (status, apps), each counted once. */
-    fun activeFilterCount(): Int = (if (status != Status.ALL) 1 else 0) + (if (selectedApps.isNotEmpty()) 1 else 0)
+    /** Count of active filter dimensions (status, apps, date window), each counted once. */
+    fun activeFilterCount(): Int = (if (status != Status.ALL) 1 else 0) +
+        (if (selectedApps.isNotEmpty()) 1 else 0) +
+        (if (since != null) 1 else 0)
 
     /** True when any filter dimension is active. */
     fun isActive(): Boolean = activeFilterCount() > 0
 
     /** The individual active filters, in display order, for the dismissible chips row. */
     fun activeChips(): List<InboxFilterChip> = buildList {
+        since?.let { add(InboxFilterChip.Since(it)) }
         if (status != Status.ALL) add(InboxFilterChip.Status(status))
         selectedApps.sorted().forEach { add(InboxFilterChip.App(it)) }
     }
@@ -45,6 +52,7 @@ data class InboxFilter(
     fun without(chip: InboxFilterChip): InboxFilter = when (chip) {
         is InboxFilterChip.Status -> copy(status = Status.ALL)
         is InboxFilterChip.App -> copy(selectedApps = selectedApps - chip.packageName)
+        is InboxFilterChip.Since -> copy(since = null)
     }
 }
 
@@ -52,6 +60,9 @@ data class InboxFilter(
 sealed interface InboxFilterChip {
     data class Status(val status: NotificationStatusFilter) : InboxFilterChip
     data class App(val packageName: String) : InboxFilterChip
+
+    /** The per-visit date window: notifications at or after [since] (epoch millis). */
+    data class Since(val since: Long) : InboxFilterChip
 }
 
 /**

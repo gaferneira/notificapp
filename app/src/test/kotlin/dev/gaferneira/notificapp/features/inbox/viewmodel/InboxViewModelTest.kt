@@ -11,6 +11,7 @@ import dev.gaferneira.notificapp.features.inbox.contract.InboxEffect
 import dev.gaferneira.notificapp.features.inbox.contract.InboxEvent
 import dev.gaferneira.notificapp.features.inbox.contract.InboxFilter
 import dev.gaferneira.notificapp.features.inbox.contract.InboxFilterChip
+import dev.gaferneira.notificapp.testutil.fakes.FakeNotificationRepository
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -60,12 +61,14 @@ class InboxViewModelTest {
     private fun createViewModel(
         listenerEnabled: Boolean = true,
         initialStatus: Status? = null,
+        since: Long? = null,
         savedStateHandle: SavedStateHandle = SavedStateHandle(),
+        repository: NotificationRepository = notificationRepository,
     ): InboxViewModel = InboxViewModel(
-        initialStatus = initialStatus,
+        visitArgs = InboxVisitArgs(initialStatus, since),
         savedStateHandle = savedStateHandle,
         listenerStatus = NotificationListenerStatusProvider { listenerEnabled },
-        notificationRepository = notificationRepository,
+        notificationRepository = repository,
         userPreferencesRepository = userPreferencesRepository,
         ioDispatcher = testDispatcher,
     )
@@ -266,6 +269,117 @@ class InboxViewModelTest {
     }
 
     @Nested
+    inner class SinceTests {
+
+        private val windowStart = 1_700_000_000_000L
+
+        @Test
+        fun `given a route since, when created, then it is in the very first state's filter`() {
+            savedFiltersFlow.value = InboxFilterSettings(listOf("com.bank"), Status.UNPROCESSED)
+
+            val viewModel = createViewModel(initialStatus = Status.PROCESSED, since = windowStart)
+
+            viewModel.uiState.value.filter shouldBe InboxFilter(status = Status.PROCESSED, since = windowStart)
+        }
+
+        @Test
+        fun `given a route since, when the list is collected, then the paging query is bounded by it`() = runTest(testDispatcher) {
+            val fakeRepository = FakeNotificationRepository()
+            val viewModel = createViewModel(initialStatus = Status.ALL, since = windowStart, repository = fakeRepository)
+
+            viewModel.notifications.test {
+                awaitItem()
+                cancelAndIgnoreRemainingEvents()
+            }
+
+            fakeRepository.lastPagedSince shouldBe windowStart
+        }
+
+        @Test
+        fun `given a route since, when a saved-filters emission arrives, then the since is kept`() = runTest(testDispatcher) {
+            val viewModel = createViewModel(since = windowStart)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            savedFiltersFlow.value = InboxFilterSettings(listOf("com.a"), Status.UNPROCESSED)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe InboxFilter(setOf("com.a"), Status.UNPROCESSED, since = windowStart)
+        }
+
+        @Test
+        fun `given a route since, when the filter is edited, then the since is kept but never persisted`() = runTest(testDispatcher) {
+            val viewModel = createViewModel(initialStatus = Status.PROCESSED, since = windowStart)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(InboxEvent.OnFilterChange(InboxFilter(setOf("com.a"), Status.PROCESSED, since = windowStart)))
+            savedFiltersFlow.value = InboxFilterSettings(listOf("com.a"), Status.PROCESSED)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe InboxFilter(setOf("com.a"), Status.PROCESSED, since = windowStart)
+            coVerify(exactly = 1) { userPreferencesRepository.setInboxFilters(InboxFilterSettings(listOf("com.a"), Status.PROCESSED)) }
+        }
+
+        @Test
+        fun `given a route since, when created, then nothing is persisted`() = runTest(testDispatcher) {
+            createViewModel(initialStatus = Status.ALL, since = windowStart)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify(exactly = 0) { userPreferencesRepository.setInboxFilters(any()) }
+        }
+
+        @Test
+        fun `given a route since, when its chip is removed, then the since is cleared`() = runTest(testDispatcher) {
+            savedFiltersFlow.value = InboxFilterSettings(listOf("com.a"), Status.ALL)
+            val viewModel = createViewModel(since = windowStart)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(InboxEvent.OnRemoveFilter(InboxFilterChip.Since(windowStart)))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe InboxFilter(setOf("com.a"), Status.ALL)
+        }
+
+        @Test
+        fun `given a route since, when OnClearFilters, then the since is cleared`() = runTest(testDispatcher) {
+            val viewModel = createViewModel(initialStatus = Status.PROCESSED, since = windowStart)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(InboxEvent.OnClearFilters)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe InboxFilter()
+            coVerify { userPreferencesRepository.setInboxFilters(InboxFilterSettings()) }
+        }
+
+        @Test
+        fun `given the user removed the since, when the ViewModel is restored, then the since stays removed`() = runTest(testDispatcher) {
+            val savedStateHandle = SavedStateHandle()
+            val viewModel = createViewModel(since = windowStart, savedStateHandle = savedStateHandle)
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.onEvent(InboxEvent.OnRemoveFilter(InboxFilterChip.Since(windowStart)))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Same route arg, same saved state: what process-death restoration hands the new instance.
+            val restored = createViewModel(since = windowStart, savedStateHandle = savedStateHandle)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            restored.uiState.value.filter.since shouldBe null
+        }
+
+        @Test
+        fun `given a route since, when the ViewModel is restored untouched, then the since is kept`() = runTest(testDispatcher) {
+            val savedStateHandle = SavedStateHandle()
+            createViewModel(since = windowStart, savedStateHandle = savedStateHandle)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            val restored = createViewModel(since = windowStart, savedStateHandle = savedStateHandle)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            restored.uiState.value.filter.since shouldBe windowStart
+        }
+    }
+
+    @Nested
     inner class NavigationTests {
 
         @Test
@@ -300,7 +414,7 @@ class InboxViewModelTest {
         fun `OnResume with revoked permission sets listener inactive`() = runTest(testDispatcher) {
             var enabled = true
             val viewModel = InboxViewModel(
-                initialStatus = null,
+                visitArgs = InboxVisitArgs(),
                 savedStateHandle = SavedStateHandle(),
                 listenerStatus = NotificationListenerStatusProvider { enabled },
                 notificationRepository = notificationRepository,

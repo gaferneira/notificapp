@@ -75,12 +75,12 @@ class HomeViewModelTest {
             every { observeEnabledApps() } returns flowOf(emptyList())
         }
         ruleExecutionRepository = mockk {
-            every { observeExecutionCountSince(any()) } returns flowOf(0)
             every { observeRecentActivity(any()) } returns flowOf(emptyList())
         }
         notificationRepository = mockk {
             every { observeRecentSince(any(), any()) } returns flowOf(emptyList())
             every { observeCountSince(any()) } returns flowOf(0)
+            every { observeProcessedCountSince(any()) } returns flowOf(0)
         }
         suggestionDismissalRepository = mockk {
             every { observeDismissals() } returns dismissalsFlow
@@ -108,6 +108,18 @@ class HomeViewModelTest {
         userPreferencesRepository = userPreferencesRepository,
         ioDispatcher = testDispatcher,
     )
+
+    private val fixedNow = LocalDate.parse("2026-01-12").atTime(8, 0).atZone(ZoneId.systemDefault()).toInstant()
+    private val fixedWindowStart = fixedNow.minus(Duration.ofDays(7)).toEpochMilli()
+
+    /** A ViewModel whose stats window is anchored to [fixedNow] through the injectable clock. */
+    private fun createViewModelWithFixedWindow(): HomeViewModel {
+        val viewModel = createViewModel()
+        viewModel.clock = Clock.fixed(fixedNow, ZoneId.systemDefault())
+        viewModel.onEvent(HomeEvent.OnRetry)
+        testDispatcher.scheduler.advanceUntilIdle()
+        return viewModel
+    }
 
     @Nested
     inner class PausedStateTests {
@@ -304,7 +316,7 @@ class HomeViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
 
             val sevenDaysAgo = now.minus(Duration.ofDays(7)).toEpochMilli()
-            verify { ruleExecutionRepository.observeExecutionCountSince(sevenDaysAgo) }
+            verify { notificationRepository.observeProcessedCountSince(sevenDaysAgo) }
             verify { notificationRepository.observeCountSince(sevenDaysAgo) }
         }
 
@@ -318,15 +330,15 @@ class HomeViewModelTest {
             viewModel.onEvent(HomeEvent.OnRetry)
             testDispatcher.scheduler.advanceUntilIdle()
             val windowStart1 = day1.minus(Duration.ofDays(7)).toEpochMilli()
-            verify(exactly = 1) { ruleExecutionRepository.observeExecutionCountSince(windowStart1) }
+            verify(exactly = 1) { notificationRepository.observeProcessedCountSince(windowStart1) }
 
             // Same day: no re-observe, so the window is unchanged.
             viewModel.clock = Clock.fixed(day1.plusSeconds(3_600), zone)
             viewModel.onEvent(HomeEvent.OnResume)
             testDispatcher.scheduler.advanceUntilIdle()
-            verify(exactly = 1) { ruleExecutionRepository.observeExecutionCountSince(windowStart1) }
+            verify(exactly = 1) { notificationRepository.observeProcessedCountSince(windowStart1) }
             verify(exactly = 0) {
-                ruleExecutionRepository.observeExecutionCountSince(day1.plusSeconds(3_600).minus(Duration.ofDays(7)).toEpochMilli())
+                notificationRepository.observeProcessedCountSince(day1.plusSeconds(3_600).minus(Duration.ofDays(7)).toEpochMilli())
             }
 
             // Next day: the window rolls forward.
@@ -334,7 +346,7 @@ class HomeViewModelTest {
             viewModel.clock = Clock.fixed(day2, zone)
             viewModel.onEvent(HomeEvent.OnResume)
             testDispatcher.scheduler.advanceUntilIdle()
-            verify(atLeast = 1) { ruleExecutionRepository.observeExecutionCountSince(day2.minus(Duration.ofDays(7)).toEpochMilli()) }
+            verify(atLeast = 1) { notificationRepository.observeProcessedCountSince(day2.minus(Duration.ofDays(7)).toEpochMilli()) }
         }
     }
 
@@ -393,29 +405,62 @@ class HomeViewModelTest {
         }
 
         @Test
-        fun `OnCapturedClick emits NavigateToInbox with the ALL status`() = runTest(testDispatcher) {
-            val viewModel = createViewModel()
-            testDispatcher.scheduler.advanceUntilIdle()
+        fun `OnSeeAllActivity has no date window even after the stats window is computed`() = runTest(testDispatcher) {
+            val viewModel = createViewModelWithFixedWindow()
 
             viewModel.effect.test {
-                viewModel.onEvent(HomeEvent.OnCapturedClick)
+                viewModel.onEvent(HomeEvent.OnSeeAllActivity)
                 testDispatcher.scheduler.advanceUntilIdle()
 
-                awaitItem() shouldBe HomeEffect.NavigateToInbox(NotificationStatusFilter.ALL)
+                awaitItem() shouldBe HomeEffect.NavigateToInbox(initialStatus = null, since = null)
                 cancelAndIgnoreRemainingEvents()
             }
         }
 
         @Test
-        fun `OnRulesFiredClick emits NavigateToInbox with the PROCESSED status`() = runTest(testDispatcher) {
-            val viewModel = createViewModel()
+        fun `OnCapturedClick emits NavigateToInbox with the ALL status and the stats window start`() = runTest(testDispatcher) {
+            val viewModel = createViewModelWithFixedWindow()
+
+            viewModel.effect.test {
+                viewModel.onEvent(HomeEvent.OnCapturedClick)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                awaitItem() shouldBe HomeEffect.NavigateToInbox(NotificationStatusFilter.ALL, since = fixedWindowStart)
+                cancelAndIgnoreRemainingEvents()
+            }
+            verify { notificationRepository.observeCountSince(fixedWindowStart) }
+        }
+
+        @Test
+        fun `OnHandledClick emits NavigateToInbox with the PROCESSED status and the stats window start`() = runTest(testDispatcher) {
+            val viewModel = createViewModelWithFixedWindow()
+
+            viewModel.effect.test {
+                viewModel.onEvent(HomeEvent.OnHandledClick)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                awaitItem() shouldBe HomeEffect.NavigateToInbox(NotificationStatusFilter.PROCESSED, since = fixedWindowStart)
+                cancelAndIgnoreRemainingEvents()
+            }
+            verify { notificationRepository.observeProcessedCountSince(fixedWindowStart) }
+        }
+
+        @Test
+        fun `tile clicks follow the window forward after a day change`() = runTest(testDispatcher) {
+            val viewModel = createViewModelWithFixedWindow()
+            val nextDay = fixedNow.plus(Duration.ofDays(1))
+            viewModel.clock = Clock.fixed(nextDay, ZoneId.systemDefault())
+            viewModel.onEvent(HomeEvent.OnResume)
             testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.effect.test {
-                viewModel.onEvent(HomeEvent.OnRulesFiredClick)
+                viewModel.onEvent(HomeEvent.OnHandledClick)
                 testDispatcher.scheduler.advanceUntilIdle()
 
-                awaitItem() shouldBe HomeEffect.NavigateToInbox(NotificationStatusFilter.PROCESSED)
+                awaitItem() shouldBe HomeEffect.NavigateToInbox(
+                    NotificationStatusFilter.PROCESSED,
+                    since = nextDay.minus(Duration.ofDays(7)).toEpochMilli(),
+                )
                 cancelAndIgnoreRemainingEvents()
             }
         }
@@ -482,13 +527,14 @@ class HomeViewModelTest {
     inner class StatsMappingTests {
 
         @Test
-        fun `week stats map captured and rules fired from their sources`() = runTest(testDispatcher) {
+        fun `week stats map captured and handled from the notification count sources`() = runTest(testDispatcher) {
             every { notificationRepository.observeCountSince(any()) } returns flowOf(12)
-            every { ruleExecutionRepository.observeExecutionCountSince(any()) } returns flowOf(7)
+            every { notificationRepository.observeProcessedCountSince(any()) } returns flowOf(7)
             val viewModel = createViewModel()
             testDispatcher.scheduler.advanceUntilIdle()
 
-            viewModel.uiState.value.weekStats shouldBe WeekStats(captured = 12, rulesFired = 7)
+            viewModel.uiState.value.weekStats shouldBe WeekStats(captured = 12, handled = 7)
+            verify(exactly = 0) { ruleExecutionRepository.observeExecutionCountSince(any()) }
         }
 
         @Test

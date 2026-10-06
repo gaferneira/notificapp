@@ -214,6 +214,7 @@ private const val ROW_SELECT = """
     SELECT
         efv.id AS valueId,
         efv.rule_execution_id AS executionId,
+        n.id AS notificationId,
         r.name AS ruleName,
         n.package_name AS packageName,
         n.app_name AS appName,

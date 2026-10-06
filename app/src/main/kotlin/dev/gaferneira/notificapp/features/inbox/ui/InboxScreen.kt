@@ -87,6 +87,7 @@ import dev.gaferneira.notificapp.features.inbox.contract.InboxListItem
 import dev.gaferneira.notificapp.features.inbox.contract.InboxUiState
 import dev.gaferneira.notificapp.features.inbox.contract.NotificationItem
 import dev.gaferneira.notificapp.features.inbox.viewmodel.InboxViewModel
+import dev.gaferneira.notificapp.features.inbox.viewmodel.InboxVisitArgs
 import dev.gaferneira.notificapp.util.openNotificationListenerSettings
 import kotlinx.coroutines.flow.flowOf
 
@@ -105,7 +106,9 @@ fun InboxScreen(
     navigateBack: () -> Unit,
     // Route arg: a per-visit status override (e.g. Home's "Rules fired" tile), seeded at ViewModel creation.
     initialStatus: NotificationStatusFilter? = null,
-    viewModel: InboxViewModel = hiltViewModel<InboxViewModel, InboxViewModel.Factory> { it.create(initialStatus) },
+    // Route arg: a per-visit date window (e.g. Home's "Last 7 days" tiles), seeded at ViewModel creation.
+    since: Long? = null,
+    viewModel: InboxViewModel = hiltViewModel<InboxViewModel, InboxViewModel.Factory> { it.create(InboxVisitArgs(initialStatus, since)) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val notifications = viewModel.notifications.collectAsLazyPagingItems()

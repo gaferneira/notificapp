@@ -61,6 +61,7 @@ import dev.gaferneira.notificapp.features.appselection.ui.AppSelectionScreen
 import dev.gaferneira.notificapp.features.databrowser.ui.DataBrowserScreen
 import dev.gaferneira.notificapp.features.home.ui.HomeScreen
 import dev.gaferneira.notificapp.features.inbox.ui.InboxScreen
+import dev.gaferneira.notificapp.features.insights.ui.InsightsScreen
 import dev.gaferneira.notificapp.features.notificationdetail.ui.NotificationDetailScreen
 import dev.gaferneira.notificapp.features.onboarding.ui.OnboardingScreen
 import dev.gaferneira.notificapp.features.ruledetails.ui.RuleDetailsScreen
@@ -288,6 +289,15 @@ private fun notificappEntryProvider(navigator: Navigator, context: Context): (Na
         )
     }
 
+    entry<Screen.DataBrowser> { screen ->
+        DataBrowserScreen(
+            navigateTo = navigator::navigate,
+            navigateBack = navigator::goBack,
+            initialRuleId = screen.ruleId,
+            initialSince = screen.since,
+        )
+    }
+
     entry<Screen.RuleDetails> { screen ->
         RuleDetailsScreen(
             ruleId = screen.ruleId,
@@ -334,13 +344,14 @@ private fun EntryProviderScope<NavKey>.mainTabEntries(navigator: Navigator) {
     entry<Screen.Inbox> { screen ->
         InboxScreen(
             initialStatus = screen.initialStatus,
+            since = screen.since,
             navigateTo = navigator::navigate,
             navigateBack = navigator::goBack,
         )
     }
 
     entry<Screen.Data> {
-        DataBrowserScreen(
+        InsightsScreen(
             navigateTo = navigator::navigate,
         )
     }

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
+import dev.gaferneira.notificapp.domain.model.FieldTotal
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -127,4 +128,34 @@ internal interface ExtractedFieldValueDao {
      */
     @Query("SELECT COUNT(*) FROM extracted_field_values")
     suspend fun getCount(): Int
+
+    /** Count of extracted values from non-dry-run executions since [since] (epoch millis). */
+    @Query(
+        """
+        SELECT COUNT(*) FROM extracted_field_values efv
+        JOIN rule_executions re ON efv.rule_execution_id = re.id
+        WHERE re.was_dry_run = 0 AND re.created_at >= :since
+        """,
+    )
+    fun observeCountSince(since: Long): Flow<Int>
+
+    /**
+     * Sum and count of `value_number` per NUMBER/CURRENCY field over non-dry-run executions since
+     * [since]; most-populated fields first. Values that failed numeric parsing are ignored.
+     */
+    @Query(
+        """
+        SELECT r.id AS ruleId, r.name AS ruleName, rf.id AS fieldId, rf.name AS fieldName,
+               rf.field_type AS fieldType, SUM(efv.value_number) AS sum, COUNT(efv.value_number) AS count
+        FROM extracted_field_values efv
+        JOIN rule_fields rf ON efv.rule_field_id = rf.id
+        JOIN rule_executions re ON efv.rule_execution_id = re.id
+        JOIN rules r ON re.rule_id = r.id
+        WHERE re.was_dry_run = 0 AND re.created_at >= :since
+        AND rf.field_type IN ('NUMBER', 'CURRENCY') AND efv.value_number IS NOT NULL
+        GROUP BY rf.id, rf.name, rf.field_type, r.id, r.name
+        ORDER BY count DESC, r.name ASC, rf.name ASC, rf.id ASC
+        """,
+    )
+    fun observeNumericTotalsSince(since: Long): Flow<List<FieldTotal>>
 }

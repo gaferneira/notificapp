@@ -17,9 +17,11 @@ sealed class Screen : NavKey {
      *
      * @property initialStatus Status filter applied for this visit only, overriding (and never
      * replacing) the saved inbox filter; null keeps the saved filter.
+     * @property since Inclusive lower bound (epoch millis) on the notification timestamp for this
+     * visit only (never persisted); null shows every notification.
      */
     @Serializable
-    data class Inbox(val initialStatus: NotificationStatusFilter? = null) : Screen()
+    data class Inbox(val initialStatus: NotificationStatusFilter? = null, val since: Long? = null) : Screen()
 
     /**
      * Home dashboard - launch summary: monitoring status, starter rules or recurring-notification
@@ -36,10 +38,20 @@ sealed class Screen : NavKey {
     data object Rules : Screen()
 
     /**
-     * Data Browser screen - browse, filter, search, and export extracted rule data.
+     * Insights tab - dashboard of rule, action, webhook and extracted-data aggregates. (Named `Data`
+     * for the bottom-nav slot it inherited from the original Data Browser tab.)
      */
     @Serializable
     data object Data : Screen()
+
+    /**
+     * Data Browser screen - browse, filter, search, and export extracted rule data.
+     *
+     * @property ruleId Limits the browser to one rule's data; null browses everything.
+     * @property since Seeds a removable "from" date bound (inclusive epoch millis) for this visit; null = no bound.
+     */
+    @Serializable
+    data class DataBrowser(val ruleId: String? = null, val since: Long? = null) : Screen()
 
     /**
      * Settings screen - app settings and configuration.

@@ -35,6 +35,9 @@ class InboxFilterBottomSheetViewModelTest {
     /** Records every (query, packages, isProcessed) the ViewModel asked a live count for. */
     private val countRequests = mutableListOf<Triple<String, List<String>, Boolean?>>()
 
+    /** The `since` bound of every live-count request. */
+    private val sinceRequests = mutableListOf<Long?>()
+
     /** Fake "database": the live count equals the value mapped from the requested filters. */
     private var countFor: (String, List<String>, Boolean?) -> Int = { _, packages, isProcessed ->
         100 - packages.size * 10 - (if (isProcessed == null) 0 else 1)
@@ -45,10 +48,11 @@ class InboxFilterBottomSheetViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { notificationRepository.observeAppsWithNotifications() } returns apps
         every { notificationRepository.observeNotificationCountsByApp() } returns counts
-        every { notificationRepository.observeFilteredCount(any(), any(), any()) } answers {
+        every { notificationRepository.observeFilteredCount(any(), any(), any(), any()) } answers {
             val query = firstArg<String>()
             val packages = secondArg<List<String>>()
             val isProcessed = thirdArg<Boolean?>()
+            sinceRequests += arg<Long?>(3)
             countRequests += Triple(query, packages, isProcessed)
             MutableStateFlow(Unit).map { countFor(query, packages, isProcessed) }
         }
@@ -143,6 +147,42 @@ class InboxFilterBottomSheetViewModelTest {
 
         viewModel.uiState.value.draft shouldBe InboxFilter()
         viewModel.uiState.value.hasActiveFilters shouldBe false
+    }
+
+    @Test
+    fun `given only a since window, when initialized, then clear all is not enabled`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+
+        viewModel.send(UiEvent.Init(InboxFilter(since = 1_000L)))
+
+        viewModel.uiState.value.draft.since shouldBe 1_000L
+        viewModel.uiState.value.hasActiveFilters shouldBe false
+    }
+
+    @Test
+    fun `given a since window and other filters, when clear all, then the window is kept`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.send(UiEvent.Init(InboxFilter(since = 1_000L)))
+        viewModel.send(UiEvent.OnAppToggle("com.a"))
+        viewModel.send(UiEvent.OnStatusChange(Status.UNPROCESSED))
+        viewModel.uiState.value.hasActiveFilters shouldBe true
+
+        viewModel.send(UiEvent.OnClearAll)
+
+        viewModel.uiState.value.draft shouldBe InboxFilter(since = 1_000L)
+        viewModel.uiState.value.hasActiveFilters shouldBe false
+    }
+
+    @Test
+    fun `given a since window, when the draft changes, then the match count query carries the window`() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.send(UiEvent.Init(InboxFilter(since = 1_000L)))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.send(UiEvent.OnAppToggle("com.a"))
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        sinceRequests.last() shouldBe 1_000L
     }
 
     @Test

@@ -48,9 +48,9 @@ internal class NotificationRepositoryImpl @Inject constructor(
     override fun observeNotificationsPaged(
         packageNames: List<String>,
         isProcessed: Boolean?,
+        since: Long?,
     ): Flow<PagingData<Notification>> {
         val hasPackageFilter = packageNames.isNotEmpty()
-        val hasStatusFilter = isProcessed != null
 
         return Pager(
             config = PagingConfig(
@@ -63,8 +63,8 @@ internal class NotificationRepositoryImpl @Inject constructor(
                 dao.getFilteredPaged(
                     packageNames = if (hasPackageFilter) packageNames else emptyList(),
                     hasPackageFilter = hasPackageFilter,
-                    isProcessed = isProcessed ?: false,
-                    hasStatusFilter = hasStatusFilter,
+                    isProcessed = isProcessed,
+                    since = since,
                 )
             },
         ).flow
@@ -76,9 +76,9 @@ internal class NotificationRepositoryImpl @Inject constructor(
         query: String,
         packageNames: List<String>,
         isProcessed: Boolean?,
+        since: Long?,
     ): Flow<PagingData<Notification>> {
         val hasPackageFilter = packageNames.isNotEmpty()
-        val hasStatusFilter = isProcessed != null
 
         return Pager(
             config = PagingConfig(
@@ -92,8 +92,8 @@ internal class NotificationRepositoryImpl @Inject constructor(
                     ftsQuery = FtsQuerySanitizer.toMatchExpression(query),
                     packageNames = if (hasPackageFilter) packageNames else emptyList(),
                     hasPackageFilter = hasPackageFilter,
-                    isProcessed = isProcessed ?: false,
-                    hasStatusFilter = hasStatusFilter,
+                    isProcessed = isProcessed,
+                    since = since,
                 )
             },
         ).flow
@@ -263,23 +263,23 @@ internal class NotificationRepositoryImpl @Inject constructor(
         query: String,
         packageNames: List<String>,
         isProcessed: Boolean?,
+        since: Long?,
     ): Flow<Int> {
         val hasPackageFilter = packageNames.isNotEmpty()
-        val hasStatusFilter = isProcessed != null
         val flow = if (query.isBlank()) {
             dao.observeFilteredCount(
                 packageNames = packageNames,
                 hasPackageFilter = hasPackageFilter,
-                isProcessed = isProcessed ?: false,
-                hasStatusFilter = hasStatusFilter,
+                isProcessed = isProcessed,
+                since = since,
             )
         } else {
             dao.observeSearchFilteredCount(
                 ftsQuery = FtsQuerySanitizer.toMatchExpression(query),
                 packageNames = packageNames,
                 hasPackageFilter = hasPackageFilter,
-                isProcessed = isProcessed ?: false,
-                hasStatusFilter = hasStatusFilter,
+                isProcessed = isProcessed,
+                since = since,
             )
         }
         return flow.flowOn(ioDispatcher)
@@ -301,6 +301,9 @@ internal class NotificationRepositoryImpl @Inject constructor(
         .flowOn(ioDispatcher)
 
     override fun observeCountSince(since: Long): Flow<Int> = dao.observeCountSince(since)
+        .flowOn(ioDispatcher)
+
+    override fun observeProcessedCountSince(since: Long): Flow<Int> = dao.observeProcessedCountSince(since)
         .flowOn(ioDispatcher)
 }
 

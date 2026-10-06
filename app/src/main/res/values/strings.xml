@@ -202,6 +202,7 @@
     <!-- Inbox filter sheet -->
     <string name="inbox_filter_cd">Filter notifications</string>
     <string name="inbox_filter_section_status">Status</string>
+    <string name="inbox_filter_chip_since">Since %1$s</string>
     <string name="inbox_filter_section_apps">Apps</string>
     <string name="inbox_filter_apps_any">Any app</string>
     <string name="inbox_filter_apps_group_with">Apps with notifications</string>
@@ -376,9 +377,9 @@
     <!-- Home - Last 7 Days Stats -->
     <string name="home_last_7_days_title">Last 7 days</string>
     <string name="home_stat_captured">Captured</string>
-    <string name="home_stat_rules_fired">Rules fired</string>
+    <string name="home_stat_handled">Handled by rules</string>
     <string name="home_stat_captured_open">Open captured notifications</string>
-    <string name="home_stat_rules_fired_open">Open notifications handled by rules</string>
+    <string name="home_stat_handled_open">Open notifications handled by rules</string>
     <plurals name="home_week_summary">
         <item quantity="one">%d notification handled by your rules in the last 7 days</item>
         <item quantity="other">%d notifications handled by your rules in the last 7 days</item>
@@ -478,6 +479,7 @@
     <string name="rule_details_error_delete">Failed to delete rule</string>
 
     <!-- Rules list -->
+    <string name="nav_home">Home</string>
     <string name="rules_title">Rules</string>
     <string name="rules_filter_cd">Filter and sort</string>
     <string name="rules_more_options">More options</string>
@@ -897,6 +899,57 @@
     <string name="data_filter_apply">Apply</string>
     <string name="data_filter_unknown_rule">Unknown rule</string>
     <string name="data_filter_date_range_chip">%1$s – %2$s</string>
+    <string name="data_filter_date_since_chip">Since %1$s</string>
+    <string name="data_title">Extracted data</string>
+    <string name="data_back_cd">Go back</string>
+    <string name="data_more_cd">More options</string>
+    <string name="data_export_cd">Export data</string>
+    <string name="data_export_csv">Export as CSV</string>
+    <string name="data_export_json">Export as JSON</string>
+    <string name="data_export_chooser_title">Share exported data</string>
+    <string name="data_sort_menu_title">Sort by</string>
+    <string name="data_sort_date_desc">Newest first</string>
+    <string name="data_sort_date_asc">Oldest first</string>
+    <string name="data_sort_rule_asc">Rule (A-Z)</string>
+    <string name="data_sort_rule_desc">Rule (Z-A)</string>
+    <string name="data_sort_app_asc">App (A-Z)</string>
+    <string name="data_sort_app_desc">App (Z-A)</string>
+    <string name="data_sort_field_asc">Field (A-Z)</string>
+    <string name="data_sort_field_desc">Field (Z-A)</string>
+    <string name="data_delete_filtered_menu">Delete filtered data…</string>
+    <string name="data_search_hint">Search extracted data…</string>
+    <string name="data_search_clear_cd">Clear search</string>
+    <string name="data_list_error_title">Error loading data</string>
+    <string name="data_list_error_unknown">Unknown error</string>
+    <string name="data_list_error_retry">Retry</string>
+    <string name="data_row_delete_cd">Delete entry</string>
+    <string name="data_row_meta">%1$s · %2$s · %3$s</string>
+    <string name="data_row_value_empty">—</string>
+    <string name="data_delete_all_title">Delete all data?</string>
+    <string name="data_delete_filtered_title">Delete filtered data?</string>
+    <plurals name="data_delete_all_message">
+        <item quantity="one">This will permanently delete all extracted data (%d entry).</item>
+        <item quantity="other">This will permanently delete all extracted data (%d entries).</item>
+    </plurals>
+    <plurals name="data_delete_filtered_message">
+        <item quantity="one">This will permanently delete %d entry matching the current filters.</item>
+        <item quantity="other">This will permanently delete %d entries matching the current filters.</item>
+    </plurals>
+    <string name="data_delete_none_filtered">No entries match the current filters.</string>
+    <string name="data_delete_none_all">There is no extracted data to delete.</string>
+    <string name="data_delete_confirm">Delete</string>
+    <string name="data_delete_ok">OK</string>
+    <string name="data_delete_cancel">Cancel</string>
+    <string name="data_undo_deleted">Entry deleted</string>
+    <string name="data_undo_action">Undo</string>
+    <plurals name="data_bulk_deleted">
+        <item quantity="one">Deleted %d entry</item>
+        <item quantity="other">Deleted %d entries</item>
+    </plurals>
+    <string name="data_error_export">Failed to export data</string>
+    <string name="data_error_delete">Failed to delete entry</string>
+    <string name="data_error_delete_entries">Failed to delete entries</string>
+    <string name="data_error_preview_delete">Failed to preview delete</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
@@ -960,4 +1013,52 @@
     <string name="settings_retry">Retry</string>
     <string name="home_banner_monitoring_paused">Monitoring paused</string>
     <string name="home_banner_monitoring_paused_resume">Resume</string>
+    <!-- Insights -->
+    <string name="insights_title">Insights</string>
+    <string name="insights_period_7_days">7 days</string>
+    <string name="insights_period_30_days">30 days</string>
+    <string name="insights_tile_captured">Captured</string>
+    <string name="insights_tile_handled">Handled by rules</string>
+    <string name="insights_tile_actions_run">Actions run</string>
+    <string name="insights_tile_values_extracted">Values extracted</string>
+    <plurals name="insights_tile_actions_failed">
+        <item quantity="one">%d failed</item>
+        <item quantity="other">%d failed</item>
+    </plurals>
+    <string name="insights_section_activity">Activity</string>
+    <string name="insights_chart_description">Rule runs per day, last %1$d days: total %2$d, peak %3$d on %4$s</string>
+    <string name="insights_chart_description_empty">Rule runs per day, last %1$d days: none</string>
+    <string name="insights_section_totals">Extracted totals</string>
+    <string name="insights_total_title">%1$s · %2$s</string>
+    <plurals name="insights_values_count">
+        <item quantity="one">%d value</item>
+        <item quantity="other">%d values</item>
+    </plurals>
+    <string name="insights_section_rules">Rules</string>
+    <plurals name="insights_rule_runs">
+        <item quantity="one">%d run</item>
+        <item quantity="other">%d runs</item>
+    </plurals>
+    <string name="insights_quiet_rules_title">Quiet rules</string>
+    <string name="insights_quiet_rule_hint">No runs in 30 days</string>
+    <string name="insights_section_actions">Actions</string>
+    <string name="insights_action_outcomes">%1$d succeeded · %2$d failed · %3$d skipped</string>
+    <string name="insights_section_webhooks">Webhooks</string>
+    <string name="insights_webhook_delivered">Delivered</string>
+    <string name="insights_webhook_config_error">Config error</string>
+    <string name="insights_webhook_unreachable">Unreachable</string>
+    <string name="insights_webhook_no_deliveries">No deliveries yet</string>
+    <string name="insights_webhook_last_delivery">Last delivery %1$s</string>
+    <plurals name="insights_webhook_pending_retries">
+        <item quantity="one">%d pending retry</item>
+        <item quantity="other">%d pending retries</item>
+    </plurals>
+    <string name="insights_section_top_apps">Top apps</string>
+    <string name="insights_browse_data">Browse extracted data</string>
+    <string name="insights_error_title">Something went wrong</string>
+    <string name="insights_error_message">We couldn\'t load your insights. Try again.</string>
+    <string name="insights_error_retry">Retry</string>
+    <string name="insights_empty_title">No insights yet</string>
+    <string name="insights_empty_message">Create a rule and Notificapp will start showing what it does for you.</string>
+    <string name="insights_empty_action">Go to rules</string>
 </resources>

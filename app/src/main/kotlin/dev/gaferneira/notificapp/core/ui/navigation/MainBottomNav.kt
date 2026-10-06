@@ -1,9 +1,10 @@
 package dev.gaferneira.notificapp.core.ui.navigation
 
+import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.DataObject
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -11,18 +12,20 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import dev.gaferneira.notificapp.R
 
 /**
  * Main app destinations for bottom navigation.
  */
 enum class AppDestinations(
-    val label: String,
+    @StringRes val label: Int,
     val icon: ImageVector,
 ) {
-    HOME("Home", Icons.Default.Home),
-    DATA("Data", Icons.Default.DataObject),
-    RULES("Rules", Icons.AutoMirrored.Filled.Assignment),
-    SETTINGS("Settings", Icons.Default.Settings),
+    HOME(R.string.nav_home, Icons.Default.Home),
+    DATA(R.string.insights_title, Icons.Default.Insights),
+    RULES(R.string.rules_title, Icons.AutoMirrored.Filled.Assignment),
+    SETTINGS(R.string.settings_title, Icons.Default.Settings),
 }
 
 /**
@@ -57,10 +60,11 @@ fun MainBottomNav(
                 icon = {
                     Icon(
                         imageVector = destination.icon,
-                        contentDescription = destination.label,
+                        // The label below is already announced; a description here would read the tab name twice.
+                        contentDescription = null,
                     )
                 },
-                label = { Text(destination.label) },
+                label = { Text(stringResource(destination.label)) },
                 selected = destination == selectedDestination,
                 onClick = {
                     if (destination == selectedDestination) {

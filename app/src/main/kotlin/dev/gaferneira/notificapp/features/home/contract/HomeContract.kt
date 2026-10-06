@@ -26,11 +26,14 @@ data class MonitoringStatus(
     val ruleCount: Int = 0,
 )
 
-/** Rolling last-7-days counters behind the Home stat tiles. */
+/**
+ * Rolling last-7-days counters behind the Home stat tiles: [captured] notifications and those
+ * [handled] by rules (processed), each matching the Inbox list its tile opens.
+ */
 @Immutable
 data class WeekStats(
     val captured: Int = 0,
-    val rulesFired: Int = 0,
+    val handled: Int = 0,
 )
 
 @Immutable
@@ -73,14 +76,17 @@ sealed interface HomeEvent {
     data object OnSeeAllActivity : HomeEvent
     data object OnResumeMonitoring : HomeEvent
     data object OnCapturedClick : HomeEvent
-    data object OnRulesFiredClick : HomeEvent
+    data object OnHandledClick : HomeEvent
 }
 
 sealed interface HomeEffect {
     data class NavigateToRuleEditor(val ruleId: String? = null, val notificationId: String? = null) : HomeEffect
     data class NavigateToNotificationDetail(val notificationId: String) : HomeEffect
 
-    /** [initialStatus] overrides the saved inbox filter for that visit only; null keeps it. */
-    data class NavigateToInbox(val initialStatus: NotificationStatusFilter? = null) : HomeEffect
+    /**
+     * [initialStatus] overrides the saved inbox filter for that visit only; null keeps it.
+     * [since] limits that visit to notifications at or after it (epoch millis); null = no bound.
+     */
+    data class NavigateToInbox(val initialStatus: NotificationStatusFilter? = null, val since: Long? = null) : HomeEffect
     data class ShowError(val message: UiText) : HomeEffect
 }

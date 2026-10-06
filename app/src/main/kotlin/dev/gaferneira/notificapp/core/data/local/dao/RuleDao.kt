@@ -10,6 +10,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.RuleConditionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleTargetAppEntity
+import dev.gaferneira.notificapp.domain.model.RuleRef
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -314,4 +315,28 @@ internal interface RuleDao {
         deleteTargetAppsForRule(ruleId)
         delete(ruleId)
     }
+
+    /** Number of rules, enabled or not. */
+    @Query("SELECT COUNT(*) FROM rules")
+    fun observeCount(): Flow<Int>
+
+    /** Enabled rules with no non-dry-run execution at or after [since] (epoch millis). */
+    @Query(
+        """
+        SELECT r.id AS ruleId, r.name AS ruleName FROM rules r
+        WHERE r.is_active = 1 AND NOT EXISTS (
+            SELECT 1 FROM rule_executions re
+            WHERE re.rule_id = r.id AND re.was_dry_run = 0 AND re.created_at >= :since
+        )
+        ORDER BY r.name ASC, r.id ASC
+        """,
+    )
+    fun observeQuietRulesSince(since: Long): Flow<List<RuleRef>>
+
+    /** Every action's id and type, to attribute `action_outcomes` entries to an [dev.gaferneira.notificapp.domain.model.ActionType]. */
+    @Query("SELECT id, type FROM rule_actions")
+    fun observeActionTypes(): Flow<List<ActionTypeRow>>
 }
+
+/** Projection for [RuleDao.observeActionTypes]. */
+internal data class ActionTypeRow(val id: String, val type: String)

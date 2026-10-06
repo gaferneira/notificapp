@@ -72,6 +72,7 @@ class DataBrowserRepositoryImplTest {
     private fun row(id: String) = DataBrowserRow(
         valueId = id,
         executionId = "exec-$id",
+        notificationId = "notif-$id",
         ruleName = "Rule",
         packageName = "com.test.app",
         appName = "Test App",

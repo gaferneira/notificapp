@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines paginated, filterable, searchable, sortable browsing of extracted rule data (`extracted_field_values` joined with their source `RuleField`, `RuleExecution`, `Notification`, `Rule`, and app). This is the read surface a future visualization phase builds on, so its query contract (filters, sort, empty behavior) must be stable and fully tested up front.
+Defines paginated, filterable, searchable, sortable browsing of extracted rule data (`extracted_field_values` joined with their source `RuleField`, `RuleExecution`, `Notification`, `Rule`, and app). The browser is a pushed "Extracted data" route (back arrow, no bottom navigation) reached from the Insights dashboard.
 
 ## Requirements
 
@@ -74,7 +74,7 @@ The system SHALL exclude any `ExtractedFieldValue` whose source `RuleExecution` 
 
 ### Requirement: Data filter sheet (rule, app, date range)
 
-The Data screen SHALL provide a filter bottom sheet that lets the user choose rules, apps, and a date range. The sheet MUST edit a draft copy of the filter; the draft MUST only take effect on Apply. The field-type filter MUST NOT be exposed in the UI. The date range MUST be chosen with the Material 3 `DateRangePicker`; no preset ranges are offered. The sheet MUST NOT display a live result count. The rule picker MUST list only rules that have at least one Extract-data field, so every offered rule can return results.
+The Extracted data screen SHALL provide a filter bottom sheet that lets the user choose rules, apps, and a date range. The sheet MUST edit a draft copy of the filter; the draft MUST only take effect on Apply. The field-type filter MUST NOT be exposed in the UI. The date range MUST be chosen with the Material 3 `DateRangePicker`; no preset ranges are offered. The sheet MUST NOT display a live result count. The rule picker MUST list only rules that have at least one Extract-data field, so every offered rule can return results.
 
 #### Scenario: Rule picker lists only extracting rules
 - GIVEN rule A has an Extract-data field, rule B has no Extract-data action, and rule C has an Extract-data action with no fields
@@ -83,7 +83,7 @@ The Data screen SHALL provide a filter bottom sheet that lets the user choose ru
 - AND rules B and C are not listed
 
 #### Scenario: Open sheet shows current filter as draft
-- GIVEN the Data screen has a rule filter active
+- GIVEN the Extracted data screen has a rule filter active
 - WHEN the user opens the filter sheet
 - THEN the sheet lists rules, apps, and a date range control
 - AND the active rule is preselected
@@ -130,11 +130,11 @@ A selected date range SHALL include every extracted value whose timestamp falls 
 
 ### Requirement: Active filter chips
 
-The Data screen SHALL display one removable chip per active filter value (each selected rule, each selected app, and the date range) while any such filter is active. Removing a chip MUST remove only that filter value and reload the list. When no filter is active, no chips are shown.
+The Extracted data screen SHALL display one removable chip per active filter value (each selected rule, each selected app, and the date range) while any such filter is active. Removing a chip MUST remove only that filter value and reload the list. When no filter is active, no chips are shown.
 
 #### Scenario: Chips reflect active filters
 - GIVEN the user applied rule A, app X, and a date range
-- WHEN the Data screen is displayed
+- WHEN the Extracted data screen is displayed
 - THEN a chip for rule A, a chip for app X, and a chip for the date range are visible
 
 #### Scenario: Removing a chip removes only that filter
@@ -152,7 +152,7 @@ The Data screen SHALL display one removable chip per active filter value (each s
 
 ### Requirement: Filter scope is visible for bulk actions
 
-Export, bulk delete, and stats SHALL continue to act on the currently applied Data filter, and the active chips MUST be visible on the Data screen whenever the filter is non-empty so the scope of these actions is apparent.
+Export and bulk delete SHALL continue to act on the currently applied Data filter, and the active chips MUST be visible on the Extracted data screen whenever the filter is non-empty so the scope of these actions is apparent.
 
 #### Scenario: Bulk delete targets the filtered scope shown by chips
 - GIVEN the user applied a rule filter and its chip is visible
@@ -165,40 +165,35 @@ Export, bulk delete, and stats SHALL continue to act on the currently applied Da
 - WHEN the user exports Data
 - THEN the export contains only rows matching both filters
 
-#### Scenario: Stats follow the filter
-- GIVEN the user applied a rule filter
-- WHEN the Data screen shows stats
-- THEN the stats reflect only rows matching the rule filter
-
 ### Requirement: Session-only Data filter lifetime
 
-The Data filter and Data search query SHALL be held in `DataBrowserViewModel` state only. They MUST NOT be persisted to preferences or storage. The filter MUST be lost when the user leaves the Data tab through bottom navigation and returns to it.
+The Data filter and Data search query SHALL be held in `DataBrowserViewModel` state only. They MUST NOT be persisted to preferences or storage. The filter MUST be lost when the user leaves the browser and opens it again.
 
 #### Scenario: Filter survives configuration change
-- GIVEN the user applied a rule filter on the Data screen
+- GIVEN the user applied a rule filter on the Extracted data screen
 - WHEN the device is rotated
 - THEN the rule filter and its chip are still active
 
-#### Scenario: Filter is lost on tab switch
-- GIVEN the user applied a rule filter on the Data screen
-- WHEN the user switches to another bottom-navigation tab and returns to Data
+#### Scenario: Filter is lost when the browser is reopened
+- GIVEN the user applied a rule filter on the Extracted data screen
+- WHEN the user navigates back and opens the browser again without a rule pre-filter
 - THEN no filter is active
 - AND no chips are shown
 
 #### Scenario: Filter is not persisted
-- GIVEN the user applied a filter on the Data screen
+- GIVEN the user applied a filter on the Extracted data screen
 - WHEN the app process is restarted
 - THEN no Data filter is active
 - AND no `UserPreferencesRepository` value was written for it
 
 ### Requirement: Data empty states are distinct
 
-The Data screen SHALL show one of two empty states when the list has zero rows after loading. If no filter and no search query is active and no extracted data exists, it MUST show a "no data" state that explains how Data gets filled (fields declared with Extract data in a rule) and offers a "Go to Rules" action that navigates to the Rules screen. If a filter or search is active, it MUST show `FilterEmptyState`. The stats card MUST NOT show a separate "No data yet" message when the list is empty.
+The Extracted data screen SHALL show one of two empty states when the list has zero rows after loading. If no filter and no search query is active and no extracted data exists, it MUST show a "no data" state that explains how Data gets filled (fields declared with Extract data in a rule) and offers a "Go to Rules" action that navigates to the Rules screen. If a filter or search is active, it MUST show `FilterEmptyState`.
 
 #### Scenario: No data at all
 - GIVEN no extracted values exist
 - AND no filter or search is active
-- WHEN the Data screen finishes loading
+- WHEN the Extracted data screen finishes loading
 - THEN the explanation of Extract data fields is shown
 - AND a "Go to Rules" action is shown
 - AND `FilterEmptyState` is not shown
@@ -211,7 +206,7 @@ The Data screen SHALL show one of two empty states when the list has zero rows a
 #### Scenario: Filters hide every row
 - GIVEN extracted values exist
 - AND the active filter matches none of them
-- WHEN the Data screen finishes loading
+- WHEN the Extracted data screen finishes loading
 - THEN `FilterEmptyState` is shown
 - AND the "Go to Rules" explanation is not shown
 
@@ -221,10 +216,75 @@ The Data screen SHALL show one of two empty states when the list has zero rows a
 - THEN the filters, chips, and search query are all cleared
 - AND the unfiltered rows are listed
 
-#### Scenario: No duplicate empty message in stats
-- GIVEN the Data list is empty
-- WHEN the Data screen is displayed
-- THEN the stats card does not show "No data yet"
+### Requirement: Pushed route with optional rule pre-filter
+
+The browser SHALL be a pushed route (`Screen.DataBrowser(ruleId, since)`) titled "Extracted data" with a back arrow and no bottom navigation. When opened with a `ruleId`, the list SHALL start filtered to that rule, shown as a removable chip. When opened with a `since` (inclusive epoch-millis lower bound, e.g. an Insights period start), the list SHALL start with an open-ended date range from that instant, shown as a removable "Since <date>" chip. Both are seeded only on first creation of the screen's state: a chip the user removed SHALL stay removed after process death and recreation, and neither value is persisted beyond that visit.
+
+#### Scenario: Opened from the Insights browse button
+- GIVEN the user is on Insights
+- WHEN the user taps "Browse extracted data"
+- THEN the browser opens with no filter and shows a back arrow and no bottom navigation
+
+#### Scenario: Opened pre-filtered to a rule
+- GIVEN the user taps an extracted-totals row for rule A on Insights
+- WHEN the browser opens
+- THEN only rule A's rows are listed and a chip for rule A is visible
+- AND removing the chip shows all rows
+
+#### Scenario: Opened with a since window
+- GIVEN the user taps an Insights tile that passes a period start as `since`
+- WHEN the browser opens
+- THEN only data from that instant on is listed and a "Since <date>" chip is visible
+- AND removing the chip shows all rows
+
+#### Scenario: Open-ended date range
+- GIVEN a date range with only a lower bound (no upper bound)
+- WHEN the browser lists rows
+- THEN rows at or after the lower bound are included with no upper limit
+
+#### Scenario: Removed chips stay removed after process death
+- GIVEN the browser was opened with a rule and a since and the user removed both chips
+- WHEN the screen state is restored after process death with the same route arguments
+- THEN neither filter is re-applied
+
+### Requirement: Row tap opens notification details
+
+#### Scenario: Tapping a row
+- GIVEN the list shows rows
+- WHEN the user taps a row
+- THEN the details of the row's source notification are opened
+
+### Requirement: Swipe delete with Undo
+
+Swiping a row SHALL hide it and offer Undo; the repository delete SHALL be deferred until the Undo window ends (snackbar dismissed, or a ViewModel-owned timeout elapsed so a rotation never deletes early), another delete starts, an export or bulk-delete preview begins (so the hidden row is neither exported nor counted), or the screen is cleared.
+
+#### Scenario: Undo restores the row
+- GIVEN the user swiped a row away
+- WHEN the user taps Undo before the snackbar ends
+- THEN the row reappears and nothing is deleted
+
+#### Scenario: Undo window ends
+- GIVEN the user swiped a row away
+- WHEN the snackbar is dismissed without Undo
+- THEN the value is deleted
+
+### Requirement: Overflow menu actions
+
+The overflow menu SHALL offer sort options and "Delete filtered data" (bulk delete behind a confirmation dialog with the exact affected count).
+
+#### Scenario: Bulk delete from the overflow menu
+- GIVEN a filter is active
+- WHEN the user chooses "Delete filtered data" and confirms
+- THEN only the previewed matching rows are deleted
+
+### Requirement: CURRENCY values keep their original text
+
+For CURRENCY fields the list SHALL show the original extracted text (with its unit) when it is non-blank, and otherwise the locale-formatted number with two decimals.
+
+#### Scenario: Currency with unit
+- GIVEN a CURRENCY value with text "249.90 kr" and number 249.9
+- WHEN the row is displayed
+- THEN it shows "249.90 kr"
 
 ### Requirement: Browsing degrades gracefully under large datasets
 

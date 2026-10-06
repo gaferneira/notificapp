@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the aggregate statistics computed over extracted rule data: total volume, recent activity, per-rule and per-app breakdowns, and a day-bucketed trend series. This phase computes and exposes these values from the data layer only — no chart rendering — so a future visualization phase can consume them without re-deriving aggregation logic.
+Defines the aggregate statistics computed over extracted rule data: total volume, recent activity, per-rule and per-app breakdowns, and a day-bucketed trend series. These values are computed in the data layer and rendered by the Insights dashboard (see `insights-dashboard`); the Data Browser no longer shows a statistics header.
 
 ## Requirements
 
@@ -67,11 +67,16 @@ The system SHALL exclude any extraction whose source `RuleExecution` has `wasDry
 - WHEN the summary is computed
 - THEN total count is 100, not 110, and the dry-run entries are excluded from per-rule/per-app counts and the trend series
 
-### Requirement: Statistics are computed but not rendered as charts (Phase 1)
+### Requirement: Statistics are rendered on the Insights dashboard
 
-The system SHALL expose statistics as structured data (counts, series) consumable by a UI layer. It SHALL NOT render charts/graphs in this phase.
+The system SHALL expose statistics as structured data consumable by a UI layer, and the Insights dashboard SHALL render them (including the daily trend as a bar chart). The Data Browser SHALL NOT show a statistics header.
 
-#### Scenario: Statistics are available as plain data for a future consumer
-- GIVEN the statistics query results
-- WHEN a UI layer requests them
-- THEN it receives structured numeric/series data with no chart-rendering dependency required
+#### Scenario: Trend is rendered as a chart on Insights
+- GIVEN rule executions exist in the selected period
+- WHEN the user opens the Insights tab
+- THEN the daily rule-match trend is shown as a bar chart on the Activity section
+
+#### Scenario: Data Browser has no stats header
+- GIVEN the user opens the Extracted data browser
+- WHEN the screen is displayed
+- THEN no total / this-week / most-active-rule header is shown above the list

@@ -5,6 +5,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
+import dev.gaferneira.notificapp.domain.model.RuleActivity
+import dev.gaferneira.notificapp.domain.model.TrendPoint
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -166,6 +168,46 @@ internal interface RuleExecutionDao {
         """,
     )
     fun observeRuleStats(ruleId: String, since7Days: Long, since30Days: Long): Flow<RuleStatsRow>
+
+    /**
+     * Rule matches per local calendar day since [since] (epoch millis), non-dry-run only. Days
+     * without matches are omitted; the repository zero-fills them. Same `localtime` bucketing as
+     * `DataBrowserDao.getTrend`. Assumes SQLite's `localtime` equals `ZoneId.systemDefault()`, which
+     * `InsightsRepositoryImpl` uses to zero-fill the missing days.
+     */
+    @Query(
+        """
+        SELECT strftime('%Y-%m-%d', created_at / 1000, 'unixepoch', 'localtime') AS date, COUNT(*) AS count
+        FROM rule_executions
+        WHERE was_dry_run = 0 AND created_at >= :since
+        GROUP BY date
+        ORDER BY date ASC
+        """,
+    )
+    fun observeDailyCountsSince(since: Long): Flow<List<TrendPoint>>
+
+    /** Raw `action_outcomes` JSON of every non-dry-run execution since [since] that recorded any. */
+    @Query(
+        """
+        SELECT action_outcomes FROM rule_executions
+        WHERE was_dry_run = 0 AND created_at >= :since AND action_outcomes IS NOT NULL
+        """,
+    )
+    fun observeActionOutcomesSince(since: Long): Flow<List<String>>
+
+    /** Most active rules by non-dry-run runs since [since], busiest first, capped at [limit]. */
+    @Query(
+        """
+        SELECT r.id AS ruleId, r.name AS ruleName, COUNT(*) AS runCount
+        FROM rule_executions re
+        INNER JOIN rules r ON re.rule_id = r.id
+        WHERE re.was_dry_run = 0 AND re.created_at >= :since
+        GROUP BY r.id, r.name
+        ORDER BY runCount DESC, r.name ASC, r.id ASC
+        LIMIT :limit
+        """,
+    )
+    fun observeTopRulesSince(since: Long, limit: Int): Flow<List<RuleActivity>>
 }
 
 /** Projection for [RuleExecutionDao.observeRuleStats]. */

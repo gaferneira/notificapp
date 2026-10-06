@@ -66,6 +66,9 @@ class HomeViewModel @Inject constructor(
     /** Day the current time windows were computed for; a change triggers a re-observe on resume. */
     private var windowsDay: LocalDate? = null
 
+    /** Start (epoch millis) of the window behind the stat tiles; passed to the Inbox so tile and list match. */
+    private var statsWindowStart: Long? = null
+
     init {
         checkListenerStatus()
         observeHome()
@@ -86,8 +89,8 @@ class HomeViewModel @Inject constructor(
             is HomeEvent.OnRecentActivityClick -> sendEffect(HomeEffect.NavigateToNotificationDetail(event.notificationId))
             HomeEvent.OnSeeAllActivity -> sendEffect(HomeEffect.NavigateToInbox())
             HomeEvent.OnResumeMonitoring -> resumeMonitoring()
-            HomeEvent.OnCapturedClick -> sendEffect(HomeEffect.NavigateToInbox(NotificationStatusFilter.ALL))
-            HomeEvent.OnRulesFiredClick -> sendEffect(HomeEffect.NavigateToInbox(NotificationStatusFilter.PROCESSED))
+            HomeEvent.OnCapturedClick -> sendEffect(HomeEffect.NavigateToInbox(NotificationStatusFilter.ALL, statsWindowStart))
+            HomeEvent.OnHandledClick -> sendEffect(HomeEffect.NavigateToInbox(NotificationStatusFilter.PROCESSED, statsWindowStart))
         }
     }
 
@@ -103,6 +106,7 @@ class HomeViewModel @Inject constructor(
         val now = Instant.now(clock)
         // Rolling window (not calendar week) so Monday morning never resets the tiles to zero; matches RuleDetails.
         val statsWindowStart = now.minusSeconds(STATS_WINDOW_DAYS * SECONDS_PER_DAY).toEpochMilli()
+        this.statsWindowStart = statsWindowStart
         val suggestionWindowStart = now.minusSeconds(SUGGESTION_WINDOW_DAYS * SECONDS_PER_DAY).toEpochMilli()
         val rulesFlow = ruleRepository.observeAllRules()
 
@@ -142,7 +146,7 @@ class HomeViewModel @Inject constructor(
                         monitoredAppCount = status.enabledApps.size,
                         listenerEnabled = status.listenerEnabled,
                         paused = status.paused,
-                        rulesFired = stats.rulesFired,
+                        handled = stats.handled,
                         recentActivity = stats.recentActivity,
                         capturedCount = stats.capturedCount,
                         suggestions = suggestions,
@@ -158,12 +162,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // Both counts mirror the Inbox queries their tiles open (ALL / PROCESSED with the same since bound).
     private fun observeStats(since: Long) = combine(
-        ruleExecutionRepository.observeExecutionCountSince(since),
+        notificationRepository.observeProcessedCountSince(since),
         ruleExecutionRepository.observeRecentActivity(RECENT_ACTIVITY_LIMIT),
         notificationRepository.observeCountSince(since),
-    ) { rulesFired, recentActivity, capturedCount ->
-        HomeStats(rulesFired, recentActivity, capturedCount)
+    ) { handled, recentActivity, capturedCount ->
+        HomeStats(handled, recentActivity, capturedCount)
     }
 
     private fun buildState(params: HomeStateParams): HomeUiState = buildHomeUiState(params)
@@ -237,7 +242,7 @@ private data class HomeStatus(
 )
 
 private data class HomeStats(
-    val rulesFired: Int,
+    val handled: Int,
     val recentActivity: List<RecentActivity>,
     val capturedCount: Int,
 )
@@ -247,7 +252,7 @@ private data class HomeStateParams(
     val monitoredAppCount: Int,
     val listenerEnabled: Boolean,
     val paused: Boolean,
-    val rulesFired: Int,
+    val handled: Int,
     val recentActivity: List<RecentActivity>,
     val capturedCount: Int,
     val suggestions: List<RecurringSuggestion>,
@@ -269,7 +274,7 @@ private fun buildHomeUiState(params: HomeStateParams): HomeUiState {
         ),
         weekStats = WeekStats(
             captured = params.capturedCount,
-            rulesFired = params.rulesFired,
+            handled = params.handled,
         ),
         recentActivity = params.recentActivity.map { it.toUi() }.toImmutableList(),
         section = section,

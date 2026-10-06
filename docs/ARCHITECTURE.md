@@ -37,7 +37,7 @@ The MVI pattern is ideal for Notificapp's screens:
 - **Rule Editor**: Complex form state for extraction rule creation
 - **Rules**: Manage user-defined extraction rules
 - **Settings**: Configure app permissions and preferences
-- **Data Browser**: Filterable, sortable, searchable list of extracted data with stats and CSV/JSON export
+- **Insights** (Data tab): dashboard of period stats (7/30 days) backed by `InsightsRepository`; drills down to the **Data Browser** (pushed route `Screen.DataBrowser(ruleId)`): filterable, sortable, searchable list of extracted data with CSV/JSON export
 
 ### Implementation Guidelines
 

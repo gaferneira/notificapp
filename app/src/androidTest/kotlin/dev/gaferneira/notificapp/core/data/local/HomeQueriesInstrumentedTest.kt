@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.data.local
 
+import androidx.paging.PagingSource
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -103,6 +104,40 @@ class HomeQueriesInstrumentedTest {
         recent.single().id shouldBe "n1"
     }
 
+    @Test
+    fun notificationDao_home_counts_match_the_inbox_list_for_the_same_window() = runBlocking {
+        val notificationDao = database.notificationDao()
+        notificationDao.insert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L, isProcessed = true))
+        notificationDao.insert(testNotification(id = "n2", packageName = "com.a", timestamp = 4_000L, isProcessed = false))
+        notificationDao.insert(testNotification(id = "n3", packageName = "com.b", timestamp = 1_000L, isProcessed = true))
+
+        val captured = notificationDao.observeCountSince(4_000L).first()
+        val handled = notificationDao.observeProcessedCountSince(4_000L).first()
+        val allList = notificationDao.getFilteredPaged(emptyList(), hasPackageFilter = false, isProcessed = null, since = 4_000L).loadIds()
+        val processedList = notificationDao.getFilteredPaged(emptyList(), hasPackageFilter = false, isProcessed = true, since = 4_000L).loadIds()
+
+        captured shouldBe 2
+        handled shouldBe 1
+        allList shouldBe listOf("n1", "n2")
+        processedList shouldBe listOf("n1")
+    }
+
+    @Test
+    fun notificationDao_getFilteredPaged_without_since_lists_every_notification() = runBlocking {
+        val notificationDao = database.notificationDao()
+        notificationDao.insert(testNotification(id = "n1", packageName = "com.a", timestamp = 5_000L))
+        notificationDao.insert(testNotification(id = "n2", packageName = "com.a", timestamp = 1_000L))
+
+        val ids = notificationDao.getFilteredPaged(emptyList(), hasPackageFilter = false, isProcessed = null, since = null).loadIds()
+
+        ids shouldBe listOf("n1", "n2")
+    }
+
+    private suspend fun PagingSource<Int, NotificationEntity>.loadIds(): List<String> {
+        val result = load(PagingSource.LoadParams.Refresh(key = null, loadSize = 50, placeholdersEnabled = false))
+        return (result as PagingSource.LoadResult.Page).data.map { it.id }
+    }
+
     private suspend fun insertMinimalRuleAndNotification(ruleId: String, notificationId: String) {
         database.ruleDao().insert(testRule(id = ruleId))
         database.notificationDao().insert(testNotification(id = notificationId, packageName = "com.a", timestamp = 1_000L))
@@ -116,7 +151,7 @@ private fun testRule(id: String, name: String = "Test Rule") = RuleEntity(
     category = null,
 )
 
-private fun testNotification(id: String, packageName: String, timestamp: Long) = NotificationEntity(
+private fun testNotification(id: String, packageName: String, timestamp: Long, isProcessed: Boolean = false) = NotificationEntity(
     id = id,
     packageName = packageName,
     appName = "Test App",
@@ -124,6 +159,7 @@ private fun testNotification(id: String, packageName: String, timestamp: Long) =
     content = null,
     rawContent = "",
     timestamp = timestamp,
+    isProcessed = isProcessed,
 )
 
 private fun testExecution(

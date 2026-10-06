@@ -26,7 +26,7 @@ import javax.inject.Inject
  * the repository:
  * - Options: apps that have notifications, with their notification count.
  * - Live match count for the draft, observed from the same filters the Inbox list uses
- *   (status, apps and the Inbox search text).
+ *   (status, apps, the per-visit date window and the Inbox search text).
  *
  * Draft lifecycle: the draft is hydrated from the applied filter once per sheet opening (the first
  * [InboxFilterContract.UiEvent.Init] after the previous Apply/Dismiss). Re-sending Init only
@@ -65,6 +65,7 @@ class InboxFilterBottomSheetViewModel @Inject constructor(
                         query = query,
                         packageNames = draft.selectedApps.sorted(),
                         isProcessed = draft.status.toIsProcessed(),
+                        since = draft.since,
                     )
                 }
                 .collect { count -> setState { copy(matchCount = count) } }
@@ -82,7 +83,7 @@ class InboxFilterBottomSheetViewModel @Inject constructor(
                 refresh()
             }
             is InboxFilterContract.UiEvent.OnStatusChange -> editDraft { copy(status = event.status) }
-            InboxFilterContract.UiEvent.OnClearAll -> editDraft { InboxFilter() }
+            InboxFilterContract.UiEvent.OnClearAll -> editDraft { InboxFilter(since = since) }
             InboxFilterContract.UiEvent.OnApply -> {
                 val filter = uiState.value.draft
                 hydrated = false

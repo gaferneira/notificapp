@@ -19,6 +19,14 @@ internal object RuleExecutionMapper {
     /** Serialize an `extractedData` map exactly as [toEntity] stores it. */
     fun encodeExtractedData(extractedData: Map<String, String>): String = json.encodeToString(extractedData)
 
+    /** Decode a stored `action_outcomes` column; malformed JSON yields an empty map. */
+    fun decodeActionOutcomes(raw: String): Map<String, ActionOutcome> = runCatching {
+        json.decodeFromString<Map<String, ActionOutcome>>(raw)
+    }.getOrElse { e ->
+        Timber.e(e, "Failed to decode action outcomes")
+        emptyMap()
+    }
+
     /**
      * Convert a RuleExecution domain model to a RuleExecutionEntity.
      *

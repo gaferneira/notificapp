@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -20,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.components.StatTile
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.domain.model.RuleStats
@@ -62,16 +62,19 @@ private fun StatsContent(stats: RuleStats, isDryRun: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatTile(
+                inset = true,
                 label = stringResource(R.string.rule_details_stats_last_7_days),
                 value = stats.matchesLast7Days.toString(),
                 modifier = Modifier.weight(1f),
             )
             StatTile(
+                inset = true,
                 label = stringResource(R.string.rule_details_stats_last_30_days),
                 value = stats.matchesLast30Days.toString(),
                 modifier = Modifier.weight(1f),
             )
             StatTile(
+                inset = true,
                 label = stringResource(R.string.rule_details_stats_total),
                 value = stats.totalMatches.toString(),
                 modifier = Modifier.weight(1f),
@@ -100,31 +103,6 @@ private fun StatsContent(stats: RuleStats, isDryRun: Boolean) {
             fontWeight = if (isDryRun) FontWeight.SemiBold else FontWeight.Normal,
             color = if (isDryRun) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.Start,
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 

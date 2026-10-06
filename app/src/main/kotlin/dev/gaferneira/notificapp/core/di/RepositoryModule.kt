@@ -5,6 +5,7 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dev.gaferneira.notificapp.core.data.repository.DataBrowserRepositoryImpl
+import dev.gaferneira.notificapp.core.data.repository.InsightsRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.NotificationRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.RuleExecutionRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.RuleRepositoryImpl
@@ -16,6 +17,7 @@ import dev.gaferneira.notificapp.core.data.repository.UserPreferencesRepositoryI
 import dev.gaferneira.notificapp.core.data.repository.WebhookDeliveryRepositoryImpl
 import dev.gaferneira.notificapp.core.data.repository.WebhookRepositoryImpl
 import dev.gaferneira.notificapp.domain.repository.DataBrowserRepository
+import dev.gaferneira.notificapp.domain.repository.InsightsRepository
 import dev.gaferneira.notificapp.domain.repository.NotificationRepository
 import dev.gaferneira.notificapp.domain.repository.RuleExecutionRepository
 import dev.gaferneira.notificapp.domain.repository.RuleRepository
@@ -99,4 +101,10 @@ internal abstract class RepositoryModule {
      */
     @Binds
     abstract fun bindWebhookDeliveryRepository(impl: WebhookDeliveryRepositoryImpl): WebhookDeliveryRepository
+
+    /**
+     * Binds InsightsRepository interface to its implementation.
+     */
+    @Binds
+    abstract fun bindInsightsRepository(impl: InsightsRepositoryImpl): InsightsRepository
 }

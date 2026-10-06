@@ -1,9 +1,9 @@
 package dev.gaferneira.notificapp.features.databrowser.contract
 
 import androidx.paging.LoadState
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.DataBrowserFilter
 import dev.gaferneira.notificapp.domain.model.DataSort
-import dev.gaferneira.notificapp.domain.model.DataStatistics
 import dev.gaferneira.notificapp.domain.model.ExportFormat
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -11,15 +11,13 @@ import kotlinx.collections.immutable.persistentListOf
 /**
  * UI state for the Data Browser screen. The paged row list itself is exposed as a separate
  * `Flow<PagingData<DataBrowserRow>>` from the ViewModel (mirroring `InboxViewModel`), not stored
- * here - this state only holds filter configuration, stats, and delete-confirmation state.
+ * here - this state only holds filter configuration and delete-confirmation state.
  *
  * No `core.extraction` imports here (architectureCheck rule 7: contract purity) - `DataBrowserRow`
- * / `DataBrowserFilter` / `DataStatistics` are plain `domain.model` types, not extraction internals.
+ * / `DataBrowserFilter` are plain `domain.model` types, not extraction internals.
  */
 data class DataBrowserUiState(
     val filter: DataBrowserFilter = DataBrowserFilter(),
-    val stats: DataStatistics? = null,
-    val isStatsLoading: Boolean = false,
     /** Count of entries a bulk delete would remove, shown in the confirmation dialog. Null = dialog hidden. */
     val pendingDeleteCount: Int? = null,
     val isExporting: Boolean = false,
@@ -84,7 +82,6 @@ sealed interface DataBrowserEvent {
     data class OnSearchQueryChange(val query: String) : DataBrowserEvent
     data class OnFilterChange(val filter: DataBrowserFilter) : DataBrowserEvent
     data class OnSortChange(val sort: DataSort) : DataBrowserEvent
-    data object OnRefreshStats : DataBrowserEvent
 
     /** Resets rule, app, date, field-type filters and the search query; keeps the sort. */
     data object OnClearFilters : DataBrowserEvent
@@ -92,7 +89,15 @@ sealed interface DataBrowserEvent {
     /** Removes the single filter value behind a chip. */
     data class OnRemoveFilterChip(val chip: DataFilterChip) : DataBrowserEvent
     data class OnExportClick(val format: ExportFormat) : DataBrowserEvent
+
+    /** Swipe/accessibility delete: hides the row and offers Undo; the real delete is deferred. */
     data class OnDeleteRowClick(val valueId: String) : DataBrowserEvent
+
+    /** Undo snackbar action: restores the row hidden for [valueId] without touching the repository. */
+    data class OnUndoDelete(val valueId: String) : DataBrowserEvent
+
+    /** Undo window ended (snackbar dismissed/timed out): commits the pending delete for [valueId]. */
+    data class OnDeleteCommitted(val valueId: String) : DataBrowserEvent
     data object OnBulkDeleteClick : DataBrowserEvent
     data object OnConfirmBulkDelete : DataBrowserEvent
     data object OnCancelBulkDelete : DataBrowserEvent
@@ -112,6 +117,11 @@ sealed interface DataBrowserEvent {
  */
 sealed interface DataBrowserEffect {
     data class RequestExportSink(val format: ExportFormat) : DataBrowserEffect
-    data class ShowError(val message: String) : DataBrowserEffect
-    data class ShowSuccess(val message: String) : DataBrowserEffect
+    data class ShowError(val message: UiText) : DataBrowserEffect
+
+    /** Shows the Undo snackbar for the row hidden by a pending delete of [valueId]. */
+    data class ShowUndoDelete(val valueId: String) : DataBrowserEffect
+
+    /** [count] entries were removed by the bulk delete. */
+    data class ShowBulkDeleted(val count: Int) : DataBrowserEffect
 }

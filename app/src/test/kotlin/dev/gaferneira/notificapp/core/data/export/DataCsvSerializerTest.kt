@@ -22,6 +22,7 @@ class DataCsvSerializerTest {
     ) = DataBrowserRow(
         valueId = id,
         executionId = "exec-$id",
+        notificationId = "notif-$id",
         ruleName = ruleName,
         packageName = "com.test.app",
         appName = appName,

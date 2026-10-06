@@ -43,22 +43,39 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
 
     override fun observeNotificationsByApps(packageNames: List<String>): Flow<List<Notification>> = notifications.asStateFlow()
 
-    override fun observeNotificationsPaged(packageNames: List<String>, isProcessed: Boolean?): Flow<PagingData<Notification>> = pagedNotifications
+    /** The `since` bound of the latest [observeNotificationsPaged] / [searchNotificationsPaged] call. */
+    var lastPagedSince: Long? = null
+        private set
+
+    override fun observeNotificationsPaged(
+        packageNames: List<String>,
+        isProcessed: Boolean?,
+        since: Long?,
+    ): Flow<PagingData<Notification>> {
+        lastPagedSince = since
+        return pagedNotifications
+    }
 
     override fun searchNotificationsPaged(
         query: String,
         packageNames: List<String>,
         isProcessed: Boolean?,
-    ): Flow<PagingData<Notification>> = pagedNotifications
+        since: Long?,
+    ): Flow<PagingData<Notification>> {
+        lastPagedSince = since
+        return pagedNotifications
+    }
 
     override fun observeFilteredCount(
         query: String,
         packageNames: List<String>,
         isProcessed: Boolean?,
+        since: Long?,
     ): Flow<Int> = notifications.map { list ->
         list.count { n ->
             (packageNames.isEmpty() || n.packageName in packageNames) &&
                 (isProcessed == null || n.isProcessed == isProcessed) &&
+                (since == null || n.timestamp >= since) &&
                 (
                     query.isBlank() ||
                         n.title?.contains(query, ignoreCase = true) == true ||
@@ -186,5 +203,9 @@ class FakeNotificationRepository(initial: List<Notification> = emptyList()) : No
 
     override fun observeCountSince(since: Long): Flow<Int> = notifications.map { list ->
         list.count { it.timestamp >= since }
+    }
+
+    override fun observeProcessedCountSince(since: Long): Flow<Int> = notifications.map { list ->
+        list.count { it.isProcessed && it.timestamp >= since }
     }
 }

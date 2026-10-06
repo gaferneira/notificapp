@@ -41,6 +41,10 @@ entry<Screen.NotificationDetails> { screen ->
 - Edit pushes `Routes.ruleEditor(ruleId = id)` on top of the details screen, so back from the editor returns to the (live-updating) details.
 - The screen observes `RuleRepository.observeRule(id)` and pops itself when the rule becomes `null`. This covers deleting the rule from the editor, which does `goBack()` and would otherwise land on a deleted rule's details. Deleting from the details screen itself also pops through the same guarded `exit()`, so the back stack is popped exactly once.
 
+### Example: Data tab and Data Browser
+
+`Screen.Data` is the bottom-nav "Insights" dashboard (`features/insights/`). The Data Browser is a pushed route, `Screen.DataBrowser(ruleId: String?)` / `Routes.dataBrowser(ruleId)`, shown without the bottom nav and reached from Insights drill-downs (an optional `ruleId` pre-filters the list to one rule). Its rows open `Routes.notificationDetails(...)`.
+
 ## Effect Handling: Internal vs Callbacks
 
 **Internal Handling (Bottom Sheets, Self-Contained Flows):**

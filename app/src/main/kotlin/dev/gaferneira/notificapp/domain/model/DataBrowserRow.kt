@@ -8,6 +8,7 @@ package dev.gaferneira.notificapp.domain.model
  *
  * @property valueId The underlying `ExtractedFieldValue.id`
  * @property executionId The owning `RuleExecution.id`
+ * @property notificationId The source `Notification.id`, for drill-down to its details
  * @property ruleName Name of the rule that produced this value
  * @property packageName Source app's package name
  * @property appName Source app's display name
@@ -23,6 +24,7 @@ package dev.gaferneira.notificapp.domain.model
 data class DataBrowserRow(
     val valueId: String,
     val executionId: String,
+    val notificationId: String,
     val ruleName: String,
     val packageName: String,
     val appName: String,

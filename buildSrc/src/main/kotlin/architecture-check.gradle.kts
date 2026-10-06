@@ -170,7 +170,7 @@ fun findArchViolations(srcDir: File): List<ArchViolation> {
     // word of 3+ letters or whitespace-separated prose. @Preview functions are skipped; a line
     // may opt out with a trailing `// i18n-ignore` (technical samples such as JSON snippets).
     val hardcodedStringUiDirs =
-        listOf("ruleeditor", "settings", "appselection", "onboarding", "notificationdetail").map { File(srcDir, "dev/gaferneira/notificapp/features/$it/ui") }
+        listOf("ruleeditor", "settings", "appselection", "onboarding", "notificationdetail", "insights", "databrowser").map { File(srcDir, "dev/gaferneira/notificapp/features/$it/ui") }
     hardcodedStringUiDirs.filter { it.exists() }.forEach { uiDir ->
         val literalRegex =
             Regex(
