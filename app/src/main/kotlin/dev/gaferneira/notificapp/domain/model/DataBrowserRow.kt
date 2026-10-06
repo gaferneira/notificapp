@@ -19,6 +19,7 @@ import java.time.LocalDate
  * @property valueText String value, populated for STRING/CURRENCY fields
  * @property valueNumber Numeric value, populated for NUMBER fields
  * @property valueDate Calendar day, populated for DATE fields (zone-independent)
+ * @property unit Unit of the quantity (ISO 4217 code for CURRENCY, free-form for NUMBER), null when unknown or not applicable
  * @property notificationTitle Title of the source notification, if any
  * @property notificationContent Content of the source notification, if any
  * @property createdAt When the owning rule execution occurred (epoch millis)
@@ -38,6 +39,7 @@ data class DataBrowserRow(
     val notificationTitle: String?,
     val notificationContent: String?,
     val createdAt: Long,
+    val unit: String? = null,
 )
 
 /**

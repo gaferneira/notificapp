@@ -21,6 +21,7 @@ import androidx.room.PrimaryKey
  * @property valueText String value for STRING/CURRENCY types
  * @property valueNumber Numeric value for NUMBER type
  * @property valueEpochDay `LocalDate.toEpochDay()` for DATE type (zone-independent calendar day)
+ * @property valueUnit Unit of the quantity: ISO 4217 code for CURRENCY, free-form for NUMBER, `NULL` otherwise
  */
 @Entity(
     tableName = "extracted_field_values",
@@ -69,4 +70,7 @@ internal data class ExtractedFieldValueEntity(
 
     @ColumnInfo(name = "value_epoch_day")
     val valueEpochDay: Long?,
+
+    @ColumnInfo(name = "value_unit")
+    val valueUnit: String? = null,
 )

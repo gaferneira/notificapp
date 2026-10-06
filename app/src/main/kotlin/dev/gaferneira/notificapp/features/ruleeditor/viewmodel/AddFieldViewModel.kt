@@ -36,6 +36,7 @@ class AddFieldViewModel @Inject constructor(
         when (event) {
             is UiEvent.Initialize -> initialize(event.field, event.notification)
             is UiEvent.OnFieldNameChange -> updateFieldName(event.name)
+            is UiEvent.OnUnitChange -> setState { copy(unit = event.unit) }
             is UiEvent.OnMethodTypeChange -> updateMethodType(event.type)
             is UiEvent.OnStartIndexChange -> updateStartIndex(event.index)
             is UiEvent.OnEndIndexChange -> updateEndIndex(event.index)
@@ -69,6 +70,8 @@ class AddFieldViewModel @Inject constructor(
                 copy(
                     fieldId = field.id,
                     fieldName = field.name,
+                    fieldType = field.fieldType,
+                    unit = field.defaultUnit.orEmpty(),
                     selectedMethodType = methodType,
                     sampleText = sampleText,
                     // Populate method-specific fields based on type
@@ -135,6 +138,8 @@ class AddFieldViewModel @Inject constructor(
             setState {
                 copy(
                     fieldName = "",
+                    fieldType = RuleField.FieldType.STRING,
+                    unit = "",
                     selectedMethodType = AddFieldContract.MethodType.TEXT_BETWEEN_ANCHORS,
                     sampleText = sampleText,
                     fixedStartIndex = 0,

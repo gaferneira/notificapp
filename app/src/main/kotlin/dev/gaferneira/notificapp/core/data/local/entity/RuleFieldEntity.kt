@@ -19,6 +19,7 @@ import androidx.room.PrimaryKey
  * @property methodType The type of extraction method (discriminator)
  * @property methodConfig JSON `ExtractionMethodDto` payload (its `type` property discriminates the method)
  * @property isRequired Whether this field is required for a match
+ * @property defaultUnit Default unit (ISO 4217 code for CURRENCY, free-form for NUMBER), `NULL` when unset
  */
 @Entity(
     tableName = "rule_fields",
@@ -53,4 +54,7 @@ internal data class RuleFieldEntity(
 
     @ColumnInfo(name = "is_required")
     val isRequired: Boolean = false,
+
+    @ColumnInfo(name = "default_unit")
+    val defaultUnit: String? = null,
 )

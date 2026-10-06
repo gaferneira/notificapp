@@ -141,8 +141,9 @@ internal interface ExtractedFieldValueDao {
     fun observeCountSince(since: Long): Flow<Int>
 
     /**
-     * Sum and count of `value_number` per NUMBER/CURRENCY field over non-dry-run executions since
-     * [since]; most-populated fields first. Values that failed numeric parsing are ignored.
+     * Sum and count of `value_number` per NUMBER/CURRENCY field and unit over non-dry-run executions
+     * since [since]; most-populated first. Values in different units (e.g. EUR vs GBP, or an unknown
+     * unit) are never summed together. Values that failed numeric parsing are ignored.
      *
      * History survives rule/field deletion, so rule and field are `LEFT JOIN`ed: a deleted rule or
      * removed field yields a null `ruleId`/`fieldId` and falls back to the snapshot names, and the
@@ -152,16 +153,17 @@ internal interface ExtractedFieldValueDao {
         """
         SELECT re.rule_id AS ruleId, COALESCE(r.name, re.rule_name) AS ruleName,
                efv.rule_field_id AS fieldId, COALESCE(rf.name, efv.field_name) AS fieldName,
-               efv.field_type AS fieldType, SUM(efv.value_number) AS sum, COUNT(efv.value_number) AS count
+               efv.field_type AS fieldType, efv.value_unit AS unit,
+               SUM(efv.value_number) AS sum, COUNT(efv.value_number) AS count
         FROM extracted_field_values efv
         JOIN rule_executions re ON efv.rule_execution_id = re.id
         LEFT JOIN rule_fields rf ON efv.rule_field_id = rf.id
         LEFT JOIN rules r ON re.rule_id = r.id
         WHERE re.was_dry_run = 0 AND re.created_at >= :since
         AND efv.field_type IN ('NUMBER', 'CURRENCY') AND efv.value_number IS NOT NULL
-        GROUP BY efv.rule_field_id, COALESCE(rf.name, efv.field_name), efv.field_type,
+        GROUP BY efv.rule_field_id, COALESCE(rf.name, efv.field_name), efv.field_type, efv.value_unit,
                  re.rule_id, COALESCE(r.name, re.rule_name)
-        ORDER BY count DESC, ruleName ASC, fieldName ASC, efv.rule_field_id ASC
+        ORDER BY count DESC, ruleName ASC, fieldName ASC, efv.rule_field_id ASC, efv.value_unit ASC
         """,
     )
     fun observeNumericTotalsSince(since: Long): Flow<List<FieldTotal>>

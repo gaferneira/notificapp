@@ -23,8 +23,8 @@ data class RuleActivity(val ruleId: String?, val ruleName: String, val runCount:
 data class RuleRef(val ruleId: String, val ruleName: String)
 
 /**
- * Sum and count of one numeric/currency extraction field. Sums are per field, so currencies are
- * never mixed across fields.
+ * Sum and count of one numeric/currency extraction field in one [unit]. Sums are per (field, unit),
+ * so currencies and units are never mixed.
  */
 @Immutable
 data class FieldTotal(
@@ -35,6 +35,7 @@ data class FieldTotal(
     val fieldType: RuleField.FieldType,
     val sum: Double,
     val count: Int,
+    val unit: String? = null,
 )
 
 /** At-a-glance health of one webhook: last delivery status/time and queued failed deliveries. */

@@ -321,6 +321,28 @@ private fun AddFieldBottomSheetContent(
                 }
             }
 
+            // Optional default unit (NUMBER / CURRENCY fields)
+            if (uiState.supportsUnit) {
+                val isCurrency = uiState.fieldType == RuleField.FieldType.CURRENCY
+                OutlinedTextField(
+                    value = uiState.unit,
+                    onValueChange = { onEvent(UiEvent.OnUnitChange(it)) },
+                    label = { Text(stringResource(R.string.add_field_unit)) },
+                    placeholder = {
+                        Text(stringResource(if (isCurrency) R.string.add_field_unit_hint_currency else R.string.add_field_unit_hint_number))
+                    },
+                    supportingText = if (isCurrency) {
+                        { Text(stringResource(R.string.add_field_unit_support_currency)) }
+                    } else {
+                        null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = proseKeyboardOptions(ImeAction.Done),
+                    keyboardActions = rememberClearFocusKeyboardActions(),
+                )
+            }
+
             // Preview Result Section (Notification Sample + Extracted Value)
             if (uiState.previewResult != AddFieldContract.PreviewResult.None) {
                 Column(

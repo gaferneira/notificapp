@@ -11,6 +11,10 @@
     <string name="add_field_cancel">Cancel</string>
     <string name="add_field_name">Field Name</string>
     <string name="add_field_name_hint">e.g., Amount, Date, Order ID</string>
+    <string name="add_field_unit">Unit (optional)</string>
+    <string name="add_field_unit_hint_currency">e.g., SEK</string>
+    <string name="add_field_unit_hint_number">e.g., km, GB, %</string>
+    <string name="add_field_unit_support_currency">Currency code used when the symbol is ambiguous ($ or kr)</string>
     <string name="add_field_extraction_method">Extraction Method</string>
     <string name="add_field_preview_result">PREVIEW RESULT</string>
     <string name="add_field_preview_success">EXTRACTED VALUE</string>

@@ -15,6 +15,7 @@ import java.time.LocalDate
  * @property valueText String value for STRING/CURRENCY types
  * @property valueNumber Numeric value for NUMBER type
  * @property valueDate Calendar day for DATE type (zone-independent)
+ * @property unit Unit of the quantity: ISO 4217 code for CURRENCY, free-form for NUMBER ("km", "%"), null otherwise
  */
 data class ExtractedFieldValue(
     val id: String,
@@ -25,4 +26,5 @@ data class ExtractedFieldValue(
     val valueText: String?,
     val valueNumber: Double?,
     val valueDate: LocalDate?,
+    val unit: String? = null,
 )

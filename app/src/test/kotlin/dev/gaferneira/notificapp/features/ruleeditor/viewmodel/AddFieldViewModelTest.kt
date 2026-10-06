@@ -3,6 +3,7 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.UiText
+import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.MethodType
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.PreviewResult
@@ -501,6 +502,80 @@ class AddFieldViewModelTest {
                 effect.shouldBeInstanceOf<UiEffect.ReturnWithField>().field.name shouldBe "Amount"
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+    }
+
+    @Nested
+    inner class UnitTests {
+
+        private fun edit(type: RuleField.FieldType, unit: String?) {
+            viewModel.onEvent(
+                UiEvent.Initialize(
+                    field = createTestField(
+                        id = "f1",
+                        name = "Amount",
+                        fieldType = type,
+                        method = ExtractionMethod.SmartAmountDetection,
+                        defaultUnit = unit,
+                    ),
+                    notification = null,
+                ),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+        }
+
+        @Test
+        fun `editing a currency field loads its unit and keeps type and id`() {
+            edit(RuleField.FieldType.CURRENCY, "SEK")
+
+            val state = viewModel.uiState.value
+            state.unit shouldBe "SEK"
+            state.supportsUnit shouldBe true
+            state.extractionField.fieldType shouldBe RuleField.FieldType.CURRENCY
+            state.extractionField.id shouldBe "f1"
+            state.extractionField.defaultUnit shouldBe "SEK"
+        }
+
+        @Test
+        fun `unit change is trimmed and uppercased for currency on the built field`() {
+            edit(RuleField.FieldType.CURRENCY, null)
+
+            viewModel.onEvent(UiEvent.OnUnitChange(" sek "))
+
+            viewModel.uiState.value.unit shouldBe " sek "
+            viewModel.uiState.value.extractionField.defaultUnit shouldBe "SEK"
+        }
+
+        @Test
+        fun `number unit is kept as typed and blank becomes null`() {
+            edit(RuleField.FieldType.NUMBER, null)
+
+            viewModel.onEvent(UiEvent.OnUnitChange(" GB "))
+            viewModel.uiState.value.extractionField.defaultUnit shouldBe "GB"
+
+            viewModel.onEvent(UiEvent.OnUnitChange("   "))
+            viewModel.uiState.value.extractionField.defaultUnit shouldBe null
+        }
+
+        @Test
+        fun `string fields do not support a unit and never store one`() {
+            edit(RuleField.FieldType.STRING, null)
+
+            viewModel.onEvent(UiEvent.OnUnitChange("km"))
+
+            viewModel.uiState.value.supportsUnit shouldBe false
+            viewModel.uiState.value.extractionField.defaultUnit shouldBe null
+        }
+
+        @Test
+        fun `initializing a new field resets the unit`() {
+            edit(RuleField.FieldType.CURRENCY, "SEK")
+
+            viewModel.onEvent(UiEvent.Initialize(field = null, notification = null))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.unit shouldBe ""
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.STRING
         }
     }
 

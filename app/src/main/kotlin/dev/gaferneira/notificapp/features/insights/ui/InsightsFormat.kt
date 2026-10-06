@@ -11,16 +11,30 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
+import java.util.Currency
 import java.util.Locale
 
 private const val MONEY_FRACTION_DIGITS = 2
 
 /** Number formats for field sums with the locale's grouping; currency fields always show 2 decimals. */
-internal class FieldSumFormats(locale: Locale) {
+internal class FieldSumFormats(private val locale: Locale) {
     private val number = decimalFormat(locale, minFractionDigits = 0)
     private val currency = decimalFormat(locale, minFractionDigits = MONEY_FRACTION_DIGITS)
 
-    fun format(sum: Double, fieldType: RuleField.FieldType): String = (if (fieldType == RuleField.FieldType.CURRENCY) currency else number).format(sum)
+    /**
+     * Formats [sum] for [fieldType] and [unit]: a valid ISO 4217 currency code renders with the locale's
+     * currency format (e.g. "SEK 1,450.00"); any other unit is appended as text ("540 min"); no unit
+     * keeps the plain number.
+     */
+    fun format(sum: Double, fieldType: RuleField.FieldType, unit: String? = null): String {
+        val currencyCode = unit?.takeIf { fieldType == RuleField.FieldType.CURRENCY }
+        val iso = currencyCode?.let { runCatching { Currency.getInstance(it) }.getOrNull() }
+        return when {
+            iso != null -> NumberFormat.getCurrencyInstance(locale).apply { currency = iso }.format(sum)
+            unit != null -> "${(if (fieldType == RuleField.FieldType.CURRENCY) currency else number).format(sum)} $unit"
+            else -> (if (fieldType == RuleField.FieldType.CURRENCY) currency else number).format(sum)
+        }
+    }
 
     private fun decimalFormat(locale: Locale, minFractionDigits: Int): NumberFormat = NumberFormat.getNumberInstance(locale).apply {
         maximumFractionDigits = MONEY_FRACTION_DIGITS

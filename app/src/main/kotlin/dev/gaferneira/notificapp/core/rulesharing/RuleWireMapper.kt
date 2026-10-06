@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.rulesharing
 
+import dev.gaferneira.notificapp.core.extraction.UnitResolver
 import dev.gaferneira.notificapp.core.rulesharing.dto.ActionDto
 import dev.gaferneira.notificapp.core.rulesharing.dto.AppInfoDto
 import dev.gaferneira.notificapp.core.rulesharing.dto.ConditionDto
@@ -169,15 +170,20 @@ private fun RuleField.toDto(): FieldDto = FieldDto(
     fieldType = fieldType.toWireString(RuleField.FieldType.serializer()),
     isRequired = isRequired,
     method = method.toDto(),
+    unit = defaultUnit,
 )
 
-private fun FieldDto.toDomain(): RuleField = RuleField(
-    id = id,
-    name = name,
-    fieldType = fieldType.fromWireStringStrict(RuleField.FieldType.serializer(), "field type"),
-    method = method.toDomain(),
-    isRequired = isRequired,
-)
+private fun FieldDto.toDomain(): RuleField {
+    val type = fieldType.fromWireStringStrict(RuleField.FieldType.serializer(), "field type")
+    return RuleField(
+        id = id,
+        name = name,
+        fieldType = type,
+        method = method.toDomain(),
+        isRequired = isRequired,
+        defaultUnit = UnitResolver.normalizeUnit(unit, type),
+    )
+}
 
 internal fun ExtractionMethod.toDto(): ExtractionMethodDto = when (this) {
     is ExtractionMethod.FixedPosition -> ExtractionMethodDto.FixedPosition(startIndex, endIndex)

@@ -217,7 +217,7 @@ class DataBrowserRepositoryImplTest {
         val result = repository().exportRows(DataBrowserFilter(), sink, ExportFormat.CSV)
 
         result.isSuccess shouldBe true
-        sink.toString(Charsets.UTF_8.name()) shouldBe "Field Name,Field Type,Value,Source App,Rule Name,Timestamp\r\n"
+        sink.toString(Charsets.UTF_8.name()) shouldBe "Field Name,Field Type,Value,Unit,Source App,Rule Name,Timestamp\r\n"
     }
 
     @Test

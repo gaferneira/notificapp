@@ -36,8 +36,8 @@ private fun sampleSummary() = InsightsSummary(
         TrendPoint(LocalDate.of(2026, 10, 5).plusDays(i.toLong()).toString(), count)
     }.toImmutableList(),
     fieldTotals = persistentListOf(
-        FieldTotal("r1", "ICA Purchase", "f1", "Amount", RuleField.FieldType.CURRENCY, 2340.0, 12),
-        FieldTotal("r2", "Gym visits", "f2", "Minutes", RuleField.FieldType.NUMBER, 540.0, 9),
+        FieldTotal("r1", "ICA Purchase", "f1", "Amount", RuleField.FieldType.CURRENCY, 2340.0, 12, "SEK"),
+        FieldTotal("r2", "Gym visits", "f2", "Minutes", RuleField.FieldType.NUMBER, 540.0, 9, "min"),
     ),
     topRules = persistentListOf(RuleActivity("r1", "ICA Purchase", 12), RuleActivity("r2", "Gym visits", 9)),
     quietRules = persistentListOf(RuleRef("r3", "Parcel delivered")),

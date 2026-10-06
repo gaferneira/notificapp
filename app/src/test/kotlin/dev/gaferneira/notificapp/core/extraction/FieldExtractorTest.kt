@@ -783,7 +783,7 @@ class FieldExtractorTest {
             val result = FieldExtractor.extract(text, field)
 
             // Then: the amount is detected
-            result shouldBe ExtractionResult.Success(value = "kr 153,50", startIndex = 0, endIndex = 9)
+            result shouldBe ExtractionResult.Success(value = "kr 153,50", startIndex = 0, endIndex = 9, unit = "kr")
         }
 
         @Test
@@ -796,7 +796,7 @@ class FieldExtractorTest {
             val result = FieldExtractor.extract(text, field)
 
             // Then: the amount is detected
-            result shouldBe ExtractionResult.Success(value = "$42.99", startIndex = 0, endIndex = 6)
+            result shouldBe ExtractionResult.Success(value = "$42.99", startIndex = 0, endIndex = 6, unit = "\$")
         }
 
         @Test
@@ -835,7 +835,7 @@ class FieldExtractorTest {
             val result = FieldExtractor.extract(text, field)
 
             // Then: the trailing period is not part of the amount
-            result shouldBe ExtractionResult.Success(value = "\$5.00", startIndex = 13, endIndex = 18)
+            result shouldBe ExtractionResult.Success(value = "\$5.00", startIndex = 13, endIndex = 18, unit = "\$")
         }
 
         @Test
@@ -848,7 +848,7 @@ class FieldExtractorTest {
             val result = FieldExtractor.extract(text, field)
 
             // Then: the currency-marked amount is chosen
-            result shouldBe ExtractionResult.Success(value = "45,90 EUR", startIndex = 22, endIndex = 31)
+            result shouldBe ExtractionResult.Success(value = "45,90 EUR", startIndex = 22, endIndex = 31, unit = "EUR")
         }
 
         @Test
@@ -887,7 +887,7 @@ class FieldExtractorTest {
             val result = FieldExtractor.extract(text, field)
 
             // Then: the whole amount is returned
-            result shouldBe ExtractionResult.Success(value = "\$1,234.56", startIndex = 6, endIndex = 15)
+            result shouldBe ExtractionResult.Success(value = "\$1,234.56", startIndex = 6, endIndex = 15, unit = "\$")
         }
 
         @Test
@@ -900,7 +900,7 @@ class FieldExtractorTest {
             val result = FieldExtractor.extract(text, field)
 
             // Then: the minus sign is part of the amount
-            result shouldBe ExtractionResult.Success(value = "-\$5.00", startIndex = 7, endIndex = 13)
+            result shouldBe ExtractionResult.Success(value = "-\$5.00", startIndex = 7, endIndex = 13, unit = "\$")
         }
 
         @Test
@@ -913,7 +913,7 @@ class FieldExtractorTest {
             val result = FieldExtractor.extract(text, field)
 
             // Then: the code is included
-            result shouldBe ExtractionResult.Success(value = "100 USD", startIndex = 5, endIndex = 12)
+            result shouldBe ExtractionResult.Success(value = "100 USD", startIndex = 5, endIndex = 12, unit = "USD")
         }
 
         @Test
@@ -926,7 +926,7 @@ class FieldExtractorTest {
             val result = FieldExtractor.extract(text, field)
 
             // Then: the code is included
-            result shouldBe ExtractionResult.Success(value = "CHF 100", startIndex = 5, endIndex = 12)
+            result shouldBe ExtractionResult.Success(value = "CHF 100", startIndex = 5, endIndex = 12, unit = "CHF")
         }
 
         @Test
@@ -939,7 +939,7 @@ class FieldExtractorTest {
             val result = FieldExtractor.extract(text, field)
 
             // Then: the marker is included
-            result shouldBe ExtractionResult.Success(value = "R\$ 50,00", startIndex = 5, endIndex = 13)
+            result shouldBe ExtractionResult.Success(value = "R\$ 50,00", startIndex = 5, endIndex = 13, unit = "R\$")
         }
 
         @Test
@@ -991,7 +991,7 @@ class FieldExtractorTest {
             val result = FieldExtractor.extract(text, field)
 
             // Then: the currency amount is chosen
-            result shouldBe ExtractionResult.Success(value = "\$30.00", startIndex = 15, endIndex = 21)
+            result shouldBe ExtractionResult.Success(value = "\$30.00", startIndex = 15, endIndex = 21, unit = "\$")
         }
     }
 

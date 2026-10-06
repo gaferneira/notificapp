@@ -39,6 +39,7 @@ internal object RuleFieldMapper {
         fieldType = domain.fieldType.name,
         methodConfig = json.encodeToString(ExtractionMethodDto.serializer(), domain.method.toDto()),
         isRequired = domain.isRequired,
+        defaultUnit = domain.defaultUnit,
     )
 
     /**
@@ -54,6 +55,7 @@ internal object RuleFieldMapper {
         fieldType = fieldTypeFromStorage(entity.fieldType),
         method = json.decodeFromString(ExtractionMethodDto.serializer(), entity.methodConfig).toDomain(),
         isRequired = entity.isRequired,
+        defaultUnit = entity.defaultUnit,
     )
 
     /** Maps a stored `field_type` name to [RuleField.FieldType], falling back to STRING when unknown. */

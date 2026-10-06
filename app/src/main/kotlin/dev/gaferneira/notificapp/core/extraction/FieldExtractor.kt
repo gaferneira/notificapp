@@ -434,6 +434,7 @@ object FieldExtractor {
                 value = chosen.value,
                 startIndex = chosen.range.first,
                 endIndex = chosen.range.last + 1,
+                unit = chosen.groups[1]?.value ?: chosen.groups[2]?.value,
             )
         } else {
             ExtractionResult.Failure("No amount detected")
@@ -496,11 +497,14 @@ sealed class ExtractionResult {
      * @param value The extracted text
      * @param startIndex The start index of the extracted text in the original text (inclusive)
      * @param endIndex The end index of the extracted text in the original text (exclusive)
+     * @param unit The raw currency marker (symbol or code) detected next to the amount, if any; only
+     *   set by smart amount detection. Resolve it with [UnitResolver.resolveMarker].
      */
     data class Success(
         val value: String,
         val startIndex: Int = -1,
         val endIndex: Int = -1,
+        val unit: String? = null,
     ) : ExtractionResult() {
         /**
          * Whether position information is available for highlighting.

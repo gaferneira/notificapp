@@ -41,6 +41,7 @@ Notificapp lets users create automation rules that act on the notifications thei
     * Smart date detection — automatically finds a date, no configuration needed
     * Smart code detection — automatically finds a one-time / verification code (OTP), no configuration needed
   * Each extracted field also has a data type: String, Number, Date, Currency, or Boolean.
+  * Number and Currency fields can carry an optional default **unit** (e.g. `km`, `GB`, `%`, or an ISO currency code such as `SEK`). Each extracted value stores its own unit: for Currency an unambiguous symbol or code in the text wins (`€` becomes EUR, `R$` BRL, `SEK` stays SEK); an ambiguous `$` or `kr`, or no marker, falls back to the field's default unit; Number uses the default unit. Other types store none.
 * **System Trigger:** User adds an "Extract data" action while building or editing a rule; the extraction itself runs automatically in the background whenever a matching notification arrives.
 * **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`
 
@@ -171,7 +172,7 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **User Experience:** The Data tab (bottom nav label "Insights") is a dashboard of what the rules did on-device. A 7 / 30 day toggle (local calendar days, today included) scopes the period-based sections; dry-run executions are always excluded. Sections, in order (each hides itself when it has nothing to show):
   * **Overview tiles (2x2):** Captured (notifications; opens Inbox, all), Handled by rules (processed notifications; opens Inbox filtered to Processed), Actions run (succeeded + failed; shows "N failed" when any), Values extracted (opens the Extracted data browser); tappable tiles and totals rows pass the period start, so the destination shows a removable "Since <date>" filter and lists exactly what was counted
   * **Activity:** daily rule-run bar chart for the period, zero-filled, with a text description for accessibility
-  * **Extracted totals:** sum and value count per numeric/currency extraction field (per field, so currencies are never mixed); tap opens the Extracted data browser pre-filtered to that rule and period
+  * **Extracted totals:** sum and value count per numeric/currency extraction field and unit (so currencies and units are never mixed: EUR and GBP rows of one field show as two totals, formatted with the currency code or the unit); tap opens the Extracted data browser pre-filtered to that rule and period
   * **Rules:** top 5 rules by runs in the period (tap opens Rule Details) and **Quiet rules** (enabled rules with no live (non-dry-run) run in the last 30 days, independent of the toggle)
   * **Actions:** succeeded / failed / skipped counts per action type (suppressed counts as skipped)
   * **Webhooks:** per webhook, last delivery status (Delivered / Config error / Unreachable / No deliveries yet), last delivery time, and pending retries; built from existing webhook state (no delivery history); tap opens the webhook list
@@ -182,7 +183,7 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **Technical Spec Reference:** `openspec/specs/insights-dashboard/spec.md`, `openspec/specs/data-statistics/spec.md`
 
 ### Extracted data browser (Data Browser)
-* **User Experience:** A pushed screen titled "Extracted data" (back arrow, no bottom nav), reached from Insights (Values extracted tile, totals row, Browse button) and optionally pre-filtered to one rule (removable chip). The user browses every piece of data their rules have extracted (field name, value, source app, rule, timestamp), in a paginated list newest-first by default. CURRENCY values show the original text with its unit when available. They can:
+* **User Experience:** A pushed screen titled "Extracted data" (back arrow, no bottom nav), reached from Insights (Values extracted tile, totals row, Browse button) and optionally pre-filtered to one rule (removable chip). The user browses every piece of data their rules have extracted (field name, value, source app, rule, timestamp), in a paginated list newest-first by default. CURRENCY values show the original text with its unit when available; the stored unit is included as a `Unit` column / `unit` key in CSV and JSON exports. They can:
   * Filter by any combination of rule, source app, and date range from a filter bottom sheet (edits are a draft that only applies on Apply; no live result count). The rule picker lists only rules that extract at least one field (Extract data); dates are chosen with a Material date range picker, inclusive of the first and last selected day in local time. Field type remains a domain-level filter and is not exposed in the UI
   * See the active filters as dismissible chips under the search field (one per rule, per app, and the date range) with a count badge on the filter button, so the scope of Export and bulk delete is always visible
   * The filter and search are session-only: held in the ViewModel state, never persisted

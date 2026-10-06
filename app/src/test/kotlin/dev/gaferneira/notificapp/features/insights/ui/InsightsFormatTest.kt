@@ -90,4 +90,27 @@ class InsightsFormatTest {
         formatCount(1234567, integerFormat(Locale.GERMANY)) shouldBe "1.234.567"
         formatCount(0, integerFormat(Locale.US)) shouldBe "0"
     }
+
+    @Test
+    fun `currency sum with a valid ISO unit uses the currency format`() {
+        FieldSumFormats(Locale.US).format(1450.0, RuleField.FieldType.CURRENCY, "SEK").let {
+            it.contains("1,450.00") shouldBe true
+            (it.contains("SEK") || it.contains("kr")) shouldBe true
+        }
+        FieldSumFormats(Locale.US).format(120.0, RuleField.FieldType.CURRENCY, "USD") shouldBe "$120.00"
+    }
+
+    @Test
+    fun `number sum appends the unit and no unit keeps the plain number`() {
+        val formats = FieldSumFormats(Locale.US)
+
+        formats.format(540.0, RuleField.FieldType.NUMBER, "min") shouldBe "540 min"
+        formats.format(540.0, RuleField.FieldType.NUMBER) shouldBe "540"
+        formats.format(2340.0, RuleField.FieldType.CURRENCY) shouldBe "2,340.00"
+    }
+
+    @Test
+    fun `currency sum with a non-ISO unit appends it as text`() {
+        FieldSumFormats(Locale.US).format(5.0, RuleField.FieldType.CURRENCY, "pts") shouldBe "5.00 pts"
+    }
 }

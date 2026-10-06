@@ -26,6 +26,13 @@ object AddFieldContract {
         val fieldId: String = UUID.randomUUID().toString(),
         /** Field name */
         val fieldName: String = "",
+        /**
+         * Type of the field being built. The sheet has no type picker; it carries the edited field's type
+         * through unchanged so saving never downgrades a NUMBER/CURRENCY field.
+         */
+        val fieldType: RuleField.FieldType = RuleField.FieldType.STRING,
+        /** Default unit text as typed (ISO code for CURRENCY, e.g. "km" for NUMBER); only meaningful for numeric types */
+        val unit: String = "",
         /** Selected extraction method type */
         val selectedMethodType: MethodType = MethodType.TEXT_BETWEEN_ANCHORS,
         /** Sample text to test against */
@@ -74,6 +81,15 @@ object AddFieldContract {
         /** JSON path: path string */
         val jsonPath: String = "",
     ) {
+        /** Whether the optional Unit input applies to this field (NUMBER and CURRENCY only) */
+        val supportsUnit: Boolean
+            get() = fieldType == RuleField.FieldType.NUMBER || fieldType == RuleField.FieldType.CURRENCY
+
+        /** Trimmed unit (uppercased for CURRENCY), null when blank or not applicable to the field type */
+        private val normalizedUnit: String?
+            get() = unit.trim().takeIf { supportsUnit && it.isNotEmpty() }
+                ?.let { if (fieldType == RuleField.FieldType.CURRENCY) it.uppercase() else it }
+
         /** Whether the form is valid */
         val isValid: Boolean
             get() = fieldName.isNotBlank() && validationErrors.isEmpty()
@@ -145,8 +161,10 @@ object AddFieldContract {
             get() = RuleField(
                 id = fieldId,
                 name = fieldName.trim(),
+                fieldType = fieldType,
                 method = extractionMethod,
                 isRequired = false,
+                defaultUnit = normalizedUnit,
             )
     }
 
@@ -191,6 +209,9 @@ object AddFieldContract {
 
         /** Update field name */
         data class OnFieldNameChange(val name: String) : UiEvent()
+
+        /** Update the optional default unit (NUMBER/CURRENCY fields) */
+        data class OnUnitChange(val unit: String) : UiEvent()
 
         /** Select extraction method type */
         data class OnMethodTypeChange(val type: MethodType) : UiEvent()

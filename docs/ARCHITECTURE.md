@@ -360,6 +360,7 @@ data class ExtractedFieldValue(
     val valueText: String?,
     val valueNumber: Double?,
     val valueDate: java.time.LocalDate?,
+    val unit: String?, // ISO 4217 for CURRENCY, free-form for NUMBER ("km", "%"), null otherwise (column value_unit)
 )
 ```
 

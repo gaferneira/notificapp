@@ -17,6 +17,11 @@ data class RuleField(
     val method: ExtractionMethod,
     /** Whether this field is required */
     val isRequired: Boolean = false,
+    /**
+     * Default unit of this field's quantity, e.g. an ISO 4217 code ("SEK") for CURRENCY or "km"/"GB"/"%"
+     * for NUMBER. Used when the extracted text carries no unambiguous unit. Null for other types.
+     */
+    val defaultUnit: String? = null,
 ) {
     /**
      * Enum representing the type of data a field can hold.

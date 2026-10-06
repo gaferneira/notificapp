@@ -43,7 +43,7 @@ class DataCsvSerializerTest {
 
         DataCsvSerializer.writeHeader(writer)
 
-        writer.toString() shouldBe "Field Name,Field Type,Value,Source App,Rule Name,Timestamp\r\n"
+        writer.toString() shouldBe "Field Name,Field Type,Value,Unit,Source App,Rule Name,Timestamp\r\n"
     }
 
     @Test
@@ -53,7 +53,7 @@ class DataCsvSerializerTest {
         DataCsvSerializer.writeHeader(writer)
         DataCsvSerializer.writeRows(writer, emptyList())
 
-        writer.toString() shouldBe "Field Name,Field Type,Value,Source App,Rule Name,Timestamp\r\n"
+        writer.toString() shouldBe "Field Name,Field Type,Value,Unit,Source App,Rule Name,Timestamp\r\n"
     }
 
     @Test
@@ -62,7 +62,7 @@ class DataCsvSerializerTest {
 
         DataCsvSerializer.writeRows(writer, listOf(row(valueNumber = 42.5)))
 
-        writer.toString() shouldBe "Amount,NUMBER,42.5,Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,NUMBER,42.5,,Test App,Rule,1000\r\n"
     }
 
     @Test
@@ -71,7 +71,7 @@ class DataCsvSerializerTest {
 
         DataCsvSerializer.writeRows(writer, listOf(row(valueNumber = null, valueText = "Acme, Inc")))
 
-        writer.toString() shouldBe "Amount,NUMBER,\"Acme, Inc\",Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,NUMBER,\"Acme, Inc\",,Test App,Rule,1000\r\n"
     }
 
     @Test
@@ -80,7 +80,7 @@ class DataCsvSerializerTest {
 
         DataCsvSerializer.writeRows(writer, listOf(row(valueNumber = null, valueText = """He said "hi"""")))
 
-        writer.toString() shouldBe "Amount,NUMBER,\"He said \"\"hi\"\"\",Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,NUMBER,\"He said \"\"hi\"\"\",,Test App,Rule,1000\r\n"
     }
 
     @Test
@@ -89,7 +89,7 @@ class DataCsvSerializerTest {
 
         DataCsvSerializer.writeRows(writer, listOf(row(valueNumber = null, valueText = "line1\nline2")))
 
-        writer.toString() shouldBe "Amount,NUMBER,\"line1\nline2\",Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,NUMBER,\"line1\nline2\",,Test App,Rule,1000\r\n"
     }
 
     @Test
@@ -110,7 +110,7 @@ class DataCsvSerializerTest {
 
         DataCsvSerializer.writeRows(writer, listOf(row(valueNumber = null, valueText = "=cmd|'/c calc'!A1")))
 
-        writer.toString() shouldBe "Amount,NUMBER,'=cmd|'/c calc'!A1,Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,NUMBER,'=cmd|'/c calc'!A1,,Test App,Rule,1000\r\n"
     }
 
     @Test
@@ -119,7 +119,7 @@ class DataCsvSerializerTest {
 
         DataCsvSerializer.writeRows(writer, listOf(row(valueNumber = null, valueText = "+1234567890")))
 
-        writer.toString() shouldBe "Amount,NUMBER,'+1234567890,Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,NUMBER,'+1234567890,,Test App,Rule,1000\r\n"
     }
 
     @Test
@@ -128,7 +128,7 @@ class DataCsvSerializerTest {
 
         DataCsvSerializer.writeRows(writer, listOf(row(valueNumber = null, valueText = "-1+1")))
 
-        writer.toString() shouldBe "Amount,NUMBER,'-1+1,Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,NUMBER,'-1+1,,Test App,Rule,1000\r\n"
     }
 
     @Test
@@ -137,7 +137,7 @@ class DataCsvSerializerTest {
 
         DataCsvSerializer.writeRows(writer, listOf(row(valueNumber = null, valueText = "@SUM(1,2)")))
 
-        writer.toString() shouldBe "Amount,NUMBER,\"'@SUM(1,2)\",Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,NUMBER,\"'@SUM(1,2)\",,Test App,Rule,1000\r\n"
     }
 
     @Test
@@ -146,7 +146,7 @@ class DataCsvSerializerTest {
 
         DataCsvSerializer.writeRows(writer, listOf(row(valueNumber = null, valueText = "Acme Inc")))
 
-        writer.toString() shouldBe "Amount,NUMBER,Acme Inc,Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,NUMBER,Acme Inc,,Test App,Rule,1000\r\n"
     }
 
     @Test
@@ -158,6 +158,6 @@ class DataCsvSerializerTest {
             listOf(row(fieldType = RuleField.FieldType.DATE, valueNumber = null, valueDate = LocalDate.of(2024, 1, 15))),
         )
 
-        writer.toString() shouldBe "Amount,DATE,2024-01-15,Test App,Rule,1000\r\n"
+        writer.toString() shouldBe "Amount,DATE,2024-01-15,,Test App,Rule,1000\r\n"
     }
 }

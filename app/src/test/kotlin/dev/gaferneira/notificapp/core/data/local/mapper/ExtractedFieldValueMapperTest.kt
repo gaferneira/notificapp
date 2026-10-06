@@ -206,4 +206,36 @@ class ExtractedFieldValueMapperTest {
     fun `DATE invalid or unrecognized values yield null without throwing`(raw: String) {
         parseDate(raw) shouldBe null
     }
+
+    private fun unitOf(type: RuleField.FieldType, default: String?, raw: String): String? = ExtractedFieldValueMapper
+        .fromExtractedData(
+            executionId = "exec-1",
+            extractedData = mapOf(fieldId to raw),
+            fields = listOf(createTestField(id = fieldId, fieldType = type, method = RuleField.ExtractionMethod.SmartAmountDetection, defaultUnit = default)),
+        )
+        .single()
+        .valueUnit
+
+    @Test
+    fun `stored unit - unambiguous marker wins over the default`() {
+        unitOf(RuleField.FieldType.CURRENCY, "SEK", "€12.00") shouldBe "EUR"
+    }
+
+    @Test
+    fun `stored unit - ambiguous marker with a default uses the default`() {
+        unitOf(RuleField.FieldType.CURRENCY, "usd", "$20.00") shouldBe "USD"
+        unitOf(RuleField.FieldType.CURRENCY, "SEK", "153.50 kr") shouldBe "SEK"
+    }
+
+    @Test
+    fun `stored unit - no marker uses the default, ambiguous marker without default is null`() {
+        unitOf(RuleField.FieldType.CURRENCY, "NOK", "153.50") shouldBe "NOK"
+        unitOf(RuleField.FieldType.CURRENCY, null, "$20.00") shouldBe null
+    }
+
+    @Test
+    fun `stored unit - NUMBER uses the default and TEXT stores none`() {
+        unitOf(RuleField.FieldType.NUMBER, "km", "12") shouldBe "km"
+        unitOf(RuleField.FieldType.STRING, "km", "12") shouldBe null
+    }
 }

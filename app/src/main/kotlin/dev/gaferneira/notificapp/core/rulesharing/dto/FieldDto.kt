@@ -14,6 +14,7 @@ data class FieldDto(
     @SerialName("fieldType") val fieldType: String,
     @SerialName("isRequired") val isRequired: Boolean = false,
     @SerialName("method") val method: ExtractionMethodDto,
+    @SerialName("unit") val unit: String? = null,
 )
 
 /**

@@ -517,6 +517,10 @@
     <string name="add_field_cancel">Cancelar</string>
     <string name="add_field_name">Nombre del campo</string>
     <string name="add_field_name_hint">p. ej., Monto, Fecha, ID de pedido</string>
+    <string name="add_field_unit">Unidad (opcional)</string>
+    <string name="add_field_unit_hint_currency">p. ej., SEK</string>
+    <string name="add_field_unit_hint_number">p. ej., km, GB, %</string>
+    <string name="add_field_unit_support_currency">Código de moneda que se usa cuando el símbolo es ambiguo ($ o kr)</string>
     <string name="add_field_extraction_method">Método de extracción</string>
     <string name="add_field_smart_detection">DETECCIÓN INTELIGENTE</string>
     <string name="add_field_smart_amount_text">Este método detectará automáticamente los montos de dinero en el texto.</string>

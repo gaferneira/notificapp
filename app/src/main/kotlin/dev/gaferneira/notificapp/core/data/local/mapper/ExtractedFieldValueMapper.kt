@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.data.local.mapper
 
 import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
+import dev.gaferneira.notificapp.core.extraction.UnitResolver
 import dev.gaferneira.notificapp.domain.model.ExtractedFieldValue
 import dev.gaferneira.notificapp.domain.model.RuleField
 import java.time.Instant
@@ -41,6 +42,7 @@ internal object ExtractedFieldValueMapper {
         valueText = domain.valueText,
         valueNumber = domain.valueNumber,
         valueEpochDay = domain.valueDate?.toEpochDay(),
+        valueUnit = domain.unit,
     )
 
     /**
@@ -58,6 +60,7 @@ internal object ExtractedFieldValueMapper {
         valueText = entity.valueText,
         valueNumber = entity.valueNumber,
         valueDate = entity.valueEpochDay?.let(LocalDate::ofEpochDay),
+        unit = entity.valueUnit,
     )
 
     /**
@@ -101,6 +104,7 @@ internal object ExtractedFieldValueMapper {
                 valueText = stringValue,
                 valueNumber = number,
                 valueEpochDay = null,
+                valueUnit = UnitResolver.resolveUnit(field, stringValue),
             )
         }
 
@@ -131,6 +135,7 @@ internal object ExtractedFieldValueMapper {
                 valueText = stringValue,
                 valueNumber = number,
                 valueEpochDay = null,
+                valueUnit = UnitResolver.resolveUnit(field, stringValue),
             )
         }
 
