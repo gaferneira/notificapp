@@ -10,6 +10,9 @@ import timber.log.Timber
 
 /**
  * Mapper functions for converting between RuleExecution domain models and RuleExecutionEntity database models.
+ *
+ * Decoding policy: an unknown [ActionOutcome] name inside `action_outcomes` drops only that entry
+ * (logged); malformed JSON yields an empty map. A bad outcome never discards the whole execution.
  */
 internal object RuleExecutionMapper {
 
@@ -18,9 +21,13 @@ internal object RuleExecutionMapper {
         encodeDefaults = true
     }
 
-    /** Decode a stored `action_outcomes` column; malformed JSON yields an empty map. */
+    /** Decode a stored `action_outcomes` column; unknown outcome names are skipped, malformed JSON yields an empty map. */
     fun decodeActionOutcomes(raw: String): Map<String, ActionOutcome> = runCatching {
-        json.decodeFromString<Map<String, ActionOutcome>>(raw)
+        json.decodeFromString<Map<String, String>>(raw).mapNotNull { (actionId, name) ->
+            val outcome = ActionOutcome.entries.firstOrNull { it.name == name }
+            if (outcome == null) Timber.e("Skipping unknown action outcome '$name' for action $actionId")
+            outcome?.let { actionId to it }
+        }.toMap()
     }.getOrElse { e ->
         Timber.e(e, "Failed to decode action outcomes")
         emptyMap()
@@ -60,7 +67,7 @@ internal object RuleExecutionMapper {
         ruleName = entity.ruleName,
         extractedValues = ExtractedFieldValueMapper.toDomainList(values),
         triggeredActions = json.decodeFromString(entity.triggeredActions),
-        actionOutcomes = entity.actionOutcomes?.let { json.decodeFromString<Map<String, ActionOutcome>>(it) } ?: emptyMap(),
+        actionOutcomes = entity.actionOutcomes?.let(::decodeActionOutcomes) ?: emptyMap(),
         wasDryRun = entity.wasDryRun,
         createdAt = entity.createdAt,
     )

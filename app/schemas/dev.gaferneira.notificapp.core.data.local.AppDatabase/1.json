@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "c060bf623a877d22243fd75dd3c3a0ac",
+    "identityHash": "4e2425779e47396ec7c486907be4305e",
     "entities": [
       {
         "tableName": "selected_apps",
@@ -139,13 +139,14 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_package_name_timestamp` ON `${TABLE_NAME}` (`package_name`, `timestamp`)"
           },
           {
-            "name": "index_notifications_is_processed",
+            "name": "index_notifications_is_processed_timestamp",
             "unique": false,
             "columnNames": [
-              "is_processed"
+              "is_processed",
+              "timestamp"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_is_processed` ON `${TABLE_NAME}` (`is_processed`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_notifications_is_processed_timestamp` ON `${TABLE_NAME}` (`is_processed`, `timestamp`)"
           },
           {
             "name": "index_notifications_timestamp",
@@ -580,13 +581,24 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_rule_executions_notification_id` ON `${TABLE_NAME}` (`notification_id`)"
           },
           {
-            "name": "index_rule_executions_rule_id",
+            "name": "index_rule_executions_rule_id_created_at",
             "unique": false,
             "columnNames": [
-              "rule_id"
+              "rule_id",
+              "created_at"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_rule_executions_rule_id` ON `${TABLE_NAME}` (`rule_id`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_rule_executions_rule_id_created_at` ON `${TABLE_NAME}` (`rule_id`, `created_at`)"
+          },
+          {
+            "name": "index_rule_executions_was_dry_run_created_at",
+            "unique": false,
+            "columnNames": [
+              "was_dry_run",
+              "created_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_rule_executions_was_dry_run_created_at` ON `${TABLE_NAME}` (`was_dry_run`, `created_at`)"
           },
           {
             "name": "index_rule_executions_created_at",
@@ -689,31 +701,24 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_extracted_field_values_rule_execution_id` ON `${TABLE_NAME}` (`rule_execution_id`)"
           },
           {
-            "name": "index_extracted_field_values_rule_field_id",
+            "name": "index_extracted_field_values_rule_field_id_value_number",
             "unique": false,
             "columnNames": [
-              "rule_field_id"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_extracted_field_values_rule_field_id` ON `${TABLE_NAME}` (`rule_field_id`)"
-          },
-          {
-            "name": "index_extracted_field_values_value_number",
-            "unique": false,
-            "columnNames": [
+              "rule_field_id",
               "value_number"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_extracted_field_values_value_number` ON `${TABLE_NAME}` (`value_number`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_extracted_field_values_rule_field_id_value_number` ON `${TABLE_NAME}` (`rule_field_id`, `value_number`)"
           },
           {
-            "name": "index_extracted_field_values_value_epoch_day",
+            "name": "index_extracted_field_values_rule_field_id_value_epoch_day",
             "unique": false,
             "columnNames": [
+              "rule_field_id",
               "value_epoch_day"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_extracted_field_values_value_epoch_day` ON `${TABLE_NAME}` (`value_epoch_day`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_extracted_field_values_rule_field_id_value_epoch_day` ON `${TABLE_NAME}` (`rule_field_id`, `value_epoch_day`)"
           }
         ],
         "foreignKeys": [
@@ -1018,7 +1023,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c060bf623a877d22243fd75dd3c3a0ac')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4e2425779e47396ec7c486907be4305e')"
     ]
   }
 }

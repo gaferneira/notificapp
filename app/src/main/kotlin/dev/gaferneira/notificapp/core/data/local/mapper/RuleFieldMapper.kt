@@ -14,6 +14,9 @@ import timber.log.Timber
  * The extraction method is persisted as an [ExtractionMethodDto] payload (the same hierarchy the
  * wire format uses), discriminated by its `type` property - mirroring how
  * [RuleConditionMapper] stores conditions. The domain model itself is never serialized.
+ *
+ * Decoding policy: an unknown `field_type` name falls back to [RuleField.FieldType.STRING]; a field
+ * whose extraction method cannot be decoded is skipped by [toDomainList].
  */
 internal object RuleFieldMapper {
 
@@ -48,10 +51,16 @@ internal object RuleFieldMapper {
     fun toDomain(entity: RuleFieldEntity): RuleField = RuleField(
         id = entity.id,
         name = entity.name,
-        fieldType = RuleField.FieldType.valueOf(entity.fieldType),
+        fieldType = fieldTypeFromStorage(entity.fieldType),
         method = json.decodeFromString(ExtractionMethodDto.serializer(), entity.methodConfig).toDomain(),
         isRequired = entity.isRequired,
     )
+
+    /** Maps a stored `field_type` name to [RuleField.FieldType], falling back to STRING when unknown. */
+    fun fieldTypeFromStorage(name: String): RuleField.FieldType = RuleField.FieldType.entries.firstOrNull { it.name == name } ?: run {
+        Timber.e("Unknown field type '$name', falling back to STRING")
+        RuleField.FieldType.STRING
+    }
 
     /**
      * Convert a list of RuleField domain models to entities.

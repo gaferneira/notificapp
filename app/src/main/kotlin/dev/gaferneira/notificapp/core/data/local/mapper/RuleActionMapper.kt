@@ -12,6 +12,10 @@ import timber.log.Timber
 
 /**
  * Mapper functions for converting between RuleAction domain models and RuleActionEntity database models.
+ *
+ * Decoding policy: an action whose stored `type` is not a known [ActionType] (renamed/removed in a
+ * later build) is logged and skipped by [toDomainList] so the rule still loads. A later save of that
+ * rule will delete the skipped action (diff-sync), same as undecodable fields.
  */
 internal object RuleActionMapper {
 
@@ -38,6 +42,7 @@ internal object RuleActionMapper {
      * @param entity The database entity
      * @param fields Field entities owned by this action (only meaningful for `SAVE_DATA`; ignored otherwise)
      * @return The domain model
+     * @throws IllegalArgumentException if the stored type is unknown; list callers use [toDomainList], which skips it
      */
     fun toDomain(entity: RuleActionEntity, fields: List<RuleFieldEntity> = emptyList()): RuleAction = RuleAction(
         id = entity.id,
@@ -71,6 +76,13 @@ internal object RuleActionMapper {
      */
     fun toDomainList(entities: List<RuleActionEntity>, fieldEntities: List<RuleFieldEntity> = emptyList()): List<RuleAction> {
         val fieldsByActionId = fieldEntities.groupBy { it.actionId }
-        return entities.map { toDomain(it, fieldsByActionId[it.id].orEmpty()) }
+        return entities.mapNotNull { entity ->
+            if (ActionType.entries.none { it.name == entity.type }) {
+                Timber.e("Skipping rule action ${entity.id}: unknown action type '${entity.type}'")
+                null
+            } else {
+                toDomain(entity, fieldsByActionId[entity.id].orEmpty())
+            }
+        }
     }
 }

@@ -11,6 +11,9 @@ import java.util.UUID
 
 /**
  * Mapper functions for converting between ExtractedFieldValue domain models and database entities.
+ *
+ * Decoding policy: the `field_type` snapshot of a stored value with an unknown name falls back to
+ * [RuleField.FieldType.STRING] (the value text is still shown).
  */
 internal object ExtractedFieldValueMapper {
 
@@ -51,7 +54,7 @@ internal object ExtractedFieldValueMapper {
         ruleExecutionId = entity.ruleExecutionId,
         ruleFieldId = entity.ruleFieldId,
         fieldName = entity.fieldName,
-        fieldType = RuleField.FieldType.entries.firstOrNull { it.name == entity.fieldType } ?: RuleField.FieldType.STRING,
+        fieldType = RuleFieldMapper.fieldTypeFromStorage(entity.fieldType),
         valueText = entity.valueText,
         valueNumber = entity.valueNumber,
         valueDate = entity.valueEpochDay?.let(LocalDate::ofEpochDay),

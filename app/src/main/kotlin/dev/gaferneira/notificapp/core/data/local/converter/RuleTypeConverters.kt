@@ -41,7 +41,7 @@ class RuleTypeConverters {
     fun fromFieldType(fieldType: RuleField.FieldType): String = fieldType.name
 
     @TypeConverter
-    fun toFieldType(value: String): RuleField.FieldType = RuleField.FieldType.valueOf(value)
+    fun toFieldType(value: String): RuleField.FieldType = RuleField.FieldType.entries.firstOrNull { it.name == value } ?: RuleField.FieldType.STRING
 
     // ========== LocalDate (for the DataBrowserRow raw-query projection of value_epoch_day) ==========
     @TypeConverter

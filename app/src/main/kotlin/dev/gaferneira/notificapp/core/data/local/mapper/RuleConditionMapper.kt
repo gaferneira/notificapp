@@ -8,6 +8,7 @@ import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.json.Json
+import timber.log.Timber
 import java.time.DayOfWeek
 import java.time.LocalTime
 
@@ -16,6 +17,13 @@ import java.time.LocalTime
  * database models, via the polymorphic [ConditionDto] payload.  The same [ConditionDto] hierarchy is reused by `RuleWireMapper`
  * for the wire format - see that class's documentation for the accepted storage/wire coupling
  * this introduces.
+ *
+ * Decoding policy (fail closed): a condition whose payload cannot be decoded (unknown `type`, or an
+ * unknown enum/day name or bad time inside it) is NOT dropped - dropping would broaden matching.
+ * It decodes to a [RuleCondition.DayOfWeekCondition] with an empty day set, which the domain defines
+ * as matching no day, so the rule loads in the list/editor but that condition never matches (under
+ * ALL the rule never fires; under ANY the other conditions still decide). Nested unreadable children
+ * make the whole top-level payload unreadable. A later save rewrites it as the placeholder.
  */
 internal object RuleConditionMapper {
 
@@ -43,7 +51,12 @@ internal object RuleConditionMapper {
      * @param entity The database entity
      * @return The domain model
      */
-    fun toDomain(entity: RuleConditionEntity): RuleCondition = json.decodeFromString(ConditionDto.serializer(), entity.payload).toDomain()
+    fun toDomain(entity: RuleConditionEntity): RuleCondition = runCatching {
+        json.decodeFromString(ConditionDto.serializer(), entity.payload).toDomain()
+    }.getOrElse { e ->
+        Timber.e(e, "Unreadable condition ${entity.id}; it will never match")
+        RuleCondition.DayOfWeekCondition(id = entity.id, days = emptySet())
+    }
 
     /**
      * Convert a list of [RuleCondition] domain models to entities.

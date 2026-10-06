@@ -39,8 +39,9 @@ import androidx.room.PrimaryKey
     ],
     indices = [
         Index(value = ["notification_id"]), // For querying executions by notification
-        Index(value = ["rule_id"]), // For querying executions by rule
-        Index(value = ["created_at"]), // For time-based queries
+        Index(value = ["rule_id", "created_at"]), // Executions by rule (also serves rule_id-only lookups), newest first
+        Index(value = ["was_dry_run", "created_at"]), // Insights/data browser: live executions in a time window
+        Index(value = ["created_at"]), // Time-only queries without was_dry_run (history list, retention purge)
     ],
 )
 internal data class RuleExecutionEntity(

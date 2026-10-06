@@ -40,9 +40,8 @@ import androidx.room.PrimaryKey
     ],
     indices = [
         Index(value = ["rule_execution_id"]), // For querying values by execution
-        Index(value = ["rule_field_id"]), // For querying values by field
-        Index(value = ["value_number"]), // For numeric range queries
-        Index(value = ["value_epoch_day"]), // For date range queries
+        Index(value = ["rule_field_id", "value_number"]), // By field (leading column) and numeric range queries
+        Index(value = ["rule_field_id", "value_epoch_day"]), // By field and date range queries
     ],
 )
 internal data class ExtractedFieldValueEntity(
