@@ -171,6 +171,7 @@ private fun testExecution(
 ) = RuleExecutionEntity(
     id = id,
     ruleId = ruleId,
+    ruleName = "Rule $ruleId",
     notificationId = notificationId,
     extractedData = "{}",
     triggeredActions = "[]",

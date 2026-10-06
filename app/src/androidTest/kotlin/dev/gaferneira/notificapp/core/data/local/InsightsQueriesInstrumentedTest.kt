@@ -178,6 +178,7 @@ class InsightsQueriesInstrumentedTest {
     private fun execution(id: String, ruleId: String, notificationId: String, createdAt: Long, dryRun: Boolean = false) = RuleExecutionEntity(
         id = id,
         ruleId = ruleId,
+        ruleName = "Rule $ruleId",
         notificationId = notificationId,
         extractedData = "{}",
         triggeredActions = "[]",
@@ -198,6 +199,8 @@ class InsightsQueriesInstrumentedTest {
         id = id,
         ruleExecutionId = executionId,
         ruleFieldId = fieldId,
+        fieldName = FIELD_SNAPSHOTS.getValue(fieldId).first,
+        fieldType = FIELD_SNAPSHOTS.getValue(fieldId).second,
         valueText = null,
         valueNumber = number,
         valueDate = null,
@@ -207,5 +210,12 @@ class InsightsQueriesInstrumentedTest {
 
     private companion object {
         val DAY: LocalDate = LocalDate.of(2026, 3, 10)
+
+        /** Field id to (name, type) snapshot, mirroring the `rule_fields` rows seeded above. */
+        val FIELD_SNAPSHOTS = mapOf(
+            "f-amount" to ("Amount" to "CURRENCY"),
+            "f-text" to ("Label" to "STRING"),
+            "f-empty" to ("Empty" to "NUMBER"),
+        )
     }
 }

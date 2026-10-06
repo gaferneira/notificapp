@@ -67,7 +67,7 @@ class RuleDaoSaveTest {
     }
 
     @Test
-    fun `removing one field deletes only that field and keeps the other field's values`() = runBlocking<Unit> {
+    fun `removing one field deletes only that field and keeps every value`() = runBlocking<Unit> {
         seedRuleWithHistory(fields = listOf(FIELD_A, FIELD_B))
 
         ruleDao.saveRuleWithRelatedData(
@@ -80,7 +80,9 @@ class RuleDaoSaveTest {
 
         ruleDao.getFieldsForAction(ACTION_ID).map { it.id } shouldBe listOf(FIELD_A)
         database.ruleExecutionDao().getExecutionsForRule(RULE_ID).map { it.id } shouldBe listOf(EXECUTION_ID)
-        database.extractedFieldValueDao().getValuesForExecution(EXECUTION_ID).map { it.ruleFieldId } shouldBe listOf(FIELD_A)
+        // The removed field's value is kept as orphaned history (`rule_field_id` SET NULL).
+        database.extractedFieldValueDao().getValuesForExecution(EXECUTION_ID).associate { it.id to it.ruleFieldId } shouldBe
+            mapOf("value-$FIELD_A" to FIELD_A, "value-$FIELD_B" to null)
     }
 
     private suspend fun seedRuleWithHistory(fields: List<String>) {
@@ -107,6 +109,7 @@ class RuleDaoSaveTest {
                 id = EXECUTION_ID,
                 notificationId = NOTIFICATION_ID,
                 ruleId = RULE_ID,
+                ruleName = "Original",
                 extractedData = "{}",
                 triggeredActions = "[]",
             ),
@@ -117,6 +120,8 @@ class RuleDaoSaveTest {
                     id = "value-$fieldId",
                     ruleExecutionId = EXECUTION_ID,
                     ruleFieldId = fieldId,
+                    fieldName = fieldId,
+                    fieldType = "STRING",
                     valueText = "x",
                     valueNumber = null,
                     valueDate = null,

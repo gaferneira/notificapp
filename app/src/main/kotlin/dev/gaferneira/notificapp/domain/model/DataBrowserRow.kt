@@ -9,11 +9,11 @@ package dev.gaferneira.notificapp.domain.model
  * @property valueId The underlying `ExtractedFieldValue.id`
  * @property executionId The owning `RuleExecution.id`
  * @property notificationId The source `Notification.id`, for drill-down to its details
- * @property ruleName Name of the rule that produced this value
+ * @property ruleName Name of the rule that produced this value (current name, or the execution-time snapshot if the rule was deleted)
  * @property packageName Source app's package name
  * @property appName Source app's display name
- * @property fieldName Name of the extraction field, from `RuleField`
- * @property fieldType Type of the extraction field, from `RuleField`
+ * @property fieldName Name of the extraction field (current name, or the extraction-time snapshot if the field was removed)
+ * @property fieldType Type of the extraction field, snapshotted at extraction time
  * @property valueText String value, populated for STRING/CURRENCY fields
  * @property valueNumber Numeric value, populated for NUMBER fields
  * @property valueDate Timestamp value, populated for DATE fields

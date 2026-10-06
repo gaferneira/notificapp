@@ -311,7 +311,7 @@ private fun NotificationDetailContent(
             items(items = uiState.executions, key = { it.execution.id }) { details ->
                 ExecutionCard(
                     details = details,
-                    onOpenRule = { onEvent(UiEvent.OnOpenRuleClicked(details.ruleId)) },
+                    onOpenRule = { details.ruleId?.let { onEvent(UiEvent.OnOpenRuleClicked(it)) } },
                 )
             }
         }

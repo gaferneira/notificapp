@@ -63,6 +63,7 @@ class RuleExecutionRepositoryImplTest {
         id = id,
         notificationId = "notif-$id",
         ruleId = "rule-1",
+        ruleName = "Rule",
         extractedData = "{}",
         triggeredActions = "[]",
         actionOutcomes = actionOutcomes,

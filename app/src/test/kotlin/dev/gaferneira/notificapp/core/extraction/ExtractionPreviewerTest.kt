@@ -47,6 +47,7 @@ class ExtractionPreviewerTest {
         id = "exec-$ruleId",
         notificationId = "n1",
         ruleId = ruleId,
+        ruleName = "Rule $ruleId",
         extractedData = data,
         triggeredActions = emptyList(),
         createdAt = 1L,

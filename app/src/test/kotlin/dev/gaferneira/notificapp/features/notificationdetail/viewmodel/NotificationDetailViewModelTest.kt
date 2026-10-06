@@ -90,6 +90,7 @@ class NotificationDetailViewModelTest {
         id = "exec-$ruleId",
         notificationId = "notif-1",
         ruleId = ruleId,
+        ruleName = "Snapshot $ruleId",
         extractedData = data,
         triggeredActions = actions,
         actionOutcomes = actions.associateWith { ActionOutcome.SUCCESS },
@@ -277,11 +278,24 @@ class NotificationDetailViewModelTest {
         }
 
         @Test
-        fun `a deleted rule has a null name`() {
+        fun `a deleted rule keeps its snapshot name and cannot be opened`() {
             createViewModel(rules = emptyList(), executions = listOf(execution()))
             load()
 
-            viewModel.uiState.value.executions.single().isRuleDeleted shouldBe true
+            val details = viewModel.uiState.value.executions.single()
+            details.isRuleDeleted shouldBe true
+            details.ruleId shouldBe null
+            details.ruleName shouldBe "Snapshot rule-1"
+        }
+
+        @Test
+        fun `an execution whose rule id was nulled by deletion does not crash the screen`() {
+            createViewModel(rules = emptyList(), executions = listOf(execution().copy(ruleId = null)))
+            load()
+
+            val details = viewModel.uiState.value.executions.single()
+            details.isRuleDeleted shouldBe true
+            details.ruleName shouldBe "Snapshot rule-1"
         }
 
         @Test

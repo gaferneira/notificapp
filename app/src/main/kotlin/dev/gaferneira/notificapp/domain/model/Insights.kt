@@ -16,7 +16,7 @@ data class OutcomeCounts(val success: Int = 0, val failed: Int = 0, val skipped:
 
 /** Per-rule run count (non-dry-run executions) within the period. */
 @Immutable
-data class RuleActivity(val ruleId: String, val ruleName: String, val runCount: Int)
+data class RuleActivity(val ruleId: String?, val ruleName: String, val runCount: Int)
 
 /** Lightweight rule reference (id + display name). */
 @Immutable
@@ -28,9 +28,9 @@ data class RuleRef(val ruleId: String, val ruleName: String)
  */
 @Immutable
 data class FieldTotal(
-    val ruleId: String,
+    val ruleId: String?,
     val ruleName: String,
-    val fieldId: String,
+    val fieldId: String?,
     val fieldName: String,
     val fieldType: RuleField.FieldType,
     val sum: Double,

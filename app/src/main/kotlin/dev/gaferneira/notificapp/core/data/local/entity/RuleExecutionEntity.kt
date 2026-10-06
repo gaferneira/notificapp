@@ -13,7 +13,9 @@ import androidx.room.PrimaryKey
  *
  * @property id Unique identifier for this execution
  * @property notificationId Foreign key to the matched notification
- * @property ruleId Foreign key to the rule that matched
+ * @property ruleId Foreign key to the rule that matched; `NULL` once the rule was deleted
+ *   (`ON DELETE SET NULL`) so the execution history survives
+ * @property ruleName Snapshot of the rule's name at execution time, shown when [ruleId] is `NULL`
  * @property extractedData JSON map of extracted field data (field name → extracted value)
  * @property triggeredActions JSON list of action IDs that were triggered
  * @property actionOutcomes JSON map of action ID to outcome, or null if none recorded
@@ -32,7 +34,7 @@ import androidx.room.PrimaryKey
             entity = RuleEntity::class,
             parentColumns = ["id"],
             childColumns = ["rule_id"],
-            onDelete = ForeignKey.CASCADE,
+            onDelete = ForeignKey.SET_NULL,
         ),
     ],
     indices = [
@@ -50,7 +52,10 @@ internal data class RuleExecutionEntity(
     val notificationId: String,
 
     @ColumnInfo(name = "rule_id")
-    val ruleId: String,
+    val ruleId: String?,
+
+    @ColumnInfo(name = "rule_name")
+    val ruleName: String,
 
     @ColumnInfo(name = "extracted_data")
     val extractedData: String, // JSON Map<String, String>

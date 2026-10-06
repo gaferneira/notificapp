@@ -195,6 +195,7 @@ class ProcessNotificationUseCase @Inject constructor(
             id = UUID.randomUUID().toString(),
             notificationId = notificationId,
             ruleId = rule.id,
+            ruleName = rule.name,
             extractedData = extractedData,
             triggeredActions = enabledActions.map { it.id },
             triggeredRuleActions = enabledActions,

@@ -32,6 +32,8 @@ internal object ExtractedFieldValueMapper {
         id = domain.id,
         ruleExecutionId = domain.ruleExecutionId,
         ruleFieldId = domain.ruleFieldId,
+        fieldName = domain.fieldName,
+        fieldType = domain.fieldType.name,
         valueText = domain.valueText,
         valueNumber = domain.valueNumber,
         valueDate = domain.valueDate,
@@ -47,6 +49,8 @@ internal object ExtractedFieldValueMapper {
         id = entity.id,
         ruleExecutionId = entity.ruleExecutionId,
         ruleFieldId = entity.ruleFieldId,
+        fieldName = entity.fieldName,
+        fieldType = RuleField.FieldType.entries.firstOrNull { it.name == entity.fieldType } ?: RuleField.FieldType.STRING,
         valueText = entity.valueText,
         valueNumber = entity.valueNumber,
         valueDate = entity.valueDate,
@@ -69,7 +73,7 @@ internal object ExtractedFieldValueMapper {
     ): List<ExtractedFieldValueEntity> {
         return extractedData.mapNotNull { (fieldId, stringValue) ->
             val field = fields.find { it.id == fieldId } ?: return@mapNotNull null
-            createEntity(executionId, fieldId, stringValue, field.fieldType, zone)
+            createEntity(executionId, field, stringValue, zone)
         }
     }
 
@@ -78,17 +82,18 @@ internal object ExtractedFieldValueMapper {
      */
     private fun createEntity(
         executionId: String,
-        fieldId: String,
+        field: RuleField,
         stringValue: String,
-        fieldType: RuleField.FieldType,
         zone: ZoneId,
-    ): ExtractedFieldValueEntity = when (fieldType) {
+    ): ExtractedFieldValueEntity = when (field.fieldType) {
         RuleField.FieldType.NUMBER -> {
             val number = extractNumericValue(stringValue)
             ExtractedFieldValueEntity(
                 id = UUID.randomUUID().toString(),
                 ruleExecutionId = executionId,
-                ruleFieldId = fieldId,
+                ruleFieldId = field.id,
+                fieldName = field.name,
+                fieldType = field.fieldType.name,
                 valueText = stringValue,
                 valueNumber = number,
                 valueDate = null,
@@ -101,7 +106,9 @@ internal object ExtractedFieldValueMapper {
             ExtractedFieldValueEntity(
                 id = UUID.randomUUID().toString(),
                 ruleExecutionId = executionId,
-                ruleFieldId = fieldId,
+                ruleFieldId = field.id,
+                fieldName = field.name,
+                fieldType = field.fieldType.name,
                 valueText = stringValue,
                 valueNumber = null,
                 valueDate = date,
@@ -114,7 +121,9 @@ internal object ExtractedFieldValueMapper {
             ExtractedFieldValueEntity(
                 id = UUID.randomUUID().toString(),
                 ruleExecutionId = executionId,
-                ruleFieldId = fieldId,
+                ruleFieldId = field.id,
+                fieldName = field.name,
+                fieldType = field.fieldType.name,
                 valueText = stringValue,
                 valueNumber = number,
                 valueDate = null,
@@ -125,7 +134,9 @@ internal object ExtractedFieldValueMapper {
             ExtractedFieldValueEntity(
                 id = UUID.randomUUID().toString(),
                 ruleExecutionId = executionId,
-                ruleFieldId = fieldId,
+                ruleFieldId = field.id,
+                fieldName = field.name,
+                fieldType = field.fieldType.name,
                 valueText = stringValue,
                 valueNumber = null,
                 valueDate = null,

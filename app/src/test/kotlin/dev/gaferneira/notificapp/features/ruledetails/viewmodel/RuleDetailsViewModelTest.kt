@@ -376,6 +376,7 @@ class RuleDetailsViewModelTest {
             id = id,
             notificationId = "n-$id",
             ruleId = "rule-1",
+            ruleName = "Rule",
             extractedData = emptyMap(),
             triggeredActions = emptyList(),
             wasDryRun = wasDryRun,

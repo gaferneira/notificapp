@@ -187,7 +187,8 @@ internal fun FieldTotalsSection(totals: ImmutableList<FieldTotal>, onClick: (Str
                     title = stringResource(R.string.insights_total_title, total.ruleName, total.fieldName),
                     subtitle = pluralStringResource(R.plurals.insights_values_count, total.count, total.count),
                     trailing = formats.format(total.sum, total.fieldType),
-                    onClick = { onClick(total.ruleId) },
+                    // Deleted rule (null id): history is still counted but there is nothing to open.
+                    onClick = total.ruleId?.let { id -> { onClick(id) } },
                 )
             }
         }
@@ -210,7 +211,7 @@ internal fun RulesSection(
                 InsightsRow(
                     title = rule.ruleName,
                     trailing = pluralStringResource(R.plurals.insights_rule_runs, rule.runCount, rule.runCount),
-                    onClick = { onRuleClick(rule.ruleId) },
+                    onClick = rule.ruleId?.let { id -> { onRuleClick(id) } },
                 )
             }
             if (quietRules.isNotEmpty()) {

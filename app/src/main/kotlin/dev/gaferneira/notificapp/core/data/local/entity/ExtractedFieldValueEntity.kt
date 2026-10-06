@@ -14,7 +14,10 @@ import androidx.room.PrimaryKey
  *
  * @property id Unique identifier for this value
  * @property ruleExecutionId Foreign key to the parent rule execution
- * @property ruleFieldId Foreign key to the field definition (provides name and type)
+ * @property ruleFieldId Foreign key to the field definition; `NULL` once the field was removed
+ *   (`ON DELETE SET NULL`) so the value survives
+ * @property fieldName Snapshot of the field's name at extraction time
+ * @property fieldType Snapshot of the field's `FieldType` enum name at extraction time
  * @property valueText String value for STRING/CURRENCY types
  * @property valueNumber Numeric value for NUMBER type
  * @property valueDate Timestamp for DATE type
@@ -32,7 +35,7 @@ import androidx.room.PrimaryKey
             entity = RuleFieldEntity::class,
             parentColumns = ["id"],
             childColumns = ["rule_field_id"],
-            onDelete = ForeignKey.CASCADE,
+            onDelete = ForeignKey.SET_NULL,
         ),
     ],
     indices = [
@@ -51,7 +54,13 @@ internal data class ExtractedFieldValueEntity(
     val ruleExecutionId: String,
 
     @ColumnInfo(name = "rule_field_id")
-    val ruleFieldId: String,
+    val ruleFieldId: String?,
+
+    @ColumnInfo(name = "field_name")
+    val fieldName: String,
+
+    @ColumnInfo(name = "field_type")
+    val fieldType: String,
 
     @ColumnInfo(name = "value_text")
     val valueText: String?,

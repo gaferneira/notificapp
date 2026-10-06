@@ -123,7 +123,7 @@ class NotificationDetailViewModel @Inject constructor(
 
     private suspend fun onEmission(notification: Notification, executions: List<RuleExecution>) {
         // One batched lookup per emission instead of one query per execution.
-        val ruleIds = executions.map { it.ruleId }.distinct()
+        val ruleIds = executions.mapNotNull { it.ruleId }.distinct()
         val rules: Map<String, Rule> = if (ruleIds.isEmpty()) {
             emptyMap()
         } else {
@@ -135,12 +135,12 @@ class NotificationDetailViewModel @Inject constructor(
         }
 
         val redactingExecution = if (notification.isContentRedacted) {
-            executions.firstOrNull { it.redactedContent(rules[it.ruleId]) }
+            executions.firstOrNull { it.redactedContent(it.ruleId?.let(rules::get)) }
         } else {
             null
         }
         val details = executions.map { execution ->
-            buildExecutionDetails(execution, rules[execution.ruleId], isRedactionSource = execution === redactingExecution)
+            buildExecutionDetails(execution, execution.ruleId?.let(rules::get), isRedactionSource = execution === redactingExecution)
         }
 
         setState {
@@ -148,7 +148,7 @@ class NotificationDetailViewModel @Inject constructor(
                 loadStatus = LoadStatus.LOADED,
                 notification = notification,
                 executions = details,
-                redactedByRule = redactingExecution?.let { e -> rules[e.ruleId]?.let { RuleRef(it.id, it.name) } },
+                redactedByRule = redactingExecution?.let { e -> e.ruleId?.let(rules::get)?.let { RuleRef(it.id, it.name) } },
                 // Once the content is gone there is nothing to test against.
                 preview = if (notification.isContentRedacted) null else preview,
             )
@@ -186,7 +186,7 @@ class NotificationDetailViewModel @Inject constructor(
                     notification = notification,
                     rules = rules,
                     executions = executions.map { it.execution },
-                    ruleNames = executions.associate { it.ruleId to it.ruleName },
+                    ruleNames = executions.mapNotNull { e -> e.ruleId?.let { it to e.ruleName } }.toMap(),
                 )
                 setState { copy(isPreviewLoading = false, preview = preview) }
             } catch (e: Exception) {

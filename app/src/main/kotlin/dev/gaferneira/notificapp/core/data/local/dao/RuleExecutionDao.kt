@@ -133,16 +133,17 @@ internal interface RuleExecutionDao {
 
     /**
      * The most recent non-dry-run executions, joined with their source notification and rule name,
-     * for Home's "Recent Activity" feed.
+     * for Home's "Recent Activity" feed. Executions of deleted rules are kept (`LEFT JOIN rules`):
+     * `ruleId` is null and the name falls back to the execution-time snapshot.
      */
     @Query(
         """
-        SELECT re.id AS executionId, re.rule_id AS ruleId, r.name AS ruleName,
+        SELECT re.id AS executionId, re.rule_id AS ruleId, COALESCE(r.name, re.rule_name) AS ruleName,
                n.id AS notificationId, n.title AS notificationTitle, n.content AS notificationContent,
                n.package_name AS packageName, n.app_name AS appName, re.created_at AS executedAt
         FROM rule_executions re
         INNER JOIN notifications n ON re.notification_id = n.id
-        INNER JOIN rules r ON re.rule_id = r.id
+        LEFT JOIN rules r ON re.rule_id = r.id
         WHERE re.was_dry_run = 0
         ORDER BY re.created_at DESC
         LIMIT :limit
@@ -195,15 +196,18 @@ internal interface RuleExecutionDao {
     )
     fun observeActionOutcomesSince(since: Long): Flow<List<String>>
 
-    /** Most active rules by non-dry-run runs since [since], busiest first, capped at [limit]. */
+    /**
+     * Most active rules by non-dry-run runs since [since], busiest first, capped at [limit].
+     * Includes deleted rules (`LEFT JOIN`): they have a null `ruleId` and their snapshot name.
+     */
     @Query(
         """
-        SELECT r.id AS ruleId, r.name AS ruleName, COUNT(*) AS runCount
+        SELECT re.rule_id AS ruleId, COALESCE(r.name, re.rule_name) AS ruleName, COUNT(*) AS runCount
         FROM rule_executions re
-        INNER JOIN rules r ON re.rule_id = r.id
+        LEFT JOIN rules r ON re.rule_id = r.id
         WHERE re.was_dry_run = 0 AND re.created_at >= :since
-        GROUP BY r.id, r.name
-        ORDER BY runCount DESC, r.name ASC, r.id ASC
+        GROUP BY re.rule_id, COALESCE(r.name, re.rule_name)
+        ORDER BY runCount DESC, ruleName ASC, re.rule_id ASC
         LIMIT :limit
         """,
     )
@@ -223,7 +227,7 @@ internal data class RuleStatsRow(
 /** Projection for [RuleExecutionDao.observeRecentActivity]. */
 internal data class RecentActivityRow(
     val executionId: String,
-    val ruleId: String,
+    val ruleId: String?,
     val ruleName: String,
     val notificationId: String,
     val notificationTitle: String?,

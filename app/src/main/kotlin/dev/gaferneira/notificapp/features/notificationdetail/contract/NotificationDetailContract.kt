@@ -98,18 +98,20 @@ object NotificationDetailContract {
     /**
      * A stored rule execution with names resolved from the rule as it is now.
      *
-     * @property ruleName `null` when the rule was deleted; the UI shows a "deleted rule" fallback.
+     * @property ruleId `null` when the rule was deleted: the execution is kept as history, so there
+     *   is nothing to open.
+     * @property ruleName The rule's current name, or the execution-time snapshot when it was deleted.
      * @property wasRedactionSource Whether this execution's rule is the one that scrubbed the content.
      */
     data class ExecutionWithDetails(
         val execution: RuleExecution,
-        val ruleId: String,
-        val ruleName: String?,
+        val ruleId: String?,
+        val ruleName: String,
         val extractedFields: List<ExtractedFieldDisplay>,
         val triggeredActions: List<TriggeredActionDisplay>,
         val wasRedactionSource: Boolean = false,
     ) {
-        val isRuleDeleted: Boolean get() = ruleName == null
+        val isRuleDeleted: Boolean get() = ruleId == null
     }
 
     /**

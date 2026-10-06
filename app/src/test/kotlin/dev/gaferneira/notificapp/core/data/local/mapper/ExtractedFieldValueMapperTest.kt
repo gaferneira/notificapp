@@ -35,6 +35,17 @@ class ExtractedFieldValueMapperTest {
         .single()
         .valueNumber
 
+    @Test
+    fun `snapshots the field name and type onto the stored value`() {
+        val entity = ExtractedFieldValueMapper
+            .fromExtractedData(executionId = "exec-1", extractedData = mapOf(fieldId to "10"), fields = listOf(currencyField))
+            .single()
+
+        entity.ruleFieldId shouldBe fieldId
+        entity.fieldName shouldBe "Amount"
+        entity.fieldType shouldBe "CURRENCY"
+    }
+
     @ParameterizedTest
     @CsvSource(
         // US / UK: comma thousands, dot decimal

@@ -14,7 +14,8 @@ import dev.gaferneira.notificapp.features.notificationdetail.contract.Notificati
  * removed field, removed action) is surfaced as a typed "unknown" (`null` name/type) instead of
  * leaking ids or hardcoded text into the UI.
  *
- * @param rule The rule that produced [execution], or `null` if it was deleted.
+ * @param rule The rule that produced [execution], or `null` if it was deleted (the name then comes
+ *   from the execution's own snapshot).
  * @param isRedactionSource Whether this execution's rule scrubbed the notification content.
  */
 internal fun buildExecutionDetails(
@@ -29,8 +30,9 @@ internal fun buildExecutionDetails(
 
     return ExecutionWithDetails(
         execution = execution,
-        ruleId = execution.ruleId,
-        ruleName = rule?.name,
+        // Only an existing rule can be opened; null also covers a deleted (SET NULL) rule.
+        ruleId = execution.ruleId.takeIf { rule != null },
+        ruleName = rule?.name ?: execution.ruleName,
         extractedFields = execution.extractedData.map { (fieldId, value) ->
             val field = fieldsById[fieldId]
             ExtractedFieldDisplay(

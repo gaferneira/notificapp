@@ -10,7 +10,8 @@ import kotlinx.collections.immutable.persistentListOf
  *
  * @property id Unique identifier for this execution
  * @property notificationId The matched notification
- * @property ruleId The rule that matched
+ * @property ruleId The rule that matched, or `null` if that rule has since been deleted
+ * @property ruleName Snapshot of the rule's name at execution time (survives rule deletion/rename)
  * @property extractedData Map of field names to extracted values
  * @property triggeredActions List of action IDs that were triggered
  * @property actionOutcomes Map of action ID to the outcome of executing it
@@ -20,7 +21,8 @@ import kotlinx.collections.immutable.persistentListOf
 data class RuleExecution(
     val id: String,
     val notificationId: String,
-    val ruleId: String,
+    val ruleId: String?,
+    val ruleName: String,
     val extractedData: Map<String, String>,
     val triggeredActions: List<String>,
     val triggeredRuleActions: ImmutableList<RuleAction> = persistentListOf(),
