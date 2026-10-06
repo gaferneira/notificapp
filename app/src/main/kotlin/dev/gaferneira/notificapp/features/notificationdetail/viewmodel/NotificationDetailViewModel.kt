@@ -159,7 +159,7 @@ class NotificationDetailViewModel @Inject constructor(
     private fun RuleExecution.redactedContent(rule: Rule?): Boolean = rule != null &&
         rule.deleteRawContentAfterExtraction &&
         !wasDryRun &&
-        extractedData.isNotEmpty()
+        extractedValues.isNotEmpty()
 
     /**
      * Read-only preview: evaluate the current active rules against this notification with the

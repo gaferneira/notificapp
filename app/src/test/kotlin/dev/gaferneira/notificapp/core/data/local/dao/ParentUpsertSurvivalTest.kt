@@ -131,7 +131,6 @@ class ParentUpsertSurvivalTest {
         notificationId = NOTIFICATION_ID,
         ruleId = null,
         ruleName = ruleName,
-        extractedData = "{}",
         triggeredActions = "[]",
         createdAt = 1_000L,
     )

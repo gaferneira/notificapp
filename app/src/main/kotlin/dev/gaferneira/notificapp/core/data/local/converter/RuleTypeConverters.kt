@@ -17,8 +17,6 @@ class RuleTypeConverters {
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
-        // Use different discriminator to avoid conflict with ExtractionMethod's 'type' property
-        classDiscriminator = "classType"
     }
 
     // ========== String Map (for extracted data) ==========

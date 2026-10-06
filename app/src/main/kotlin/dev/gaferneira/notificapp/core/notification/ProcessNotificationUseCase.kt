@@ -127,7 +127,7 @@ class ProcessNotificationUseCase @Inject constructor(
                 // enabled one, field values are not saved, even though the execution record (and any
                 // other action outcomes) still are. saveDataFields() is naturally empty in that case.
                 val fieldsToPersist = match.rule.saveDataFields()
-                ruleExecutionRepository.saveExecution(execution, fieldsToPersist)
+                ruleExecutionRepository.saveExecution(execution, match.extractedData, fieldsToPersist)
                     .fold(
                         onSuccess = { execution },
                         onFailure = { e ->
@@ -196,7 +196,6 @@ class ProcessNotificationUseCase @Inject constructor(
             notificationId = notificationId,
             ruleId = rule.id,
             ruleName = rule.name,
-            extractedData = extractedData,
             triggeredActions = enabledActions.map { it.id },
             triggeredRuleActions = enabledActions,
             actionOutcomes = actionOutcomes,

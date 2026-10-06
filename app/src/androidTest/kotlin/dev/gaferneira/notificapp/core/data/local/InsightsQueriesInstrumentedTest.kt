@@ -180,7 +180,6 @@ class InsightsQueriesInstrumentedTest {
         ruleId = ruleId,
         ruleName = "Rule $ruleId",
         notificationId = notificationId,
-        extractedData = "{}",
         triggeredActions = "[]",
         wasDryRun = dryRun,
         createdAt = createdAt,
@@ -191,7 +190,6 @@ class InsightsQueriesInstrumentedTest {
         actionId = "a1",
         name = name,
         fieldType = type,
-        methodType = "REGEX",
         methodConfig = "{}",
     )
 

@@ -9,14 +9,14 @@ import androidx.room.PrimaryKey
 /**
  * Room entity representing a rule execution (when a rule matches a notification).
  *
- * Stores the extracted data and triggered actions for audit and history purposes.
+ * Stores the triggered actions and outcomes for audit and history purposes. The values extracted by
+ * the match live in `extracted_field_values` (one typed row per field), not in this table.
  *
  * @property id Unique identifier for this execution
  * @property notificationId Foreign key to the matched notification
  * @property ruleId Foreign key to the rule that matched; `NULL` once the rule was deleted
  *   (`ON DELETE SET NULL`) so the execution history survives
  * @property ruleName Snapshot of the rule's name at execution time, shown when [ruleId] is `NULL`
- * @property extractedData JSON map of extracted field data (field name → extracted value)
  * @property triggeredActions JSON list of action IDs that were triggered
  * @property actionOutcomes JSON map of action ID to outcome, or null if none recorded
  * @property wasDryRun Snapshot of the rule's dry-run flag at match time
@@ -56,9 +56,6 @@ internal data class RuleExecutionEntity(
 
     @ColumnInfo(name = "rule_name")
     val ruleName: String,
-
-    @ColumnInfo(name = "extracted_data")
-    val extractedData: String, // JSON Map<String, String>
 
     @ColumnInfo(name = "triggered_actions")
     val triggeredActions: String, // JSON List<String>

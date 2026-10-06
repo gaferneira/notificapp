@@ -50,13 +50,15 @@ class ExtractionPreviewer @Inject constructor(
             val rule = match.rule
             val execution = executionByRule[rule.id]
             val fields = rule.saveDataFields()
-            val stored = execution?.extractedData.orEmpty()
+            // Values still linked to a field definition; orphans (field removed, id SET NULL) have no id to compare.
+            val stored = execution?.extractedValues.orEmpty()
+                .mapNotNull { value -> value.ruleFieldId?.let { it to value.valueText.orEmpty() } }
+                .toMap()
             val diffs = fields.map { field ->
                 val old = stored[field.id]
                 val new = match.extractedData[field.id]
                 FieldDiff(field.id, field.name, field.fieldType, old, new, compare(old, new))
             }
-            val fieldIds = fields.map { it.id }.toSet()
             val changed = diffs.any { it.change != FieldChange.UNCHANGED }
             RuleMatchPreview(
                 ruleId = rule.id,
@@ -69,7 +71,7 @@ class ExtractionPreviewer @Inject constructor(
                     ExtractedDataUpdate(
                         executionId = execution.id,
                         fields = fields,
-                        extractedData = stored.filterKeys { it !in fieldIds } + match.extractedData,
+                        extractedData = match.extractedData,
                     )
                 } else {
                     null

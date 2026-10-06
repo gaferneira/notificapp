@@ -7,6 +7,7 @@ import dev.gaferneira.notificapp.core.ui.navigation.NavigationHandler
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.ExtractedFieldValue
 import dev.gaferneira.notificapp.domain.model.FieldChange
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
@@ -82,16 +83,28 @@ class NotificationDetailViewModelTest {
         ),
     )
 
+    private fun storedValue(fieldId: String?, name: String, type: RuleField.FieldType, text: String) = ExtractedFieldValue(
+        id = "value-${fieldId ?: name}",
+        ruleExecutionId = "exec-rule-1",
+        ruleFieldId = fieldId,
+        fieldName = name,
+        fieldType = type,
+        valueText = text,
+        valueNumber = null,
+        valueDate = null,
+    )
+
     private fun execution(
         ruleId: String = "rule-1",
         data: Map<String, String> = mapOf("f-amount" to "123"),
         actions: List<String> = listOf("save-$ruleId", "dismiss-$ruleId"),
+        values: List<ExtractedFieldValue> = data.map { (fieldId, text) -> storedValue(fieldId, "snapshot-$fieldId", RuleField.FieldType.STRING, text) },
     ) = RuleExecution(
         id = "exec-$ruleId",
         notificationId = "notif-1",
         ruleId = ruleId,
         ruleName = "Snapshot $ruleId",
-        extractedData = data,
+        extractedValues = values,
         triggeredActions = actions,
         actionOutcomes = actions.associateWith { ActionOutcome.SUCCESS },
         createdAt = 5_000L,
@@ -252,18 +265,19 @@ class NotificationDetailViewModelTest {
         }
 
         @Test
-        fun `a field deleted from the rule falls back to an unnamed STRING`() {
+        fun `a removed field keeps its snapshot name and type`() {
             createViewModel(
                 rules = listOf(rule(fields = emptyList())),
-                executions = listOf(execution(data = mapOf("f-gone" to "x"))),
+                executions = listOf(execution(values = listOf(storedValue(null, "Old merchant", RuleField.FieldType.NUMBER, "x")))),
             )
             load()
 
             val field = viewModel.uiState.value.executions.single().extractedFields.single()
-            field.fieldName shouldBe null
+            field.fieldName shouldBe "Old merchant"
             field.isFieldDeleted shouldBe true
-            field.fieldType shouldBe RuleField.FieldType.STRING
-            field.fieldId shouldBe "f-gone"
+            field.fieldType shouldBe RuleField.FieldType.NUMBER
+            field.fieldId shouldBe null
+            field.value shouldBe "x"
         }
 
         @Test
@@ -449,8 +463,8 @@ class NotificationDetailViewModelTest {
             }
 
             val after = ruleExecutionRepository.currentExecutions("notif-1").single()
-            after.extractedData shouldBe mapOf("f-amount" to "123")
-            after.copy(extractedData = before.extractedData) shouldBe before
+            after.extractedValues.map { it.ruleFieldId to it.valueText } shouldBe listOf("f-amount" to "123")
+            after.copy(extractedValues = before.extractedValues) shouldBe before
             ruleExecutionRepository.appliedUpdates.single().single().executionId shouldBe before.id
             viewModel.uiState.value.preview shouldBe null
             viewModel.uiState.value.isApplyingUpdate shouldBe false
@@ -514,7 +528,7 @@ class NotificationDetailViewModelTest {
 
             (viewModel.uiState.value.preview != null) shouldBe true
             viewModel.uiState.value.isApplyingUpdate shouldBe false
-            ruleExecutionRepository.currentExecutions("notif-1").single().extractedData shouldBe mapOf("f-amount" to "99")
+            ruleExecutionRepository.currentExecutions("notif-1").single().extractedValues.single().valueText shouldBe "99"
         }
     }
 

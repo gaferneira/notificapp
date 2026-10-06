@@ -341,19 +341,22 @@ data class Rule(
 data class RuleExecution(
     val id: String,
     val notificationId: String,
-    val ruleId: String,
-    val extractedData: Map<String, String>,
+    val ruleId: String?, // null once the rule was deleted (history is kept)
     val triggeredActions: List<String>,
     val triggeredRuleActions: List<RuleAction> = emptyList(),
     val actionOutcomes: Map<String, ActionOutcome> = emptyMap(), // actionId -> SUCCESS/FAILED/SKIPPED
+    val extractedValues: List<ExtractedFieldValue> = emptyList(), // loaded from extracted_field_values (Room @Relation)
     val createdAt: Long = System.currentTimeMillis(),
 )
 
-// Typed extracted value (one row per field per execution), used for filtering
+// Typed extracted value (one row per field per execution) - the single source of extracted data.
+// fieldName/fieldType are snapshots, so a value stays readable after its field is removed.
 data class ExtractedFieldValue(
     val id: String,
     val ruleExecutionId: String,
-    val ruleFieldId: String,
+    val ruleFieldId: String?, // null once the field was removed
+    val fieldName: String,
+    val fieldType: RuleField.FieldType,
     val valueText: String?,
     val valueNumber: Double?,
     val valueDate: Long?,

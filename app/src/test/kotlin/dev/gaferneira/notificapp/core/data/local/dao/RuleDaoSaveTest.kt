@@ -110,7 +110,6 @@ class RuleDaoSaveTest {
                 notificationId = NOTIFICATION_ID,
                 ruleId = RULE_ID,
                 ruleName = "Original",
-                extractedData = "{}",
                 triggeredActions = "[]",
             ),
         )
@@ -141,7 +140,6 @@ class RuleDaoSaveTest {
         actionId = ACTION_ID,
         name = id,
         fieldType = "STRING",
-        methodType = "REGEX",
         methodConfig = "{}",
     )
 

@@ -179,7 +179,7 @@ private fun FieldDto.toDomain(): RuleField = RuleField(
     isRequired = isRequired,
 )
 
-private fun ExtractionMethod.toDto(): ExtractionMethodDto = when (this) {
+internal fun ExtractionMethod.toDto(): ExtractionMethodDto = when (this) {
     is ExtractionMethod.FixedPosition -> ExtractionMethodDto.FixedPosition(startIndex, endIndex)
     is ExtractionMethod.TextBetweenAnchors -> ExtractionMethodDto.TextBetweenAnchors(startAnchor, endAnchor)
     is ExtractionMethod.RegexPattern -> ExtractionMethodDto.RegexPattern(pattern, captureGroup)
@@ -193,7 +193,7 @@ private fun ExtractionMethod.toDto(): ExtractionMethodDto = when (this) {
     ExtractionMethod.SmartCodeDetection -> ExtractionMethodDto.SmartCodeDetection
 }
 
-private fun ExtractionMethodDto.toDomain(): ExtractionMethod = when (this) {
+internal fun ExtractionMethodDto.toDomain(): ExtractionMethod = when (this) {
     is ExtractionMethodDto.FixedPosition -> ExtractionMethod.FixedPosition(startIndex, endIndex)
     is ExtractionMethodDto.TextBetweenAnchors -> ExtractionMethod.TextBetweenAnchors(startAnchor, endAnchor)
     is ExtractionMethodDto.RegexPattern -> ExtractionMethod.RegexPattern(pattern, captureGroup)

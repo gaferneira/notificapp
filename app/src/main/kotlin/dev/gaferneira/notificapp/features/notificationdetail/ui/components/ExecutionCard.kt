@@ -169,14 +169,12 @@ private fun ExtractedFieldRow(field: ExtractedFieldDisplay, modifier: Modifier =
             itemVerticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = field.fieldName ?: stringResource(R.string.notification_detail_removed_field),
+                text = field.fieldName,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 fontStyle = if (field.isFieldDeleted) FontStyle.Italic else null,
             )
-            if (!field.isFieldDeleted) {
-                TypeChip(stringResource(field.fieldType.labelRes()))
-            }
+            TypeChip(stringResource(field.fieldType.labelRes()))
         }
         SelectionContainer {
             Text(

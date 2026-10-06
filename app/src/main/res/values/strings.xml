@@ -108,7 +108,6 @@
     <string name="notification_detail_dry_run_note">Dry run: actions did not run.</string>
     <string name="notification_detail_removed_content_note">Removed the notification content</string>
     <string name="notification_detail_extracted_data">Extracted data</string>
-    <string name="notification_detail_removed_field">Removed field</string>
     <string name="notification_detail_field_type_string">Text</string>
     <string name="notification_detail_field_type_number">Number</string>
     <string name="notification_detail_field_type_date">Date</string>

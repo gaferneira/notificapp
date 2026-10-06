@@ -173,7 +173,6 @@ private fun testExecution(
     ruleId = ruleId,
     ruleName = "Rule $ruleId",
     notificationId = notificationId,
-    extractedData = "{}",
     triggeredActions = "[]",
     wasDryRun = wasDryRun,
     createdAt = createdAt,

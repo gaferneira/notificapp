@@ -829,7 +829,6 @@
     <string name="notification_detail_dry_run_note">Simulación: las acciones no se ejecutaron.</string>
     <string name="notification_detail_removed_content_note">Eliminó el contenido de la notificación</string>
     <string name="notification_detail_extracted_data">Datos extraídos</string>
-    <string name="notification_detail_removed_field">Campo eliminado</string>
     <string name="notification_detail_field_type_string">Texto</string>
     <string name="notification_detail_field_type_number">Número</string>
     <string name="notification_detail_field_type_date">Fecha</string>

@@ -117,16 +117,17 @@ object NotificationDetailContract {
     /**
      * Display data for a stored extracted value.
      *
-     * @property fieldName `null` when the field no longer exists on the rule; the UI shows a
-     *   "removed field" fallback. [fieldType] is then [RuleField.FieldType.STRING].
+     * @property fieldId The field definition's id, or `null` when the field was removed from the rule.
+     * @property fieldName The field's current name, or the name snapshotted at extraction time when
+     *   the field was removed. [fieldType] follows the same rule.
      */
     data class ExtractedFieldDisplay(
-        val fieldId: String,
-        val fieldName: String?,
+        val fieldId: String?,
+        val fieldName: String,
         val fieldType: RuleField.FieldType,
         val value: String,
     ) {
-        val isFieldDeleted: Boolean get() = fieldName == null
+        val isFieldDeleted: Boolean get() = fieldId == null
     }
 
     /**

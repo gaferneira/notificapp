@@ -40,7 +40,6 @@ private fun sampleExecution(id: String, name: String, ruleDeleted: Boolean, dryR
     notificationId = "n1",
     ruleId = "r-$id".takeUnless { ruleDeleted },
     ruleName = name,
-    extractedData = mapOf("amount" to "42.50"),
     triggeredActions = listOf("a1", "a2"),
     wasDryRun = dryRun,
 )
@@ -52,7 +51,7 @@ private fun sampleDetails(id: String, name: String, ruleDeleted: Boolean = false
     extractedFields = listOf(
         ExtractedFieldDisplay("amount", "Amount", FieldType.NUMBER, "42.50"),
         ExtractedFieldDisplay("when", "Purchase date", FieldType.DATE, "2026-10-05"),
-        ExtractedFieldDisplay("gone", null, FieldType.STRING, "Corner Cafe"),
+        ExtractedFieldDisplay(null, "Merchant", FieldType.STRING, "Corner Cafe"),
     ),
     triggeredActions = listOf(
         TriggeredActionDisplay("a1", ActionType.SAVE_DATA, if (dryRun) null else ActionOutcome.SUCCESS),

@@ -1,5 +1,7 @@
 package dev.gaferneira.notificapp.core.data.local.mapper
 
+import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionWithValues
+import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.RuleExecution
@@ -15,9 +17,6 @@ internal object RuleExecutionMapper {
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
-
-    /** Serialize an `extractedData` map exactly as [toEntity] stores it. */
-    fun encodeExtractedData(extractedData: Map<String, String>): String = json.encodeToString(extractedData)
 
     /** Decode a stored `action_outcomes` column; malformed JSON yields an empty map. */
     fun decodeActionOutcomes(raw: String): Map<String, ActionOutcome> = runCatching {
@@ -38,7 +37,6 @@ internal object RuleExecutionMapper {
         notificationId = domain.notificationId,
         ruleId = domain.ruleId,
         ruleName = domain.ruleName,
-        extractedData = encodeExtractedData(domain.extractedData),
         triggeredActions = json.encodeToString(domain.triggeredActions),
         actionOutcomes = domain.actionOutcomes.takeIf { it.isNotEmpty() }?.let { json.encodeToString(it) },
         wasDryRun = domain.wasDryRun,
@@ -49,19 +47,33 @@ internal object RuleExecutionMapper {
      * Convert a RuleExecutionEntity to a RuleExecution domain model.
      *
      * @param entity The database entity
+     * @param values The execution's extracted field values (empty when the caller does not need them)
      * @return The domain model
      */
-    fun toDomain(entity: RuleExecutionEntity): RuleExecution = RuleExecution(
+    fun toDomain(
+        entity: RuleExecutionEntity,
+        values: List<ExtractedFieldValueEntity> = emptyList(),
+    ): RuleExecution = RuleExecution(
         id = entity.id,
         notificationId = entity.notificationId,
         ruleId = entity.ruleId,
         ruleName = entity.ruleName,
-        extractedData = json.decodeFromString(entity.extractedData),
+        extractedValues = ExtractedFieldValueMapper.toDomainList(values),
         triggeredActions = json.decodeFromString(entity.triggeredActions),
         actionOutcomes = entity.actionOutcomes?.let { json.decodeFromString<Map<String, ActionOutcome>>(it) } ?: emptyMap(),
         wasDryRun = entity.wasDryRun,
         createdAt = entity.createdAt,
     )
+
+    /**
+     * Convert executions loaded with their values (see `RuleExecutionDao.observeExecutionsForNotification`)
+     * to domain models, skipping rows that fail to decode like [toDomainList].
+     */
+    fun withValuesToDomainList(rows: List<RuleExecutionWithValues>): List<RuleExecution> = rows.mapNotNull { row ->
+        runCatching { toDomain(row.execution, row.values) }
+            .onFailure { e -> Timber.e(e, "Failed to decode rule execution ${row.execution.id}") }
+            .getOrNull()
+    }
 
     /**
      * Convert a list of RuleExecution domain models to entities.

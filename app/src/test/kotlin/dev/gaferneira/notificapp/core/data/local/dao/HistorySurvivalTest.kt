@@ -11,6 +11,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.RuleConditionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
+import dev.gaferneira.notificapp.core.data.local.mapper.RuleExecutionMapper
 import dev.gaferneira.notificapp.domain.model.RuleField
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.first
@@ -94,6 +95,39 @@ class HistorySurvivalTest {
         values.getValue("value-amount").fieldName shouldBe "Amount"
         values.getValue("value-amount").fieldType shouldBe "CURRENCY"
         values.getValue("value-label").ruleFieldId shouldBe FIELD_LABEL
+    }
+
+    @Test
+    fun `executions load their values in one relation query, a removed field shown by its snapshot name`() = runBlocking<Unit> {
+        seed()
+        ruleDao.saveRuleWithRelatedData(
+            rule = rule(),
+            fields = listOf(field(FIELD_LABEL, "Label", "STRING")),
+            conditions = listOf(condition()),
+            actions = listOf(action()),
+            apps = null,
+        )
+
+        val rows = database.ruleExecutionDao().observeExecutionsForNotification(NOTIFICATION_ID).first()
+        val execution = RuleExecutionMapper.withValuesToDomainList(rows).single()
+
+        execution.id shouldBe EXECUTION_ID
+        val byId = execution.extractedValues.associateBy { it.id }
+        byId.keys shouldBe setOf("value-amount", "value-label")
+        byId.getValue("value-amount").ruleFieldId shouldBe null
+        byId.getValue("value-amount").fieldName shouldBe "Amount"
+        byId.getValue("value-amount").fieldType shouldBe RuleField.FieldType.CURRENCY
+        byId.getValue("value-label").ruleFieldId shouldBe FIELD_LABEL
+    }
+
+    @Test
+    fun `an execution without extracted values loads with an empty value list`() = runBlocking<Unit> {
+        seed()
+        database.extractedFieldValueDao().deleteValuesForExecution(EXECUTION_ID)
+
+        val rows = database.ruleExecutionDao().observeExecutionsForNotification(NOTIFICATION_ID).first()
+
+        RuleExecutionMapper.withValuesToDomainList(rows).single().extractedValues shouldBe emptyList()
     }
 
     @Test
@@ -202,7 +236,6 @@ class HistorySurvivalTest {
         notificationId = NOTIFICATION_ID,
         ruleId = ruleId,
         ruleName = ruleName,
-        extractedData = "{}",
         triggeredActions = "[]",
         createdAt = 1_000L,
     )
@@ -229,7 +262,6 @@ class HistorySurvivalTest {
         actionId = ACTION_ID,
         name = name,
         fieldType = type,
-        methodType = "REGEX",
         methodConfig = "{}",
     )
 

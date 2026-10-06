@@ -1,8 +1,12 @@
 package dev.gaferneira.notificapp.core.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Query
+import androidx.room.Relation
+import androidx.room.Transaction
 import androidx.room.Upsert
+import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.domain.model.RuleActivity
 import dev.gaferneira.notificapp.domain.model.TrendPoint
@@ -35,10 +39,15 @@ internal interface RuleExecutionDao {
     suspend fun getExecutionsForNotification(notificationId: String): List<RuleExecutionEntity>
 
     /**
-     * Get executions for a specific notification as a Flow.
+     * Get executions for a specific notification as a Flow, each with its extracted field values.
+     *
+     * `@Relation` makes Room run one extra `extracted_field_values ... WHERE rule_execution_id IN (...)`
+     * query for the whole page of executions (inside one transaction), so there is no per-execution
+     * fan-out. The flow re-emits when either table changes.
      */
+    @Transaction
     @Query("SELECT * FROM rule_executions WHERE notification_id = :notificationId ORDER BY created_at DESC")
-    fun observeExecutionsForNotification(notificationId: String): Flow<List<RuleExecutionEntity>>
+    fun observeExecutionsForNotification(notificationId: String): Flow<List<RuleExecutionWithValues>>
 
     /**
      * Get executions for a specific rule.
@@ -82,13 +91,6 @@ internal interface RuleExecutionDao {
      */
     @Upsert
     suspend fun upsertAll(executions: List<RuleExecutionEntity>)
-
-    /**
-     * Replace only the serialized `extracted_data` of one execution. Outcomes, triggered actions,
-     * dry-run flag and `created_at` are deliberately untouched.
-     */
-    @Query("UPDATE rule_executions SET extracted_data = :extractedData WHERE id = :id")
-    suspend fun updateExtractedData(id: String, extractedData: String)
 
     /**
      * Delete executions for a specific rule.
@@ -215,6 +217,13 @@ internal interface RuleExecutionDao {
     )
     fun observeTopRulesSince(since: Long, limit: Int): Flow<List<RuleActivity>>
 }
+
+/** An execution together with its extracted field values (see [RuleExecutionDao.observeExecutionsForNotification]). */
+internal data class RuleExecutionWithValues(
+    @Embedded val execution: RuleExecutionEntity,
+    @Relation(parentColumn = "id", entityColumn = "rule_execution_id")
+    val values: List<ExtractedFieldValueEntity>,
+)
 
 /** Projection for [RuleExecutionDao.observeRuleStats]. */
 internal data class RuleStatsRow(

@@ -17,7 +17,7 @@ import androidx.room.PrimaryKey
  * @property name Human-readable name for the field
  * @property fieldType The type of data this field represents (STRING, NUMBER, DATE, CURRENCY, BOOLEAN)
  * @property methodType The type of extraction method (discriminator)
- * @property methodConfig JSON configuration for the specific extraction method
+ * @property methodConfig JSON `ExtractionMethodDto` payload (its `type` property discriminates the method)
  * @property isRequired Whether this field is required for a match
  */
 @Entity(
@@ -48,11 +48,8 @@ internal data class RuleFieldEntity(
     @ColumnInfo(name = "field_type")
     val fieldType: String,
 
-    @ColumnInfo(name = "method_type")
-    val methodType: String,
-
     @ColumnInfo(name = "method_config")
-    val methodConfig: String, // JSON serialized ExtractionMethod
+    val methodConfig: String, // JSON ExtractionMethodDto
 
     @ColumnInfo(name = "is_required")
     val isRequired: Boolean = false,
