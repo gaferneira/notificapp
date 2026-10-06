@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Upsert
 import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleConditionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleEntity
@@ -89,10 +90,11 @@ internal interface RuleDao {
     suspend fun getActiveRulesForApp(packageName: String): List<RuleEntity>
 
     /**
-     * Insert or update a rule.
+     * Insert or update a rule row in place. Never use REPLACE here: it deletes the existing row
+     * first, and the FK `ON DELETE CASCADE` on `rule_executions` would wipe the rule's history.
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(rule: RuleEntity)
+    @Upsert
+    suspend fun upsert(rule: RuleEntity)
 
     /**
      * Insert or update target app associations.
@@ -145,7 +147,7 @@ internal interface RuleDao {
 
     @Transaction
     suspend fun saveRuleWithApps(rule: RuleEntity, apps: List<String>?) {
-        insert(rule)
+        upsert(rule)
         deleteTargetAppsForRule(rule.id)
         if (!apps.isNullOrEmpty()) {
             insertTargetApps(
@@ -162,7 +164,7 @@ internal interface RuleDao {
      */
     @Transaction
     suspend fun updateRule(rule: RuleEntity) {
-        insert(rule)
+        upsert(rule)
     }
 
     // ========== Rule Condition Operations ==========
@@ -187,16 +189,20 @@ internal interface RuleDao {
     fun observeConditionsForRule(ruleId: String): Flow<List<RuleConditionEntity>>
 
     /**
-     * Insert or update conditions.
+     * Insert or update conditions in place (no delete, so FK cascades never fire).
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertConditions(conditions: List<RuleConditionEntity>)
+    @Upsert
+    suspend fun upsertConditions(conditions: List<RuleConditionEntity>)
 
     /**
      * Delete all conditions for a rule.
      */
     @Query("DELETE FROM rule_conditions WHERE rule_id = :ruleId")
     suspend fun deleteConditionsForRule(ruleId: String)
+
+    /** Delete the rule's conditions whose id is not in [keepIds]. */
+    @Query("DELETE FROM rule_conditions WHERE rule_id = :ruleId AND id NOT IN (:keepIds)")
+    suspend fun deleteConditionsForRuleExcept(ruleId: String, keepIds: List<String>)
 
     // ========== Rule Action Operations ==========
 
@@ -230,16 +236,20 @@ internal interface RuleDao {
     suspend fun getActionsByTypeReferencingUri(type: String, uri: String, excludingActionId: String): List<RuleActionEntity>
 
     /**
-     * Insert or update actions.
+     * Insert or update actions in place (no delete, so FK cascades never fire).
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertActions(actions: List<RuleActionEntity>)
+    @Upsert
+    suspend fun upsertActions(actions: List<RuleActionEntity>)
 
     /**
      * Delete all actions for a rule.
      */
     @Query("DELETE FROM rule_actions WHERE rule_id = :ruleId")
     suspend fun deleteActionsForRule(ruleId: String)
+
+    /** Delete the rule's actions whose id is not in [keepIds]; cascades to their `rule_fields`. */
+    @Query("DELETE FROM rule_actions WHERE rule_id = :ruleId AND id NOT IN (:keepIds)")
+    suspend fun deleteActionsForRuleExcept(ruleId: String, keepIds: List<String>)
 
     // ========== Rule Field Operations ==========
 
@@ -257,10 +267,11 @@ internal interface RuleDao {
     suspend fun getFieldsForActions(actionIds: List<String>): List<RuleFieldEntity>
 
     /**
-     * Insert or update fields.
+     * Insert or update fields in place (no delete, so FK cascades to `extracted_field_values`
+     * never fire).
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertFields(fields: List<RuleFieldEntity>)
+    @Upsert
+    suspend fun upsertFields(fields: List<RuleFieldEntity>)
 
     /**
      * Delete all fields owned by a specific action. Not required for the combined save/delete
@@ -270,8 +281,28 @@ internal interface RuleDao {
     @Query("DELETE FROM rule_fields WHERE action_id = :actionId")
     suspend fun deleteFieldsForAction(actionId: String)
 
+    /** Delete fields of any of the rule's actions whose id is not in [keepIds]. */
+    @Query(
+        """
+        DELETE FROM rule_fields
+        WHERE action_id IN (SELECT id FROM rule_actions WHERE rule_id = :ruleId)
+          AND id NOT IN (:keepIds)
+        """,
+    )
+    suspend fun deleteFieldsForRuleExcept(ruleId: String, keepIds: List<String>)
+
+    /** Delete the rule's target apps whose package is not in [keepPackages]. */
+    @Query("DELETE FROM rule_target_apps WHERE rule_id = :ruleId AND package_name NOT IN (:keepPackages)")
+    suspend fun deleteTargetAppsForRuleExcept(ruleId: String, keepPackages: List<String>)
+
     // ========== Combined Operations ==========
 
+    /**
+     * Save a rule and its children by diff-sync: rows are upserted in place and only the ids that
+     * are no longer present are deleted. A delete-all/reinsert (or `REPLACE`) would cascade through
+     * `rule_executions` and `extracted_field_values` and erase the rule's execution history on
+     * every edit.
+     */
     @Transaction
     suspend fun saveRuleWithRelatedData(
         rule: RuleEntity,
@@ -280,28 +311,17 @@ internal interface RuleDao {
         actions: List<RuleActionEntity>,
         apps: List<String>?,
     ) {
-        insert(rule)
-        // Deleting actions cascades to their owned rule_fields rows (FK ON DELETE CASCADE), so
-        // fields are re-inserted under the fresh action ids without a separate delete-by-rule step.
-        deleteConditionsForRule(rule.id)
-        deleteActionsForRule(rule.id)
-        deleteTargetAppsForRule(rule.id)
-        if (conditions.isNotEmpty()) {
-            insertConditions(conditions)
-        }
-        if (actions.isNotEmpty()) {
-            insertActions(actions)
-        }
-        if (fields.isNotEmpty()) {
-            insertFields(fields)
-        }
-        if (!apps.isNullOrEmpty()) {
-            insertTargetApps(
-                apps.map { packageName ->
-                    RuleTargetAppEntity(rule.id, packageName)
-                },
-            )
-        }
+        upsert(rule)
+        deleteConditionsForRuleExcept(rule.id, conditions.map { it.id })
+        // Deleting a stale action cascades to its own rule_fields (and their extracted values).
+        deleteActionsForRuleExcept(rule.id, actions.map { it.id })
+        upsertConditions(conditions)
+        upsertActions(actions)
+        upsertFields(fields)
+        deleteFieldsForRuleExcept(rule.id, fields.map { it.id })
+        val packages = apps.orEmpty()
+        deleteTargetAppsForRuleExcept(rule.id, packages)
+        insertTargetApps(packages.map { RuleTargetAppEntity(rule.id, it) })
     }
 
     /**

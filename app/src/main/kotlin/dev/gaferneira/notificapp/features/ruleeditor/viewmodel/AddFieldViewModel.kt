@@ -67,6 +67,7 @@ class AddFieldViewModel @Inject constructor(
             val methodType = mapMethodToType(field.method)
             setState {
                 copy(
+                    fieldId = field.id,
                     fieldName = field.name,
                     selectedMethodType = methodType,
                     sampleText = sampleText,

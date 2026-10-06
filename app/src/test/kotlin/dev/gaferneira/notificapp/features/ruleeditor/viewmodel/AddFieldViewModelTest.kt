@@ -462,6 +462,28 @@ class AddFieldViewModelTest {
         }
 
         @Test
+        fun `saving an edited field keeps its original id`() = runTest(testDispatcher) {
+            // Given: an existing field loaded for editing
+            val field = createTestField(
+                id = "existing-field-id",
+                name = "Amount",
+                method = ExtractionMethod.TextBetweenAnchors(startAnchor = "Total: ", endAnchor = " end"),
+            )
+            viewModel.onEvent(UiEvent.Initialize(field = field, notification = null))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.effect.test {
+                // When: saving without changing the identity
+                viewModel.onEvent(UiEvent.OnSaveClicked)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                // Then: the returned field keeps the id, so its rule_fields row (and history) survives
+                awaitItem().shouldBeInstanceOf<UiEffect.ReturnWithField>().field.id shouldBe "existing-field-id"
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
         fun `save still returns the field when the extraction test fails against the sample text`() = runTest(testDispatcher) {
             // Given: valid field name and anchors that do not match the (empty) sample text
             viewModel.onEvent(UiEvent.OnFieldNameChange("Amount"))

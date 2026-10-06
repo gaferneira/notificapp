@@ -139,7 +139,7 @@ class HomeQueriesInstrumentedTest {
     }
 
     private suspend fun insertMinimalRuleAndNotification(ruleId: String, notificationId: String) {
-        database.ruleDao().insert(testRule(id = ruleId))
+        database.ruleDao().upsert(testRule(id = ruleId))
         database.notificationDao().insert(testNotification(id = notificationId, packageName = "com.a", timestamp = 1_000L))
     }
 }

@@ -19,6 +19,11 @@ object AddFieldContract {
      * UI State for the add field screen.
      */
     data class UiState(
+        /**
+         * Id of the field being built. Fresh for a new field; set to the existing field's id when
+         * editing, so saving keeps the same `rule_fields` row (and its extracted values).
+         */
+        val fieldId: String = UUID.randomUUID().toString(),
         /** Field name */
         val fieldName: String = "",
         /** Selected extraction method type */
@@ -138,7 +143,7 @@ object AddFieldContract {
         /** Build RuleField from current state */
         val extractionField: RuleField
             get() = RuleField(
-                id = UUID.randomUUID().toString(),
+                id = fieldId,
                 name = fieldName.trim(),
                 method = extractionMethod,
                 isRequired = false,

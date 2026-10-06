@@ -72,8 +72,8 @@ class InsightsQueriesInstrumentedTest {
     fun observeNumericTotalsSince_sums_only_non_null_NUMBER_and_CURRENCY_values() = runBlocking {
         seedRule("r1", "Rule")
         seedNotification("n1", "com.a", "App", 1_000L)
-        database.ruleDao().insertActions(listOf(RuleActionEntity(id = "a1", ruleId = "r1", type = "SAVE_DATA")))
-        database.ruleDao().insertFields(
+        database.ruleDao().upsertActions(listOf(RuleActionEntity(id = "a1", ruleId = "r1", type = "SAVE_DATA")))
+        database.ruleDao().upsertFields(
             listOf(
                 field("f-amount", "Amount", "CURRENCY"),
                 field("f-text", "Label", "STRING"),
@@ -157,7 +157,7 @@ class InsightsQueriesInstrumentedTest {
     }
 
     private suspend fun seedRule(id: String, name: String, isActive: Boolean = true) {
-        database.ruleDao().insert(RuleEntity(id = id, name = name, description = null, category = null, isActive = isActive))
+        database.ruleDao().upsert(RuleEntity(id = id, name = name, description = null, category = null, isActive = isActive))
     }
 
     private suspend fun seedNotification(id: String, pkg: String, appName: String, timestamp: Long) {
