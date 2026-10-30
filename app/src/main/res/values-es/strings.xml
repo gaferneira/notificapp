@@ -101,9 +101,9 @@
     <!-- Home - Last 7 Days Stats -->
     <string name="home_last_7_days_title">Últimos 7 días</string>
     <string name="home_stat_captured">Capturadas</string>
-    <string name="home_stat_rules_fired">Reglas activadas</string>
+    <string name="home_stat_handled">Gestionadas por reglas</string>
     <string name="home_stat_captured_open">Abrir notificaciones capturadas</string>
-    <string name="home_stat_rules_fired_open">Abrir notificaciones gestionadas por reglas</string>
+    <string name="home_stat_handled_open">Abrir notificaciones gestionadas por reglas</string>
     <plurals name="home_week_summary">
         <item quantity="one">%d notificación gestionada por tus reglas en los últimos 7 días</item>
         <item quantity="many">%d de notificaciones gestionadas por tus reglas en los últimos 7 días</item>
@@ -209,6 +209,7 @@
     <string name="rule_details_error_delete">No se pudo eliminar la regla</string>
 
     <!-- Rules list -->
+    <string name="nav_home">Inicio</string>
     <string name="rules_title">Reglas</string>
     <string name="rules_filter_cd">Filtrar y ordenar</string>
     <string name="rules_more_options">Más opciones</string>
@@ -309,6 +310,7 @@
     <!-- Inbox filter sheet -->
     <string name="inbox_filter_cd">Filtrar notificaciones</string>
     <string name="inbox_filter_section_status">Estado</string>
+    <string name="inbox_filter_chip_since">Desde el %1$s</string>
     <string name="inbox_filter_section_apps">Apps</string>
     <string name="inbox_filter_apps_any">Cualquier app</string>
     <string name="inbox_filter_apps_group_with">Apps con notificaciones</string>
@@ -515,10 +517,21 @@
     <string name="add_field_cancel">Cancelar</string>
     <string name="add_field_name">Nombre del campo</string>
     <string name="add_field_name_hint">p. ej., Monto, Fecha, ID de pedido</string>
+    <string name="add_field_type">Tipo</string>
+    <string name="add_field_type_string">Texto</string>
+    <string name="add_field_type_number">Número</string>
+    <string name="add_field_type_date">Fecha</string>
+    <string name="add_field_type_currency">Moneda</string>
+    <string name="add_field_type_boolean">Sí/No</string>
+    <string name="add_field_unit">Unidad (opcional)</string>
+    <string name="add_field_unit_hint_currency">p. ej., SEK</string>
+    <string name="add_field_unit_hint_number">p. ej., km, GB, %</string>
+    <string name="add_field_unit_support_currency">Código de moneda que se usa cuando el símbolo es ambiguo ($ o kr)</string>
     <string name="add_field_extraction_method">Método de extracción</string>
     <string name="add_field_smart_detection">DETECCIÓN INTELIGENTE</string>
     <string name="add_field_smart_amount_text">Este método detectará automáticamente los montos de dinero en el texto.</string>
     <string name="add_field_smart_date_text">Este método detectará automáticamente las fechas en el texto.</string>
+    <string name="add_field_smart_code_text">Este método detectará automáticamente los códigos de verificación (OTP, PIN) en el texto.</string>
     <string name="add_field_preview_result">RESULTADO DE LA VISTA PREVIA</string>
     <string name="add_field_sample_text">Muestra de notificación:</string>
     <string name="add_field_preview_success">VALOR EXTRAÍDO</string>
@@ -544,6 +557,8 @@
     <string name="method_smart_amount_desc">Detecta automáticamente montos de dinero</string>
     <string name="method_smart_date">Detección inteligente de fechas</string>
     <string name="method_smart_date_desc">Detecta automáticamente fechas</string>
+    <string name="method_smart_code">Detección inteligente de códigos</string>
+    <string name="method_smart_code_desc">Detecta automáticamente códigos de verificación (OTP)</string>
     <string name="error_field_name_required">El nombre del campo es obligatorio</string>
     <string name="error_start_anchor_required">El ancla inicial es obligatoria</string>
     <string name="error_end_anchor_required">El ancla final es obligatoria</string>
@@ -824,7 +839,6 @@
     <string name="notification_detail_dry_run_note">Simulación: las acciones no se ejecutaron.</string>
     <string name="notification_detail_removed_content_note">Eliminó el contenido de la notificación</string>
     <string name="notification_detail_extracted_data">Datos extraídos</string>
-    <string name="notification_detail_removed_field">Campo eliminado</string>
     <string name="notification_detail_field_type_string">Texto</string>
     <string name="notification_detail_field_type_number">Número</string>
     <string name="notification_detail_field_type_date">Fecha</string>
@@ -893,6 +907,57 @@
     <string name="data_filter_apply">Aplicar</string>
     <string name="data_filter_unknown_rule">Regla desconocida</string>
     <string name="data_filter_date_range_chip">%1$s – %2$s</string>
+    <string name="data_filter_date_since_chip">Desde el %1$s</string>
+    <string name="data_title">Datos extraídos</string>
+    <string name="data_back_cd">Volver</string>
+    <string name="data_more_cd">Más opciones</string>
+    <string name="data_export_cd">Exportar datos</string>
+    <string name="data_export_csv">Exportar como CSV</string>
+    <string name="data_export_json">Exportar como JSON</string>
+    <string name="data_export_chooser_title">Compartir datos exportados</string>
+    <string name="data_sort_menu_title">Ordenar por</string>
+    <string name="data_sort_date_desc">Más recientes primero</string>
+    <string name="data_sort_date_asc">Más antiguos primero</string>
+    <string name="data_sort_rule_asc">Regla (A-Z)</string>
+    <string name="data_sort_rule_desc">Regla (Z-A)</string>
+    <string name="data_sort_app_asc">App (A-Z)</string>
+    <string name="data_sort_app_desc">App (Z-A)</string>
+    <string name="data_sort_field_asc">Campo (A-Z)</string>
+    <string name="data_sort_field_desc">Campo (Z-A)</string>
+    <string name="data_delete_filtered_menu">Eliminar datos filtrados…</string>
+    <string name="data_search_hint">Buscar datos extraídos…</string>
+    <string name="data_search_clear_cd">Borrar búsqueda</string>
+    <string name="data_list_error_title">Error al cargar los datos</string>
+    <string name="data_list_error_unknown">Error desconocido</string>
+    <string name="data_list_error_retry">Reintentar</string>
+    <string name="data_row_delete_cd">Eliminar entrada</string>
+    <string name="data_row_meta">%1$s · %2$s · %3$s</string>
+    <string name="data_row_value_empty">—</string>
+    <string name="data_delete_all_title">¿Eliminar todos los datos?</string>
+    <string name="data_delete_filtered_title">¿Eliminar los datos filtrados?</string>
+    <plurals name="data_delete_all_message">
+        <item quantity="one">Se eliminarán de forma permanente todos los datos extraídos (%d entrada).</item>
+        <item quantity="other">Se eliminarán de forma permanente todos los datos extraídos (%d entradas).</item>
+    </plurals>
+    <plurals name="data_delete_filtered_message">
+        <item quantity="one">Se eliminará de forma permanente %d entrada que coincide con los filtros actuales.</item>
+        <item quantity="other">Se eliminarán de forma permanente %d entradas que coinciden con los filtros actuales.</item>
+    </plurals>
+    <string name="data_delete_none_filtered">Ninguna entrada coincide con los filtros actuales.</string>
+    <string name="data_delete_none_all">No hay datos extraídos que eliminar.</string>
+    <string name="data_delete_confirm">Eliminar</string>
+    <string name="data_delete_ok">Aceptar</string>
+    <string name="data_delete_cancel">Cancelar</string>
+    <string name="data_undo_deleted">Entrada eliminada</string>
+    <string name="data_undo_action">Deshacer</string>
+    <plurals name="data_bulk_deleted">
+        <item quantity="one">Se eliminó %d entrada</item>
+        <item quantity="other">Se eliminaron %d entradas</item>
+    </plurals>
+    <string name="data_error_export">No se pudieron exportar los datos</string>
+    <string name="data_error_delete">No se pudo eliminar la entrada</string>
+    <string name="data_error_delete_entries">No se pudieron eliminar las entradas</string>
+    <string name="data_error_preview_delete">No se pudo calcular la eliminación</string>
 
     <!-- Settings -->
     <string name="settings_title">Ajustes</string>
@@ -957,4 +1022,107 @@
     <string name="settings_retry">Reintentar</string>
     <string name="home_banner_monitoring_paused">Monitoreo en pausa</string>
     <string name="home_banner_monitoring_paused_resume">Reanudar</string>
+    <!-- Insights -->
+    <string name="insights_title">Estadísticas</string>
+    <string name="insights_period_7_days">7 días</string>
+    <string name="insights_period_30_days">30 días</string>
+    <string name="insights_tile_captured">Capturadas</string>
+    <string name="insights_tile_handled">Gestionadas por reglas</string>
+    <string name="insights_tile_actions_run">Acciones ejecutadas</string>
+    <string name="insights_tile_values_extracted">Valores extraídos</string>
+    <plurals name="insights_tile_actions_failed">
+        <item quantity="one">%d fallida</item>
+        <item quantity="many">%d de fallidas</item>
+        <item quantity="other">%d fallidas</item>
+    </plurals>
+    <string name="insights_section_activity">Actividad</string>
+    <string name="insights_chart_description">Ejecuciones de reglas por día, últimos %1$d días: total %2$d, máximo %3$d el %4$s</string>
+    <string name="insights_chart_description_empty">Ejecuciones de reglas por día, últimos %1$d días: ninguna</string>
+    <string name="insights_chart_subtitle_rule_runs">Ejecuciones de reglas por día</string>
+    <string name="insights_chart_summary">%1$s en total · %2$s por día · máximo %3$s el %4$s</string>
+    <string name="insights_chart_summary_empty">Sin ejecuciones de reglas en este período</string>
+    <string name="insights_chart_max">Máx. %1$s</string>
+    <plurals name="insights_chart_selection_rule_runs">
+        <item quantity="one">%2$s: %1$d ejecución de regla</item>
+        <item quantity="many">%2$s: %1$d de ejecuciones de reglas</item>
+        <item quantity="other">%2$s: %1$d ejecuciones de reglas</item>
+    </plurals>
+    <string name="insights_chart_metric_notifications">Notificaciones</string>
+    <string name="insights_chart_metric_handled">Gestionadas</string>
+    <string name="insights_chart_metric_rule_runs">Ejecuciones</string>
+    <string name="insights_chart_metric_actions_failed">Acciones fallidas</string>
+    <string name="insights_chart_subtitle_notifications">Notificaciones capturadas por día</string>
+    <string name="insights_chart_subtitle_handled">Notificaciones gestionadas por reglas por día</string>
+    <string name="insights_chart_subtitle_actions_failed">Acciones fallidas por día</string>
+    <string name="insights_chart_summary_empty_notifications">Sin notificaciones en este período</string>
+    <string name="insights_chart_summary_empty_handled">Sin notificaciones gestionadas en este período</string>
+    <string name="insights_chart_summary_empty_actions_failed">Sin acciones fallidas en este período</string>
+    <string name="insights_chart_description_notifications">Notificaciones capturadas por día, últimos %1$d días: total %2$d, máximo %3$d el %4$s</string>
+    <string name="insights_chart_description_handled">Notificaciones gestionadas por reglas por día, últimos %1$d días: total %2$d, máximo %3$d el %4$s</string>
+    <string name="insights_chart_description_actions_failed">Acciones fallidas por día, últimos %1$d días: total %2$d, máximo %3$d el %4$s</string>
+    <string name="insights_chart_description_empty_notifications">Notificaciones capturadas por día, últimos %1$d días: ninguna</string>
+    <string name="insights_chart_description_empty_handled">Notificaciones gestionadas por reglas por día, últimos %1$d días: ninguna</string>
+    <string name="insights_chart_description_empty_actions_failed">Acciones fallidas por día, últimos %1$d días: ninguna</string>
+    <plurals name="insights_chart_selection_notifications">
+        <item quantity="one">%2$s: %1$d notificación</item>
+        <item quantity="many">%2$s: %1$d de notificaciones</item>
+        <item quantity="other">%2$s: %1$d notificaciones</item>
+    </plurals>
+    <plurals name="insights_chart_selection_handled">
+        <item quantity="one">%2$s: %1$d notificación gestionada</item>
+        <item quantity="many">%2$s: %1$d de notificaciones gestionadas</item>
+        <item quantity="other">%2$s: %1$d notificaciones gestionadas</item>
+    </plurals>
+    <plurals name="insights_chart_selection_actions_failed">
+        <item quantity="one">%2$s: %1$d acción fallida</item>
+        <item quantity="many">%2$s: %1$d de acciones fallidas</item>
+        <item quantity="other">%2$s: %1$d acciones fallidas</item>
+    </plurals>
+    <string name="insights_section_totals">Totales extraídos</string>
+    <string name="insights_total_title">%1$s · %2$s</string>
+    <plurals name="insights_values_count">
+        <item quantity="one">%d valor</item>
+        <item quantity="many">%d de valores</item>
+        <item quantity="other">%d valores</item>
+    </plurals>
+    <string name="insights_section_rules">Reglas</string>
+    <plurals name="insights_rule_runs">
+        <item quantity="one">%d ejecución</item>
+        <item quantity="many">%d de ejecuciones</item>
+        <item quantity="other">%d ejecuciones</item>
+    </plurals>
+    <string name="insights_quiet_rules_title">Reglas inactivas</string>
+    <string name="insights_quiet_rule_hint">Sin ejecuciones en los últimos 30 días</string>
+    <string name="insights_section_actions">Acciones</string>
+    <string name="insights_action_sheet_title_all">Acciones por regla</string>
+    <string name="insights_action_sheet_empty">Sin resultados de acciones en este período</string>
+    <plurals name="insights_outcome_succeeded">
+        <item quantity="one">%d correcta</item>
+        <item quantity="many">%d de correctas</item>
+        <item quantity="other">%d correctas</item>
+    </plurals>
+    <plurals name="insights_outcome_skipped">
+        <item quantity="one">%d omitida</item>
+        <item quantity="many">%d de omitidas</item>
+        <item quantity="other">%d omitidas</item>
+    </plurals>
+    <string name="insights_section_webhooks">Webhooks</string>
+    <string name="insights_webhook_delivered">Entregado</string>
+    <string name="insights_webhook_config_error">Error de configuración</string>
+    <string name="insights_webhook_unreachable">Inaccesible</string>
+    <string name="insights_webhook_no_deliveries">Aún sin entregas</string>
+    <string name="insights_webhook_last_delivery">Última entrega %1$s</string>
+    <plurals name="insights_webhook_pending_retries">
+        <item quantity="one">%d reintento pendiente</item>
+        <item quantity="many">%d de reintentos pendientes</item>
+        <item quantity="other">%d reintentos pendientes</item>
+    </plurals>
+    <string name="insights_section_top_apps">Apps principales</string>
+    <string name="insights_browse_data">Explorar datos extraídos</string>
+    <string name="insights_error_title">Algo salió mal</string>
+    <string name="insights_error_message">No pudimos cargar tus estadísticas. Inténtalo de nuevo.</string>
+    <string name="insights_error_retry">Reintentar</string>
+    <string name="insights_empty_title">Aún no hay estadísticas</string>
+    <string name="insights_empty_message">Crea una regla y Notificapp empezará a mostrar lo que hace por ti.</string>
+    <string name="insights_empty_action">Ir a reglas</string>
 </resources>

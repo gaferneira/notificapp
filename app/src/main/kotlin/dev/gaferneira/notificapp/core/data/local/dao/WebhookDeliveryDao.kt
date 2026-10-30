@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import dev.gaferneira.notificapp.core.data.local.entity.WebhookDeliveryEntity
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Data Access Object for the `webhook_deliveries` queue/journal. Mirrors [WebhookDao]'s
@@ -14,7 +15,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.WebhookDeliveryEntity
 @Dao
 internal interface WebhookDeliveryDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) // replace-ok: leaf table, no cascade children
     suspend fun insert(delivery: WebhookDeliveryEntity)
 
     @Query("SELECT * FROM webhook_deliveries WHERE id = :id LIMIT 1")
@@ -27,6 +28,10 @@ internal interface WebhookDeliveryDao {
     @Query("SELECT * FROM webhook_deliveries")
     suspend fun getAllUnresolved(): List<WebhookDeliveryEntity>
 
+    /** Unresolved deliveries per webhook, re-emitting on every queue change. Webhooks with none are omitted. */
+    @Query("SELECT webhook_id AS webhookId, COUNT(*) AS count FROM webhook_deliveries GROUP BY webhook_id")
+    fun observeUnresolvedCounts(): Flow<List<WebhookPendingCount>>
+
     @Query("DELETE FROM webhook_deliveries WHERE id = :id")
     suspend fun deleteById(id: String)
 
@@ -36,3 +41,6 @@ internal interface WebhookDeliveryDao {
     )
     suspend fun updateFailure(id: String, failureType: String, attemptCount: Int, at: Long)
 }
+
+/** Projection for [WebhookDeliveryDao.observeUnresolvedCounts]. */
+internal data class WebhookPendingCount(val webhookId: String, val count: Int)

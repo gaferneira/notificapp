@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Defines the Home launch screen that replaces Inbox as the first bottom-nav destination: it surfaces monitoring health, a path to the first rule, weekly activity, and recent rule executions, so the app answers "is this working, what should I do next?" on open — without touching Inbox's own code or reachability.
+Defines the Home launch screen that replaces Inbox as the first bottom-nav destination: it surfaces monitoring health, a path to the first rule, last-7-days activity, and recent rule executions, so the app answers "is this working, what should I do next?" on open — without touching Inbox's own code or reachability.
 
 ## Requirements
 
 ### Requirement: Home replaces Inbox in the first bottom-nav slot
-`AppDestinations.HOME` SHALL occupy the first bottom-nav slot previously held by `AppDestinations.INBOX`. Inbox's screen, ViewModel, and contract code SHALL remain unmodified; only its nav-bar entry point moves.
+`AppDestinations.HOME` SHALL occupy the first bottom-nav slot previously held by `AppDestinations.INBOX`; only Inbox's nav-bar entry point moves. Reached without route arguments, Inbox SHALL behave as before (its saved filters apply); the optional per-visit `initialStatus` and `since` route arguments are used only by the stats tiles.
 
 #### Scenario: App launches to Home
 - GIVEN a user opens the app
@@ -79,7 +79,7 @@ Home SHALL show a battery-optimization hint card when notification access is on,
 - THEN the hint card is not shown
 
 ### Requirement: First-run checklist replaces the banner and offers templates
-WHEN the user has zero rules, Home SHALL show a "Get started" checklist INSTEAD of the monitoring banner, with three steps: notification access, monitored apps, and first rule. Steps 1 and 2 SHALL be derived from the current monitoring status (no persisted state), show completion, and offer an action (enable access / choose apps) while incomplete. Step 3 SHALL be the current step, SHALL NOT be gated on steps 1-2, and SHALL host curated starter templates from `core/rulesharing/RuleTemplates` (first three), a "See more templates" action, and a "Create from scratch" action. A progress indicator SHALL show completed steps out of 3. First run is defined as zero rules, zero weekly stats, and no recent activity; in first run the stats row and recent activity SHALL be hidden.
+WHEN the user has zero rules, Home SHALL show a "Get started" checklist INSTEAD of the monitoring banner, with three steps: notification access, monitored apps, and first rule. Steps 1 and 2 SHALL be derived from the current monitoring status (no persisted state), show completion, and offer an action (enable access / choose apps) while incomplete. Step 3 SHALL be the current step, SHALL NOT be gated on steps 1-2, and SHALL host curated starter templates from `core/rulesharing/RuleTemplates` (first three), a "See more templates" action, and a "Create from scratch" action. A progress indicator SHALL show completed steps out of 3. First run is defined as zero rules, zero last-7-days stats, and no recent activity; in first run the stats row and recent activity SHALL be hidden.
 
 #### Scenario: Zero-rule user sees the checklist
 - GIVEN the user has no rules
@@ -124,26 +124,47 @@ Home SHALL show a persistent "New rule" floating button that opens the templates
 - WHEN Home renders
 - THEN the "New rule" button is not shown
 
-### Requirement: "This Week" stats row
-Outside first run, Home SHALL show a stats row with two tiles: extracted-record count ("Records") and rules-fired count ("Rules fired"), each computed over the current calendar week (Monday start) in the device's local timezone, derived in-memory from existing repository flows (no new aggregate stored). A one-line weekly summary SHALL be shown only when rules fired is greater than zero. The week window SHALL be recomputed on resume once the calendar day changes. Home SHALL NOT show an apps-active tile.
+### Requirement: "Last 7 days" stats row
+Outside first run, Home SHALL show a "Last 7 days" stats row with two tappable tiles, each computed over a rolling window starting exactly 7 days before the moment the window was computed (not a calendar week, so the tiles never reset to zero on Monday):
+- "Captured": the number of captured notifications with a timestamp at or after the window start.
+- "Handled by rules": the number of those notifications marked processed (`is_processed = 1`). This counts notifications, not rule executions, so a notification matched by several rules counts once.
 
-#### Scenario: Stats reflect current week's activity
-- GIVEN 8 records were extracted and rules fired 12 times this calendar week
+Each count SHALL use the same predicate as the Inbox list its tile opens, so the tile's number equals the size of that list. A one-line summary ("N notifications handled by your rules in the last 7 days") SHALL be shown only when the handled count is greater than zero. The window SHALL be recomputed on resume once the calendar day changes. Home SHALL NOT show an apps-active tile.
+
+Tapping a tile SHALL push Inbox as a stacked screen with a per-visit status and the exact window start used for the counts as its `since` bound: "Captured" opens the All status, "Handled by rules" opens the Processed status. Neither value SHALL be persisted to the user's saved Inbox filters.
+
+#### Scenario: Stats reflect the last 7 days
+- GIVEN 8 notifications were captured in the last 7 days and 5 of them were processed by rules
 - WHEN Home renders the stats row
-- THEN it shows 8 for Records and 12 for Rules fired
+- THEN it shows 8 for Captured and 5 for Handled by rules, and the summary line reads "5 notifications handled by your rules in the last 7 days"
 
-#### Scenario: No activity this week yields zero values, not an error
-- GIVEN no rule executions occurred in the current calendar week and the user has at least one rule
+#### Scenario: Several rules on one notification count once
+- GIVEN one notification in the window was matched by two rules
+- WHEN Home renders the stats row
+- THEN Handled by rules counts it as 1
+
+#### Scenario: Monday morning does not reset the tiles
+- GIVEN notifications were captured on the previous Friday and it is now Monday 08:00
+- WHEN Home renders the stats row
+- THEN those notifications are still counted, because the window starts 7 days before now
+
+#### Scenario: No activity in the window yields zero values, not an error
+- GIVEN no notifications were captured in the last 7 days and the user has at least one rule
 - WHEN Home renders
-- THEN both tiles show 0 and no weekly summary line is shown
+- THEN both tiles show 0 and no summary line is shown
 
-#### Scenario: Week window rolls over
-- GIVEN Home is open across a Monday boundary
-- WHEN Home resumes on the new week
-- THEN the stats are re-observed with the new week start
+#### Scenario: Window rolls forward on a new day
+- GIVEN Home was opened on one day
+- WHEN Home resumes on a later calendar day
+- THEN the stats are re-observed with a window starting 7 days before the new current time; a resume on the same day does not re-observe
+
+#### Scenario: Tile count matches the opened list
+- GIVEN the Handled by rules tile shows 5
+- WHEN the user taps it
+- THEN Inbox opens on the Processed status bounded to the same window start (shown as a removable "Since" chip) and lists exactly 5 notifications, and the user's saved Inbox filters are unchanged
 
 ### Requirement: Recent Activity feed
-Outside first run, Home SHALL show a "Recent Activity" feed of at most the 5 most recent rule executions in reverse-chronological order, joined from rule executions, the source notification, source app, and rule name. Each row SHALL show the rule name, and the notification content (subtitle) and app name when available. Tapping a row SHALL open that notification in `features/notificationdetail`. The feed SHALL always show a "See all" action; tapping it SHALL push Inbox as a new stacked navigation screen (not a bottom-nav destination). When there are no executions, the feed SHALL show an empty state with a hint instead of an error.
+Outside first run, Home SHALL show a "Recent Activity" feed of at most the 5 most recent rule executions in reverse-chronological order, joined from rule executions, the source notification, source app, and rule name. Each row SHALL show the source app's icon, the rule name, a relative time for when the rule ran (e.g. "5 min ago"), and the notification content (subtitle) and app name when available. Tapping a row SHALL open that notification in `features/notificationdetail`. The feed SHALL always show a "See all" action; tapping it SHALL push Inbox as a new stacked navigation screen (not a bottom-nav destination) with no status override and no date bound, so the user's saved Inbox filters apply. When there are no executions, the feed SHALL show an empty state with a hint instead of an error.
 
 #### Scenario: Recent row opens notification detail
 - GIVEN the Recent Activity feed shows a row for a rule execution

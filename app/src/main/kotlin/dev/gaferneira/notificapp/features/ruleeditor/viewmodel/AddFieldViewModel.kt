@@ -36,6 +36,11 @@ class AddFieldViewModel @Inject constructor(
         when (event) {
             is UiEvent.Initialize -> initialize(event.field, event.notification)
             is UiEvent.OnFieldNameChange -> updateFieldName(event.name)
+            is UiEvent.OnFieldTypeChange -> {
+                setState { copy(fieldType = event.type, typeTouched = true) }
+                previewExtraction()
+            }
+            is UiEvent.OnUnitChange -> setState { copy(unit = event.unit) }
             is UiEvent.OnMethodTypeChange -> updateMethodType(event.type)
             is UiEvent.OnStartIndexChange -> updateStartIndex(event.index)
             is UiEvent.OnEndIndexChange -> updateEndIndex(event.index)
@@ -67,7 +72,11 @@ class AddFieldViewModel @Inject constructor(
             val methodType = mapMethodToType(field.method)
             setState {
                 copy(
+                    fieldId = field.id,
                     fieldName = field.name,
+                    fieldType = field.fieldType,
+                    typeTouched = true,
+                    unit = field.defaultUnit.orEmpty(),
                     selectedMethodType = methodType,
                     sampleText = sampleText,
                     // Populate method-specific fields based on type
@@ -134,6 +143,9 @@ class AddFieldViewModel @Inject constructor(
             setState {
                 copy(
                     fieldName = "",
+                    fieldType = RuleField.FieldType.STRING,
+                    typeTouched = false,
+                    unit = "",
                     selectedMethodType = AddFieldContract.MethodType.TEXT_BETWEEN_ANCHORS,
                     sampleText = sampleText,
                     fixedStartIndex = 0,
@@ -173,6 +185,7 @@ class AddFieldViewModel @Inject constructor(
         is ExtractionMethod.JsonPath -> AddFieldContract.MethodType.JSON_PATH
         is ExtractionMethod.SmartAmountDetection -> AddFieldContract.MethodType.SMART_AMOUNT
         is ExtractionMethod.SmartDateDetection -> AddFieldContract.MethodType.SMART_DATE
+        is ExtractionMethod.SmartCodeDetection -> AddFieldContract.MethodType.SMART_CODE
     }
 
     private fun updateFieldName(name: String) {
@@ -185,9 +198,21 @@ class AddFieldViewModel @Inject constructor(
     }
 
     private fun updateMethodType(type: AddFieldContract.MethodType) {
-        setState { copy(selectedMethodType = type) }
+        setState {
+            copy(
+                selectedMethodType = type,
+                // Until the user picks a type, follow the method: smart amount -> CURRENCY, smart date -> DATE
+                fieldType = if (typeTouched) fieldType else suggestedFieldType(type),
+            )
+        }
         // Auto-preview with new method
         previewExtraction()
+    }
+
+    private fun suggestedFieldType(type: AddFieldContract.MethodType): RuleField.FieldType = when (type) {
+        AddFieldContract.MethodType.SMART_AMOUNT -> RuleField.FieldType.CURRENCY
+        AddFieldContract.MethodType.SMART_DATE -> RuleField.FieldType.DATE
+        else -> RuleField.FieldType.STRING
     }
 
     private fun updateStartIndex(index: Int) {

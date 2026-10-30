@@ -2,16 +2,15 @@ package dev.gaferneira.notificapp.core.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import dev.gaferneira.notificapp.core.data.local.entity.WebhookEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Data Access Object for webhooks. No `update` method: `saveWebhook` always calls [insert] with
- * `OnConflictStrategy.REPLACE` for both create and edit, mirroring [SelectedAppDao]'s pattern
- * where its `.update()` is dead code in practice.
+ * Data Access Object for webhooks. No `update` method: `saveWebhook` always calls [upsert] for both create and edit.
+ * It must be an in-place upsert, never `OnConflictStrategy.REPLACE`: REPLACE deletes the parent row
+ * first, which would cascade-delete the webhook's queued `webhook_deliveries` on every edit.
  */
 @Dao
 internal interface WebhookDao {
@@ -22,8 +21,8 @@ internal interface WebhookDao {
     @Query("SELECT * FROM webhooks WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): WebhookEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(webhook: WebhookEntity)
+    @Upsert
+    suspend fun upsert(webhook: WebhookEntity)
 
     @Delete
     suspend fun delete(webhook: WebhookEntity)

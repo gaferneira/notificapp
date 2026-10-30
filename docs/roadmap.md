@@ -39,7 +39,7 @@ Areas already built and in the app, one line each. **For the full functional det
 - **Rule engine** — condition matching (6 operators) + field extraction (10 methods), pure-Kotlin `RuleMatcher`/`FieldExtractor`
 - **Action system** — dismiss, snooze (duration / scheduled / throttle), alarm (with full-screen UI + built-in snooze), flash alert, per-action cooldowns, extract-data; per-action outcomes (`SUCCESS`/`FAILED`/`SKIPPED`/`SUPPRESSED`) surfaced in detail
 - **Rule trust & sharing** — backtest against history, dry-run mode, versioned JSON import/export (`RuleJsonCodec`, golden-file-pinned), improved conditionals (day-of-week, time-range, include/exclude app scope)
-- **Starter templates & data browser** — curated starter rules; Data tab with browse/filter/search, statistics (trend computed, chart pending), CSV/JSON export, single + bulk delete, retention sweep + settings, storage usage view
+- **Starter templates & data browser** — curated starter rules; Data tab is an Insights dashboard (overview tiles, activity chart, extracted totals, top/quiet rules, action outcomes, webhook health, top apps) that drills down to the Extracted data browser (browse/filter/search, swipe delete with undo), CSV/JSON export, single + bulk delete, retention sweep + settings, storage usage view
 - **Webhooks** — webhook library (methods, headers, auth, query params, test payload), `SEND_WEBHOOK` action (fields + template payload modes), WorkManager delivery with retry/backoff + local queue + per-webhook status
 - **Repo, trust & privacy** — README + `CONTRIBUTING`/issue+PR templates/`CODE_OF_CONDUCT`/`SECURITY`, CI (Spotless + Detekt + tests + debug build), GPL-3.0 license, `PRIVACY.md`
 - **Tech-debt hardening** — see the Detekt/architecture baseline policies in `CLAUDE.md` and git history for the TD-1..16 record
@@ -97,10 +97,12 @@ Additive and migration-safe by design (new action types use schemaless config; n
 
 ### Data & insights
 
-- **Activity log screen (`rule_executions` history)** — a chronological, filterable log of every rule firing, including action-only firings (dismiss, snooze) that extract nothing. v1 routes Home's "Rules fired" tile to the Inbox with the Processed filter instead
-- **Trend chart rendering** — visualize the already-computed 7/30-day trend series as a bar/line chart in the Data Browser
+- **Activity log screen (`rule_executions` history)** — a chronological, filterable log of every rule firing, including action-only firings (dismiss, snooze) that extract nothing. v1 instead has Home's "Handled by rules" tile count processed notifications in the last 7 days and open the Inbox with the Processed filter and that same date window
+- [x] **Trend chart rendering** — done: the Insights activity bar chart (7/30 days)
+- [ ] **Webhook delivery history** — a delivery log table to enable success-rate stats (Insights webhook health only shows last status, last delivery and pending retries today)
+- [ ] **Inline error on Insights period switch** — show the error inline (keeping the previous data) instead of a full-screen error
 - **Daily/weekly digest notification** — "This week: 23 transactions, €412 total", computed locally from extracted values
-- **Per-rule health stats** — the Rule Details screen now shows a Statistics card (7/30-day, total, last triggered, test vs live); still open: a "matched 0 times in 30 days" indicator in the Rules list; a dead rule silently not firing violates "never fail silently", and the `RuleExecution` data already exists
+- **Per-rule health stats** — the Rule Details screen now shows a Statistics card (7/30-day, total, last triggered, test vs live); the "matched 0 times in 30 days" indicator is partially done (shown as Quiet rules on Insights, not yet in the Rules list); a dead rule silently not firing violates "never fail silently", and the `RuleExecution` data already exists
 - **Bulk re-extraction** — "Re-extract past notifications" from Rule Details: after fixing a rule's extraction, re-run only its extraction over stored history (backtest-style preview of old → new values, then a transactional apply), replacing extracted values while preserving execution history/outcomes and never re-running actions; redacted notifications are skipped and reported. v1 ships the single-notification version in Notification Detail
 
 ### Backup & data model

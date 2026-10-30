@@ -9,7 +9,10 @@ import dev.gaferneira.notificapp.domain.model.TrendPoint
 
 /**
  * Data Access Object backing the Data Browser: the joined/filtered/searched/aggregated/bulk-delete
- * surface over `extracted_field_values ⋈ rule_fields ⋈ rule_executions ⋈ rules ⋈ notifications`.
+ * surface over `extracted_field_values ⋈ rule_executions ⋈ notifications`, with `rule_fields` and
+ * `rules` as `LEFT JOIN`s: history survives rule/field deletion, so a deleted rule/field falls back to
+ * the snapshot names (`rule_executions.rule_name`, `extracted_field_values.field_name`) and the
+ * field-type filter uses the snapshot `extracted_field_values.field_type`.
  *
  * Every query excludes dry-run executions (`rule_executions.was_dry_run = 0`) by default. Optional
  * filters use the `IN (:x) OR :hasFilter = 0` idiom from `NotificationDao.getFilteredPaged`. Result
@@ -73,11 +76,11 @@ internal interface DataBrowserDao {
 
     @Query(
         """
-        SELECT r.name AS ruleName, COUNT(*) AS count
+        SELECT COALESCE(r.name, re.rule_name) AS ruleName, COUNT(*) AS count
         $AGGREGATE_JOIN_WITH_RULE
         $FILTER_WHERE
-        GROUP BY re.rule_id, r.name
-        ORDER BY count DESC, re.rule_id ASC
+        GROUP BY re.rule_id, COALESCE(r.name, re.rule_name)
+        ORDER BY count DESC, re.rule_id ASC, ruleName ASC
         LIMIT 1
         """,
     )
@@ -96,11 +99,11 @@ internal interface DataBrowserDao {
 
     @Query(
         """
-        SELECT r.name AS label, COUNT(*) AS count
+        SELECT COALESCE(r.name, re.rule_name) AS label, COUNT(*) AS count
         $AGGREGATE_JOIN_WITH_RULE
         $FILTER_WHERE
-        GROUP BY re.rule_id, r.name
-        ORDER BY count DESC, re.rule_id ASC
+        GROUP BY re.rule_id, COALESCE(r.name, re.rule_name)
+        ORDER BY count DESC, re.rule_id ASC, label ASC
         """,
     )
     suspend fun getPerRuleCounts(
@@ -146,7 +149,7 @@ internal interface DataBrowserDao {
         WHERE re.was_dry_run = 0
         AND (re.rule_id IN (:ruleIds) OR :hasRuleFilter = 0)
         AND (n.package_name IN (:packageNames) OR :hasPackageFilter = 0)
-        AND (rf.field_type IN (:fieldTypes) OR :hasFieldTypeFilter = 0)
+        AND (efv.field_type IN (:fieldTypes) OR :hasFieldTypeFilter = 0)
         AND re.created_at >= :sinceMillis
         GROUP BY date
         ORDER BY date ASC
@@ -214,21 +217,23 @@ private const val ROW_SELECT = """
     SELECT
         efv.id AS valueId,
         efv.rule_execution_id AS executionId,
-        r.name AS ruleName,
+        n.id AS notificationId,
+        COALESCE(r.name, re.rule_name) AS ruleName,
         n.package_name AS packageName,
         n.app_name AS appName,
-        rf.name AS fieldName,
-        rf.field_type AS fieldType,
+        COALESCE(rf.name, efv.field_name) AS fieldName,
+        efv.field_type AS fieldType,
         efv.value_text AS valueText,
         efv.value_number AS valueNumber,
-        efv.value_date AS valueDate,
+        efv.value_epoch_day AS valueDate,
+        efv.value_unit AS unit,
         n.title AS notificationTitle,
         n.content AS notificationContent,
         re.created_at AS createdAt
     FROM extracted_field_values efv
-    JOIN rule_fields rf ON efv.rule_field_id = rf.id
+    LEFT JOIN rule_fields rf ON efv.rule_field_id = rf.id
     JOIN rule_executions re ON efv.rule_execution_id = re.id
-    JOIN rules r ON re.rule_id = r.id
+    LEFT JOIN rules r ON re.rule_id = r.id
     JOIN notifications n ON re.notification_id = n.id
 """
 
@@ -238,16 +243,14 @@ private const val ROW_SELECT_WITH_FTS_JOIN = ROW_SELECT +
 /** Base join for aggregation queries that need the rule name (per-rule counts, most-active). */
 private const val AGGREGATE_JOIN_WITH_RULE = """
     FROM extracted_field_values efv
-    JOIN rule_fields rf ON efv.rule_field_id = rf.id
     JOIN rule_executions re ON efv.rule_execution_id = re.id
-    JOIN rules r ON re.rule_id = r.id
+    LEFT JOIN rules r ON re.rule_id = r.id
     JOIN notifications n ON re.notification_id = n.id
 """
 
 /** Base join for aggregation/count queries that don't need the rule name. */
 private const val AGGREGATE_JOIN_NO_RULE = """
     FROM extracted_field_values efv
-    JOIN rule_fields rf ON efv.rule_field_id = rf.id
     JOIN rule_executions re ON efv.rule_execution_id = re.id
     JOIN notifications n ON re.notification_id = n.id
 """
@@ -255,21 +258,21 @@ private const val AGGREGATE_JOIN_NO_RULE = """
 private const val ID_SELECT = """
     SELECT efv.id
     FROM extracted_field_values efv
-    JOIN rule_fields rf ON efv.rule_field_id = rf.id
     JOIN rule_executions re ON efv.rule_execution_id = re.id
     JOIN notifications n ON re.notification_id = n.id
 """
 
 /**
  * Shared optional-filter predicate: rule / source app / field type / date range, plus the
- * mandatory dry-run exclusion. Every query above joins `efv`, `rf`, `re`, and `n` under those
- * aliases, so this fragment is reusable verbatim regardless of whether `rules r` is also joined.
+ * mandatory dry-run exclusion. Every query above joins `efv`, `re`, and `n` under those aliases
+ * (`rf`/`r` are optional LEFT JOINs the fragment never touches), so it is reusable verbatim.
+ * The field-type filter reads the snapshot `efv.field_type` so orphaned values still match.
  */
 private const val FILTER_WHERE = """
     WHERE re.was_dry_run = 0
     AND (re.rule_id IN (:ruleIds) OR :hasRuleFilter = 0)
     AND (n.package_name IN (:packageNames) OR :hasPackageFilter = 0)
-    AND (rf.field_type IN (:fieldTypes) OR :hasFieldTypeFilter = 0)
+    AND (efv.field_type IN (:fieldTypes) OR :hasFieldTypeFilter = 0)
     AND (re.created_at >= :dateFrom OR :hasDateFromFilter = 0)
     AND (re.created_at <= :dateTo OR :hasDateToFilter = 0)
 """
@@ -280,12 +283,12 @@ private const val SORT_ORDER = """
     ORDER BY
         CASE WHEN :sortKey = 0 THEN re.created_at END DESC,
         CASE WHEN :sortKey = 1 THEN re.created_at END ASC,
-        CASE WHEN :sortKey = 2 THEN r.name END ASC,
-        CASE WHEN :sortKey = 3 THEN r.name END DESC,
+        CASE WHEN :sortKey = 2 THEN COALESCE(r.name, re.rule_name) END ASC,
+        CASE WHEN :sortKey = 3 THEN COALESCE(r.name, re.rule_name) END DESC,
         CASE WHEN :sortKey = 4 THEN n.app_name END ASC,
         CASE WHEN :sortKey = 5 THEN n.app_name END DESC,
-        CASE WHEN :sortKey = 6 THEN rf.name END ASC,
-        CASE WHEN :sortKey = 7 THEN rf.name END DESC,
+        CASE WHEN :sortKey = 6 THEN COALESCE(rf.name, efv.field_name) END ASC,
+        CASE WHEN :sortKey = 7 THEN COALESCE(rf.name, efv.field_name) END DESC,
         re.created_at DESC,
         efv.id ASC
 """

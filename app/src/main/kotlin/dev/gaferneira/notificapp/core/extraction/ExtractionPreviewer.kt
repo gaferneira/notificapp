@@ -42,19 +42,23 @@ class ExtractionPreviewer @Inject constructor(
         // whether the rule would have matched when the notification arrived.
         val capturedAt = LocalDateTime.ofInstant(Instant.ofEpochMilli(notification.timestamp), zone)
         val matches = ruleEngine.evaluate(notification, rules, capturedAt)
-        val executionByRule = executions.groupBy { it.ruleId }.mapValues { (_, list) -> list.maxBy { it.createdAt } }
+        // Executions of deleted rules (null ruleId) are kept as history but can never match again.
+        val liveExecutions = executions.filter { it.ruleId != null }
+        val executionByRule = liveExecutions.groupBy { it.ruleId }.mapValues { (_, list) -> list.maxBy { it.createdAt } }
 
         val matchPreviews = matches.map { match ->
             val rule = match.rule
             val execution = executionByRule[rule.id]
             val fields = rule.saveDataFields()
-            val stored = execution?.extractedData.orEmpty()
+            // Values still linked to a field definition; orphans (field removed, id SET NULL) have no id to compare.
+            val stored = execution?.extractedValues.orEmpty()
+                .mapNotNull { value -> value.ruleFieldId?.let { it to value.valueText.orEmpty() } }
+                .toMap()
             val diffs = fields.map { field ->
                 val old = stored[field.id]
                 val new = match.extractedData[field.id]
                 FieldDiff(field.id, field.name, field.fieldType, old, new, compare(old, new))
             }
-            val fieldIds = fields.map { it.id }.toSet()
             val changed = diffs.any { it.change != FieldChange.UNCHANGED }
             RuleMatchPreview(
                 ruleId = rule.id,
@@ -67,7 +71,7 @@ class ExtractionPreviewer @Inject constructor(
                     ExtractedDataUpdate(
                         executionId = execution.id,
                         fields = fields,
-                        extractedData = stored.filterKeys { it !in fieldIds } + match.extractedData,
+                        extractedData = match.extractedData,
                     )
                 } else {
                     null
@@ -76,8 +80,10 @@ class ExtractionPreviewer @Inject constructor(
         }
 
         val matchedRuleIds = matches.map { it.rule.id }.toSet()
-        val unmatched = executions.filter { it.ruleId !in matchedRuleIds }.map {
-            UnmatchedExecution(executionId = it.id, ruleId = it.ruleId, ruleName = ruleNames[it.ruleId])
+        val unmatched = liveExecutions.filter { it.ruleId !in matchedRuleIds }.mapNotNull { execution ->
+            execution.ruleId?.let { ruleId ->
+                UnmatchedExecution(executionId = execution.id, ruleId = ruleId, ruleName = ruleNames[ruleId])
+            }
         }
         return ExtractionPreview(matches = matchPreviews, noLongerMatching = unmatched)
     }

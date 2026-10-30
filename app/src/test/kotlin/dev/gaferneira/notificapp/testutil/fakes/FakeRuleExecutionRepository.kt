@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.testutil.fakes
 
 import dev.gaferneira.notificapp.domain.model.ExtractedDataUpdate
+import dev.gaferneira.notificapp.domain.model.ExtractedFieldValue
 import dev.gaferneira.notificapp.domain.model.RecentActivity
 import dev.gaferneira.notificapp.domain.model.RuleExecution
 import dev.gaferneira.notificapp.domain.model.RuleField
@@ -37,10 +38,15 @@ class FakeRuleExecutionRepository(
 
     fun currentExecutions(notificationId: String): List<RuleExecution> = executionsByNotification.value[notificationId].orEmpty()
 
-    override suspend fun saveExecution(execution: RuleExecution, fields: List<RuleField>): Result<Unit> {
+    override suspend fun saveExecution(
+        execution: RuleExecution,
+        extractedData: Map<String, String>,
+        fields: List<RuleField>,
+    ): Result<Unit> {
+        val stored = execution.copy(extractedValues = valuesFor(execution.id, extractedData, fields))
         executionsByNotification.update { map ->
             val existing = map[execution.notificationId].orEmpty()
-            map + (execution.notificationId to (existing + execution))
+            map + (execution.notificationId to (existing + stored))
         }
         return Result.success(Unit)
     }
@@ -48,8 +54,8 @@ class FakeRuleExecutionRepository(
     override fun observeExecutionsForNotification(notificationId: String): Flow<List<RuleExecution>> = executionsByNotification.map { map -> map[notificationId].orEmpty() }
 
     /**
-     * Mirrors the real transactional contract: all updates apply or none, and only `extractedData`
-     * changes - executions are never added or removed, and outcomes/createdAt are kept.
+     * Mirrors the real transactional contract: all updates apply or none, and only the values of the
+     * update's fields change (values of removed fields are kept) - executions are never added or removed, and outcomes/createdAt are kept.
      */
     override suspend fun updateExtractedData(updates: List<ExtractedDataUpdate>): Result<Unit> {
         updateError?.let { return Result.failure(it) }
@@ -57,10 +63,33 @@ class FakeRuleExecutionRepository(
         val byId = updates.associateBy { it.executionId }
         executionsByNotification.update { map ->
             map.mapValues { (_, list) ->
-                list.map { e -> byId[e.id]?.let { e.copy(extractedData = it.extractedData) } ?: e }
+                list.map { e ->
+                    byId[e.id]?.let { update ->
+                        val fieldIds = update.fields.map { it.id }.toSet()
+                        e.copy(
+                            extractedValues = e.extractedValues.filter { it.ruleFieldId !in fieldIds } +
+                                valuesFor(e.id, update.extractedData, update.fields),
+                        )
+                    } ?: e
+                }
             }
         }
         return Result.success(Unit)
+    }
+
+    private fun valuesFor(executionId: String, data: Map<String, String>, fields: List<RuleField>) = data.mapNotNull { (fieldId, text) ->
+        fields.find { it.id == fieldId }?.let { field ->
+            ExtractedFieldValue(
+                id = "$executionId-$fieldId",
+                ruleExecutionId = executionId,
+                ruleFieldId = field.id,
+                fieldName = field.name,
+                fieldType = field.fieldType,
+                valueText = text,
+                valueNumber = null,
+                valueDate = null,
+            )
+        }
     }
 
     /** Test helper: replace the stored executions of a notification (simulates a Room emission). */

@@ -98,33 +98,36 @@ object NotificationDetailContract {
     /**
      * A stored rule execution with names resolved from the rule as it is now.
      *
-     * @property ruleName `null` when the rule was deleted; the UI shows a "deleted rule" fallback.
+     * @property ruleId `null` when the rule was deleted: the execution is kept as history, so there
+     *   is nothing to open.
+     * @property ruleName The rule's current name, or the execution-time snapshot when it was deleted.
      * @property wasRedactionSource Whether this execution's rule is the one that scrubbed the content.
      */
     data class ExecutionWithDetails(
         val execution: RuleExecution,
-        val ruleId: String,
-        val ruleName: String?,
+        val ruleId: String?,
+        val ruleName: String,
         val extractedFields: List<ExtractedFieldDisplay>,
         val triggeredActions: List<TriggeredActionDisplay>,
         val wasRedactionSource: Boolean = false,
     ) {
-        val isRuleDeleted: Boolean get() = ruleName == null
+        val isRuleDeleted: Boolean get() = ruleId == null
     }
 
     /**
      * Display data for a stored extracted value.
      *
-     * @property fieldName `null` when the field no longer exists on the rule; the UI shows a
-     *   "removed field" fallback. [fieldType] is then [RuleField.FieldType.STRING].
+     * @property fieldId The field definition's id, or `null` when the field was removed from the rule.
+     * @property fieldName The field's current name, or the name snapshotted at extraction time when
+     *   the field was removed. [fieldType] follows the same rule.
      */
     data class ExtractedFieldDisplay(
-        val fieldId: String,
-        val fieldName: String?,
+        val fieldId: String?,
+        val fieldName: String,
         val fieldType: RuleField.FieldType,
         val value: String,
     ) {
-        val isFieldDeleted: Boolean get() = fieldName == null
+        val isFieldDeleted: Boolean get() = fieldId == null
     }
 
     /**

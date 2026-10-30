@@ -49,7 +49,11 @@ internal fun ExecutionCard(
     onOpenRule: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val openLabel = details.ruleName?.let { stringResource(R.string.notification_detail_open_rule_label, it) }
+    val openLabel = if (details.isRuleDeleted) {
+        null
+    } else {
+        stringResource(R.string.notification_detail_open_rule_label, details.ruleName)
+    }
     TonalCard(
         modifier = modifier
             .clip(MaterialTheme.shapes.large)
@@ -84,18 +88,19 @@ private fun ExecutionHeader(details: ExecutionWithDetails, isTappable: Boolean) 
     val locale = LocalConfiguration.current.locales[0]
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
-            if (ruleName != null) {
+            if (details.isRuleDeleted) {
+                // History outlives the rule: show its name snapshot, muted, with no way to open it.
+                Text(
+                    text = ruleName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
                 Text(
                     text = ruleName,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.notification_detail_deleted_rule),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Text(
@@ -164,14 +169,12 @@ private fun ExtractedFieldRow(field: ExtractedFieldDisplay, modifier: Modifier =
             itemVerticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = field.fieldName ?: stringResource(R.string.notification_detail_removed_field),
+                text = field.fieldName,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
                 fontStyle = if (field.isFieldDeleted) FontStyle.Italic else null,
             )
-            if (!field.isFieldDeleted) {
-                TypeChip(stringResource(field.fieldType.labelRes()))
-            }
+            TypeChip(stringResource(field.fieldType.labelRes()))
         }
         SelectionContainer {
             Text(

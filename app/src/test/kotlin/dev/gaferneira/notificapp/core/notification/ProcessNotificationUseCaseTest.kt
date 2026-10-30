@@ -80,7 +80,7 @@ class ProcessNotificationUseCaseTest {
         coVerify(exactly = 0) { deduplicator.isDuplicate(any()) }
         coVerify(exactly = 0) { notificationRepository.saveNotification(any()) }
         coVerify(exactly = 0) { ruleRepository.getRulesForApp(any()) }
-        coVerify(exactly = 0) { ruleExecutionRepository.saveExecution(any(), any()) }
+        coVerify(exactly = 0) { ruleExecutionRepository.saveExecution(any(), any(), any()) }
         coVerify(exactly = 0) { actionDispatcher.executeAll(any(), any()) }
     }
 
@@ -129,7 +129,7 @@ class ProcessNotificationUseCaseTest {
 
         // Then: an empty success is returned and no execution is saved
         result shouldBe Result.success(emptyList())
-        coVerify(exactly = 0) { ruleExecutionRepository.saveExecution(any(), any()) }
+        coVerify(exactly = 0) { ruleExecutionRepository.saveExecution(any(), any(), any()) }
     }
 
     @Test
@@ -158,7 +158,7 @@ class ProcessNotificationUseCaseTest {
         // Then: nothing matches, no action is dispatched and no execution is saved
         result shouldBe Result.success(emptyList())
         coVerify(exactly = 0) { actionDispatcher.executeAll(any(), any()) }
-        coVerify(exactly = 0) { ruleExecutionRepository.saveExecution(any(), any()) }
+        coVerify(exactly = 0) { ruleExecutionRepository.saveExecution(any(), any(), any()) }
     }
 
     @Test
@@ -178,7 +178,7 @@ class ProcessNotificationUseCaseTest {
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
         coEvery { actionDispatcher.executeAll(notification, rule.actions) } returns mapOf("action-1" to ActionOutcome.SUCCESS)
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any(), any()) } returns Result.success(Unit)
 
         // When: invoking the use case
         val result = useCase.invoke(notification)
@@ -193,7 +193,7 @@ class ProcessNotificationUseCaseTest {
         execution.actionOutcomes shouldBe mapOf("action-1" to ActionOutcome.SUCCESS)
         execution.triggeredActions shouldBe listOf("action-1")
 
-        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(execution, rule.saveDataFields()) }
+        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(execution, any(), rule.saveDataFields()) }
     }
 
     @Test
@@ -211,7 +211,7 @@ class ProcessNotificationUseCaseTest {
         coEvery { deduplicator.isDuplicate(notification) } returns false
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any(), any()) } returns Result.success(Unit)
 
         // When: invoking the use case
         val result = useCase.invoke(notification)
@@ -258,13 +258,13 @@ class ProcessNotificationUseCaseTest {
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
         coEvery { actionDispatcher.executeAll(notification, rule.actions) } returns mapOf("action-1" to ActionOutcome.SUCCESS)
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any(), any()) } returns Result.success(Unit)
 
         // When: invoking the use case
         useCase.invoke(notification)
 
         // Then: the execution is saved with the rule's fields
-        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(any(), fields) }
+        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(any(), any(), fields) }
     }
 
     @Test
@@ -283,13 +283,13 @@ class ProcessNotificationUseCaseTest {
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
         coEvery { actionDispatcher.executeAll(notification, rule.actions) } returns mapOf("dismiss-1" to ActionOutcome.SUCCESS)
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any(), any()) } returns Result.success(Unit)
 
         // When: invoking the use case
         useCase.invoke(notification)
 
         // Then: the execution is still saved (dismiss ran), but with no fields to persist
-        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(any(), emptyList()) }
+        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(any(), any(), emptyList()) }
     }
 
     @Test
@@ -309,13 +309,13 @@ class ProcessNotificationUseCaseTest {
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
         coEvery { actionDispatcher.executeAll(notification, rule.actions) } returns emptyMap()
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any(), any()) } returns Result.success(Unit)
 
         // When: invoking the use case
         useCase.invoke(notification)
 
         // Then: no fields are persisted
-        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(any(), emptyList()) }
+        coVerify(exactly = 1) { ruleExecutionRepository.saveExecution(any(), any(), emptyList()) }
     }
 
     @Test
@@ -361,7 +361,7 @@ class ProcessNotificationUseCaseTest {
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
         coEvery { actionDispatcher.executeAll(notification, rule.actions, any()) } returns mapOf("action-1" to ActionOutcome.SUCCESS)
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any(), any()) } returns Result.success(Unit)
         coEvery { notificationRepository.redactContent(notification.id) } returns Result.success(Unit)
 
         // When: invoking the use case
@@ -384,7 +384,7 @@ class ProcessNotificationUseCaseTest {
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
         coEvery { actionDispatcher.executeAll(notification, rule.actions, any()) } returns mapOf("dismiss-1" to ActionOutcome.SUCCESS)
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any(), any()) } returns Result.success(Unit)
 
         // When: invoking the use case
         useCase.invoke(notification)
@@ -405,7 +405,7 @@ class ProcessNotificationUseCaseTest {
         coEvery { deduplicator.isDuplicate(notification) } returns false
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any(), any()) } returns Result.success(Unit)
 
         // When: invoking the use case
         useCase.invoke(notification)
@@ -427,7 +427,7 @@ class ProcessNotificationUseCaseTest {
         coEvery { notificationRepository.saveNotification(notification) } returns Result.success(Unit)
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(rule))
         coEvery { actionDispatcher.executeAll(notification, rule.actions, any()) } returns mapOf("action-1" to ActionOutcome.SUCCESS)
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any(), any()) } returns Result.success(Unit)
 
         // When: invoking the use case
         useCase.invoke(notification)
@@ -453,7 +453,7 @@ class ProcessNotificationUseCaseTest {
         coEvery { ruleRepository.getRulesForApp(notification.packageName) } returns Result.success(listOf(flaggedRule, plainRule))
         coEvery { actionDispatcher.executeAll(notification, flaggedRule.actions, any()) } returns mapOf("action-1" to ActionOutcome.SUCCESS)
         coEvery { actionDispatcher.executeAll(notification, plainRule.actions, any()) } returns mapOf("dismiss-1" to ActionOutcome.SUCCESS)
-        coEvery { ruleExecutionRepository.saveExecution(any(), any()) } returns Result.success(Unit)
+        coEvery { ruleExecutionRepository.saveExecution(any(), any(), any()) } returns Result.success(Unit)
         coEvery { notificationRepository.redactContent(notification.id) } returns Result.success(Unit)
 
         // When: invoking the use case

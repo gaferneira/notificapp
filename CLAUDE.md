@@ -18,6 +18,8 @@
 - **Rule wire format** (`core/rulesharing/RuleJsonCodec`, `docs/rule-format.md`): free to break `RuleExportDto`/schema version across commits without a compatibility shim — no one has exported rules from a shipped version yet.
 - **Domain model shape**: sealed-class/structural rewrites of `Rule`, `RuleCondition`, etc. are fine — condition storage uses a JSON polymorphic column (`rule_conditions.payload`), so adding new condition families never requires a Room migration.
 
+Once released, [ADR 015](docs/adr/015-database-evolution-policy.md) (database evolution policy) becomes mandatory: additive schema changes, `@AutoMigration`/tested `Migration`, no destructive fallback in release builds.
+
 Revisit and remove this section once the app has a real release with installed users — at that point migrations and wire-format compatibility become mandatory again.
 
 ## Quick Reference — where to look
@@ -133,7 +135,7 @@ No `.git/hooks/pre-commit` is installed yet — these are enforced by CI / `./gr
 **Boy-scout baseline policy (TD-16):** the baseline is meant to shrink, not accumulate. When a PR meaningfully touches a file with baseline entries, fix those entries in the same PR and regenerate — the diff must show the count going *down*. Never regenerate to *add* entries except via the explicit rule above (intentionally accepted new debt, called out in the PR description).
 
 ### Architecture Check (`./gradlew architectureCheck`)
-Implemented in `buildSrc/src/main/kotlin/architecture-check.gradle.kts` (precompiled script plugin applied from `app/build.gradle.kts`), grandfathered violations in `config/architecture/baseline.txt`. Runs as part of `check`. Enforces ten rules Detekt can't express:
+Implemented in `buildSrc/src/main/kotlin/architecture-check.gradle.kts` (precompiled script plugin applied from `app/build.gradle.kts`), grandfathered violations in `config/architecture/baseline.txt`. Runs as part of `check`. Enforces eleven rules Detekt can't express:
 
 1. **Visibility** — `core/data/repository/*Impl` and every DAO/entity/mapper under `core/data/local` must be `internal`.
 2. **Dispatcher injection** (ADR 008) — no hardcoded `Dispatchers.IO`/`Default`/`Main` outside `core/di/DispatchersModule.kt`.
@@ -145,8 +147,9 @@ Implemented in `buildSrc/src/main/kotlin/architecture-check.gradle.kts` (precomp
 8. **Design-system styling** — `core/ui/components/*` must not reintroduce ad-hoc `.copy(alpha = ...)` tonal-color literals; use `NotificappStyles`/`NotificappTokens` instead (Styles API). Only the alpha-copy pattern is matched; hardcoded shapes remain a convention enforced by review.
 9. **Hardcoded strings** — `features/{ruleeditor,settings,appselection,onboarding,notificationdetail}/ui/**` (files named `*Previews.kt` exempt) must not contain `Text("...")`/`text = "..."`-style prose literals outside `@Preview` functions; use `stringResource` (ADR 014). A line may opt out with a trailing `// i18n-ignore: reason` (technical samples only). Starts clean.
 10. **Core independence** — `core/**` must never import `features/**` (graph flows `features → core`, never back; avoids package cycles). `core/di` is exempt: Hilt modules are the composition root and bind feature-owned implementations. Shared UI mappings/text that both features and `core/ui` need (e.g. `ActionType.ui()`, condition display text) live in `core/ui/mapping` and `core/ui/text`. Starts clean.
+11. **No REPLACE on conflict** (ADR 015) — `@Insert(onConflict = OnConflictStrategy.REPLACE)` is forbidden in `core/data/local/dao` (it cascades deletes into child rows); use `@Upsert`. Leaf tables opt out with a trailing `// replace-ok: reason`. Starts clean.
 
-Rules 1-4, 8-10 start clean; 5-7 start with grandfathered violations under the same shrink-only boy-scout policy: touch a listed file → fix its entry and remove the line in the same PR. The build fails on any **new** violation not in the baseline.
+Rules 1-4, 8-11 start clean; 5-7 start with grandfathered violations under the same shrink-only boy-scout policy: touch a listed file → fix its entry and remove the line in the same PR. The build fails on any **new** violation not in the baseline.
 
 Not every audit finding is a mechanical rule — regex recompilation on hot paths (PERF-001/002) and N+1 DAO fan-out (PERF-008, DATA-01/03/05) need real data-flow analysis; a naive text-matching rule would be too fragile. Those stay as manual review checklist items in `.claude/commands/review-pr.md`.
 

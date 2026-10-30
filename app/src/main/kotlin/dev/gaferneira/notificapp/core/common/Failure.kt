@@ -20,6 +20,7 @@ sealed class Failure(cause: Throwable?) : Throwable(cause = cause) {
         fun analyzeCause(cause: Throwable?): Failure {
             // TODO Create cases
             return when (cause) {
+                is Failure -> cause
                 is IllegalStateException -> ApplicationException(cause.message.orEmpty())
                 is UnknownHostException,
                 is SocketException,

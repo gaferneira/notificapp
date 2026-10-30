@@ -37,7 +37,7 @@ The MVI pattern is ideal for Notificapp's screens:
 - **Rule Editor**: Complex form state for extraction rule creation
 - **Rules**: Manage user-defined extraction rules
 - **Settings**: Configure app permissions and preferences
-- **Data Browser**: Filterable, sortable, searchable list of extracted data with stats and CSV/JSON export
+- **Insights** (Data tab): dashboard of period stats (7/30 days) backed by `InsightsRepository`; drills down to the **Data Browser** (pushed route `Screen.DataBrowser(ruleId)`): filterable, sortable, searchable list of extracted data with CSV/JSON export
 
 ### Implementation Guidelines
 
@@ -341,22 +341,26 @@ data class Rule(
 data class RuleExecution(
     val id: String,
     val notificationId: String,
-    val ruleId: String,
-    val extractedData: Map<String, String>,
+    val ruleId: String?, // null once the rule was deleted (history is kept)
     val triggeredActions: List<String>,
     val triggeredRuleActions: List<RuleAction> = emptyList(),
     val actionOutcomes: Map<String, ActionOutcome> = emptyMap(), // actionId -> SUCCESS/FAILED/SKIPPED
+    val extractedValues: List<ExtractedFieldValue> = emptyList(), // loaded from extracted_field_values (Room @Relation)
     val createdAt: Long = System.currentTimeMillis(),
 )
 
-// Typed extracted value (one row per field per execution), used for filtering
+// Typed extracted value (one row per field per execution) - the single source of extracted data.
+// fieldName/fieldType are snapshots, so a value stays readable after its field is removed.
 data class ExtractedFieldValue(
     val id: String,
     val ruleExecutionId: String,
-    val ruleFieldId: String,
+    val ruleFieldId: String?, // null once the field was removed
+    val fieldName: String,
+    val fieldType: RuleField.FieldType,
     val valueText: String?,
     val valueNumber: Double?,
-    val valueDate: Long?,
+    val valueDate: java.time.LocalDate?,
+    val unit: String?, // ISO 4217 for CURRENCY, free-form for NUMBER ("km", "%"), null otherwise (column value_unit)
 )
 ```
 
@@ -389,6 +393,9 @@ data class ExtractedFieldValue(
 - Map database entities to domain models
 - Handle errors gracefully by returning `Result<T>` or sealed `DataResult`
 - Provide reactive streams (Flow)
+- **History outlives rules**: `rule_executions.rule_id` and `extracted_field_values.rule_field_id` are nullable with `ON DELETE SET NULL`; deleting a notification still cascades (retention). Each row snapshots what the UI needs (`rule_executions.rule_name`, `extracted_field_values.field_name` / `field_type`), so queries that read history `LEFT JOIN rules` / `rule_fields` and `COALESCE` to the snapshot (live name wins while the rule/field exists), and field-type filters read the snapshot `field_type`. Per-rule queries (stats, quiet rules) stay on the plain `rule_id`. UI must treat a null `ruleId` as "deleted": show the snapshot name, no navigation to the rule.
+
+**Schema evolution:** the Room schema is frozen at the first public release; later changes must be additive, migrated (`@AutoMigration` or a tested `Migration`), and never use `OnConflictStrategy.REPLACE` on tables with cascade children. See [ADR 015](adr/015-database-evolution-policy.md).
 
 ### 4. Extraction Layer (`core/extraction`)
 

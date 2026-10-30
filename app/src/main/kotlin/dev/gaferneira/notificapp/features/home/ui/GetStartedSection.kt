@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.rulesharing.RuleTemplateInfo
+import dev.gaferneira.notificapp.core.ui.components.SectionHeader
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
 import dev.gaferneira.notificapp.core.ui.theme.NotificappStyles
 import dev.gaferneira.notificapp.features.home.contract.MonitoringStatus
@@ -148,7 +149,7 @@ private fun ChecklistHeader(completedSteps: Int) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SectionEyebrow(text = stringResource(R.string.home_checklist_title))
+            SectionHeader(title = stringResource(R.string.home_checklist_title))
             Text(
                 text = progressText,
                 style = MaterialTheme.typography.labelMedium,

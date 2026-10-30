@@ -14,10 +14,14 @@ import androidx.room.PrimaryKey
  *
  * @property id Unique identifier for this value
  * @property ruleExecutionId Foreign key to the parent rule execution
- * @property ruleFieldId Foreign key to the field definition (provides name and type)
+ * @property ruleFieldId Foreign key to the field definition; `NULL` once the field was removed
+ *   (`ON DELETE SET NULL`) so the value survives
+ * @property fieldName Snapshot of the field's name at extraction time
+ * @property fieldType Snapshot of the field's `FieldType` enum name at extraction time
  * @property valueText String value for STRING/CURRENCY types
  * @property valueNumber Numeric value for NUMBER type
- * @property valueDate Timestamp for DATE type
+ * @property valueEpochDay `LocalDate.toEpochDay()` for DATE type (zone-independent calendar day)
+ * @property valueUnit Unit of the quantity: ISO 4217 code for CURRENCY, free-form for NUMBER, `NULL` otherwise
  */
 @Entity(
     tableName = "extracted_field_values",
@@ -32,14 +36,13 @@ import androidx.room.PrimaryKey
             entity = RuleFieldEntity::class,
             parentColumns = ["id"],
             childColumns = ["rule_field_id"],
-            onDelete = ForeignKey.CASCADE,
+            onDelete = ForeignKey.SET_NULL,
         ),
     ],
     indices = [
         Index(value = ["rule_execution_id"]), // For querying values by execution
-        Index(value = ["rule_field_id"]), // For querying values by field
-        Index(value = ["value_number"]), // For numeric range queries
-        Index(value = ["value_date"]), // For date range queries
+        Index(value = ["rule_field_id", "value_number"]), // By field (leading column) and numeric range queries
+        Index(value = ["rule_field_id", "value_epoch_day"]), // By field and date range queries
     ],
 )
 internal data class ExtractedFieldValueEntity(
@@ -51,7 +54,13 @@ internal data class ExtractedFieldValueEntity(
     val ruleExecutionId: String,
 
     @ColumnInfo(name = "rule_field_id")
-    val ruleFieldId: String,
+    val ruleFieldId: String?,
+
+    @ColumnInfo(name = "field_name")
+    val fieldName: String,
+
+    @ColumnInfo(name = "field_type")
+    val fieldType: String,
 
     @ColumnInfo(name = "value_text")
     val valueText: String?,
@@ -59,6 +68,9 @@ internal data class ExtractedFieldValueEntity(
     @ColumnInfo(name = "value_number")
     val valueNumber: Double?,
 
-    @ColumnInfo(name = "value_date")
-    val valueDate: Long?,
+    @ColumnInfo(name = "value_epoch_day")
+    val valueEpochDay: Long?,
+
+    @ColumnInfo(name = "value_unit")
+    val valueUnit: String? = null,
 )

@@ -21,9 +21,15 @@ interface RuleExecutionRepository {
      * Persist one execution and its typed field values atomically.
      *
      * @param execution The rule execution to record
-     * @param fields The rule's field definitions (used to type the extracted values)
+     * @param extractedData Values extracted by this match, keyed by field id. Entries whose id is
+     *   not in [fields] are not persisted.
+     * @param fields The rule's field definitions (used to type and name-snapshot the extracted values)
      */
-    suspend fun saveExecution(execution: RuleExecution, fields: List<RuleField>): Result<Unit>
+    suspend fun saveExecution(
+        execution: RuleExecution,
+        extractedData: Map<String, String>,
+        fields: List<RuleField>,
+    ): Result<Unit>
 
     /**
      * Observe executions for one notification, most recent first.
@@ -33,7 +39,7 @@ interface RuleExecutionRepository {
     /**
      * Replace the extracted values of existing executions, all in one transaction (all or none).
      *
-     * Only `extractedData` and the typed field values of the given fields change: executions are
+     * Only the typed field values of the given fields change: executions are
      * never created or deleted, and outcomes, dry-run flag, `createdAt` and the notification's
      * applied-rules counter are untouched. No action is dispatched.
      */

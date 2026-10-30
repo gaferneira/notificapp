@@ -3,10 +3,11 @@ package dev.gaferneira.notificapp.core.data.local.dao
 import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import dev.gaferneira.notificapp.core.data.local.entity.NotificationEntity
+import dev.gaferneira.notificapp.domain.model.AppActivity
+import dev.gaferneira.notificapp.domain.model.TrendPoint
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -63,20 +64,22 @@ internal interface NotificationDao {
      * Get paginated notifications with optional app and status filters.
      * NULL or empty packageNames means no app filter.
      * NULL isProcessed means no status filter.
+     * NULL since means no date bound; otherwise only notifications at or after it (epoch millis).
      */
     @Query(
         """
         SELECT * FROM notifications 
         WHERE (package_name IN (:packageNames) OR :hasPackageFilter = 0)
-        AND (is_processed = :isProcessed OR :hasStatusFilter = 0)
+        AND (:isProcessed IS NULL OR is_processed = :isProcessed)
+        AND (:since IS NULL OR timestamp >= :since)
         ORDER BY timestamp DESC
     """,
     )
     fun getFilteredPaged(
         packageNames: List<String>,
         hasPackageFilter: Boolean,
-        isProcessed: Boolean,
-        hasStatusFilter: Boolean,
+        isProcessed: Boolean?,
+        since: Long?,
     ): PagingSource<Int, NotificationEntity>
 
     /**
@@ -89,7 +92,8 @@ internal interface NotificationDao {
         SELECT n.* FROM notifications n
         JOIN notifications_fts fts ON n.rowid = fts.rowid
         WHERE (n.package_name IN (:packageNames) OR :hasPackageFilter = 0)
-        AND (n.is_processed = :isProcessed OR :hasStatusFilter = 0)
+        AND (:isProcessed IS NULL OR n.is_processed = :isProcessed)
+        AND (:since IS NULL OR n.timestamp >= :since)
         AND notifications_fts MATCH :ftsQuery
         ORDER BY n.timestamp DESC
     """,
@@ -98,8 +102,8 @@ internal interface NotificationDao {
         ftsQuery: String,
         packageNames: List<String>,
         hasPackageFilter: Boolean,
-        isProcessed: Boolean,
-        hasStatusFilter: Boolean,
+        isProcessed: Boolean?,
+        since: Long?,
     ): PagingSource<Int, NotificationEntity>
 
     /**
@@ -152,17 +156,21 @@ internal interface NotificationDao {
     suspend fun search(ftsQuery: String): List<NotificationEntity>
 
     /**
-     * Insert a new notification.
-     * Replaces on conflict (UPSERT behavior).
+     * Insert a notification, or update it in place when the id already exists.
+     *
+     * Must be an in-place upsert, never `OnConflictStrategy.REPLACE`: REPLACE deletes the parent row
+     * first, which would cascade-delete the notification's `rule_executions` (and their extracted
+     * values). An in-place update also keeps the `rowid` that the `notifications_fts` external-content
+     * index is keyed on, so Room's FTS sync triggers stay consistent.
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(notification: NotificationEntity)
+    @Upsert
+    suspend fun upsert(notification: NotificationEntity)
 
     /**
-     * Insert multiple notifications.
+     * Insert or update multiple notifications in place (see [upsert]).
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(notifications: List<NotificationEntity>)
+    @Upsert
+    suspend fun upsertAll(notifications: List<NotificationEntity>)
 
     /**
      * Mark a notification as processed.
@@ -256,14 +264,15 @@ internal interface NotificationDao {
         """
         SELECT COUNT(*) FROM notifications
         WHERE (package_name IN (:packageNames) OR :hasPackageFilter = 0)
-        AND (is_processed = :isProcessed OR :hasStatusFilter = 0)
+        AND (:isProcessed IS NULL OR is_processed = :isProcessed)
+        AND (:since IS NULL OR timestamp >= :since)
     """,
     )
     fun observeFilteredCount(
         packageNames: List<String>,
         hasPackageFilter: Boolean,
-        isProcessed: Boolean,
-        hasStatusFilter: Boolean,
+        isProcessed: Boolean?,
+        since: Long?,
     ): Flow<Int>
 
     /**
@@ -275,7 +284,8 @@ internal interface NotificationDao {
         SELECT COUNT(*) FROM notifications n
         JOIN notifications_fts fts ON n.rowid = fts.rowid
         WHERE (n.package_name IN (:packageNames) OR :hasPackageFilter = 0)
-        AND (n.is_processed = :isProcessed OR :hasStatusFilter = 0)
+        AND (:isProcessed IS NULL OR n.is_processed = :isProcessed)
+        AND (:since IS NULL OR n.timestamp >= :since)
         AND notifications_fts MATCH :ftsQuery
     """,
     )
@@ -283,8 +293,8 @@ internal interface NotificationDao {
         ftsQuery: String,
         packageNames: List<String>,
         hasPackageFilter: Boolean,
-        isProcessed: Boolean,
-        hasStatusFilter: Boolean,
+        isProcessed: Boolean?,
+        since: Long?,
     ): Flow<Int>
 
     /** Number of notifications per package. */
@@ -317,6 +327,62 @@ internal interface NotificationDao {
      */
     @Query("SELECT COUNT(*) FROM notifications WHERE timestamp >= :since")
     fun observeCountSince(since: Long): Flow<Int>
+
+    /**
+     * Count processed notifications logged at or after [since] (epoch millis), as a Flow - Home's
+     * "Handled by rules" stat. Uses the exact predicates of [getFilteredPaged] with the PROCESSED
+     * status (`is_processed = 1`) and the same date bound, so the tile matches the list it opens.
+     */
+    @Query("SELECT COUNT(*) FROM notifications WHERE is_processed = 1 AND timestamp >= :since")
+    fun observeProcessedCountSince(since: Long): Flow<Int>
+
+    /**
+     * Captured notifications per local calendar day since [since] (epoch millis); sums to
+     * [observeCountSince]. Days without notifications are omitted (the repository zero-fills them).
+     * Same `localtime` bucketing as `RuleExecutionDao.observeDailyCountsSince`.
+     */
+    @Query(
+        """
+        SELECT strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime') AS date, COUNT(*) AS count
+        FROM notifications
+        WHERE timestamp >= :since
+        GROUP BY date
+        ORDER BY date ASC
+        """,
+    )
+    fun observeDailyCountsSince(since: Long): Flow<List<TrendPoint>>
+
+    /** Processed notifications per local calendar day since [since]; sums to [observeProcessedCountSince]. */
+    @Query(
+        """
+        SELECT strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime') AS date, COUNT(*) AS count
+        FROM notifications
+        WHERE is_processed = 1 AND timestamp >= :since
+        GROUP BY date
+        ORDER BY date ASC
+        """,
+    )
+    fun observeDailyProcessedCountsSince(since: Long): Flow<List<TrendPoint>>
+
+    /**
+     * Busiest source apps by notifications logged at or after [since], capped at [limit]. The label
+     * is the package's most recent `app_name` (ties on timestamp broken by `id`), not an arbitrary
+     * row of the group.
+     */
+    @Query(
+        """
+        SELECT (
+            SELECT n2.app_name FROM notifications n2
+            WHERE n2.package_name = notifications.package_name
+            ORDER BY n2.timestamp DESC, n2.id DESC LIMIT 1
+        ) AS appName, package_name AS packageName, COUNT(*) AS count FROM notifications
+        WHERE timestamp >= :since
+        GROUP BY package_name
+        ORDER BY count DESC, package_name ASC
+        LIMIT :limit
+        """,
+    )
+    fun observeTopAppsSince(since: Long, limit: Int): Flow<List<AppActivity>>
 }
 
 /** Projection for [NotificationDao.observeAppsWithLatestName]. */

@@ -1,5 +1,7 @@
 package dev.gaferneira.notificapp.domain.model
 
+import java.time.LocalDate
+
 /**
  * Flat, joined projection of one extracted value for the Data Browser: [ExtractedFieldValue]
  * joined with its owning [RuleField] (name/type), [RuleExecution] (timestamp), [Rule] (name), and
@@ -8,14 +10,16 @@ package dev.gaferneira.notificapp.domain.model
  *
  * @property valueId The underlying `ExtractedFieldValue.id`
  * @property executionId The owning `RuleExecution.id`
- * @property ruleName Name of the rule that produced this value
+ * @property notificationId The source `Notification.id`, for drill-down to its details
+ * @property ruleName Name of the rule that produced this value (current name, or the execution-time snapshot if the rule was deleted)
  * @property packageName Source app's package name
  * @property appName Source app's display name
- * @property fieldName Name of the extraction field, from `RuleField`
- * @property fieldType Type of the extraction field, from `RuleField`
+ * @property fieldName Name of the extraction field (current name, or the extraction-time snapshot if the field was removed)
+ * @property fieldType Type of the extraction field, snapshotted at extraction time
  * @property valueText String value, populated for STRING/CURRENCY fields
  * @property valueNumber Numeric value, populated for NUMBER fields
- * @property valueDate Timestamp value, populated for DATE fields
+ * @property valueDate Calendar day, populated for DATE fields (zone-independent)
+ * @property unit Unit of the quantity (ISO 4217 code for CURRENCY, free-form for NUMBER), null when unknown or not applicable
  * @property notificationTitle Title of the source notification, if any
  * @property notificationContent Content of the source notification, if any
  * @property createdAt When the owning rule execution occurred (epoch millis)
@@ -23,6 +27,7 @@ package dev.gaferneira.notificapp.domain.model
 data class DataBrowserRow(
     val valueId: String,
     val executionId: String,
+    val notificationId: String,
     val ruleName: String,
     val packageName: String,
     val appName: String,
@@ -30,10 +35,11 @@ data class DataBrowserRow(
     val fieldType: RuleField.FieldType,
     val valueText: String?,
     val valueNumber: Double?,
-    val valueDate: Long?,
+    val valueDate: LocalDate?,
     val notificationTitle: String?,
     val notificationContent: String?,
     val createdAt: Long,
+    val unit: String? = null,
 )
 
 /**

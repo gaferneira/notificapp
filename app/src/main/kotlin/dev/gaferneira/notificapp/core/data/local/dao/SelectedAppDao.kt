@@ -67,13 +67,13 @@ internal interface SelectedAppDao {
      * Insert a new selected app.
      * Replaces on conflict (UPSERT behavior).
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) // replace-ok: leaf table, no cascade children
     suspend fun insert(app: SelectedAppEntity)
 
     /**
      * Insert multiple selected apps.
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) // replace-ok: leaf table, no cascade children
     suspend fun insertAll(apps: List<SelectedAppEntity>)
 
     /**

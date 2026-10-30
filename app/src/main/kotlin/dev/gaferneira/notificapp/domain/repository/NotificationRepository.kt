@@ -28,10 +28,12 @@ interface NotificationRepository {
      *
      * @param packageNames Filter by app package names (empty = all apps)
      * @param isProcessed Filter by processed status (null = all statuses)
+     * @param since Inclusive lower bound on the notification timestamp, epoch millis (null = no bound)
      */
     fun observeNotificationsPaged(
         packageNames: List<String> = emptyList(),
         isProcessed: Boolean? = null,
+        since: Long? = null,
     ): Flow<PagingData<Notification>>
 
     /**
@@ -40,11 +42,13 @@ interface NotificationRepository {
      * @param query Search query for title/content
      * @param packageNames Filter by app package names (empty = all apps)
      * @param isProcessed Filter by processed status (null = all statuses)
+     * @param since Inclusive lower bound on the notification timestamp, epoch millis (null = no bound)
      */
     fun searchNotificationsPaged(
         query: String,
         packageNames: List<String> = emptyList(),
         isProcessed: Boolean? = null,
+        since: Long? = null,
     ): Flow<PagingData<Notification>>
 
     /**
@@ -69,11 +73,13 @@ interface NotificationRepository {
      * @param query Search query for title/content (blank = no text search)
      * @param packageNames Filter by app package names (empty = all apps)
      * @param isProcessed Filter by processed status (null = all statuses)
+     * @param since Inclusive lower bound on the notification timestamp, epoch millis (null = no bound)
      */
     fun observeFilteredCount(
         query: String = "",
         packageNames: List<String> = emptyList(),
         isProcessed: Boolean? = null,
+        since: Long? = null,
     ): Flow<Int>
 
     /**
@@ -178,4 +184,10 @@ interface NotificationRepository {
      * Count notifications logged at or after [since] (epoch millis).
      */
     fun observeCountSince(since: Long): Flow<Int>
+
+    /**
+     * Count processed notifications logged at or after [since] (epoch millis) - exactly what
+     * [observeNotificationsPaged] lists with `isProcessed = true` and the same [since].
+     */
+    fun observeProcessedCountSince(since: Long): Flow<Int>
 }

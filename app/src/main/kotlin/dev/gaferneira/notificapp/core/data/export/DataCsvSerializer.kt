@@ -10,7 +10,7 @@ import dev.gaferneira.notificapp.domain.model.DataBrowserRow
  */
 internal object DataCsvSerializer {
 
-    private val HEADER = listOf("Field Name", "Field Type", "Value", "Source App", "Rule Name", "Timestamp")
+    private val HEADER = listOf("Field Name", "Field Type", "Value", "Unit", "Source App", "Rule Name", "Timestamp")
 
     /** Write the CSV header row. Call exactly once, before the first [writeRows] call. */
     fun writeHeader(writer: Appendable) {
@@ -26,6 +26,7 @@ internal object DataCsvSerializer {
         fieldName,
         fieldType.name,
         valueAsString(),
+        unit.orEmpty(),
         appName,
         ruleName,
         createdAt.toString(),

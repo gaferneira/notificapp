@@ -1,15 +1,19 @@
 package dev.gaferneira.notificapp.features.databrowser.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
+import androidx.paging.AsyncPagingDataDiffer
 import androidx.paging.PagingData
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListUpdateCallback
 import app.cash.turbine.test
+import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.UiText
 import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.DataBrowserFilter
 import dev.gaferneira.notificapp.domain.model.DataBrowserRow
 import dev.gaferneira.notificapp.domain.model.DataSort
-import dev.gaferneira.notificapp.domain.model.DataStatistics
 import dev.gaferneira.notificapp.domain.model.ExportFormat
 import dev.gaferneira.notificapp.domain.model.RuleField
-import dev.gaferneira.notificapp.domain.repository.DataBrowserRepository
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserEffect
 import dev.gaferneira.notificapp.features.databrowser.contract.DataBrowserEvent
 import dev.gaferneira.notificapp.features.databrowser.contract.DataFilterChip
@@ -18,16 +22,21 @@ import dev.gaferneira.notificapp.testutil.createTestAction
 import dev.gaferneira.notificapp.testutil.createTestField
 import dev.gaferneira.notificapp.testutil.createTestNotification
 import dev.gaferneira.notificapp.testutil.createTestRule
+import dev.gaferneira.notificapp.testutil.fakes.FakeDataBrowserRepository
 import dev.gaferneira.notificapp.testutil.fakes.FakeNotificationRepository
 import dev.gaferneira.notificapp.testutil.fakes.FakeRuleRepository
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
@@ -35,7 +44,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayOutputStream
-import java.io.OutputStream
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DataBrowserViewModelTest {
@@ -57,10 +65,16 @@ class DataBrowserViewModelTest {
     private fun createViewModel(
         ruleRepository: FakeRuleRepository = FakeRuleRepository(),
         notificationRepository: FakeNotificationRepository = FakeNotificationRepository(),
+        initialRuleId: String? = null,
+        initialSince: Long? = null,
+        savedStateHandle: SavedStateHandle = SavedStateHandle(),
     ): DataBrowserViewModel = DataBrowserViewModel(
+        visitArgs = DataBrowserVisitArgs(initialRuleId, initialSince),
+        savedStateHandle = savedStateHandle,
         dataBrowserRepository = repository,
         ruleRepository = ruleRepository,
         notificationRepository = notificationRepository,
+        ioDispatcher = testDispatcher,
     )
 
     private val extractField = createTestField(method = RuleField.ExtractionMethod.SmartAmountDetection)
@@ -115,13 +129,10 @@ class DataBrowserViewModelTest {
                 ),
             )
             testDispatcher.scheduler.advanceUntilIdle()
-            repository.statisticsCalls.clear()
-
             viewModel.onEvent(DataBrowserEvent.OnClearFilters)
             testDispatcher.scheduler.advanceUntilIdle()
 
             viewModel.uiState.value.filter shouldBe DataBrowserFilter(sort = DataSort.RULE_ASC)
-            repository.statisticsCalls shouldBe listOf(DataBrowserFilter(sort = DataSort.RULE_ASC))
         }
 
         @Test
@@ -132,6 +143,24 @@ class DataBrowserViewModelTest {
             viewModel.onEvent(DataBrowserEvent.OnClearFilters)
 
             viewModel.uiState.value.filter shouldBe DataBrowserFilter()
+        }
+    }
+
+    @Nested
+    inner class SortTests {
+
+        @Test
+        fun `OnSortChange updates the sort and requeries with it`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            val collectJob = launch { viewModel.rows.collect { } }
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.onEvent(DataBrowserEvent.OnSortChange(DataSort.RULE_ASC))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            collectJob.cancel()
+            viewModel.uiState.value.filter shouldBe DataBrowserFilter(sort = DataSort.RULE_ASC)
+            repository.browseCalls.last() shouldBe DataBrowserFilter(sort = DataSort.RULE_ASC)
         }
     }
 
@@ -200,18 +229,15 @@ class DataBrowserViewModelTest {
         )
 
         @Test
-        fun `OnRemoveFilterChip removes only that value and reloads the stats`() = runTest(testDispatcher) {
+        fun `OnRemoveFilterChip removes only that value`() = runTest(testDispatcher) {
             val viewModel = createViewModel()
             viewModel.onEvent(DataBrowserEvent.OnFilterChange(applied))
             testDispatcher.scheduler.advanceUntilIdle()
-            repository.statisticsCalls.clear()
-
             viewModel.onEvent(DataBrowserEvent.OnRemoveFilterChip(DataFilterChip.App("com.a")))
             testDispatcher.scheduler.advanceUntilIdle()
 
             val expected = applied.copy(packageNames = listOf("com.b"))
             viewModel.uiState.value.filter shouldBe expected
-            repository.statisticsCalls shouldBe listOf(expected)
         }
 
         @Test
@@ -222,34 +248,6 @@ class DataBrowserViewModelTest {
             viewModel.onEvent(DataBrowserEvent.OnRemoveFilterChip(DataFilterChip.DateRange))
 
             viewModel.uiState.value.filter shouldBe applied.copy(dateFrom = null, dateTo = null)
-        }
-    }
-
-    @Nested
-    inner class StatisticsTests {
-
-        @Test
-        fun `stats load on init`() = runTest(testDispatcher) {
-            val stats = DataStatistics(total = 5, thisWeek = 2, mostActiveRuleName = "Rule A", perRule = emptyList(), perApp = emptyList(), trend = emptyList())
-            repository.statisticsResult = Result.success(stats)
-
-            val viewModel = createViewModel()
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            viewModel.uiState.value.stats shouldBe stats
-            viewModel.uiState.value.isStatsLoading shouldBe false
-        }
-
-        @Test
-        fun `OnRefreshStats reloads statistics for the current filter`() = runTest(testDispatcher) {
-            val viewModel = createViewModel()
-            testDispatcher.scheduler.advanceUntilIdle()
-            repository.statisticsCalls.clear()
-
-            viewModel.onEvent(DataBrowserEvent.OnRefreshStats)
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            repository.statisticsCalls shouldBe listOf(DataBrowserFilter())
         }
     }
 
@@ -340,54 +338,304 @@ class DataBrowserViewModelTest {
             result.isFailure shouldBe true
         }
     }
-}
 
-/**
- * Deterministic in-memory [DataBrowserRepository] fake for VM tests. The paginated methods return
- * an empty [PagingData] by default while tracking every call's filter (faking Paging3's real
- * pipeline isn't worth the complexity for VM-level tests, mirroring `FakeNotificationRepository`).
- */
-private class FakeDataBrowserRepository : DataBrowserRepository {
+    @Nested
+    inner class ExportCancellationTests {
 
-    val browseCalls = mutableListOf<DataBrowserFilter>()
-    val searchCalls = mutableListOf<DataBrowserFilter>()
-    val statisticsCalls = mutableListOf<DataBrowserFilter>()
-    val deleteByIdsCalls = mutableListOf<List<String>>()
-    val exportCalls = mutableListOf<Pair<DataBrowserFilter, ExportFormat>>()
+        @Test
+        fun `cancelling an in-flight export resets isExporting`() = runTest(testDispatcher) {
+            repository.exportGate = CompletableDeferred()
+            val viewModel = createViewModel()
+            val export = launch { viewModel.exportTo(ByteArrayOutputStream(), ExportFormat.CSV) }
+            testDispatcher.scheduler.advanceUntilIdle()
+            viewModel.uiState.value.isExporting shouldBe true
 
-    var statisticsResult: Result<DataStatistics> = Result.success(
-        DataStatistics(total = 0, thisWeek = 0, mostActiveRuleName = null, perRule = emptyList(), perApp = emptyList(), trend = emptyList()),
-    )
-    var previewDeleteResult: Result<List<String>> = Result.success(emptyList())
-    var deleteByIdsResult: Result<Int> = Result.success(0)
-    var exportResult: Result<Unit> = Result.success(Unit)
+            export.cancel()
+            testDispatcher.scheduler.advanceUntilIdle()
 
-    override fun browsePaged(filter: DataBrowserFilter): Flow<PagingData<DataBrowserRow>> {
-        browseCalls += filter
-        return flowOf(PagingData.empty())
+            viewModel.uiState.value.isExporting shouldBe false
+        }
     }
 
-    override fun searchPaged(filter: DataBrowserFilter): Flow<PagingData<DataBrowserRow>> {
-        searchCalls += filter
-        return flowOf(PagingData.empty())
+    @Nested
+    inner class InitialRuleTests {
+
+        private val windowStart = 1_773_532_800_000L
+
+        @Test
+        fun `a route rule id seeds a removable rule filter`() = runTest(testDispatcher) {
+            val viewModel = createViewModel(initialRuleId = "rule-9")
+            val collectJob = launch { viewModel.rows.collect { } }
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.filter shouldBe DataBrowserFilter(ruleIds = listOf("rule-9"))
+            repository.browseCalls shouldBe listOf(DataBrowserFilter(ruleIds = listOf("rule-9")))
+
+            viewModel.onEvent(DataBrowserEvent.OnRemoveFilterChip(DataFilterChip.Rule("rule-9")))
+            viewModel.uiState.value.filter shouldBe DataBrowserFilter()
+            collectJob.cancel()
+        }
+
+        @Test
+        fun `without a route rule id the filter starts empty`() = runTest(testDispatcher) {
+            createViewModel().uiState.value.filter shouldBe DataBrowserFilter()
+        }
+
+        @Test
+        fun `a route since seeds an open-ended date filter in the first state and the first query`() = runTest(testDispatcher) {
+            // Given / When
+            val viewModel = createViewModel(initialRuleId = "rule-9", initialSince = windowStart)
+            val collectJob = launch { viewModel.rows.collect { } }
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then
+            val seeded = DataBrowserFilter(ruleIds = listOf("rule-9"), dateFrom = windowStart, dateTo = null)
+            viewModel.uiState.value.filter shouldBe seeded
+            repository.browseCalls shouldBe listOf(seeded)
+            collectJob.cancel()
+        }
+
+        @Test
+        fun `the seeded since is a removable date chip that keeps the rule`() = runTest(testDispatcher) {
+            // Given
+            val viewModel = createViewModel(initialRuleId = "rule-9", initialSince = windowStart)
+
+            // When
+            viewModel.onEvent(DataBrowserEvent.OnRemoveFilterChip(DataFilterChip.DateRange))
+
+            // Then
+            viewModel.uiState.value.filter shouldBe DataBrowserFilter(ruleIds = listOf("rule-9"))
+        }
+
+        @Test
+        fun `chips removed by the user stay removed when the ViewModel is restored`() = runTest(testDispatcher) {
+            // Given a visit seeded with a rule and a since, then both chips removed
+            val savedStateHandle = SavedStateHandle()
+            val viewModel = createViewModel(initialRuleId = "rule-9", initialSince = windowStart, savedStateHandle = savedStateHandle)
+            viewModel.onEvent(DataBrowserEvent.OnRemoveFilterChip(DataFilterChip.Rule("rule-9")))
+            viewModel.onEvent(DataBrowserEvent.OnRemoveFilterChip(DataFilterChip.DateRange))
+
+            // When process death restores a new instance with the same route args and saved state
+            val restored = createViewModel(initialRuleId = "rule-9", initialSince = windowStart, savedStateHandle = savedStateHandle)
+
+            // Then nothing comes back
+            restored.uiState.value.filter shouldBe DataBrowserFilter()
+        }
+
+        @Test
+        fun `an untouched seeded filter is kept when the ViewModel is restored`() = runTest(testDispatcher) {
+            val savedStateHandle = SavedStateHandle()
+            createViewModel(initialRuleId = "rule-9", initialSince = windowStart, savedStateHandle = savedStateHandle)
+
+            val restored = createViewModel(initialRuleId = "rule-9", initialSince = windowStart, savedStateHandle = savedStateHandle)
+
+            restored.uiState.value.filter shouldBe DataBrowserFilter(ruleIds = listOf("rule-9"), dateFrom = windowStart)
+        }
+
+        @Test
+        fun `the seeded since only lives in that visit`() = runTest(testDispatcher) {
+            // Given a visit seeded from Insights
+            createViewModel(initialSince = windowStart)
+
+            // When the browser is opened again without a since
+            val nextVisit = createViewModel()
+
+            // Then nothing carried over
+            nextVisit.uiState.value.filter shouldBe DataBrowserFilter()
+        }
     }
 
-    override suspend fun statistics(filter: DataBrowserFilter): Result<DataStatistics> {
-        statisticsCalls += filter
-        return statisticsResult
-    }
+    @Nested
+    inner class RowDeleteTests {
 
-    override suspend fun exportRows(filter: DataBrowserFilter, sink: OutputStream, format: ExportFormat): Result<Unit> {
-        exportCalls += filter to format
-        return exportResult
-    }
+        private fun row(id: String) = DataBrowserRow(
+            valueId = id,
+            executionId = "e-$id",
+            notificationId = "n-$id",
+            ruleName = "Rule",
+            packageName = "com.a",
+            appName = "A",
+            fieldName = "Amount",
+            fieldType = RuleField.FieldType.NUMBER,
+            valueText = null,
+            valueNumber = 1.0,
+            valueDate = null,
+            notificationTitle = null,
+            notificationContent = null,
+            createdAt = 0L,
+        )
 
-    override suspend fun previewDelete(filter: DataBrowserFilter): Result<List<String>> = previewDeleteResult
+        private val differ = AsyncPagingDataDiffer(
+            diffCallback = object : DiffUtil.ItemCallback<DataBrowserRow>() {
+                override fun areItemsTheSame(oldItem: DataBrowserRow, newItem: DataBrowserRow) = oldItem.valueId == newItem.valueId
+                override fun areContentsTheSame(oldItem: DataBrowserRow, newItem: DataBrowserRow) = oldItem == newItem
+            },
+            updateCallback = object : ListUpdateCallback {
+                override fun onInserted(position: Int, count: Int) = Unit
+                override fun onRemoved(position: Int, count: Int) = Unit
+                override fun onMoved(fromPosition: Int, toPosition: Int) = Unit
+                override fun onChanged(position: Int, count: Int, payload: Any?) = Unit
+            },
+            mainDispatcher = testDispatcher,
+            workerDispatcher = testDispatcher,
+        )
 
-    override suspend fun deleteById(valueId: String): Result<Unit> = Result.success(Unit)
+        private fun visibleIds() = differ.snapshot().items.map { it.valueId }
 
-    override suspend fun deleteByIds(ids: List<String>): Result<Int> {
-        deleteByIdsCalls += ids
-        return deleteByIdsResult
+        private fun TestScope.startCollecting(viewModel: DataBrowserViewModel): Job {
+            repository.pagedRows = PagingData.from(listOf(row("a"), row("b")))
+            val job = launch { viewModel.rows.collectLatest { differ.submitData(it) } }
+            testDispatcher.scheduler.advanceUntilIdle()
+            return job
+        }
+
+        @Test
+        fun `deleting a row hides it and offers undo without deleting yet`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            val job = startCollecting(viewModel)
+            visibleIds() shouldBe listOf("a", "b")
+
+            viewModel.effect.test {
+                viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("a"))
+                testDispatcher.scheduler.runCurrent()
+
+                awaitItem() shouldBe DataBrowserEffect.ShowUndoDelete("a")
+                cancelAndIgnoreRemainingEvents()
+            }
+            visibleIds() shouldBe listOf("b")
+            repository.deleteByIdCalls shouldBe emptyList()
+            job.cancel()
+        }
+
+        @Test
+        fun `committing the pending delete deletes the row once`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            val job = startCollecting(viewModel)
+
+            viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("a"))
+            viewModel.onEvent(DataBrowserEvent.OnDeleteCommitted("a"))
+            viewModel.onEvent(DataBrowserEvent.OnDeleteCommitted("a"))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            repository.deleteByIdCalls shouldBe listOf("a")
+            visibleIds() shouldBe listOf("b")
+            job.cancel()
+        }
+
+        @Test
+        fun `undo restores the row without calling the repository`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            val job = startCollecting(viewModel)
+
+            viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("a"))
+            viewModel.onEvent(DataBrowserEvent.OnUndoDelete("a"))
+            viewModel.onEvent(DataBrowserEvent.OnDeleteCommitted("a"))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            visibleIds() shouldBe listOf("a", "b")
+            repository.deleteByIdCalls shouldBe emptyList()
+            job.cancel()
+        }
+
+        @Test
+        fun `a second delete commits the first one`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            val job = startCollecting(viewModel)
+
+            viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("a"))
+            viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("b"))
+            testDispatcher.scheduler.runCurrent()
+
+            repository.deleteByIdCalls shouldBe listOf("a")
+            visibleIds() shouldBe emptyList()
+            job.cancel()
+        }
+
+        @Test
+        fun `a failed commit unhides the row and reports the error`() = runTest(testDispatcher) {
+            repository.deleteByIdResult = Result.failure(RuntimeException("db"))
+            val viewModel = createViewModel()
+            val job = startCollecting(viewModel)
+
+            viewModel.effect.test {
+                viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("a"))
+                viewModel.onEvent(DataBrowserEvent.OnDeleteCommitted("a"))
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                awaitItem() shouldBe DataBrowserEffect.ShowUndoDelete("a")
+                awaitItem() shouldBe DataBrowserEffect.ShowError(UiText.StringResource(R.string.data_error_delete))
+                cancelAndIgnoreRemainingEvents()
+            }
+            visibleIds() shouldBe listOf("a", "b")
+            job.cancel()
+        }
+
+        @Test
+        fun `the pending delete commits by itself once the undo window elapses`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            val job = startCollecting(viewModel)
+
+            viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("a"))
+            testDispatcher.scheduler.advanceTimeBy(UNDO_WINDOW_MS - 1)
+            testDispatcher.scheduler.runCurrent()
+            repository.deleteByIdCalls shouldBe emptyList()
+
+            testDispatcher.scheduler.advanceTimeBy(1)
+            testDispatcher.scheduler.runCurrent()
+
+            repository.deleteByIdCalls shouldBe listOf("a")
+            job.cancel()
+        }
+
+        @Test
+        fun `undo stops the timer so the row is never deleted`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            val job = startCollecting(viewModel)
+
+            viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("a"))
+            viewModel.onEvent(DataBrowserEvent.OnUndoDelete("a"))
+            testDispatcher.scheduler.advanceTimeBy(UNDO_WINDOW_MS * 2)
+            testDispatcher.scheduler.runCurrent()
+
+            repository.deleteByIdCalls shouldBe emptyList()
+            visibleIds() shouldBe listOf("a", "b")
+            job.cancel()
+        }
+
+        @Test
+        fun `onCleared commits a still-pending delete`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("a"))
+            testDispatcher.scheduler.runCurrent()
+
+            DataBrowserViewModel::class.java.getDeclaredMethod("onCleared")
+                .apply { isAccessible = true }
+                .invoke(viewModel)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            repository.deleteByIdCalls shouldBe listOf("a")
+        }
+
+        @Test
+        fun `exporting first makes the pending delete final so the hidden row is not exported`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("a"))
+
+            viewModel.exportTo(ByteArrayOutputStream(), ExportFormat.CSV)
+
+            repository.deleteByIdCalls shouldBe listOf("a")
+            repository.exportCalls.size shouldBe 1
+        }
+
+        @Test
+        fun `previewing a bulk delete first makes the pending delete final`() = runTest(testDispatcher) {
+            val viewModel = createViewModel()
+            viewModel.onEvent(DataBrowserEvent.OnDeleteRowClick("a"))
+
+            viewModel.onEvent(DataBrowserEvent.OnBulkDeleteClick)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            repository.deleteByIdCalls shouldBe listOf("a")
+        }
     }
 }

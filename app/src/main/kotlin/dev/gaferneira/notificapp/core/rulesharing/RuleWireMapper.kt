@@ -1,5 +1,6 @@
 package dev.gaferneira.notificapp.core.rulesharing
 
+import dev.gaferneira.notificapp.core.extraction.UnitResolver
 import dev.gaferneira.notificapp.core.rulesharing.dto.ActionDto
 import dev.gaferneira.notificapp.core.rulesharing.dto.AppInfoDto
 import dev.gaferneira.notificapp.core.rulesharing.dto.ConditionDto
@@ -169,17 +170,22 @@ private fun RuleField.toDto(): FieldDto = FieldDto(
     fieldType = fieldType.toWireString(RuleField.FieldType.serializer()),
     isRequired = isRequired,
     method = method.toDto(),
+    unit = defaultUnit,
 )
 
-private fun FieldDto.toDomain(): RuleField = RuleField(
-    id = id,
-    name = name,
-    fieldType = fieldType.fromWireStringStrict(RuleField.FieldType.serializer(), "field type"),
-    method = method.toDomain(),
-    isRequired = isRequired,
-)
+private fun FieldDto.toDomain(): RuleField {
+    val type = fieldType.fromWireStringStrict(RuleField.FieldType.serializer(), "field type")
+    return RuleField(
+        id = id,
+        name = name,
+        fieldType = type,
+        method = method.toDomain(),
+        isRequired = isRequired,
+        defaultUnit = UnitResolver.normalizeUnit(unit, type),
+    )
+}
 
-private fun ExtractionMethod.toDto(): ExtractionMethodDto = when (this) {
+internal fun ExtractionMethod.toDto(): ExtractionMethodDto = when (this) {
     is ExtractionMethod.FixedPosition -> ExtractionMethodDto.FixedPosition(startIndex, endIndex)
     is ExtractionMethod.TextBetweenAnchors -> ExtractionMethodDto.TextBetweenAnchors(startAnchor, endAnchor)
     is ExtractionMethod.RegexPattern -> ExtractionMethodDto.RegexPattern(pattern, captureGroup)
@@ -190,9 +196,10 @@ private fun ExtractionMethod.toDto(): ExtractionMethodDto = when (this) {
     is ExtractionMethod.JsonPath -> ExtractionMethodDto.JsonPath(path)
     ExtractionMethod.SmartAmountDetection -> ExtractionMethodDto.SmartAmountDetection
     ExtractionMethod.SmartDateDetection -> ExtractionMethodDto.SmartDateDetection
+    ExtractionMethod.SmartCodeDetection -> ExtractionMethodDto.SmartCodeDetection
 }
 
-private fun ExtractionMethodDto.toDomain(): ExtractionMethod = when (this) {
+internal fun ExtractionMethodDto.toDomain(): ExtractionMethod = when (this) {
     is ExtractionMethodDto.FixedPosition -> ExtractionMethod.FixedPosition(startIndex, endIndex)
     is ExtractionMethodDto.TextBetweenAnchors -> ExtractionMethod.TextBetweenAnchors(startAnchor, endAnchor)
     is ExtractionMethodDto.RegexPattern -> ExtractionMethod.RegexPattern(pattern, captureGroup)
@@ -203,6 +210,7 @@ private fun ExtractionMethodDto.toDomain(): ExtractionMethod = when (this) {
     is ExtractionMethodDto.JsonPath -> ExtractionMethod.JsonPath(path)
     ExtractionMethodDto.SmartAmountDetection -> ExtractionMethod.SmartAmountDetection
     ExtractionMethodDto.SmartDateDetection -> ExtractionMethod.SmartDateDetection
+    ExtractionMethodDto.SmartCodeDetection -> ExtractionMethod.SmartCodeDetection
 }
 
 private fun RuleAction.toDto(): ActionDto = ActionDto(

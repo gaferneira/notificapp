@@ -54,14 +54,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
@@ -69,7 +67,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.gaferneira.notificapp.R
@@ -78,6 +75,8 @@ import dev.gaferneira.notificapp.core.rulesharing.RuleTemplates
 import dev.gaferneira.notificapp.core.ui.components.AppIcon
 import dev.gaferneira.notificapp.core.ui.components.IconBadge
 import dev.gaferneira.notificapp.core.ui.components.RuleTemplateCard
+import dev.gaferneira.notificapp.core.ui.components.SectionHeader
+import dev.gaferneira.notificapp.core.ui.components.StatTile
 import dev.gaferneira.notificapp.core.ui.components.TonalCard
 import dev.gaferneira.notificapp.core.ui.mvi.CollectOneOffEffects
 import dev.gaferneira.notificapp.core.ui.navigation.AppDestinations
@@ -85,6 +84,8 @@ import dev.gaferneira.notificapp.core.ui.navigation.MainBottomNav
 import dev.gaferneira.notificapp.core.ui.navigation.NavOptions
 import dev.gaferneira.notificapp.core.ui.navigation.Routes
 import dev.gaferneira.notificapp.core.ui.navigation.Screen
+import dev.gaferneira.notificapp.core.ui.text.formatCount
+import dev.gaferneira.notificapp.core.ui.text.rememberIntegerFormat
 import dev.gaferneira.notificapp.core.ui.theme.NotificappStyles
 import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 import dev.gaferneira.notificapp.core.ui.utils.OnResumeEffect
@@ -133,7 +134,7 @@ fun HomeScreen(
             is HomeEffect.NavigateToNotificationDetail ->
                 navigateTo(Routes.notificationDetails(effect.notificationId), null)
 
-            is HomeEffect.NavigateToInbox -> navigateTo(Routes.inbox(initialStatus = effect.initialStatus), null)
+            is HomeEffect.NavigateToInbox -> navigateTo(Routes.inbox(initialStatus = effect.initialStatus, since = effect.since), null)
 
             is HomeEffect.ShowError -> snackbarHostState.showSnackbar(effect.message.asString(context))
         }
@@ -232,7 +233,7 @@ private fun LazyListScope.activityItems(uiState: HomeUiState, onEvent: (HomeEven
             weekStats = uiState.weekStats,
             actions = StatTileActions(
                 onCapturedClick = { onEvent(HomeEvent.OnCapturedClick) },
-                onRulesFiredClick = { onEvent(HomeEvent.OnRulesFiredClick) },
+                onHandledClick = { onEvent(HomeEvent.OnHandledClick) },
             ),
         )
     }
@@ -556,17 +557,6 @@ private fun monitoringSummary(monitoring: MonitoringStatus): String {
 }
 
 @Composable
-internal fun SectionEyebrow(text: String) {
-    Text(
-        text = text.uppercase(Locale.current.platformLocale),
-        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.secondary,
-        modifier = Modifier.semantics { heading() },
-    )
-}
-
-@Composable
 internal fun StarterTemplates(
     templates: ImmutableList<RuleTemplateInfo>,
     onCreateFromTemplate: (RuleTemplateInfo) -> Unit,
@@ -618,7 +608,7 @@ private fun RecurringSuggestionsSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            SectionEyebrow(text = stringResource(R.string.home_recurring_title))
+            SectionHeader(title = stringResource(R.string.home_recurring_title))
             Text(
                 text = stringResource(R.string.home_recurring_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
@@ -686,16 +676,17 @@ private fun SuggestionCard(suggestion: RecurringSuggestionUi, onCreate: () -> Un
 
 private class StatTileActions(
     val onCapturedClick: () -> Unit,
-    val onRulesFiredClick: () -> Unit,
+    val onHandledClick: () -> Unit,
 )
 
 @Composable
 private fun WeekStatsRow(weekStats: WeekStats, actions: StatTileActions) {
+    val countFormat = rememberIntegerFormat()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionEyebrow(text = stringResource(R.string.home_last_7_days_title))
-        if (weekStats.rulesFired > 0) {
+        SectionHeader(title = stringResource(R.string.home_last_7_days_title))
+        if (weekStats.handled > 0) {
             Text(
-                text = pluralStringResource(R.plurals.home_week_summary, weekStats.rulesFired, weekStats.rulesFired),
+                text = pluralStringResource(R.plurals.home_week_summary, weekStats.handled, weekStats.handled),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -709,66 +700,20 @@ private fun WeekStatsRow(weekStats: WeekStats, actions: StatTileActions) {
             StatTile(
                 icon = Icons.Outlined.Inbox,
                 label = stringResource(R.string.home_stat_captured),
-                value = weekStats.captured,
+                value = formatCount(weekStats.captured, countFormat),
                 onClickLabel = stringResource(R.string.home_stat_captured_open),
                 onClick = actions.onCapturedClick,
                 modifier = tileModifier,
             )
             StatTile(
                 icon = Icons.Outlined.Bolt,
-                label = stringResource(R.string.home_stat_rules_fired),
-                value = weekStats.rulesFired,
-                onClickLabel = stringResource(R.string.home_stat_rules_fired_open),
-                onClick = actions.onRulesFiredClick,
+                label = stringResource(R.string.home_stat_handled),
+                value = formatCount(weekStats.handled, countFormat),
+                onClickLabel = stringResource(R.string.home_stat_handled_open),
+                onClick = actions.onHandledClick,
                 modifier = tileModifier,
             )
         }
-    }
-}
-
-/** A navigation tile: icon badge, big number and label, with a chevron so it reads as tappable. */
-@Composable
-private fun StatTile(
-    icon: ImageVector,
-    label: String,
-    value: Int,
-    onClickLabel: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    TonalCard(
-        modifier = modifier
-            .clip(MaterialTheme.shapes.large)
-            .clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = onClick)
-            .heightIn(min = 48.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconBadge(icon = icon, style = NotificappStyles.iconBadgeSubtleStyle, modifier = Modifier.size(32.dp), iconSize = 18.dp)
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        Text(
-            text = value.toString(),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 8.dp),
-            maxLines = 1,
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 
@@ -779,14 +724,11 @@ private fun RecentActivitySection(
     onSeeAll: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SectionEyebrow(text = stringResource(R.string.home_recent_activity_title))
-            TextButton(onClick = onSeeAll) { Text(stringResource(R.string.home_see_all)) }
-        }
+        SectionHeader(
+            title = stringResource(R.string.home_recent_activity_title),
+            actionLabel = stringResource(R.string.home_see_all),
+            onActionClick = onSeeAll,
+        )
         if (recentActivity.isEmpty()) {
             RecentActivityEmptyState()
         } else {
@@ -948,7 +890,7 @@ private fun HomeScreenActivePreview() {
         HomeScreenContent(
             uiState = HomeUiState(
                 monitoring = previewMonitoring.copy(ruleCount = 5),
-                weekStats = WeekStats(captured = 42, rulesFired = 12),
+                weekStats = WeekStats(captured = 42, handled = 12),
                 recentActivity = previewActivity,
                 isLoading = false,
             ),
@@ -980,7 +922,7 @@ private fun HomeScreenAccessOffPreview() {
         HomeScreenContent(
             uiState = HomeUiState(
                 monitoring = MonitoringStatus(isListenerEnabled = false, monitoredAppCount = 3, ruleCount = 2),
-                weekStats = WeekStats(captured = 42, rulesFired = 12),
+                weekStats = WeekStats(captured = 42, handled = 12),
                 recentActivity = previewActivity,
                 isLoading = false,
             ),
@@ -1000,7 +942,7 @@ private fun HomeScreenSuggestionsPreview() {
             uiState = HomeUiState(
                 monitoring = previewMonitoring.copy(ruleCount = 2),
                 section = HomeSection.Recurring(previewSuggestions),
-                weekStats = WeekStats(captured = 42, rulesFired = 1),
+                weekStats = WeekStats(captured = 42, handled = 1),
                 recentActivity = previewActivity,
                 isLoading = false,
             ),
@@ -1077,7 +1019,7 @@ private fun HomeScreenBatteryHintPreview() {
         HomeScreenContent(
             uiState = HomeUiState(
                 monitoring = previewMonitoring.copy(ruleCount = 5),
-                weekStats = WeekStats(captured = 42, rulesFired = 12),
+                weekStats = WeekStats(captured = 42, handled = 12),
                 recentActivity = previewActivity,
                 isLoading = false,
             ),
@@ -1106,7 +1048,7 @@ private fun HomeScreenLargeFontPreview() {
         HomeScreenContent(
             uiState = HomeUiState(
                 monitoring = previewMonitoring.copy(ruleCount = 5),
-                weekStats = WeekStats(captured = 42, rulesFired = 12),
+                weekStats = WeekStats(captured = 42, handled = 12),
                 recentActivity = previewActivity,
                 isLoading = false,
             ),

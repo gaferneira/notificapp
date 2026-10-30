@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.text.intl.Locale
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.rulesharing.RuleTemplates
@@ -70,7 +71,7 @@ class HomeScreenContentTest {
         setContent(
             HomeUiState(
                 monitoring = activeMonitoring.copy(isListenerEnabled = false),
-                weekStats = WeekStats(records = 4, rulesFired = 1),
+                weekStats = WeekStats(captured = 4, handled = 1),
                 isLoading = false,
             ),
             onEnableAccess = { enableClicks++ },
@@ -86,7 +87,7 @@ class HomeScreenContentTest {
         setContent(
             HomeUiState(
                 monitoring = activeMonitoring.copy(monitoredAppCount = 0),
-                weekStats = WeekStats(records = 4, rulesFired = 1),
+                weekStats = WeekStats(captured = 4, handled = 1),
                 isLoading = false,
             ),
         )
@@ -104,7 +105,8 @@ class HomeScreenContentTest {
             ),
         )
 
-        composeRule.onNodeWithText(string(R.string.home_checklist_title)).assertIsDisplayed()
+        // SectionHeader renders its title uppercased.
+        composeRule.onNodeWithText(string(R.string.home_checklist_title).uppercase(Locale.current.platformLocale)).assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.home_new_rule)).assertDoesNotExist()
     }
 
@@ -113,7 +115,7 @@ class HomeScreenContentTest {
         setContent(
             HomeUiState(
                 monitoring = activeMonitoring,
-                weekStats = WeekStats(records = 4, rulesFired = 1),
+                weekStats = WeekStats(captured = 4, handled = 1),
                 isLoading = false,
             ),
         )

@@ -96,7 +96,8 @@
                             "type": "fixed_position",
                             "startIndex": 0,
                             "endIndex": 10
-                        }
+                        },
+                        "unit": null
                     },
                     {
                         "id": "field-anchors",
@@ -107,7 +108,8 @@
                             "type": "text_between_anchors",
                             "startAnchor": "Total: ",
                             "endAnchor": " kr"
-                        }
+                        },
+                        "unit": null
                     },
                     {
                         "id": "field-regex",
@@ -118,7 +120,8 @@
                             "type": "regex",
                             "pattern": "(\\d+)",
                             "captureGroup": 1
-                        }
+                        },
+                        "unit": null
                     },
                     {
                         "id": "field-after",
@@ -129,7 +132,8 @@
                             "type": "text_after_keyword",
                             "keyword": "Total: ",
                             "maxLength": 20
-                        }
+                        },
+                        "unit": null
                     },
                     {
                         "id": "field-before",
@@ -139,7 +143,8 @@
                         "method": {
                             "type": "text_before_keyword",
                             "keyword": " kr"
-                        }
+                        },
+                        "unit": null
                     },
                     {
                         "id": "field-line",
@@ -149,7 +154,8 @@
                         "method": {
                             "type": "line_extraction",
                             "lineNumber": 2
-                        }
+                        },
+                        "unit": null
                     },
                     {
                         "id": "field-split",
@@ -160,7 +166,8 @@
                             "type": "split_by_delimiter",
                             "delimiter": ",",
                             "takeIndex": 0
-                        }
+                        },
+                        "unit": null
                     },
                     {
                         "id": "field-json",
@@ -170,7 +177,8 @@
                         "method": {
                             "type": "json_path",
                             "path": "$.amount"
-                        }
+                        },
+                        "unit": null
                     },
                     {
                         "id": "field-smart-amount",
@@ -179,7 +187,8 @@
                         "isRequired": false,
                         "method": {
                             "type": "smart_amount"
-                        }
+                        },
+                        "unit": null
                     },
                     {
                         "id": "field-smart-date",
@@ -188,7 +197,18 @@
                         "isRequired": false,
                         "method": {
                             "type": "smart_date"
-                        }
+                        },
+                        "unit": null
+                    },
+                    {
+                        "id": "field-smart-code",
+                        "name": "Smart Code",
+                        "fieldType": "string",
+                        "isRequired": false,
+                        "method": {
+                            "type": "smart_code"
+                        },
+                        "unit": null
                     }
                 ]
             },

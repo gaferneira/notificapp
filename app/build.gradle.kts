@@ -200,6 +200,8 @@ dependencies {
     testRuntimeOnly(libs.bundles.test.runtime)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.junit4)
+    testImplementation(libs.robolectric)
     testImplementation(libs.androidx.work.testing)
 
     // Android Testing

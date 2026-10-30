@@ -19,8 +19,22 @@ object AddFieldContract {
      * UI State for the add field screen.
      */
     data class UiState(
+        /**
+         * Id of the field being built. Fresh for a new field; set to the existing field's id when
+         * editing, so saving keeps the same `rule_fields` row (and its extracted values).
+         */
+        val fieldId: String = UUID.randomUUID().toString(),
         /** Field name */
         val fieldName: String = "",
+        /** Type of the field being built, chosen with the type picker (preselected when editing). */
+        val fieldType: RuleField.FieldType = RuleField.FieldType.STRING,
+        /**
+         * Whether the type is pinned: the user picked it, or the field is being edited. While false,
+         * choosing a smart extraction method suggests a matching type (amount -> CURRENCY, date -> DATE).
+         */
+        val typeTouched: Boolean = false,
+        /** Default unit text as typed (ISO code for CURRENCY, e.g. "km" for NUMBER); only meaningful for numeric types */
+        val unit: String = "",
         /** Selected extraction method type */
         val selectedMethodType: MethodType = MethodType.TEXT_BETWEEN_ANCHORS,
         /** Sample text to test against */
@@ -69,6 +83,15 @@ object AddFieldContract {
         /** JSON path: path string */
         val jsonPath: String = "",
     ) {
+        /** Whether the optional Unit input applies to this field (NUMBER and CURRENCY only) */
+        val supportsUnit: Boolean
+            get() = fieldType == RuleField.FieldType.NUMBER || fieldType == RuleField.FieldType.CURRENCY
+
+        /** Trimmed unit (uppercased for CURRENCY), null when blank or not applicable to the field type */
+        private val normalizedUnit: String?
+            get() = unit.trim().takeIf { supportsUnit && it.isNotEmpty() }
+                ?.let { if (fieldType == RuleField.FieldType.CURRENCY) it.uppercase() else it }
+
         /** Whether the form is valid */
         val isValid: Boolean
             get() = fieldName.isNotBlank() && validationErrors.isEmpty()
@@ -94,6 +117,7 @@ object AddFieldContract {
                     jsonPath.isNotBlank()
                 MethodType.SMART_AMOUNT,
                 MethodType.SMART_DATE,
+                MethodType.SMART_CODE,
                 -> true // No required input fields
             }
 
@@ -131,15 +155,18 @@ object AddFieldContract {
                 )
                 MethodType.SMART_AMOUNT -> ExtractionMethod.SmartAmountDetection
                 MethodType.SMART_DATE -> ExtractionMethod.SmartDateDetection
+                MethodType.SMART_CODE -> ExtractionMethod.SmartCodeDetection
             }
 
         /** Build RuleField from current state */
         val extractionField: RuleField
             get() = RuleField(
-                id = UUID.randomUUID().toString(),
+                id = fieldId,
                 name = fieldName.trim(),
+                fieldType = fieldType,
                 method = extractionMethod,
                 isRequired = false,
+                defaultUnit = normalizedUnit,
             )
     }
 
@@ -157,6 +184,7 @@ object AddFieldContract {
         JSON_PATH(R.string.method_json_path, R.string.method_json_path_desc),
         SMART_AMOUNT(R.string.method_smart_amount, R.string.method_smart_amount_desc),
         SMART_DATE(R.string.method_smart_date, R.string.method_smart_date_desc),
+        SMART_CODE(R.string.method_smart_code, R.string.method_smart_code_desc),
     }
 
     /**
@@ -183,6 +211,12 @@ object AddFieldContract {
 
         /** Update field name */
         data class OnFieldNameChange(val name: String) : UiEvent()
+
+        /** Select the field's type */
+        data class OnFieldTypeChange(val type: RuleField.FieldType) : UiEvent()
+
+        /** Update the optional default unit (NUMBER/CURRENCY fields) */
+        data class OnUnitChange(val unit: String) : UiEvent()
 
         /** Select extraction method type */
         data class OnMethodTypeChange(val type: MethodType) : UiEvent()

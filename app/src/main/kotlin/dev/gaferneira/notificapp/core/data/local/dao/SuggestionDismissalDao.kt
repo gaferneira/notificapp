@@ -23,6 +23,6 @@ internal interface SuggestionDismissalDao {
      * Record a dismissal. Replaces on conflict - re-dismissing the same (package_name,
      * normalized_title_key) key refreshes dismissed_at rather than creating a duplicate row.
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) // replace-ok: leaf table, no cascade children
     suspend fun dismiss(entity: SuggestionDismissalEntity)
 }

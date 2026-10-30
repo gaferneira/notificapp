@@ -6,7 +6,9 @@ import dev.gaferneira.notificapp.core.data.local.AppDatabase
 import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
+import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionWithValues
 import dev.gaferneira.notificapp.core.data.local.dao.RuleStatsRow
+import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
 import dev.gaferneira.notificapp.domain.model.ExtractedDataUpdate
@@ -63,7 +65,7 @@ class RuleExecutionRepositoryImplTest {
         id = id,
         notificationId = "notif-$id",
         ruleId = "rule-1",
-        extractedData = "{}",
+        ruleName = "Rule",
         triggeredActions = "[]",
         actionOutcomes = actionOutcomes,
         createdAt = createdAt,
@@ -131,13 +133,29 @@ class RuleExecutionRepositoryImplTest {
     }
 
     @Test
-    fun `observeExecutionsForNotification maps every entity to a domain model`() = runTest(testDispatcher) {
+    fun `observeExecutionsForNotification maps every entity and its extracted values to a domain model`() = runTest(testDispatcher) {
+        val removedFieldValue = ExtractedFieldValueEntity(
+            id = "v1",
+            ruleExecutionId = "e1",
+            ruleFieldId = null,
+            fieldName = "Old amount",
+            fieldType = "NUMBER",
+            valueText = "42",
+            valueNumber = 42.0,
+            valueEpochDay = null,
+        )
         every { ruleExecutionDao.observeExecutionsForNotification("notif-e1") } returns
-            flowOf(listOf(executionEntity("e1", createdAt = 1_000L, actionOutcomes = null)))
+            flowOf(listOf(RuleExecutionWithValues(executionEntity("e1", createdAt = 1_000L, actionOutcomes = null), listOf(removedFieldValue))))
         val repository = repository()
 
         repository.observeExecutionsForNotification("notif-e1").test {
-            awaitItem().single().id shouldBe "e1"
+            val execution = awaitItem().single()
+            execution.id shouldBe "e1"
+            val value = execution.extractedValues.single()
+            value.ruleFieldId shouldBe null
+            value.fieldName shouldBe "Old amount"
+            value.fieldType shouldBe RuleField.FieldType.NUMBER
+            value.valueText shouldBe "42"
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -196,21 +214,19 @@ class RuleExecutionRepositoryImplTest {
                 @Suppress("UNCHECKED_CAST")
                 (it.invocation.args[1] as suspend () -> Unit).invoke()
             }
-            coEvery { ruleExecutionDao.updateExtractedData(any(), any()) } returns Unit
             val field = RuleField(id = "f1", name = "Amount", fieldType = RuleField.FieldType.NUMBER, method = RuleField.ExtractionMethod.RegexPattern("\\d+"))
-            val update = ExtractedDataUpdate("exec-1", listOf(field), mapOf("f1" to "42", "orphan" to "kept"))
+            val update = ExtractedDataUpdate("exec-1", listOf(field), mapOf("f1" to "42"))
 
             // When
             val result = repository().updateExtractedData(listOf(update))
 
-            // Then: JSON column and typed rows for the current fields are replaced; nothing is
+            // Then: typed rows for the current fields are replaced; nothing is
             // deleted at execution level and the applied-rules counter is not touched
             result.isSuccess shouldBe true
             coVerify(exactly = 1) { database.withTransaction<Unit>(any()) }
-            coVerify { ruleExecutionDao.updateExtractedData("exec-1", """{"f1":"42","orphan":"kept"}""") }
             coVerify { extractedFieldValueDao.deleteValuesForExecutionFields("exec-1", listOf("f1")) }
             coVerify { extractedFieldValueDao.insertAll(match { it.single().ruleFieldId == "f1" && it.single().valueNumber == 42.0 }) }
-            coVerify(exactly = 0) { ruleExecutionDao.insert(any()) }
+            coVerify(exactly = 0) { ruleExecutionDao.upsert(any()) }
             coVerify(exactly = 0) { ruleExecutionDao.delete(any()) }
             coVerify(exactly = 0) { notificationDao.incrementAppliedRulesCount(any()) }
         } finally {

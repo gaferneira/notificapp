@@ -3,6 +3,7 @@ package dev.gaferneira.notificapp.features.ruleeditor.viewmodel
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.UiText
+import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.MethodType
 import dev.gaferneira.notificapp.features.ruleeditor.contract.AddFieldContract.PreviewResult
@@ -170,6 +171,19 @@ class AddFieldViewModelTest {
 
             // Then: the method type is mapped to SMART_AMOUNT
             viewModel.uiState.value.selectedMethodType shouldBe MethodType.SMART_AMOUNT
+        }
+
+        @Test
+        fun `initialize maps smart code detection to SMART_CODE`() = runTest(testDispatcher) {
+            // Given: an existing field using SmartCodeDetection
+            val field = createTestField(method = ExtractionMethod.SmartCodeDetection)
+
+            // When: initializing with the field
+            viewModel.onEvent(UiEvent.Initialize(field = field, notification = null))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Then: the method type is mapped to SMART_CODE
+            viewModel.uiState.value.selectedMethodType shouldBe MethodType.SMART_CODE
         }
     }
 
@@ -449,6 +463,28 @@ class AddFieldViewModelTest {
         }
 
         @Test
+        fun `saving an edited field keeps its original id`() = runTest(testDispatcher) {
+            // Given: an existing field loaded for editing
+            val field = createTestField(
+                id = "existing-field-id",
+                name = "Amount",
+                method = ExtractionMethod.TextBetweenAnchors(startAnchor = "Total: ", endAnchor = " end"),
+            )
+            viewModel.onEvent(UiEvent.Initialize(field = field, notification = null))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.effect.test {
+                // When: saving without changing the identity
+                viewModel.onEvent(UiEvent.OnSaveClicked)
+                testDispatcher.scheduler.advanceUntilIdle()
+
+                // Then: the returned field keeps the id, so its rule_fields row (and history) survives
+                awaitItem().shouldBeInstanceOf<UiEffect.ReturnWithField>().field.id shouldBe "existing-field-id"
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
         fun `save still returns the field when the extraction test fails against the sample text`() = runTest(testDispatcher) {
             // Given: valid field name and anchors that do not match the (empty) sample text
             viewModel.onEvent(UiEvent.OnFieldNameChange("Amount"))
@@ -466,6 +502,185 @@ class AddFieldViewModelTest {
                 effect.shouldBeInstanceOf<UiEffect.ReturnWithField>().field.name shouldBe "Amount"
                 cancelAndIgnoreRemainingEvents()
             }
+        }
+    }
+
+    @Nested
+    inner class UnitTests {
+
+        private fun edit(type: RuleField.FieldType, unit: String?) {
+            viewModel.onEvent(
+                UiEvent.Initialize(
+                    field = createTestField(
+                        id = "f1",
+                        name = "Amount",
+                        fieldType = type,
+                        method = ExtractionMethod.SmartAmountDetection,
+                        defaultUnit = unit,
+                    ),
+                    notification = null,
+                ),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+        }
+
+        @Test
+        fun `editing a currency field loads its unit and keeps type and id`() {
+            edit(RuleField.FieldType.CURRENCY, "SEK")
+
+            val state = viewModel.uiState.value
+            state.unit shouldBe "SEK"
+            state.supportsUnit shouldBe true
+            state.extractionField.fieldType shouldBe RuleField.FieldType.CURRENCY
+            state.extractionField.id shouldBe "f1"
+            state.extractionField.defaultUnit shouldBe "SEK"
+        }
+
+        @Test
+        fun `unit change is trimmed and uppercased for currency on the built field`() {
+            edit(RuleField.FieldType.CURRENCY, null)
+
+            viewModel.onEvent(UiEvent.OnUnitChange(" sek "))
+
+            viewModel.uiState.value.unit shouldBe " sek "
+            viewModel.uiState.value.extractionField.defaultUnit shouldBe "SEK"
+        }
+
+        @Test
+        fun `number unit is kept as typed and blank becomes null`() {
+            edit(RuleField.FieldType.NUMBER, null)
+
+            viewModel.onEvent(UiEvent.OnUnitChange(" GB "))
+            viewModel.uiState.value.extractionField.defaultUnit shouldBe "GB"
+
+            viewModel.onEvent(UiEvent.OnUnitChange("   "))
+            viewModel.uiState.value.extractionField.defaultUnit shouldBe null
+        }
+
+        @Test
+        fun `string fields do not support a unit and never store one`() {
+            edit(RuleField.FieldType.STRING, null)
+
+            viewModel.onEvent(UiEvent.OnUnitChange("km"))
+
+            viewModel.uiState.value.supportsUnit shouldBe false
+            viewModel.uiState.value.extractionField.defaultUnit shouldBe null
+        }
+
+        @Test
+        fun `initializing a new field resets the unit`() {
+            edit(RuleField.FieldType.CURRENCY, "SEK")
+
+            viewModel.onEvent(UiEvent.Initialize(field = null, notification = null))
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.unit shouldBe ""
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.STRING
+        }
+    }
+
+    @Nested
+    inner class FieldTypePickerTests {
+
+        private fun initNew() {
+            viewModel.onEvent(UiEvent.Initialize(field = null, notification = null))
+            testDispatcher.scheduler.advanceUntilIdle()
+        }
+
+        private fun savedField(): RuleField {
+            viewModel.onEvent(UiEvent.OnFieldNameChange("Amount"))
+            viewModel.onEvent(UiEvent.OnStartAnchorChange("a"))
+            viewModel.onEvent(UiEvent.OnEndAnchorChange("b"))
+            testDispatcher.scheduler.advanceUntilIdle()
+            return viewModel.uiState.value.extractionField
+        }
+
+        @Test
+        fun `new field defaults to string and untouched type`() {
+            initNew()
+
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.STRING
+            viewModel.uiState.value.typeTouched shouldBe false
+        }
+
+        @Test
+        fun `selecting a type updates state and the saved field carries it`() = runTest(testDispatcher) {
+            initNew()
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.NUMBER))
+            savedField()
+
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.NUMBER
+            viewModel.uiState.value.typeTouched shouldBe true
+
+            viewModel.effect.test {
+                viewModel.onEvent(UiEvent.OnSaveClicked)
+                testDispatcher.scheduler.advanceUntilIdle()
+                awaitItem().shouldBeInstanceOf<UiEffect.ReturnWithField>().field.fieldType shouldBe RuleField.FieldType.NUMBER
+                cancelAndIgnoreRemainingEvents()
+            }
+        }
+
+        @Test
+        fun `switching to a non numeric type drops the unit from the saved field`() {
+            initNew()
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.NUMBER))
+            viewModel.onEvent(UiEvent.OnUnitChange("km"))
+
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.DATE))
+
+            viewModel.uiState.value.supportsUnit shouldBe false
+            savedField().defaultUnit shouldBe null
+        }
+
+        @Test
+        fun `switching between number and currency keeps the typed unit`() {
+            initNew()
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.NUMBER))
+            viewModel.onEvent(UiEvent.OnUnitChange("sek"))
+
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.CURRENCY))
+
+            viewModel.uiState.value.unit shouldBe "sek"
+            savedField().defaultUnit shouldBe "SEK"
+        }
+
+        @Test
+        fun `editing preselects the field type and treats it as touched`() {
+            viewModel.onEvent(
+                UiEvent.Initialize(
+                    field = createTestField(fieldType = RuleField.FieldType.BOOLEAN, method = ExtractionMethod.SmartDateDetection),
+                    notification = null,
+                ),
+            )
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.BOOLEAN
+            viewModel.onEvent(UiEvent.OnMethodTypeChange(MethodType.SMART_AMOUNT))
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.BOOLEAN
+        }
+
+        @Test
+        fun `smart methods suggest a type until the user picks one`() {
+            initNew()
+
+            viewModel.onEvent(UiEvent.OnMethodTypeChange(MethodType.SMART_AMOUNT))
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.CURRENCY
+
+            viewModel.onEvent(UiEvent.OnMethodTypeChange(MethodType.SMART_DATE))
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.DATE
+
+            viewModel.onEvent(UiEvent.OnMethodTypeChange(MethodType.REGEX))
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.STRING
+        }
+
+        @Test
+        fun `an explicitly picked type is not overridden by a smart method`() {
+            initNew()
+            viewModel.onEvent(UiEvent.OnFieldTypeChange(RuleField.FieldType.NUMBER))
+
+            viewModel.onEvent(UiEvent.OnMethodTypeChange(MethodType.SMART_AMOUNT))
+
+            viewModel.uiState.value.fieldType shouldBe RuleField.FieldType.NUMBER
         }
     }
 

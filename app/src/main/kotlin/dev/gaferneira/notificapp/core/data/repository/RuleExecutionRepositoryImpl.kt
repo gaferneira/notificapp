@@ -54,16 +54,17 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
 
     override suspend fun saveExecution(
         execution: RuleExecution,
+        extractedData: Map<String, String>,
         fields: List<RuleField>,
     ): Result<Unit> = withContext(ioDispatcher) {
         try {
             database.withTransaction {
                 val executionEntity = RuleExecutionMapper.toEntity(execution)
-                ruleExecutionDao.insert(executionEntity)
+                ruleExecutionDao.upsert(executionEntity)
 
                 val fieldValues = ExtractedFieldValueMapper.fromExtractedData(
                     executionId = execution.id,
-                    extractedData = execution.extractedData,
+                    extractedData = extractedData,
                     fields = fields,
                 )
                 if (fieldValues.isNotEmpty()) {
@@ -82,7 +83,7 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
     }
 
     override fun observeExecutionsForNotification(notificationId: String): Flow<List<RuleExecution>> = ruleExecutionDao.observeExecutionsForNotification(notificationId)
-        .map { entities -> RuleExecutionMapper.toDomainList(entities) }
+        .map { rows -> RuleExecutionMapper.withValuesToDomainList(rows) }
         .flowOn(ioDispatcher)
 
     override suspend fun lastThrottleDeliveryAt(
@@ -107,10 +108,6 @@ internal class RuleExecutionRepositoryImpl @Inject constructor(
         try {
             database.withTransaction {
                 updates.forEach { update ->
-                    ruleExecutionDao.updateExtractedData(
-                        id = update.executionId,
-                        extractedData = RuleExecutionMapper.encodeExtractedData(update.extractedData),
-                    )
                     extractedFieldValueDao.deleteValuesForExecutionFields(
                         executionId = update.executionId,
                         fieldIds = update.fields.map { it.id },

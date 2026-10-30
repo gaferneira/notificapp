@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import dev.gaferneira.notificapp.R
@@ -51,16 +52,21 @@ fun DataBrowserActiveFilterChips(
     DismissibleChipsRow(chips = chips, onRemove = onRemove, modifier = modifier)
 }
 
-/** Localized "start – end" label of the date range, or a single date when both bounds fall on one day. */
+/**
+ * Localized "start – end" label of the date range, a single date when both bounds fall on one day, or
+ * "Since start" for an open-ended range (only a lower bound, e.g. seeded from an Insights window).
+ */
 @Composable
 internal fun dateRangeLabel(dateFrom: Long?, dateTo: Long?): String {
+    val locale = LocalConfiguration.current.locales[0]
     val zone = remember { ZoneId.systemDefault() }
-    val formatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
+    val formatter = remember(locale) { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale) }
     fun Long.format(): String = formatter.format(Instant.ofEpochMilli(this).atZone(zone).toLocalDate())
     val from = (dateFrom ?: dateTo)?.format()
     val to = (dateTo ?: dateFrom)?.format()
     return when {
         from == null || to == null -> ""
+        dateTo == null -> stringResource(R.string.data_filter_date_since_chip, from)
         from == to -> from
         else -> stringResource(R.string.data_filter_date_range_chip, from, to)
     }

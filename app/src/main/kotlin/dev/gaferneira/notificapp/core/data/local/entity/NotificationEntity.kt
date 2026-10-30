@@ -24,7 +24,7 @@ import androidx.room.PrimaryKey
     tableName = "notifications",
     indices = [
         Index(value = ["package_name", "timestamp"]), // For filtering by app and sorting
-        Index(value = ["is_processed"]), // For querying unprocessed notifications
+        Index(value = ["is_processed", "timestamp"]), // Unprocessed queue (oldest first) and processed-in-window counts
         Index(value = ["timestamp"]), // For time-based queries
         Index(value = ["package_name", "content_hash", "timestamp"]), // For dedup existence checks
     ],

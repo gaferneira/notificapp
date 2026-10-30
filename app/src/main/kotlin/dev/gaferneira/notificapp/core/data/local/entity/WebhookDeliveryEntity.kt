@@ -2,6 +2,8 @@ package dev.gaferneira.notificapp.core.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
@@ -9,10 +11,23 @@ import androidx.room.PrimaryKey
  * on success so the table naturally drains (see
  * [dev.gaferneira.notificapp.core.data.repository.WebhookDeliveryRepositoryImpl.markDelivered]).
  *
+ * Deleting a webhook cascades to its deliveries; inserting one for an unknown webhook violates the FK.
+ *
  * @property payload JSON snapshot to POST, encrypted at rest (SQLCipher).
  * @property failureType `NETWORK`/`SERVER`/`CLIENT`, or null while still PENDING.
  */
-@Entity(tableName = "webhook_deliveries")
+@Entity(
+    tableName = "webhook_deliveries",
+    foreignKeys = [
+        ForeignKey(
+            entity = WebhookEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["webhook_id"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index(value = ["webhook_id"])],
+)
 internal data class WebhookDeliveryEntity(
     @PrimaryKey
     val id: String,

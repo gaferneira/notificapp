@@ -10,11 +10,12 @@ import dev.gaferneira.notificapp.features.notificationdetail.contract.Notificati
 /**
  * Resolves names and types for a stored execution from the rule as it is now.
  *
- * Executions only store field/action ids, so anything the rule no longer has (deleted rule,
- * removed field, removed action) is surfaced as a typed "unknown" (`null` name/type) instead of
- * leaking ids or hardcoded text into the UI.
+ * Executions only store action ids, so a removed action is surfaced as a typed "unknown" (`null`
+ * type) instead of leaking ids or hardcoded text into the UI. Extracted values carry a snapshot of
+ * their field's name and type, so a removed field still shows its original name.
  *
- * @param rule The rule that produced [execution], or `null` if it was deleted.
+ * @param rule The rule that produced [execution], or `null` if it was deleted (the name then comes
+ *   from the execution's own snapshot).
  * @param isRedactionSource Whether this execution's rule scrubbed the notification content.
  */
 internal fun buildExecutionDetails(
@@ -29,15 +30,16 @@ internal fun buildExecutionDetails(
 
     return ExecutionWithDetails(
         execution = execution,
-        ruleId = execution.ruleId,
-        ruleName = rule?.name,
-        extractedFields = execution.extractedData.map { (fieldId, value) ->
-            val field = fieldsById[fieldId]
+        // Only an existing rule can be opened; null also covers a deleted (SET NULL) rule.
+        ruleId = execution.ruleId.takeIf { rule != null },
+        ruleName = rule?.name ?: execution.ruleName,
+        extractedFields = execution.extractedValues.map { stored ->
+            val field = stored.ruleFieldId?.let { fieldsById[it] }
             ExtractedFieldDisplay(
-                fieldId = fieldId,
-                fieldName = field?.name,
-                fieldType = field?.fieldType ?: RuleField.FieldType.STRING,
-                value = value,
+                fieldId = stored.ruleFieldId,
+                fieldName = field?.name ?: stored.fieldName,
+                fieldType = field?.fieldType ?: stored.fieldType,
+                value = stored.valueText.orEmpty(),
             )
         },
         triggeredActions = execution.triggeredActions.map { actionId ->

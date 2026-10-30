@@ -46,4 +46,29 @@ class InboxFilterTest {
 
         filter.without(InboxFilterChip.App("com.a")) shouldBe InboxFilter(setOf("com.b"), Status.PROCESSED)
     }
+
+    @Test
+    fun `given a date window, when counted, then it counts as one dimension`() {
+        InboxFilter(since = 1_000L).activeFilterCount() shouldBe 1
+        InboxFilter(setOf("a"), Status.PROCESSED, since = 1_000L).activeFilterCount() shouldBe 3
+        InboxFilter(since = 1_000L).isActive() shouldBe true
+    }
+
+    @Test
+    fun `given a date window with status and apps, when chips are built, then the window chip comes first`() {
+        val chips = InboxFilter(setOf("com.a"), Status.PROCESSED, since = 1_000L).activeChips()
+
+        chips shouldBe listOf(
+            InboxFilterChip.Since(1_000L),
+            InboxFilterChip.Status(Status.PROCESSED),
+            InboxFilterChip.App("com.a"),
+        )
+    }
+
+    @Test
+    fun `given a date window, when its chip is removed, then only the window is cleared`() {
+        val filter = InboxFilter(setOf("com.a"), Status.PROCESSED, since = 1_000L)
+
+        filter.without(InboxFilterChip.Since(1_000L)) shouldBe InboxFilter(setOf("com.a"), Status.PROCESSED)
+    }
 }

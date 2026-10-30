@@ -34,8 +34,11 @@ object InboxFilterContract {
         /** Number of notifications matching [draft] (and the Inbox search query) */
         val matchCount: Int = 0,
     ) {
-        /** Whether the draft has any active filter. */
-        val hasActiveFilters: Boolean get() = draft.isActive()
+        /**
+         * Whether the draft has any filter the sheet can edit. The per-visit [InboxFilter.since] window has no
+         * control here, so it never enables "Clear all" (clearing would silently drop it).
+         */
+        val hasActiveFilters: Boolean get() = draft.copy(since = null).isActive()
     }
 
     /**

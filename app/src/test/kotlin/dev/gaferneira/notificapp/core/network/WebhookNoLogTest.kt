@@ -95,7 +95,7 @@ class WebhookNoLogTest {
     fun `dao exception during saveWebhook never logs the auth value`() = runTest(testDispatcher) {
         val dao: WebhookDao = mockk()
         val testClient: WebhookTestClient = mockk()
-        coEvery { dao.insert(any()) } throws SQLException("db locked")
+        coEvery { dao.upsert(any()) } throws SQLException("db locked")
         val repository = WebhookRepositoryImpl(dao, testClient, testDispatcher)
 
         val result = repository.saveWebhook(webhookWithSecret())

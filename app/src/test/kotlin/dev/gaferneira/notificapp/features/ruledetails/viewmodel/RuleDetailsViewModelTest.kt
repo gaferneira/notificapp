@@ -376,7 +376,7 @@ class RuleDetailsViewModelTest {
             id = id,
             notificationId = "n-$id",
             ruleId = "rule-1",
-            extractedData = emptyMap(),
+            ruleName = "Rule",
             triggeredActions = emptyList(),
             wasDryRun = wasDryRun,
             createdAt = createdAt,
@@ -387,9 +387,9 @@ class RuleDetailsViewModelTest {
             // Given: three recorded matches, two of them in test mode
             val now = 100L * DAY_MS
             val repo = FakeRuleExecutionRepository().apply { this.now = now }
-            repo.saveExecution(execution("e1", now - DAY_MS, wasDryRun = true), emptyList())
-            repo.saveExecution(execution("e2", now - 20 * DAY_MS, wasDryRun = true), emptyList())
-            repo.saveExecution(execution("e3", now - 40 * DAY_MS, wasDryRun = false), emptyList())
+            repo.saveExecution(execution("e1", now - DAY_MS, wasDryRun = true), emptyMap(), emptyList())
+            repo.saveExecution(execution("e2", now - 20 * DAY_MS, wasDryRun = true), emptyMap(), emptyList())
+            repo.saveExecution(execution("e3", now - 40 * DAY_MS, wasDryRun = false), emptyMap(), emptyList())
 
             // When: the screen opens
             val vm = RuleDetailsViewModel(ruleRepository, repo, navigationHandler)
@@ -417,7 +417,7 @@ class RuleDetailsViewModelTest {
         @Test
         fun `stats update live when a new match is recorded`() = runTest(testDispatcher) {
             // When: a match is recorded while the screen is open
-            executionRepository.saveExecution(execution("e1", createdAt = 5L, wasDryRun = false), emptyList())
+            executionRepository.saveExecution(execution("e1", createdAt = 5L, wasDryRun = false), emptyMap(), emptyList())
             testDispatcher.scheduler.advanceUntilIdle()
 
             // Then

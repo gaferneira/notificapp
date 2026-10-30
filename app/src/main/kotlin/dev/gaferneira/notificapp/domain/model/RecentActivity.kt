@@ -5,7 +5,7 @@ package dev.gaferneira.notificapp.domain.model
  * and the rule that fired, flattened for direct display.
  *
  * @property executionId The rule execution's id.
- * @property ruleId The rule that fired.
+ * @property ruleId The rule that fired, or `null` if it has since been deleted.
  * @property ruleName The rule's display name at execution time.
  * @property notificationId The source notification's id (opens `features/notificationdetail`).
  * @property notificationTitle The source notification's title, nullable to match [Notification.title].
@@ -16,7 +16,7 @@ package dev.gaferneira.notificapp.domain.model
  */
 data class RecentActivity(
     val executionId: String,
-    val ruleId: String,
+    val ruleId: String?,
     val ruleName: String,
     val notificationId: String,
     val notificationTitle: String?,

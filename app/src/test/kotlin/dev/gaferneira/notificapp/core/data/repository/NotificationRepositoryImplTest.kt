@@ -96,13 +96,13 @@ class NotificationRepositoryImplTest {
 
     @Test
     fun `saveNotification inserts the mapped entity`() = runTest(testDispatcher) {
-        coEvery { dao.insert(any()) } returns Unit
+        coEvery { dao.upsert(any()) } returns Unit
         val notification = createTestNotification(id = "n1")
 
         val result = repository.saveNotification(notification)
 
         result.isSuccess shouldBe true
-        coVerify(exactly = 1) { dao.insert(any()) }
+        coVerify(exactly = 1) { dao.upsert(any()) }
     }
 
     @Test

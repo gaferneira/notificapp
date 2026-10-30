@@ -9,6 +9,7 @@ import dev.gaferneira.notificapp.domain.model.ConditionCombinator
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
 import dev.gaferneira.notificapp.domain.model.RuleCondition
+import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleField.ExtractionMethod
 import dev.gaferneira.notificapp.domain.model.saveDataFields
 import dev.gaferneira.notificapp.testutil.createTestAction
@@ -88,6 +89,30 @@ class RuleJsonCodecTest {
         // Then: the re-imported rule's conditions match the originals in type and value
         decoded.isSuccess shouldBe true
         decoded.getOrThrow().rule.conditions shouldBe mixedRule.conditions
+    }
+
+    @Test
+    fun `field default unit round-trips and is normalized on import`() {
+        val unitRule = rule.copy(
+            actions = persistentListOf(
+                createTestAction(
+                    id = "a1",
+                    type = ActionType.SAVE_DATA,
+                    fields = listOf(
+                        createTestField(id = "f1", name = "Amount", fieldType = RuleField.FieldType.CURRENCY, method = ExtractionMethod.SmartAmountDetection, defaultUnit = "SEK"),
+                        createTestField(id = "f2", name = "Distance", fieldType = RuleField.FieldType.NUMBER, method = ExtractionMethod.SmartAmountDetection, defaultUnit = "km"),
+                    ),
+                ),
+            ),
+        )
+
+        val encoded = RuleJsonCodec.encode(unitRule)
+        Regex(""""unit"\s*:\s*"SEK"""").containsMatchIn(encoded) shouldBe true
+        val decoded = RuleJsonCodec.decode(encoded).getOrThrow().rule
+        decoded.saveDataFields().map { it.defaultUnit } shouldBe listOf("SEK", "km")
+
+        val lowercased = RuleJsonCodec.decode(encoded.replace(Regex(""""unit"(\s*):(\s*)"SEK""""), """"unit"$1:$2" sek """")).getOrThrow().rule
+        lowercased.saveDataFields().first().defaultUnit shouldBe "SEK"
     }
 
     @Test

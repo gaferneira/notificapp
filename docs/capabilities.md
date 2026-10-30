@@ -39,7 +39,9 @@ Notificapp lets users create automation rules that act on the notifications thei
     * JSON path — a value from structured/JSON-shaped content by dot-notation path
     * Smart amount detection — automatically finds a currency amount, no configuration needed
     * Smart date detection — automatically finds a date, no configuration needed
-  * Each extracted field also has a data type: String, Number, Date, Currency, or Boolean.
+    * Smart code detection — automatically finds a one-time / verification code (OTP), no configuration needed
+  * Each extracted field also has a data type: String, Number, Date, Currency, or Boolean, chosen in the Add/Edit field sheet with a chip picker beside the field name (preselected when editing). Until the user picks a type, choosing Smart amount suggests Currency and Smart date suggests Date. The Unit input appears only for Number and Currency; switching to any other type stores no unit.
+  * Number and Currency fields can carry an optional default **unit** (e.g. `km`, `GB`, `%`, or an ISO currency code such as `SEK`). Each extracted value stores its own unit: for Currency an unambiguous symbol or code in the text wins (`€` becomes EUR, `R$` BRL, `SEK` stays SEK); an ambiguous `$` or `kr`, or no marker, falls back to the field's default unit; Number uses the default unit. Other types store none.
 * **System Trigger:** User adds an "Extract data" action while building or editing a rule; the extraction itself runs automatically in the background whenever a matching notification arrives.
 * **Technical Spec Reference:** `openspec/specs/rule-action-authoring/`
 
@@ -99,8 +101,9 @@ Notificapp lets users create automation rules that act on the notifications thei
   checklist (notification access, monitored apps, first rule) whose active step hosts curated
   templates ("Create rule from this" / "Create from scratch" / "See more templates") and replaces
   the banner; for users with rules, a "Recurring Notifications" section suggesting rules for
-  repeated, un-automated notification patterns ("Create rule from this" / "Skip similar"); a "This
-  Week" summary (records / rules fired); a persistent "New rule" button (opens the templates screen; hidden while loading, on error, and during first run); and a "Recent Activity" feed of recent
+  repeated, un-automated notification patterns ("Create rule from this" / "Skip similar"); "Last 7
+  days" tiles (Captured / Handled by rules, i.e. processed notifications, each opening the Inbox with
+  the same status and 7-day window so the count matches the list); a persistent "New rule" button (opens the templates screen; hidden while loading, on error, and during first run); and a "Recent Activity" feed of recent
   rule executions, each opening notification detail, with a "See all" action that pushes Inbox as a
   stacked screen. While data loads Home shows a centered progress indicator; if observation fails
   it shows an error message with a "Retry" button instead of a blank screen. The banner turns into a
@@ -127,6 +130,7 @@ Notificapp lets users create automation rules that act on the notifications thei
     * Status: single-select All / Processed / Unprocessed
     * Apps: pick one or more source apps from a searchable list showing each app's notification count (notifications from ANY selected app)
   * Active filters shown as dismissible chips under the search field (tap to remove one), with a count badge on the filter button
+  * Per-visit date window: Home's "Last 7 days" tiles open the Inbox limited to that same window (a "Since <date>" chip, never persisted; removing it or "Clear filters" shows everything again)
   * When a filter or search hides every notification, a "Nothing matches your filters" state with a "Clear filters" action that resets the filters and the search at once (distinct from the "No notifications yet" state)
   * A warning banner if notification access has been revoked
   * Tapping an item opens Notification Detail: the source app, absolute and relative time, and the full selectable text (long content collapses with Show more). If a rule removed the content after extraction, the card says which rule did so instead
@@ -164,21 +168,36 @@ Notificapp lets users create automation rules that act on the notifications thei
 * **User Experience:** A sectioned screen (Monitoring, Integrations, Appearance, Data, About). Monitoring: a **Pause monitoring** switch (same global state as the Quick Settings tile; Home shows a "Monitoring paused" banner with Resume), notification-access status (re-enable if revoked), the monitored-apps summary with a link to manage them, and a battery-optimization row that opens the system exemption prompt. Integrations: webhook management. Appearance: **Theme** (System / Light / Dark) and **Language** (System / English / Spanish), both applied live. Data: notification retention (30 days / 90 days / Forever, swept on app start and whenever the setting changes), a storage usage summary (database size, row counts per data type), and **Clear all data** behind a confirmation dialog. About: version, privacy policy link, and open-source licenses link.
 * **System Trigger:** User navigates to the Settings tab.
 
-### Data Browser
-* **User Experience:** The user browses every piece of data their rules have extracted (field name, value, source app, rule, timestamp), in a paginated list newest-first by default. They can:
-  * Filter by any combination of rule, source app, and date range from a filter bottom sheet (edits are a draft that only applies on Apply; no live result count). The rule picker lists only rules that extract at least one field (Extract data), so every choice can return results; dates are chosen with a Material date range picker, inclusive of the first and last selected day in local time. Field type remains a domain-level filter and is not exposed in the UI
-  * See the active filters as dismissible chips under the search field (one per rule, per app, and the date range; tap to remove just that value) with a count badge on the filter button, so the scope of Export, bulk delete, and stats is always visible
-  * The filter and search are session-only: held in the Data screen state, lost when leaving the tab, never persisted
+### Insights (Data tab)
+* **User Experience:** The Data tab (bottom nav label "Insights") is a dashboard of what the rules did on-device. A 7 / 30 day toggle (local calendar days, today included) scopes the period-based sections; dry-run executions are always excluded. Sections, in order (each hides itself when it has nothing to show):
+  * **Overview tiles (2x2):** Captured (notifications; opens Inbox, all), Handled by rules (processed notifications; opens Inbox filtered to Processed), Actions run (succeeded + failed; shows "N failed" when any; tap opens the action breakdown sheet for every action type), Values extracted (opens the Extracted data browser); tappable tiles and totals rows pass the period start, so the destination shows a removable "Since <date>" filter and lists exactly what was counted
+  * **Activity:** daily bar chart for the period, zero-filled, with a text description for accessibility. A chip row switches what it counts: Notifications (default, matches the Captured tile), Handled, Rule runs or Actions failed (each series sums to its tile). The header subtitle names the metric, a summary line shows total, daily average and peak day, and tapping a bar shows that day's value
+  * **Extracted totals:** sum and value count per numeric/currency extraction field and unit (so currencies and units are never mixed: EUR and GBP rows of one field show as two totals, formatted with the currency code or the unit); tap opens the Extracted data browser pre-filtered to that rule and period
+  * **Rules:** top 5 rules by runs in the period (tap opens Rule Details) and **Quiet rules** (enabled rules with no live (non-dry-run) run in the last 30 days, independent of the toggle)
+  * **Actions:** succeeded / failed / skipped counts per action type, showing only the non-zero ones with failed in the error color (suppressed counts as skipped); tapping a row (or the Actions run tile) opens a bottom sheet listing the rules that produced those results per rule (success / failed / skipped, most failures first); tapping a rule opens Rule Details
+  * **Webhooks:** per webhook, last delivery status (Delivered / Config error / Unreachable / No deliveries yet), last delivery time, and pending retries; built from existing webhook state (no delivery history); tap opens the webhook list
+  * **Top apps:** top 5 source apps by captured notifications in the period
+  * **Browse extracted data** button opens the Extracted data browser
+  * Global empty state ("No insights yet", "Go to rules") when no rule exists and the period has no data; full-screen error with Retry if loading fails; the screen updates live as data changes
+* **System Trigger:** User navigates to the Data tab (bottom navigation, between Home and Rules), or taps a Home/Insights shortcut.
+* **Technical Spec Reference:** `openspec/specs/insights-dashboard/spec.md`, `openspec/specs/data-statistics/spec.md`
+
+### Extracted data browser (Data Browser)
+* **User Experience:** A pushed screen titled "Extracted data" (back arrow, no bottom nav), reached from Insights (Values extracted tile, totals row, Browse button) and optionally pre-filtered to one rule (removable chip). The user browses every piece of data their rules have extracted (field name, value, source app, rule, timestamp), in a paginated list newest-first by default. CURRENCY values show the original text with its unit when available; the stored unit is included as a `Unit` column / `unit` key in CSV and JSON exports. They can:
+  * Filter by any combination of rule, source app, and date range from a filter bottom sheet (edits are a draft that only applies on Apply; no live result count). The rule picker lists only rules that extract at least one field (Extract data); dates are chosen with a Material date range picker, inclusive of the first and last selected day in local time. Field type remains a domain-level filter and is not exposed in the UI
+  * See the active filters as dismissible chips under the search field (one per rule, per app, and the date range) with a count badge on the filter button, so the scope of Export and bulk delete is always visible
+  * The filter and search are session-only: held in the ViewModel state, never persisted
   * Search extracted values with free-text search (FTS4-backed)
-  * Sort by date, rule name, app, or field name
-  * See a plain-text stats header: total extractions, extractions this week, most active rule (no chart rendering yet — trend data is computed but not visualized, see `docs/roadmap.md`)
-  * Delete a single entry directly from the list
-  * Bulk-delete everything matching the current filters, after a confirmation dialog showing the exact affected count — the delete always targets the previewed ID set, so data arriving between preview and confirmation is never swept in
-  * Export the currently filtered set as CSV or JSON via the Android share sheet; export streams in fixed-size batches so it never materializes the full result set in memory, even for tens of thousands of rows
-  * Two distinct empty states: "No extracted data yet" (explains Extract data fields, with a "Go to Rules" action) when nothing was ever extracted, versus "Nothing matches your filters" with "Clear filters" (resets filters and search, keeps the sort) when a filter or search hides every row. The stats card no longer shows its own "No data yet"
-  * Dry-run rule executions (test/preview matches) are excluded from every Data Browser view by default: browsing, search, statistics, export, and deletion
-* **System Trigger:** User navigates to the Data tab (bottom navigation, between Home and Rules).
-* **Technical Spec Reference:** `openspec/changes/data-browser/specs/data-browsing/spec.md`, `data-statistics/spec.md`, `data-export/spec.md`, `data-deletion/spec.md`
+  * Sort by date, rule name, app, or field name (overflow menu)
+  * Tap a row to open that notification's details
+  * Swipe a row to delete it, with an Undo snackbar (the real delete is deferred until the undo window ends)
+  * Overflow menu: "Delete filtered data" (bulk delete of everything matching the current filters after a confirmation dialog showing the exact affected count; it always targets the previewed ID set)
+  * Export the currently filtered set as CSV or JSON via the Android share sheet; export streams in fixed-size batches
+  * Two distinct empty states: "No extracted data yet" (with a "Go to Rules" action) versus "Nothing matches your filters" with "Clear filters"
+  * Dry-run rule executions are excluded from every view: browsing, search, export, and deletion
+  * There is no stats header; statistics live on Insights
+* **System Trigger:** User taps a drill-down on Insights (Values extracted tile, an extracted-totals row, or Browse extracted data).
+* **Technical Spec Reference:** `openspec/specs/data-browsing/spec.md`, `data-statistics/spec.md`, `data-export/spec.md`, `data-deletion/spec.md`
 
 ---
 
@@ -235,7 +254,6 @@ Notificapp lets users create automation rules that act on the notifications thei
 ## Status Reference (for planning what to build next)
 
 * **Planned, not yet built:**
-  * Trend chart rendering for the Data Browser's computed trend series (bar/line chart, last 7/30 days) — the Data Browser itself (browse/filter/search/stats/export/delete) is done, see "Data Browser" above
   * Local backup/restore of rules and extracted data (retention settings + storage usage are already shipped — see "Settings" above)
   * Optional on-device AI extraction (separate build flavor)
   * Community rule gallery

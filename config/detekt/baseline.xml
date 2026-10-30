@@ -29,8 +29,6 @@
     <ID>LongParameterList:TestFixtures.kt$( id: String = "test-id", packageName: String = "com.test.app", appName: String = "Test App", title: String? = "Test Title", content: String? = "Test Content", rawContent: String = "Test Title\nTest Content", timestamp: Long = 0L, isProcessed: Boolean = false, appliedRulesCount: Int = 0, sbnKey: String? = null, )</ID>
     <ID>LoopWithTooManyJumpStatements:PackageManagerInstalledAppsProvider.kt$PackageManagerInstalledAppsProvider$for</ID>
     <ID>MatchingDeclarationName:MainBottomNav.kt$AppDestinations</ID>
-    <ID>NestedBlockDepth:FieldExtractor.kt$FieldExtractor$private fun extractJsonPath(text: String, method: ExtractionMethod.JsonPath): ExtractionResult</ID>
-    <ID>ReturnCount:FieldExtractor.kt$FieldExtractor$private fun extractTextBetweenAnchors(text: String, method: ExtractionMethod.TextBetweenAnchors): ExtractionResult</ID>
     <ID>ReturnCount:NotificappListenerService.kt$NotificappListenerService$override fun onNotificationPosted(sbn: StatusBarNotification?)</ID>
     <ID>ReturnCount:NotificappListenerService.kt$NotificappListenerService$private fun shouldSkipNotification(sbn: StatusBarNotification): Boolean</ID>
     <ID>ReturnCount:SnoozeScheduleCalculator.kt$SnoozeScheduleCalculator$fun nextCheckpoint(now: LocalDateTime, schedule: SnoozeSchedule): LocalDateTime?</ID>

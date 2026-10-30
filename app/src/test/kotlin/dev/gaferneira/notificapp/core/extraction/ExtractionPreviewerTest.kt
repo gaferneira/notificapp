@@ -1,6 +1,7 @@
 package dev.gaferneira.notificapp.core.extraction
 
 import dev.gaferneira.notificapp.domain.model.ActionType
+import dev.gaferneira.notificapp.domain.model.ExtractedFieldValue
 import dev.gaferneira.notificapp.domain.model.FieldChange
 import dev.gaferneira.notificapp.domain.model.MatchingCondition
 import dev.gaferneira.notificapp.domain.model.MatchingOperator
@@ -47,7 +48,20 @@ class ExtractionPreviewerTest {
         id = "exec-$ruleId",
         notificationId = "n1",
         ruleId = ruleId,
-        extractedData = data,
+        ruleName = "Rule $ruleId",
+        extractedValues = data.map { (fieldId, text) ->
+            ExtractedFieldValue(
+                id = "v-$fieldId",
+                ruleExecutionId = "exec-$ruleId",
+                // Ids absent from the rule model a removed field: the FK was SET NULL.
+                ruleFieldId = fieldId.takeUnless { it == "f-deleted" },
+                fieldName = "snapshot-$fieldId",
+                fieldType = RuleField.FieldType.STRING,
+                valueText = text,
+                valueNumber = null,
+                valueDate = null,
+            )
+        },
         triggeredActions = emptyList(),
         createdAt = 1L,
     )
@@ -116,13 +130,15 @@ class ExtractionPreviewerTest {
     }
 
     @Test
-    fun `stored values of fields deleted from the rule are carried over, not dropped`() {
+    fun `stored values of removed fields are ignored by the diff and left out of the update`() {
         val result = preview(
             listOf(rule()),
             listOf(execution(data = mapOf("f-amount" to "99", "f-deleted" to "old"))),
         )
 
-        result.updates.single().extractedData shouldBe mapOf("f-deleted" to "old", "f-amount" to "123")
+        // The orphan row is untouched by the update (it only replaces the current fields' values).
+        result.updates.single().extractedData shouldBe mapOf("f-amount" to "123")
+        result.matches.single().fieldDiffs.map { it.fieldId } shouldBe listOf("f-amount")
     }
 
     @Test

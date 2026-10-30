@@ -1,10 +1,15 @@
 package dev.gaferneira.notificapp.core.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
+import androidx.room.Embedded
 import androidx.room.Query
+import androidx.room.Relation
+import androidx.room.Transaction
+import androidx.room.Upsert
+import dev.gaferneira.notificapp.core.data.local.entity.ExtractedFieldValueEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
+import dev.gaferneira.notificapp.domain.model.RuleActivity
+import dev.gaferneira.notificapp.domain.model.TrendPoint
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -34,10 +39,15 @@ internal interface RuleExecutionDao {
     suspend fun getExecutionsForNotification(notificationId: String): List<RuleExecutionEntity>
 
     /**
-     * Get executions for a specific notification as a Flow.
+     * Get executions for a specific notification as a Flow, each with its extracted field values.
+     *
+     * `@Relation` makes Room run one extra `extracted_field_values ... WHERE rule_execution_id IN (...)`
+     * query for the whole page of executions (inside one transaction), so there is no per-execution
+     * fan-out. The flow re-emits when either table changes.
      */
+    @Transaction
     @Query("SELECT * FROM rule_executions WHERE notification_id = :notificationId ORDER BY created_at DESC")
-    fun observeExecutionsForNotification(notificationId: String): Flow<List<RuleExecutionEntity>>
+    fun observeExecutionsForNotification(notificationId: String): Flow<List<RuleExecutionWithValues>>
 
     /**
      * Get executions for a specific rule.
@@ -68,23 +78,19 @@ internal interface RuleExecutionDao {
     suspend fun getRecentExecutionsForPackageSince(packageName: String, since: Long): List<RuleExecutionEntity>
 
     /**
-     * Insert a rule execution.
+     * Insert a rule execution, or update it in place when the id already exists.
+     *
+     * Must be an in-place upsert, never `OnConflictStrategy.REPLACE`: REPLACE deletes the parent row
+     * first, which would cascade-delete the execution's `extracted_field_values`.
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(execution: RuleExecutionEntity)
+    @Upsert
+    suspend fun upsert(execution: RuleExecutionEntity)
 
     /**
-     * Insert multiple rule executions.
+     * Insert or update multiple rule executions in place (see [upsert]).
      */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(executions: List<RuleExecutionEntity>)
-
-    /**
-     * Replace only the serialized `extracted_data` of one execution. Outcomes, triggered actions,
-     * dry-run flag and `created_at` are deliberately untouched.
-     */
-    @Query("UPDATE rule_executions SET extracted_data = :extractedData WHERE id = :id")
-    suspend fun updateExtractedData(id: String, extractedData: String)
+    @Upsert
+    suspend fun upsertAll(executions: List<RuleExecutionEntity>)
 
     /**
      * Delete executions for a specific rule.
@@ -131,16 +137,17 @@ internal interface RuleExecutionDao {
 
     /**
      * The most recent non-dry-run executions, joined with their source notification and rule name,
-     * for Home's "Recent Activity" feed.
+     * for Home's "Recent Activity" feed. Executions of deleted rules are kept (`LEFT JOIN rules`):
+     * `ruleId` is null and the name falls back to the execution-time snapshot.
      */
     @Query(
         """
-        SELECT re.id AS executionId, re.rule_id AS ruleId, r.name AS ruleName,
+        SELECT re.id AS executionId, re.rule_id AS ruleId, COALESCE(r.name, re.rule_name) AS ruleName,
                n.id AS notificationId, n.title AS notificationTitle, n.content AS notificationContent,
                n.package_name AS packageName, n.app_name AS appName, re.created_at AS executedAt
         FROM rule_executions re
         INNER JOIN notifications n ON re.notification_id = n.id
-        INNER JOIN rules r ON re.rule_id = r.id
+        LEFT JOIN rules r ON re.rule_id = r.id
         WHERE re.was_dry_run = 0
         ORDER BY re.created_at DESC
         LIMIT :limit
@@ -166,7 +173,85 @@ internal interface RuleExecutionDao {
         """,
     )
     fun observeRuleStats(ruleId: String, since7Days: Long, since30Days: Long): Flow<RuleStatsRow>
+
+    /**
+     * Rule matches per local calendar day since [since] (epoch millis), non-dry-run only. Days
+     * without matches are omitted; the repository zero-fills them. Same `localtime` bucketing as
+     * `DataBrowserDao.getTrend`. Assumes SQLite's `localtime` equals `ZoneId.systemDefault()`, which
+     * `InsightsRepositoryImpl` uses to zero-fill the missing days.
+     */
+    @Query(
+        """
+        SELECT strftime('%Y-%m-%d', created_at / 1000, 'unixepoch', 'localtime') AS date, COUNT(*) AS count
+        FROM rule_executions
+        WHERE was_dry_run = 0 AND created_at >= :since
+        GROUP BY date
+        ORDER BY date ASC
+        """,
+    )
+    fun observeDailyCountsSince(since: Long): Flow<List<TrendPoint>>
+
+    /** Raw `action_outcomes` JSON of every non-dry-run execution since [since] that recorded any. */
+    @Query(
+        """
+        SELECT action_outcomes FROM rule_executions
+        WHERE was_dry_run = 0 AND created_at >= :since AND action_outcomes IS NOT NULL
+        """,
+    )
+    fun observeActionOutcomesSince(since: Long): Flow<List<String>>
+
+    /**
+     * Raw `action_outcomes` JSON per local calendar day since [since], same filter and `localtime`
+     * bucketing as [observeDailyCountsSince]; the repository counts the failed ones per day.
+     */
+    @Query(
+        """
+        SELECT strftime('%Y-%m-%d', created_at / 1000, 'unixepoch', 'localtime') AS date, action_outcomes AS actionOutcomes
+        FROM rule_executions
+        WHERE was_dry_run = 0 AND created_at >= :since AND action_outcomes IS NOT NULL
+        """,
+    )
+    fun observeDailyActionOutcomesSince(since: Long): Flow<List<DailyOutcomesRow>>
+
+    /**
+     * Raw `action_outcomes` JSON with the owning rule, same filter as [observeActionOutcomesSince].
+     * Outcomes are a JSON blob, so the repository does the per-(action type, rule) grouping.
+     * Deleted rules (`LEFT JOIN`) have a null `ruleId` and their snapshot name.
+     */
+    @Query(
+        """
+        SELECT re.rule_id AS ruleId, COALESCE(r.name, re.rule_name) AS ruleName, re.action_outcomes AS actionOutcomes
+        FROM rule_executions re
+        LEFT JOIN rules r ON re.rule_id = r.id
+        WHERE re.was_dry_run = 0 AND re.created_at >= :since AND re.action_outcomes IS NOT NULL
+        """,
+    )
+    fun observeRuleActionOutcomesSince(since: Long): Flow<List<RuleOutcomesRow>>
+
+    /**
+     * Most active rules by non-dry-run runs since [since], busiest first, capped at [limit].
+     * Includes deleted rules (`LEFT JOIN`): they have a null `ruleId` and their snapshot name.
+     */
+    @Query(
+        """
+        SELECT re.rule_id AS ruleId, COALESCE(r.name, re.rule_name) AS ruleName, COUNT(*) AS runCount
+        FROM rule_executions re
+        LEFT JOIN rules r ON re.rule_id = r.id
+        WHERE re.was_dry_run = 0 AND re.created_at >= :since
+        GROUP BY re.rule_id, COALESCE(r.name, re.rule_name)
+        ORDER BY runCount DESC, ruleName ASC, re.rule_id ASC
+        LIMIT :limit
+        """,
+    )
+    fun observeTopRulesSince(since: Long, limit: Int): Flow<List<RuleActivity>>
 }
+
+/** An execution together with its extracted field values (see [RuleExecutionDao.observeExecutionsForNotification]). */
+internal data class RuleExecutionWithValues(
+    @Embedded val execution: RuleExecutionEntity,
+    @Relation(parentColumn = "id", entityColumn = "rule_execution_id")
+    val values: List<ExtractedFieldValueEntity>,
+)
 
 /** Projection for [RuleExecutionDao.observeRuleStats]. */
 internal data class RuleStatsRow(
@@ -181,7 +266,7 @@ internal data class RuleStatsRow(
 /** Projection for [RuleExecutionDao.observeRecentActivity]. */
 internal data class RecentActivityRow(
     val executionId: String,
-    val ruleId: String,
+    val ruleId: String?,
     val ruleName: String,
     val notificationId: String,
     val notificationTitle: String?,
@@ -190,3 +275,9 @@ internal data class RecentActivityRow(
     val appName: String,
     val executedAt: Long,
 )
+
+/** Projection for [RuleExecutionDao.observeDailyActionOutcomesSince]. */
+internal data class DailyOutcomesRow(val date: String, val actionOutcomes: String)
+
+/** Projection for [RuleExecutionDao.observeRuleActionOutcomesSince]. */
+internal data class RuleOutcomesRow(val ruleId: String?, val ruleName: String, val actionOutcomes: String)

@@ -74,8 +74,8 @@ data class ExtractionPreview(
  * Replacement of the extracted values of one existing execution.
  *
  * @property fields The rule's current fields; their stored values are replaced (and typed from these).
- * @property extractedData The execution's complete new `extractedData` map. Stored values for
- *   fields that no longer exist on the rule are carried over unchanged, never dropped.
+ * @property extractedData The new values of [fields], keyed by field id. A field without an entry
+ *   has its stored value removed. Values of fields that no longer exist on the rule are not touched.
  */
 data class ExtractedDataUpdate(
     val executionId: String,

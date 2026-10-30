@@ -87,11 +87,14 @@ A `group` condition nests its own `children` array (any mix of `content_match`, 
   "name": "Amount",
   "fieldType": "currency",
   "isRequired": false,
-  "method": { "type": "text_after_keyword", "keyword": "Total: ", "maxLength": null }
+  "method": { "type": "text_after_keyword", "keyword": "Total: ", "maxLength": null },
+  "unit": "SEK"
 }
 ```
 
 `fieldType` is one of: `string`, `number`, `date`, `currency`, `boolean`.
+
+`unit` (optional, default `null`) is the field's default unit: an ISO 4217 code for `currency` (uppercased on import), free-form text for `number` (e.g. `km`, `GB`, `%`). It is used when the extracted text carries no unambiguous unit (an unambiguous currency symbol such as `€` always wins; `$` and `kr` are ambiguous). Other field types ignore it. Added without a `schemaVersion` bump while the app is pre-release.
 
 `method` is a tagged union on its `type` field — one of:
 
@@ -107,6 +110,7 @@ A `group` condition nests its own `children` array (any mix of `content_match`, 
 | `json_path`            | `path`                     |
 | `smart_amount`         | (none)                     |
 | `smart_date`           | (none)                     |
+| `smart_code`           | (none)                     |
 
 ## Full example
 

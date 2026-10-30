@@ -35,23 +35,23 @@ private val sampleNotification = Notification(
     timestamp = System.currentTimeMillis() - 3 * 60 * 60 * 1000L,
 )
 
-private fun sampleExecution(id: String, dryRun: Boolean = false) = RuleExecution(
+private fun sampleExecution(id: String, name: String, ruleDeleted: Boolean, dryRun: Boolean = false) = RuleExecution(
     id = id,
     notificationId = "n1",
-    ruleId = "r-$id",
-    extractedData = mapOf("amount" to "42.50"),
+    ruleId = "r-$id".takeUnless { ruleDeleted },
+    ruleName = name,
     triggeredActions = listOf("a1", "a2"),
     wasDryRun = dryRun,
 )
 
-private fun sampleDetails(id: String, name: String?, dryRun: Boolean = false) = ExecutionWithDetails(
-    execution = sampleExecution(id, dryRun),
-    ruleId = "r-$id",
+private fun sampleDetails(id: String, name: String, ruleDeleted: Boolean = false, dryRun: Boolean = false) = ExecutionWithDetails(
+    execution = sampleExecution(id, name, ruleDeleted, dryRun),
+    ruleId = "r-$id".takeUnless { ruleDeleted },
     ruleName = name,
     extractedFields = listOf(
         ExtractedFieldDisplay("amount", "Amount", FieldType.NUMBER, "42.50"),
         ExtractedFieldDisplay("when", "Purchase date", FieldType.DATE, "2026-10-05"),
-        ExtractedFieldDisplay("gone", null, FieldType.STRING, "Corner Cafe"),
+        ExtractedFieldDisplay(null, "Merchant", FieldType.STRING, "Corner Cafe"),
     ),
     triggeredActions = listOf(
         TriggeredActionDisplay("a1", ActionType.SAVE_DATA, if (dryRun) null else ActionOutcome.SUCCESS),
@@ -63,7 +63,7 @@ private fun sampleDetails(id: String, name: String?, dryRun: Boolean = false) = 
 private val loadedState = UiState(
     loadStatus = LoadStatus.LOADED,
     notification = sampleNotification,
-    executions = listOf(sampleDetails("e1", "Bank purchases"), sampleDetails("e2", null)),
+    executions = listOf(sampleDetails("e1", "Bank purchases"), sampleDetails("e2", "Old promo cleaner", ruleDeleted = true)),
 )
 
 private val samplePreview = ExtractionPreview(

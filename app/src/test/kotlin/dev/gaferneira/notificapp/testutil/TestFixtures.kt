@@ -74,18 +74,21 @@ fun createTestGroupCondition(
     children: List<RuleCondition> = listOf(createTestCondition()),
 ): RuleCondition.Group = RuleCondition.Group(id = id, combinator = combinator, children = children.toImmutableList())
 
+@Suppress("LongParameterList")
 fun createTestField(
     id: String = "test-field-id",
     name: String = "Test Field",
     fieldType: RuleField.FieldType = RuleField.FieldType.STRING,
     method: RuleField.ExtractionMethod,
     isRequired: Boolean = false,
+    defaultUnit: String? = null,
 ): RuleField = RuleField(
     id = id,
     name = name,
     fieldType = fieldType,
     method = method,
     isRequired = isRequired,
+    defaultUnit = defaultUnit,
 )
 
 fun createTestAction(
