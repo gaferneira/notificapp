@@ -6,7 +6,8 @@ import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
 import dev.gaferneira.notificapp.core.data.local.entity.NotificationEntity
-import dev.gaferneira.notificapp.domain.model.CountBucket
+import dev.gaferneira.notificapp.domain.model.AppActivity
+import dev.gaferneira.notificapp.domain.model.TrendPoint
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -336,6 +337,34 @@ internal interface NotificationDao {
     fun observeProcessedCountSince(since: Long): Flow<Int>
 
     /**
+     * Captured notifications per local calendar day since [since] (epoch millis); sums to
+     * [observeCountSince]. Days without notifications are omitted (the repository zero-fills them).
+     * Same `localtime` bucketing as `RuleExecutionDao.observeDailyCountsSince`.
+     */
+    @Query(
+        """
+        SELECT strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime') AS date, COUNT(*) AS count
+        FROM notifications
+        WHERE timestamp >= :since
+        GROUP BY date
+        ORDER BY date ASC
+        """,
+    )
+    fun observeDailyCountsSince(since: Long): Flow<List<TrendPoint>>
+
+    /** Processed notifications per local calendar day since [since]; sums to [observeProcessedCountSince]. */
+    @Query(
+        """
+        SELECT strftime('%Y-%m-%d', timestamp / 1000, 'unixepoch', 'localtime') AS date, COUNT(*) AS count
+        FROM notifications
+        WHERE is_processed = 1 AND timestamp >= :since
+        GROUP BY date
+        ORDER BY date ASC
+        """,
+    )
+    fun observeDailyProcessedCountsSince(since: Long): Flow<List<TrendPoint>>
+
+    /**
      * Busiest source apps by notifications logged at or after [since], capped at [limit]. The label
      * is the package's most recent `app_name` (ties on timestamp broken by `id`), not an arbitrary
      * row of the group.
@@ -346,14 +375,14 @@ internal interface NotificationDao {
             SELECT n2.app_name FROM notifications n2
             WHERE n2.package_name = notifications.package_name
             ORDER BY n2.timestamp DESC, n2.id DESC LIMIT 1
-        ) AS label, COUNT(*) AS count FROM notifications
+        ) AS appName, package_name AS packageName, COUNT(*) AS count FROM notifications
         WHERE timestamp >= :since
         GROUP BY package_name
         ORDER BY count DESC, package_name ASC
         LIMIT :limit
         """,
     )
-    fun observeTopAppsSince(since: Long, limit: Int): Flow<List<CountBucket>>
+    fun observeTopAppsSince(since: Long, limit: Int): Flow<List<AppActivity>>
 }
 
 /** Projection for [NotificationDao.observeAppsWithLatestName]. */

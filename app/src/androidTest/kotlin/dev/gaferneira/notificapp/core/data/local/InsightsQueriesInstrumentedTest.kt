@@ -9,6 +9,7 @@ import dev.gaferneira.notificapp.core.data.local.entity.RuleActionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleExecutionEntity
 import dev.gaferneira.notificapp.core.data.local.entity.RuleFieldEntity
+import dev.gaferneira.notificapp.domain.model.AppActivity
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -66,6 +67,56 @@ class InsightsQueriesInstrumentedTest {
         val daily = dao.observeDailyCountsSince(0L).first()
 
         daily.map { it.date to it.count } shouldBe listOf(DAY.toString() to 1, DAY.plusDays(1).toString() to 2)
+    }
+
+    @Test
+    fun notification_daily_counts_bucket_by_local_day_and_sum_to_the_count_since() = runBlocking<Unit> {
+        val dao = database.notificationDao()
+        dao.upsert(seedNotificationEntity("n1", "com.a", "App", millisAt(DAY, 23, 59), processed = true))
+        dao.upsert(seedNotificationEntity("n2", "com.a", "App", millisAt(DAY.plusDays(1), 0, 1)))
+        dao.upsert(seedNotificationEntity("n3", "com.a", "App", millisAt(DAY.plusDays(1), 12), processed = true))
+        dao.upsert(seedNotificationEntity("n4", "com.a", "App", millisAt(DAY.minusDays(5), 12))) // before the window
+        val since = millisAt(DAY, 0)
+
+        val captured = dao.observeDailyCountsSince(since).first()
+        val handled = dao.observeDailyProcessedCountsSince(since).first()
+
+        captured.map { it.date to it.count } shouldBe listOf(DAY.toString() to 1, DAY.plusDays(1).toString() to 2)
+        handled.map { it.date to it.count } shouldBe listOf(DAY.toString() to 1, DAY.plusDays(1).toString() to 1)
+        captured.sumOf { it.count } shouldBe dao.observeCountSince(since).first()
+        handled.sumOf { it.count } shouldBe dao.observeProcessedCountSince(since).first()
+    }
+
+    @Test
+    fun observeDailyActionOutcomesSince_keeps_only_live_executions_with_outcomes() = runBlocking<Unit> {
+        seedRule("r1", "Rule")
+        seedNotification("n1", "com.a", "App", 1_000L)
+        val dao = database.ruleExecutionDao()
+        dao.upsert(execution("e1", "r1", "n1", createdAt = millisAt(DAY, 10), outcomes = """{"a1":"FAILED"}"""))
+        dao.upsert(execution("e2", "r1", "n1", createdAt = millisAt(DAY, 11), outcomes = """{"a1":"FAILED"}""", dryRun = true))
+        dao.upsert(execution("e3", "r1", "n1", createdAt = millisAt(DAY, 12), outcomes = null))
+
+        val rows = dao.observeDailyActionOutcomesSince(0L).first()
+
+        rows.map { it.date to it.actionOutcomes } shouldBe listOf(DAY.toString() to """{"a1":"FAILED"}""")
+    }
+
+    @Test
+    fun observeRuleActionOutcomesSince_joins_the_rule_name_and_keeps_deleted_rules_with_a_null_id() = runBlocking<Unit> {
+        seedRule("r1", "Renamed")
+        seedNotification("n1", "com.a", "App", 1_000L)
+        val dao = database.ruleExecutionDao()
+        dao.upsert(execution("e1", "r1", "n1", createdAt = 5_000L, outcomes = """{"a1":"SUCCESS"}"""))
+        dao.upsert(execution("e2", null, "n1", createdAt = 6_000L, outcomes = """{"a1":"FAILED"}""", ruleName = "Gone"))
+        dao.upsert(execution("e3", "r1", "n1", createdAt = 7_000L, outcomes = """{"a1":"SUCCESS"}""", dryRun = true))
+        dao.upsert(execution("e4", "r1", "n1", createdAt = 100L, outcomes = """{"a1":"SUCCESS"}""")) // before the window
+
+        val rows = dao.observeRuleActionOutcomesSince(1_000L).first()
+
+        rows.map { Triple(it.ruleId, it.ruleName, it.actionOutcomes) }.toSet() shouldBe setOf(
+            Triple("r1", "Renamed", """{"a1":"SUCCESS"}"""),
+            Triple(null, "Gone", """{"a1":"FAILED"}"""),
+        )
     }
 
     @Test
@@ -153,7 +204,7 @@ class InsightsQueriesInstrumentedTest {
         val top = dao.observeTopAppsSince(500L, 5).first()
 
         // com.a and com.d tie at 2; package_name ASC decides. com.c is outside the window.
-        top.map { it.label to it.count } shouldBe listOf("New B" to 3, "App A" to 2, "App D" to 2)
+        top shouldBe listOf(AppActivity("com.b", "New B", 3), AppActivity("com.a", "App A", 2), AppActivity("com.d", "App D", 2))
     }
 
     private suspend fun seedRule(id: String, name: String, isActive: Boolean = true) {
@@ -164,7 +215,7 @@ class InsightsQueriesInstrumentedTest {
         database.notificationDao().upsert(seedNotificationEntity(id, pkg, appName, timestamp))
     }
 
-    private fun seedNotificationEntity(id: String, pkg: String, appName: String, timestamp: Long) = NotificationEntity(
+    private fun seedNotificationEntity(id: String, pkg: String, appName: String, timestamp: Long, processed: Boolean = false) = NotificationEntity(
         id = id,
         packageName = pkg,
         appName = appName,
@@ -172,13 +223,23 @@ class InsightsQueriesInstrumentedTest {
         content = null,
         rawContent = "",
         timestamp = timestamp,
-        isProcessed = false,
+        isProcessed = processed,
     )
 
-    private fun execution(id: String, ruleId: String, notificationId: String, createdAt: Long, dryRun: Boolean = false) = RuleExecutionEntity(
+    @Suppress("LongParameterList") // test fixture builder with one defaulted knob per column
+    private fun execution(
+        id: String,
+        ruleId: String?,
+        notificationId: String,
+        createdAt: Long,
+        dryRun: Boolean = false,
+        outcomes: String? = null,
+        ruleName: String = "Rule $ruleId",
+    ) = RuleExecutionEntity(
         id = id,
         ruleId = ruleId,
-        ruleName = "Rule $ruleId",
+        ruleName = ruleName,
+        actionOutcomes = outcomes,
         notificationId = notificationId,
         triggeredActions = "[]",
         wasDryRun = dryRun,

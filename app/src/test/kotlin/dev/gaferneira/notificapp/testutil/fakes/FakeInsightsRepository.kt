@@ -1,13 +1,18 @@
 package dev.gaferneira.notificapp.testutil.fakes
 
+import dev.gaferneira.notificapp.domain.model.ActionBreakdownRow
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.InsightsPeriod
 import dev.gaferneira.notificapp.domain.model.InsightsSummary
 import dev.gaferneira.notificapp.domain.repository.InsightsRepository
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
 
 /**
  * Deterministic in-memory [InsightsRepository] fake for VM tests. Every period is served from a
@@ -28,6 +33,32 @@ class FakeInsightsRepository(initial: InsightsSummary = emptySummary()) : Insigh
 
     /** Emit a failure to observers of [period], or of every non-overridden period when null. */
     fun setFailure(failure: Throwable, period: InsightsPeriod? = null) = flowFor(period).let { it.value = Result.failure(failure) }
+
+    private val breakdown = MutableStateFlow<Result<ImmutableList<ActionBreakdownRow>>>(Result.success(persistentListOf()))
+
+    /** Arguments of every [observeActionBreakdown] call, oldest first. */
+    val requestedBreakdowns = mutableListOf<Pair<ActionType?, InsightsPeriod>>()
+
+    /** Number of live collectors of [observeActionBreakdown], to assert cancellation. */
+    var activeBreakdownCollectors = 0
+        private set
+
+    /** Emit [rows] to the breakdown observers. */
+    fun setBreakdown(rows: List<ActionBreakdownRow>) {
+        breakdown.value = Result.success(persistentListOf<ActionBreakdownRow>().addAll(rows))
+    }
+
+    /** Emit a failure to the breakdown observers. */
+    fun setBreakdownFailure(failure: Throwable) {
+        breakdown.value = Result.failure(failure)
+    }
+
+    override fun observeActionBreakdown(type: ActionType?, period: InsightsPeriod): Flow<Result<ImmutableList<ActionBreakdownRow>>> {
+        requestedBreakdowns += type to period
+        return breakdown
+            .onStart { activeBreakdownCollectors++ }
+            .onCompletion { activeBreakdownCollectors-- }
+    }
 
     override fun observeSummary(period: InsightsPeriod): Flow<Result<InsightsSummary>> {
         requestedPeriods += period
@@ -54,7 +85,7 @@ class FakeInsightsRepository(initial: InsightsSummary = emptySummary()) : Insigh
             actionsRunCount = 0,
             actionsFailedCount = 0,
             valuesExtractedCount = 0,
-            trend = persistentListOf(),
+            trends = persistentMapOf(),
             fieldTotals = persistentListOf(),
             topRules = persistentListOf(),
             quietRules = persistentListOf(),

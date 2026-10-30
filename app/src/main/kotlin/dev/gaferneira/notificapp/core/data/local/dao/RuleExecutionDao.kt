@@ -201,6 +201,34 @@ internal interface RuleExecutionDao {
     fun observeActionOutcomesSince(since: Long): Flow<List<String>>
 
     /**
+     * Raw `action_outcomes` JSON per local calendar day since [since], same filter and `localtime`
+     * bucketing as [observeDailyCountsSince]; the repository counts the failed ones per day.
+     */
+    @Query(
+        """
+        SELECT strftime('%Y-%m-%d', created_at / 1000, 'unixepoch', 'localtime') AS date, action_outcomes AS actionOutcomes
+        FROM rule_executions
+        WHERE was_dry_run = 0 AND created_at >= :since AND action_outcomes IS NOT NULL
+        """,
+    )
+    fun observeDailyActionOutcomesSince(since: Long): Flow<List<DailyOutcomesRow>>
+
+    /**
+     * Raw `action_outcomes` JSON with the owning rule, same filter as [observeActionOutcomesSince].
+     * Outcomes are a JSON blob, so the repository does the per-(action type, rule) grouping.
+     * Deleted rules (`LEFT JOIN`) have a null `ruleId` and their snapshot name.
+     */
+    @Query(
+        """
+        SELECT re.rule_id AS ruleId, COALESCE(r.name, re.rule_name) AS ruleName, re.action_outcomes AS actionOutcomes
+        FROM rule_executions re
+        LEFT JOIN rules r ON re.rule_id = r.id
+        WHERE re.was_dry_run = 0 AND re.created_at >= :since AND re.action_outcomes IS NOT NULL
+        """,
+    )
+    fun observeRuleActionOutcomesSince(since: Long): Flow<List<RuleOutcomesRow>>
+
+    /**
      * Most active rules by non-dry-run runs since [since], busiest first, capped at [limit].
      * Includes deleted rules (`LEFT JOIN`): they have a null `ruleId` and their snapshot name.
      */
@@ -247,3 +275,9 @@ internal data class RecentActivityRow(
     val appName: String,
     val executedAt: Long,
 )
+
+/** Projection for [RuleExecutionDao.observeDailyActionOutcomesSince]. */
+internal data class DailyOutcomesRow(val date: String, val actionOutcomes: String)
+
+/** Projection for [RuleExecutionDao.observeRuleActionOutcomesSince]. */
+internal data class RuleOutcomesRow(val ruleId: String?, val ruleName: String, val actionOutcomes: String)

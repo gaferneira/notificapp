@@ -68,7 +68,7 @@ class InboxViewModel @AssistedInject constructor(
 ) : MviViewModel<InboxUiState, InboxEvent, InboxEffect>(
     InboxUiState(
         filter = (savedStateHandle.resolveStatusOverride(visitArgs.initialStatus)?.let { InboxFilter(status = it) } ?: InboxFilter())
-            .copy(since = savedStateHandle.resolveSince(visitArgs.since)),
+            .copy(since = savedStateHandle.resolveSince(visitArgs.since), selectedApps = savedStateHandle.resolveApps(visitArgs.app)),
     ),
 ) {
 
@@ -154,6 +154,16 @@ class InboxViewModel @AssistedInject constructor(
             savedStateHandle[KEY_SINCE] = value
         }
 
+    /**
+     * Per-visit app from the route (e.g. Insights' top apps). Like [initialStatusOverride] it replaces
+     * the saved app selection in the state without being persisted, and the first filter edit drops it.
+     */
+    private var initialAppOverride: String?
+        get() = savedStateHandle[KEY_APP_OVERRIDE]
+        set(value) {
+            savedStateHandle[KEY_APP_OVERRIDE] = value
+        }
+
     init {
         loadSavedFilters()
         loadAppNames()
@@ -168,7 +178,8 @@ class InboxViewModel @AssistedInject constructor(
             userPreferencesRepository.observeInboxFilters()
                 .collect { filters ->
                     val override = initialStatusOverride
-                    val base = override?.let { InboxFilter(status = it) } ?: filters.toInboxFilter()
+                    val saved = override?.let { InboxFilter(status = it) } ?: filters.toInboxFilter()
+                    val base = initialAppOverride?.let { saved.copy(selectedApps = setOf(it)) } ?: saved
                     setState { copy(filter = base.copy(since = since)) }
                 }
         }
@@ -223,10 +234,11 @@ class InboxViewModel @AssistedInject constructor(
             since = filter.since
             setState { copy(filter = this.filter.copy(since = filter.since)) }
         }
-        if (initialStatusOverride != null) {
-            // Leaving the per-visit override: show the edit now, since persisting a value equal to
+        if (initialStatusOverride != null || initialAppOverride != null) {
+            // Leaving the per-visit overrides: show the edit now, since persisting a value equal to
             // the saved one wouldn't re-emit through the saved-filters collector.
             initialStatusOverride = null
+            initialAppOverride = null
             setState { copy(filter = filter) }
         }
         viewModelScope.launch {
@@ -247,15 +259,18 @@ class InboxViewModel @AssistedInject constructor(
  *
  * @property initialStatus Status override for this visit; null keeps the saved filter
  * @property since Date window for this visit (epoch millis, inclusive); null = no bound
+ * @property app Package name replacing the saved app selection for this visit; null keeps it
  */
 data class InboxVisitArgs(
     val initialStatus: NotificationStatusFilter? = null,
     val since: Long? = null,
+    val app: String? = null,
 )
 
 // File-scoped so the constructor's super-call argument (resolveStatusOverride) can reach it.
 private const val KEY_STATUS_OVERRIDE = "inbox_status_override"
 private const val KEY_SINCE = "inbox_since"
+private const val KEY_APP_OVERRIDE = "inbox_app_override"
 
 /** What the paging query depends on; a change recreates the Pager. */
 private data class PagingKey(
@@ -278,6 +293,12 @@ private fun SavedStateHandle.resolveStatusOverride(initialStatus: NotificationSt
 private fun SavedStateHandle.resolveSince(initialSince: Long?): Long? {
     if (!contains(KEY_SINCE)) set(KEY_SINCE, initialSince)
     return get(KEY_SINCE)
+}
+
+/** Same first-creation-only seeding as [resolveStatusOverride], for the per-visit app. Returns the seeded selection. */
+private fun SavedStateHandle.resolveApps(initialApp: String?): Set<String> {
+    if (!contains(KEY_APP_OVERRIDE)) set(KEY_APP_OVERRIDE, initialApp)
+    return get<String?>(KEY_APP_OVERRIDE)?.let { setOf(it) } ?: emptySet()
 }
 
 /**

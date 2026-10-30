@@ -2,6 +2,7 @@ package dev.gaferneira.notificapp.core.ui.components
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +21,7 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 
 /**
  * Dashboard section header: an uppercase "eyebrow" [title] (announced as a heading) with an optional
+ * optional one-line [subtitle] saying what the section measures, and an optional
  * trailing text action such as "See all". The action is shown only when both [actionLabel] and
  * [onActionClick] are provided; the row fills the width only in that case.
  */
@@ -27,6 +29,7 @@ import dev.gaferneira.notificapp.core.ui.theme.NotificappTheme
 fun SectionHeader(
     title: String,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     actionLabel: String? = null,
     onActionClick: (() -> Unit)? = null,
 ) {
@@ -38,13 +41,22 @@ fun SectionHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = title.uppercase(Locale.current.platformLocale),
-            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.semantics { heading() },
-        )
+        Column {
+            Text(
+                text = title.uppercase(Locale.current.platformLocale),
+                style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.semantics { heading() },
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         if (actionLabel != null && onActionClick != null) {
             TextButton(onClick = onActionClick) { Text(actionLabel) }
         }
@@ -63,6 +75,6 @@ private fun SectionHeaderPreview() {
 @Composable
 private fun SectionHeaderPreviewDark() {
     NotificappTheme(dynamicColor = false) {
-        SectionHeader(title = "Last 7 days")
+        SectionHeader(title = "Activity", subtitle = "Rule runs per day")
     }
 }

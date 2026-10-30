@@ -2,29 +2,34 @@ package dev.gaferneira.notificapp.core.data.repository
 
 import dev.gaferneira.notificapp.core.common.toFailureResult
 import dev.gaferneira.notificapp.core.data.local.dao.ActionTypeRow
+import dev.gaferneira.notificapp.core.data.local.dao.DailyOutcomesRow
 import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
+import dev.gaferneira.notificapp.core.data.local.dao.RuleOutcomesRow
 import dev.gaferneira.notificapp.core.data.local.dao.WebhookDeliveryDao
 import dev.gaferneira.notificapp.core.data.local.mapper.RuleExecutionMapper
 import dev.gaferneira.notificapp.core.di.Dispatcher
 import dev.gaferneira.notificapp.core.di.DispatcherType
 import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
+import dev.gaferneira.notificapp.domain.model.ActionBreakdownRow
 import dev.gaferneira.notificapp.domain.model.ActionOutcome
 import dev.gaferneira.notificapp.domain.model.ActionType
-import dev.gaferneira.notificapp.domain.model.CountBucket
+import dev.gaferneira.notificapp.domain.model.AppActivity
 import dev.gaferneira.notificapp.domain.model.FieldTotal
 import dev.gaferneira.notificapp.domain.model.InsightsPeriod
 import dev.gaferneira.notificapp.domain.model.InsightsSummary
 import dev.gaferneira.notificapp.domain.model.OutcomeCounts
 import dev.gaferneira.notificapp.domain.model.RuleActivity
 import dev.gaferneira.notificapp.domain.model.RuleRef
+import dev.gaferneira.notificapp.domain.model.TrendMetric
 import dev.gaferneira.notificapp.domain.model.TrendPoint
 import dev.gaferneira.notificapp.domain.model.Webhook
 import dev.gaferneira.notificapp.domain.model.WebhookHealth
 import dev.gaferneira.notificapp.domain.repository.InsightsRepository
 import dev.gaferneira.notificapp.domain.repository.WebhookRepository
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.CoroutineDispatcher
@@ -75,14 +80,38 @@ internal class InsightsRepositoryImpl @Inject constructor(
         }
         .flowOn(ioDispatcher)
 
-    private fun summaryFlow(period: InsightsPeriod): Flow<InsightsSummary> {
-        // Assumes the device zone matches SQLite's 'localtime' used by the daily-count query
-        // (RuleExecutionDao.observeDailyCountsSince); the zero-fill below and that bucketing must agree.
+    override fun observeActionBreakdown(
+        type: ActionType?,
+        period: InsightsPeriod,
+    ): Flow<Result<ImmutableList<ActionBreakdownRow>>> = flow {
+        val since = windowStart(period, currentTimeProvider.nowEpochMillis()).second
+        emitAll(
+            combine(
+                ruleExecutionDao.observeRuleActionOutcomesSince(since),
+                ruleDao.observeActionTypes(),
+            ) { rows, actionTypes -> aggregateActionBreakdown(rows, actionTypes, type).toImmutableList() },
+        )
+    }
+        .map { Result.success(it) }
+        .catch { e ->
+            Timber.e(e, "Failed to observe action breakdown")
+            emit(e.toFailureResult())
+        }
+        .flowOn(ioDispatcher)
+
+    /** First local day of [period] and its local midnight in epoch millis, the inclusive bound every count uses. */
+    private fun windowStart(period: InsightsPeriod, nowMillis: Long): Pair<LocalDate, Long> {
+        // Assumes the device zone matches SQLite's 'localtime' used by the daily-count queries
+        // (e.g. RuleExecutionDao.observeDailyCountsSince); the zero-fill below and that bucketing must agree.
         val zone = ZoneId.systemDefault()
-        val nowMillis = currentTimeProvider.nowEpochMillis()
         val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
         val firstDay = today.minusDays((period.days - 1).toLong())
-        val since = firstDay.atStartOfDay(zone).toInstant().toEpochMilli()
+        return firstDay to firstDay.atStartOfDay(zone).toInstant().toEpochMilli()
+    }
+
+    private fun summaryFlow(period: InsightsPeriod): Flow<InsightsSummary> {
+        val nowMillis = currentTimeProvider.nowEpochMillis()
+        val (firstDay, since) = windowStart(period, nowMillis)
         val quietSince = nowMillis - QUIET_WINDOW_MILLIS
 
         return combine(
@@ -90,7 +119,8 @@ internal class InsightsRepositoryImpl @Inject constructor(
             breakdownFlow(since, quietSince),
             actionStatsFlow(since),
             webhookHealthFlow(),
-        ) { overview, breakdown, actions, webhooks ->
+            trendsFlow(since),
+        ) { overview, breakdown, actions, webhooks, dailySeries ->
             InsightsSummary(
                 period = period,
                 windowStart = since,
@@ -99,7 +129,7 @@ internal class InsightsRepositoryImpl @Inject constructor(
                 actionsRunCount = actions.runCount,
                 actionsFailedCount = actions.failedCount,
                 valuesExtractedCount = overview.values,
-                trend = zeroFill(breakdown.daily, firstDay, period.days).toImmutableList(),
+                trends = dailySeries.mapValues { (_, daily) -> zeroFill(daily, firstDay, period.days).toImmutableList() }.toImmutableMap(),
                 fieldTotals = breakdown.fieldTotals.toImmutableList(),
                 topRules = breakdown.topRules.toImmutableList(),
                 quietRules = breakdown.quietRules.toImmutableList(),
@@ -119,12 +149,26 @@ internal class InsightsRepositoryImpl @Inject constructor(
     ) { captured, handled, values, rules -> Overview(captured, handled, values, rules) }
 
     private fun breakdownFlow(since: Long, quietSince: Long): Flow<Breakdown> = combine(
-        ruleExecutionDao.observeDailyCountsSince(since),
         extractedFieldValueDao.observeNumericTotalsSince(since),
         ruleExecutionDao.observeTopRulesSince(since, TOP_LIMIT),
         ruleDao.observeQuietRulesSince(quietSince),
         notificationDao.observeTopAppsSince(since, TOP_LIMIT),
-    ) { daily, totals, top, quiet, apps -> Breakdown(daily, totals, top, quiet, apps) }
+    ) { totals, top, quiet, apps -> Breakdown(totals, top, quiet, apps) }
+
+    /** Sparse daily counts per [TrendMetric], in enum order; each series uses the predicate of its tile. */
+    private fun trendsFlow(since: Long): Flow<Map<TrendMetric, List<TrendPoint>>> = combine(
+        notificationDao.observeDailyCountsSince(since),
+        notificationDao.observeDailyProcessedCountsSince(since),
+        ruleExecutionDao.observeDailyCountsSince(since),
+        ruleExecutionDao.observeDailyActionOutcomesSince(since),
+    ) { captured, handled, ruleRuns, outcomes ->
+        mapOf(
+            TrendMetric.NOTIFICATIONS to captured,
+            TrendMetric.HANDLED to handled,
+            TrendMetric.RULE_RUNS to ruleRuns,
+            TrendMetric.ACTIONS_FAILED to dailyFailedCounts(outcomes),
+        )
+    }
 
     private fun actionStatsFlow(since: Long): Flow<ActionStats> = combine(
         ruleExecutionDao.observeActionOutcomesSince(since),
@@ -158,11 +202,10 @@ internal class InsightsRepositoryImpl @Inject constructor(
     private data class Overview(val captured: Int, val handled: Int, val values: Int, val ruleCount: Int)
 
     private data class Breakdown(
-        val daily: List<TrendPoint>,
         val fieldTotals: List<FieldTotal>,
         val topRules: List<RuleActivity>,
         val quietRules: List<RuleRef>,
-        val topApps: List<CountBucket>,
+        val topApps: List<AppActivity>,
     )
 
     private companion object {
@@ -200,8 +243,55 @@ internal fun aggregateActionOutcomes(rawOutcomes: List<String>, actionTypes: Lis
     return ActionStats(runCount, failedCount, byType.toSortedMap())
 }
 
+/** Grouping key of [aggregateActionBreakdown]; deleted rules (null id) are told apart by their snapshot name. */
+internal data class BreakdownKey(val type: ActionType, val ruleId: String?, val ruleName: String)
+
 private fun OutcomeCounts.withOutcome(outcome: ActionOutcome): OutcomeCounts = when (outcome) {
     ActionOutcome.SUCCESS -> copy(success = success + 1)
     ActionOutcome.FAILED -> copy(failed = failed + 1)
     ActionOutcome.SKIPPED, ActionOutcome.SUPPRESSED -> copy(skipped = skipped + 1)
+}
+
+/** Failed outcomes per day, counted like [ActionStats.failedCount] so the series sums to the "failed" tile. */
+internal fun dailyFailedCounts(rows: List<DailyOutcomesRow>): List<TrendPoint> = rows
+    .groupBy { it.date }
+    .map { (date, dayRows) ->
+        val failed = dayRows.sumOf { row -> RuleExecutionMapper.decodeActionOutcomes(row.actionOutcomes).values.count { it == ActionOutcome.FAILED } }
+        TrendPoint(date = date, count = failed)
+    }
+    .filter { it.count > 0 }
+    .sortedBy { it.date }
+
+/**
+ * Groups raw outcomes into one [ActionBreakdownRow] per (action type, rule), counted like
+ * [aggregateActionOutcomes] (suppressed counts as skipped). Outcomes whose action no longer exists
+ * cannot be attributed to a type and are left out. [type] keeps only that action type. Rows with the
+ * most failures come first, then the busiest, then by name.
+ */
+internal fun aggregateActionBreakdown(
+    rows: List<RuleOutcomesRow>,
+    actionTypes: List<ActionTypeRow>,
+    type: ActionType?,
+): List<ActionBreakdownRow> {
+    val typeById = actionTypes.mapNotNull { row ->
+        runCatching { ActionType.valueOf(row.type) }.getOrNull()?.let { row.id to it }
+    }.toMap()
+
+    val grouped = mutableMapOf<BreakdownKey, OutcomeCounts>()
+    rows.forEach { row ->
+        RuleExecutionMapper.decodeActionOutcomes(row.actionOutcomes).forEach { (actionId, outcome) ->
+            val actionType = typeById[actionId]?.takeIf { type == null || it == type } ?: return@forEach
+            val key = BreakdownKey(actionType, row.ruleId, if (row.ruleId == null) row.ruleName else "")
+            grouped[key] = (grouped[key] ?: OutcomeCounts()).withOutcome(outcome)
+        }
+    }
+    val names = rows.associate { (it.ruleId ?: it.ruleName) to it.ruleName }
+    return grouped.map { (key, counts) ->
+        ActionBreakdownRow(key.type, key.ruleId, names.getValue(key.ruleId ?: key.ruleName), counts)
+    }.sortedWith(
+        compareByDescending<ActionBreakdownRow> { it.counts.failed }
+            .thenByDescending { it.counts.success + it.counts.skipped }
+            .thenBy { it.ruleName }
+            .thenBy { it.type },
+    )
 }

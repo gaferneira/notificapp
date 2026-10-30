@@ -345,6 +345,7 @@ private fun EntryProviderScope<NavKey>.mainTabEntries(navigator: Navigator) {
         InboxScreen(
             initialStatus = screen.initialStatus,
             since = screen.since,
+            app = screen.app,
             navigateTo = navigator::navigate,
             navigateBack = navigator::goBack,
         )

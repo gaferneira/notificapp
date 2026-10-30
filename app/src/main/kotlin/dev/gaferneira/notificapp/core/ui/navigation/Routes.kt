@@ -27,8 +27,9 @@ object Routes {
      *
      * @param initialStatus Status filter for this visit only (not persisted); null keeps the saved filter
      * @param since Date window (inclusive epoch-millis lower bound) for this visit only; null = no bound
+     * @param app Package name to limit the list to for this visit only (not persisted); null = no app limit
      */
-    fun inbox(initialStatus: NotificationStatusFilter? = null, since: Long? = null): Screen = Screen.Inbox(initialStatus, since)
+    fun inbox(initialStatus: NotificationStatusFilter? = null, since: Long? = null, app: String? = null): Screen = Screen.Inbox(initialStatus, since, app)
 
     /**
      * Home dashboard - the app's first bottom-nav destination.

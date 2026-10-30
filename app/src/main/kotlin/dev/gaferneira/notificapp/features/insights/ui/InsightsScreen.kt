@@ -61,7 +61,7 @@ fun InsightsScreen(
 
     CollectOneOffEffects(viewModel.effect) { effect ->
         when (effect) {
-            is InsightsEffect.NavigateToInbox -> navigateTo(Routes.inbox(initialStatus = effect.initialStatus, since = effect.since), null)
+            is InsightsEffect.NavigateToInbox -> navigateTo(Routes.inbox(initialStatus = effect.initialStatus, since = effect.since, app = effect.app), null)
             is InsightsEffect.NavigateToDataBrowser -> navigateTo(Routes.dataBrowser(ruleId = effect.ruleId, since = effect.since), null)
             is InsightsEffect.NavigateToRuleDetails -> navigateTo(Routes.ruleDetails(effect.ruleId), null)
             InsightsEffect.NavigateToWebhooks -> navigateTo(Routes.webhookList(), null)
@@ -121,6 +121,13 @@ private fun InsightsLoaded(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
+        uiState.actionBreakdown?.let { breakdown ->
+            ActionBreakdownSheet(
+                state = breakdown,
+                onRuleClick = { onEvent(InsightsEvent.OnActionBreakdownRuleClick(it)) },
+                onDismiss = { onEvent(InsightsEvent.OnActionBreakdownDismiss) },
+            )
+        }
         // Shown while a period switch or retry refreshes data that is already on screen.
         if (uiState.isLoading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         if (uiState.isGlobalEmpty) {

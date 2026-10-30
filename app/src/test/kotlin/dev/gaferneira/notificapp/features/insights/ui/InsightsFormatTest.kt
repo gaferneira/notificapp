@@ -43,6 +43,34 @@ class InsightsFormatTest {
     }
 
     @Test
+    fun `average is the total over every day of the trend, zero days included`() {
+        // Given / When
+        val chart = buildTrendChart(week(1, 5, 0, 2), InsightsPeriod.DAYS_7, locale)
+
+        // Then
+        chart.total shouldBe 8
+        chart.average shouldBe 2.0
+    }
+
+    @Test
+    fun `average of an empty trend is zero`() {
+        // Given / When
+        val chart = buildTrendChart(emptyList(), InsightsPeriod.DAYS_7, locale)
+
+        // Then
+        chart.average shouldBe 0.0
+    }
+
+    @Test
+    fun `entries carry the full medium date as their description`() {
+        // Given / When
+        val chart = buildTrendChart(week(1, 5), InsightsPeriod.DAYS_7, locale)
+
+        // Then
+        chart.entries.map { it.description } shouldBe listOf("Oct 5, 2026", "Oct 6, 2026")
+    }
+
+    @Test
     fun `7-day labels are short weekdays and the peak uses the weekday`() {
         // Given / When
         val chart = buildTrendChart(week(1, 5, 2), InsightsPeriod.DAYS_7, locale)

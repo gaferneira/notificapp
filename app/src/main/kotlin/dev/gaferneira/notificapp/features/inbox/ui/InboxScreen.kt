@@ -108,7 +108,9 @@ fun InboxScreen(
     initialStatus: NotificationStatusFilter? = null,
     // Route arg: a per-visit date window (e.g. Home's "Last 7 days" tiles), seeded at ViewModel creation.
     since: Long? = null,
-    viewModel: InboxViewModel = hiltViewModel<InboxViewModel, InboxViewModel.Factory> { it.create(InboxVisitArgs(initialStatus, since)) },
+    // Route arg: a per-visit app limit (e.g. Insights' top apps), seeded at ViewModel creation.
+    app: String? = null,
+    viewModel: InboxViewModel = hiltViewModel<InboxViewModel, InboxViewModel.Factory> { it.create(InboxVisitArgs(initialStatus, since, app)) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val notifications = viewModel.notifications.collectAsLazyPagingItems()

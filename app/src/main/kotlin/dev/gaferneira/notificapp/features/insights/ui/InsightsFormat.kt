@@ -46,6 +46,8 @@ internal class FieldSumFormats(private val locale: Locale) {
 internal data class TrendChart(
     val entries: ImmutableList<BarChartEntry>,
     val total: Int,
+    /** Mean count per day over every day of the trend (zero days included); 0 for an empty trend. */
+    val average: Double,
     val peakCount: Int,
     /** Human-readable day of the highest bar, or null when every day is zero. */
     val peakDayLabel: String?,
@@ -63,7 +65,8 @@ internal fun buildTrendChart(trend: List<TrendPoint>, period: InsightsPeriod, lo
             period == InsightsPeriod.DAYS_7 -> date.dayOfWeek.getDisplayName(TextStyle.SHORT, locale)
             else -> date.dayOfMonth.toString()
         }
-        BarChartEntry(label = label, value = point.count)
+        val description = date?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)) ?: point.date
+        BarChartEntry(label = label, value = point.count, description = description)
     }.toImmutableList()
     val peak = parsed.maxByOrNull { it.first.count }?.takeIf { it.first.count > 0 }
     val peakLabel = peak?.let { (point, date) ->
@@ -76,6 +79,7 @@ internal fun buildTrendChart(trend: List<TrendPoint>, period: InsightsPeriod, lo
     return TrendChart(
         entries = entries,
         total = trend.sumOf { it.count },
+        average = if (trend.isEmpty()) 0.0 else trend.sumOf { it.count }.toDouble() / trend.size,
         peakCount = peak?.first?.count ?: 0,
         peakDayLabel = peakLabel,
     )

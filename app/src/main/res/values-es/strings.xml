@@ -1038,6 +1038,46 @@
     <string name="insights_section_activity">Actividad</string>
     <string name="insights_chart_description">Ejecuciones de reglas por día, últimos %1$d días: total %2$d, máximo %3$d el %4$s</string>
     <string name="insights_chart_description_empty">Ejecuciones de reglas por día, últimos %1$d días: ninguna</string>
+    <string name="insights_chart_subtitle_rule_runs">Ejecuciones de reglas por día</string>
+    <string name="insights_chart_summary">%1$s en total · %2$s por día · máximo %3$s el %4$s</string>
+    <string name="insights_chart_summary_empty">Sin ejecuciones de reglas en este período</string>
+    <string name="insights_chart_max">Máx. %1$s</string>
+    <plurals name="insights_chart_selection_rule_runs">
+        <item quantity="one">%2$s: %1$d ejecución de regla</item>
+        <item quantity="many">%2$s: %1$d de ejecuciones de reglas</item>
+        <item quantity="other">%2$s: %1$d ejecuciones de reglas</item>
+    </plurals>
+    <string name="insights_chart_metric_notifications">Notificaciones</string>
+    <string name="insights_chart_metric_handled">Gestionadas</string>
+    <string name="insights_chart_metric_rule_runs">Ejecuciones</string>
+    <string name="insights_chart_metric_actions_failed">Acciones fallidas</string>
+    <string name="insights_chart_subtitle_notifications">Notificaciones capturadas por día</string>
+    <string name="insights_chart_subtitle_handled">Notificaciones gestionadas por reglas por día</string>
+    <string name="insights_chart_subtitle_actions_failed">Acciones fallidas por día</string>
+    <string name="insights_chart_summary_empty_notifications">Sin notificaciones en este período</string>
+    <string name="insights_chart_summary_empty_handled">Sin notificaciones gestionadas en este período</string>
+    <string name="insights_chart_summary_empty_actions_failed">Sin acciones fallidas en este período</string>
+    <string name="insights_chart_description_notifications">Notificaciones capturadas por día, últimos %1$d días: total %2$d, máximo %3$d el %4$s</string>
+    <string name="insights_chart_description_handled">Notificaciones gestionadas por reglas por día, últimos %1$d días: total %2$d, máximo %3$d el %4$s</string>
+    <string name="insights_chart_description_actions_failed">Acciones fallidas por día, últimos %1$d días: total %2$d, máximo %3$d el %4$s</string>
+    <string name="insights_chart_description_empty_notifications">Notificaciones capturadas por día, últimos %1$d días: ninguna</string>
+    <string name="insights_chart_description_empty_handled">Notificaciones gestionadas por reglas por día, últimos %1$d días: ninguna</string>
+    <string name="insights_chart_description_empty_actions_failed">Acciones fallidas por día, últimos %1$d días: ninguna</string>
+    <plurals name="insights_chart_selection_notifications">
+        <item quantity="one">%2$s: %1$d notificación</item>
+        <item quantity="many">%2$s: %1$d de notificaciones</item>
+        <item quantity="other">%2$s: %1$d notificaciones</item>
+    </plurals>
+    <plurals name="insights_chart_selection_handled">
+        <item quantity="one">%2$s: %1$d notificación gestionada</item>
+        <item quantity="many">%2$s: %1$d de notificaciones gestionadas</item>
+        <item quantity="other">%2$s: %1$d notificaciones gestionadas</item>
+    </plurals>
+    <plurals name="insights_chart_selection_actions_failed">
+        <item quantity="one">%2$s: %1$d acción fallida</item>
+        <item quantity="many">%2$s: %1$d de acciones fallidas</item>
+        <item quantity="other">%2$s: %1$d acciones fallidas</item>
+    </plurals>
     <string name="insights_section_totals">Totales extraídos</string>
     <string name="insights_total_title">%1$s · %2$s</string>
     <plurals name="insights_values_count">
@@ -1052,9 +1092,20 @@
         <item quantity="other">%d ejecuciones</item>
     </plurals>
     <string name="insights_quiet_rules_title">Reglas inactivas</string>
-    <string name="insights_quiet_rule_hint">Sin ejecuciones en 30 días</string>
+    <string name="insights_quiet_rule_hint">Sin ejecuciones en los últimos 30 días</string>
     <string name="insights_section_actions">Acciones</string>
-    <string name="insights_action_outcomes">Correctas: %1$d · Fallidas: %2$d · Omitidas: %3$d</string>
+    <string name="insights_action_sheet_title_all">Acciones por regla</string>
+    <string name="insights_action_sheet_empty">Sin resultados de acciones en este período</string>
+    <plurals name="insights_outcome_succeeded">
+        <item quantity="one">%d correcta</item>
+        <item quantity="many">%d de correctas</item>
+        <item quantity="other">%d correctas</item>
+    </plurals>
+    <plurals name="insights_outcome_skipped">
+        <item quantity="one">%d omitida</item>
+        <item quantity="many">%d de omitidas</item>
+        <item quantity="other">%d omitidas</item>
+    </plurals>
     <string name="insights_section_webhooks">Webhooks</string>
     <string name="insights_webhook_delivered">Entregado</string>
     <string name="insights_webhook_config_error">Error de configuración</string>

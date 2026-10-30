@@ -3,8 +3,13 @@ package dev.gaferneira.notificapp.features.insights.viewmodel
 import app.cash.turbine.test
 import dev.gaferneira.notificapp.R
 import dev.gaferneira.notificapp.core.ui.UiText
+import dev.gaferneira.notificapp.domain.model.ActionBreakdownRow
+import dev.gaferneira.notificapp.domain.model.ActionType
 import dev.gaferneira.notificapp.domain.model.InsightsPeriod
+import dev.gaferneira.notificapp.domain.model.OutcomeCounts
+import dev.gaferneira.notificapp.domain.model.TrendMetric
 import dev.gaferneira.notificapp.domain.model.preferences.NotificationStatusFilter
+import dev.gaferneira.notificapp.features.insights.contract.ActionBreakdownUiState
 import dev.gaferneira.notificapp.features.insights.contract.InsightsEffect
 import dev.gaferneira.notificapp.features.insights.contract.InsightsEvent
 import dev.gaferneira.notificapp.testutil.fakes.FakeInsightsRepository
@@ -195,6 +200,7 @@ class InsightsViewModelTest {
             InsightsEvent.OnHandledClick to InsightsEffect.NavigateToInbox(NotificationStatusFilter.PROCESSED, since = WINDOW_START),
             InsightsEvent.OnValuesExtractedClick to InsightsEffect.NavigateToDataBrowser(since = WINDOW_START),
             InsightsEvent.OnFieldTotalClick("rule-1") to InsightsEffect.NavigateToDataBrowser("rule-1", since = WINDOW_START),
+            InsightsEvent.OnTopAppClick("com.bank") to InsightsEffect.NavigateToInbox(NotificationStatusFilter.ALL, since = WINDOW_START, app = "com.bank"),
             InsightsEvent.OnRuleClick("rule-2") to InsightsEffect.NavigateToRuleDetails("rule-2"),
             InsightsEvent.OnWebhooksClick to InsightsEffect.NavigateToWebhooks,
             InsightsEvent.OnBrowseDataClick to InsightsEffect.NavigateToDataBrowser(),
@@ -284,6 +290,143 @@ class InsightsViewModelTest {
         state.summary?.capturedCount shouldBe 10
         state.error shouldBe null
         state.isLoading shouldBe false
+    }
+
+    @Test
+    fun `chart metric defaults to notifications and switches without reloading`() = runTest(testDispatcher) {
+        // Given
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        viewModel.uiState.value.chartMetric shouldBe TrendMetric.NOTIFICATIONS
+
+        // When
+        viewModel.onEvent(InsightsEvent.OnChartMetricChange(TrendMetric.ACTIONS_FAILED))
+        advanceUntilIdle()
+
+        // Then
+        viewModel.uiState.value.chartMetric shouldBe TrendMetric.ACTIONS_FAILED
+        repository.requestedPeriods shouldBe listOf(InsightsPeriod.DAYS_7)
+    }
+
+    @Test
+    fun `clicking an action loads its breakdown into the sheet state`() = runTest(testDispatcher) {
+        // Given
+        val rows = listOf(ActionBreakdownRow(ActionType.SEND_WEBHOOK, "r1", "Alpha", OutcomeCounts(success = 2, failed = 1)))
+        repository.setBreakdown(rows)
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.onEvent(InsightsEvent.OnActionClick(ActionType.SEND_WEBHOOK))
+        advanceUntilIdle()
+
+        // Then
+        repository.requestedBreakdowns shouldBe listOf(ActionType.SEND_WEBHOOK to InsightsPeriod.DAYS_7)
+        val sheet = viewModel.uiState.value.actionBreakdown
+        sheet?.type shouldBe ActionType.SEND_WEBHOOK
+        sheet?.isLoading shouldBe false
+        sheet?.rows shouldBe rows
+    }
+
+    @Test
+    fun `the sheet is loading until the breakdown arrives`() = runTest(testDispatcher) {
+        // Given
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.onEvent(InsightsEvent.OnActionClick(ActionType.SAVE_DATA))
+
+        // Then
+        viewModel.uiState.value.actionBreakdown shouldBe ActionBreakdownUiState(type = ActionType.SAVE_DATA, isLoading = true)
+    }
+
+    @Test
+    fun `the Actions run tile opens the breakdown for every type`() = runTest(testDispatcher) {
+        // Given
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        // When
+        viewModel.onEvent(InsightsEvent.OnActionsRunTileClick)
+        advanceUntilIdle()
+
+        // Then
+        repository.requestedBreakdowns shouldBe listOf(null to InsightsPeriod.DAYS_7)
+        viewModel.uiState.value.actionBreakdown?.type shouldBe null
+        viewModel.uiState.value.actionBreakdown?.isLoading shouldBe false
+    }
+
+    @Test
+    fun `dismissing the sheet closes it and stops collecting`() = runTest(testDispatcher) {
+        // Given an open sheet
+        val viewModel = createViewModel()
+        viewModel.onEvent(InsightsEvent.OnActionsRunTileClick)
+        advanceUntilIdle()
+        repository.activeBreakdownCollectors shouldBe 1
+
+        // When
+        viewModel.onEvent(InsightsEvent.OnActionBreakdownDismiss)
+        advanceUntilIdle()
+
+        // Then
+        viewModel.uiState.value.actionBreakdown shouldBe null
+        repository.activeBreakdownCollectors shouldBe 0
+    }
+
+    @Test
+    fun `tapping a rule in the sheet closes it and opens the rule`() = runTest(testDispatcher) {
+        // Given an open sheet
+        val viewModel = createViewModel()
+        viewModel.onEvent(InsightsEvent.OnActionsRunTileClick)
+        advanceUntilIdle()
+
+        viewModel.effect.test {
+            // When
+            viewModel.onEvent(InsightsEvent.OnActionBreakdownRuleClick("rule-7"))
+            advanceUntilIdle()
+
+            // Then
+            awaitItem() shouldBe InsightsEffect.NavigateToRuleDetails("rule-7")
+            cancelAndIgnoreRemainingEvents()
+        }
+        viewModel.uiState.value.actionBreakdown shouldBe null
+        repository.activeBreakdownCollectors shouldBe 0
+    }
+
+    @Test
+    fun `changing the period while the sheet is open closes it`() = runTest(testDispatcher) {
+        // Given an open sheet
+        val viewModel = createViewModel()
+        viewModel.onEvent(InsightsEvent.OnActionsRunTileClick)
+        advanceUntilIdle()
+
+        // When
+        viewModel.onEvent(InsightsEvent.OnPeriodChange(InsightsPeriod.DAYS_30))
+        advanceUntilIdle()
+
+        // Then
+        viewModel.uiState.value.actionBreakdown shouldBe null
+        repository.activeBreakdownCollectors shouldBe 0
+    }
+
+    @Test
+    fun `a breakdown failure closes the sheet and reports the error`() = runTest(testDispatcher) {
+        // Given
+        repository.setBreakdownFailure(IllegalStateException("db down"))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.effect.test {
+            // When
+            viewModel.onEvent(InsightsEvent.OnActionsRunTileClick)
+            advanceUntilIdle()
+
+            // Then
+            awaitItem() shouldBe InsightsEffect.ShowError(UiText.StringResource(R.string.insights_error_message))
+            cancelAndIgnoreRemainingEvents()
+        }
+        viewModel.uiState.value.actionBreakdown shouldBe null
     }
 
     @Test

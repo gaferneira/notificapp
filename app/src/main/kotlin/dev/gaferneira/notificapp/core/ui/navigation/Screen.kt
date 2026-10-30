@@ -19,9 +19,14 @@ sealed class Screen : NavKey {
      * replacing) the saved inbox filter; null keeps the saved filter.
      * @property since Inclusive lower bound (epoch millis) on the notification timestamp for this
      * visit only (never persisted); null shows every notification.
+     * @property app Package name the list is limited to for this visit only (never persisted); null = no app limit.
      */
     @Serializable
-    data class Inbox(val initialStatus: NotificationStatusFilter? = null, val since: Long? = null) : Screen()
+    data class Inbox(
+        val initialStatus: NotificationStatusFilter? = null,
+        val since: Long? = null,
+        val app: String? = null,
+    ) : Screen()
 
     /**
      * Home dashboard - launch summary: monitoring status, starter rules or recurring-notification

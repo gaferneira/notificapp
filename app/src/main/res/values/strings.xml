@@ -1040,6 +1040,42 @@
     <string name="insights_section_activity">Activity</string>
     <string name="insights_chart_description">Rule runs per day, last %1$d days: total %2$d, peak %3$d on %4$s</string>
     <string name="insights_chart_description_empty">Rule runs per day, last %1$d days: none</string>
+    <string name="insights_chart_subtitle_rule_runs">Rule runs per day</string>
+    <string name="insights_chart_summary">%1$s total · %2$s per day · peak %3$s on %4$s</string>
+    <string name="insights_chart_summary_empty">No rule runs in this period</string>
+    <string name="insights_chart_max">Max %1$s</string>
+    <plurals name="insights_chart_selection_rule_runs">
+        <item quantity="one">%2$s: %1$d rule run</item>
+        <item quantity="other">%2$s: %1$d rule runs</item>
+    </plurals>
+    <string name="insights_chart_metric_notifications">Notifications</string>
+    <string name="insights_chart_metric_handled">Handled</string>
+    <string name="insights_chart_metric_rule_runs">Rule runs</string>
+    <string name="insights_chart_metric_actions_failed">Actions failed</string>
+    <string name="insights_chart_subtitle_notifications">Captured notifications per day</string>
+    <string name="insights_chart_subtitle_handled">Notifications handled by rules per day</string>
+    <string name="insights_chart_subtitle_actions_failed">Failed actions per day</string>
+    <string name="insights_chart_summary_empty_notifications">No notifications in this period</string>
+    <string name="insights_chart_summary_empty_handled">No handled notifications in this period</string>
+    <string name="insights_chart_summary_empty_actions_failed">No failed actions in this period</string>
+    <string name="insights_chart_description_notifications">Captured notifications per day, last %1$d days: total %2$d, peak %3$d on %4$s</string>
+    <string name="insights_chart_description_handled">Notifications handled by rules per day, last %1$d days: total %2$d, peak %3$d on %4$s</string>
+    <string name="insights_chart_description_actions_failed">Failed actions per day, last %1$d days: total %2$d, peak %3$d on %4$s</string>
+    <string name="insights_chart_description_empty_notifications">Captured notifications per day, last %1$d days: none</string>
+    <string name="insights_chart_description_empty_handled">Notifications handled by rules per day, last %1$d days: none</string>
+    <string name="insights_chart_description_empty_actions_failed">Failed actions per day, last %1$d days: none</string>
+    <plurals name="insights_chart_selection_notifications">
+        <item quantity="one">%2$s: %1$d notification</item>
+        <item quantity="other">%2$s: %1$d notifications</item>
+    </plurals>
+    <plurals name="insights_chart_selection_handled">
+        <item quantity="one">%2$s: %1$d handled notification</item>
+        <item quantity="other">%2$s: %1$d handled notifications</item>
+    </plurals>
+    <plurals name="insights_chart_selection_actions_failed">
+        <item quantity="one">%2$s: %1$d failed action</item>
+        <item quantity="other">%2$s: %1$d failed actions</item>
+    </plurals>
     <string name="insights_section_totals">Extracted totals</string>
     <string name="insights_total_title">%1$s · %2$s</string>
     <plurals name="insights_values_count">
@@ -1052,9 +1088,18 @@
         <item quantity="other">%d runs</item>
     </plurals>
     <string name="insights_quiet_rules_title">Quiet rules</string>
-    <string name="insights_quiet_rule_hint">No runs in 30 days</string>
+    <string name="insights_quiet_rule_hint">No runs in the last 30 days</string>
     <string name="insights_section_actions">Actions</string>
-    <string name="insights_action_outcomes">%1$d succeeded · %2$d failed · %3$d skipped</string>
+    <string name="insights_action_sheet_title_all">Actions by rule</string>
+    <string name="insights_action_sheet_empty">No action results in this period</string>
+    <plurals name="insights_outcome_succeeded">
+        <item quantity="one">%d succeeded</item>
+        <item quantity="other">%d succeeded</item>
+    </plurals>
+    <plurals name="insights_outcome_skipped">
+        <item quantity="one">%d skipped</item>
+        <item quantity="other">%d skipped</item>
+    </plurals>
     <string name="insights_section_webhooks">Webhooks</string>
     <string name="insights_webhook_delivered">Delivered</string>
     <string name="insights_webhook_config_error">Config error</string>

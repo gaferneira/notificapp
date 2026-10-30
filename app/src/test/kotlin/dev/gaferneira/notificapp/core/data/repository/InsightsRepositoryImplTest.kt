@@ -2,15 +2,18 @@ package dev.gaferneira.notificapp.core.data.repository
 
 import dev.gaferneira.notificapp.core.common.Failure
 import dev.gaferneira.notificapp.core.data.local.dao.ActionTypeRow
+import dev.gaferneira.notificapp.core.data.local.dao.DailyOutcomesRow
 import dev.gaferneira.notificapp.core.data.local.dao.ExtractedFieldValueDao
 import dev.gaferneira.notificapp.core.data.local.dao.NotificationDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleDao
 import dev.gaferneira.notificapp.core.data.local.dao.RuleExecutionDao
+import dev.gaferneira.notificapp.core.data.local.dao.RuleOutcomesRow
 import dev.gaferneira.notificapp.core.data.local.dao.WebhookDeliveryDao
 import dev.gaferneira.notificapp.core.data.local.dao.WebhookPendingCount
 import dev.gaferneira.notificapp.core.notification.action.CurrentTimeProvider
+import dev.gaferneira.notificapp.domain.model.ActionBreakdownRow
 import dev.gaferneira.notificapp.domain.model.ActionType
-import dev.gaferneira.notificapp.domain.model.CountBucket
+import dev.gaferneira.notificapp.domain.model.AppActivity
 import dev.gaferneira.notificapp.domain.model.FieldTotal
 import dev.gaferneira.notificapp.domain.model.InsightsPeriod
 import dev.gaferneira.notificapp.domain.model.InsightsSummary
@@ -18,6 +21,7 @@ import dev.gaferneira.notificapp.domain.model.OutcomeCounts
 import dev.gaferneira.notificapp.domain.model.RuleActivity
 import dev.gaferneira.notificapp.domain.model.RuleField
 import dev.gaferneira.notificapp.domain.model.RuleRef
+import dev.gaferneira.notificapp.domain.model.TrendMetric
 import dev.gaferneira.notificapp.domain.model.TrendPoint
 import dev.gaferneira.notificapp.domain.model.Webhook
 import dev.gaferneira.notificapp.domain.model.WebhookDeliveryStatus
@@ -79,16 +83,24 @@ class InsightsRepositoryImplTest {
         totals: List<FieldTotal> = emptyList(),
         topRules: List<RuleActivity> = emptyList(),
         quiet: List<RuleRef> = emptyList(),
-        topApps: List<CountBucket> = emptyList(),
+        topApps: List<AppActivity> = emptyList(),
         outcomes: List<String> = emptyList(),
         actionTypes: List<ActionTypeRow> = emptyList(),
         dailyFlow: Flow<List<TrendPoint>> = flowOf(daily),
+        capturedDaily: List<TrendPoint> = emptyList(),
+        handledDaily: List<TrendPoint> = emptyList(),
+        failedDaily: List<DailyOutcomesRow> = emptyList(),
+        ruleOutcomes: List<RuleOutcomesRow> = emptyList(),
     ) {
         every { notificationDao.observeCountSince(any()) } returns flowOf(captured)
         every { notificationDao.observeProcessedCountSince(any()) } returns flowOf(handled)
         every { extractedFieldValueDao.observeCountSince(any()) } returns flowOf(values)
         every { ruleDao.observeCount() } returns flowOf(ruleCount)
         every { ruleExecutionDao.observeDailyCountsSince(any()) } returns dailyFlow
+        every { notificationDao.observeDailyCountsSince(any()) } returns flowOf(capturedDaily)
+        every { notificationDao.observeDailyProcessedCountsSince(any()) } returns flowOf(handledDaily)
+        every { ruleExecutionDao.observeDailyActionOutcomesSince(any()) } returns flowOf(failedDaily)
+        every { ruleExecutionDao.observeRuleActionOutcomesSince(any()) } returns flowOf(ruleOutcomes)
         every { extractedFieldValueDao.observeNumericTotalsSince(any()) } returns flowOf(totals)
         every { ruleExecutionDao.observeTopRulesSince(any(), any()) } returns flowOf(topRules)
         every { ruleDao.observeQuietRulesSince(any()) } returns flowOf(quiet)
@@ -103,10 +115,34 @@ class InsightsRepositoryImplTest {
     fun `given sparse daily counts, when observing 7 days, then trend is zero-filled oldest first`() = runTest {
         stubDaos(daily = listOf(TrendPoint("2026-03-13", 4)))
 
-        val trend = summary().trend
+        val trend = summary().trends.getValue(TrendMetric.RULE_RUNS)
 
         trend.map { it.date } shouldBe (9..15).map { "2026-03-%02d".format(it) }
         trend.map { it.count } shouldBe listOf(0, 0, 0, 0, 4, 0, 0)
+    }
+
+    @Test
+    fun `given daily rows for every metric, when observing, then each series is zero-filled and bucketed on its own`() = runTest {
+        stubDaos(
+            capturedDaily = listOf(TrendPoint("2026-03-14", 6)),
+            handledDaily = listOf(TrendPoint("2026-03-15", 2)),
+            daily = listOf(TrendPoint("2026-03-13", 4)),
+            failedDaily = listOf(
+                DailyOutcomesRow("2026-03-12", """{"a1":"FAILED","a2":"SUCCESS"}"""),
+                DailyOutcomesRow("2026-03-12", """{"a1":"FAILED","a2":"FAILED"}"""),
+                DailyOutcomesRow("2026-03-11", """{"a1":"SUCCESS"}"""),
+                DailyOutcomesRow("2026-03-10", "not json"),
+            ),
+        )
+
+        val trends = summary().trends
+
+        trends.keys.toList() shouldBe TrendMetric.entries
+        trends.values.forEach { it.size shouldBe 7 }
+        trends.getValue(TrendMetric.NOTIFICATIONS).map { it.count } shouldBe listOf(0, 0, 0, 0, 0, 6, 0)
+        trends.getValue(TrendMetric.HANDLED).map { it.count } shouldBe listOf(0, 0, 0, 0, 0, 0, 2)
+        trends.getValue(TrendMetric.RULE_RUNS).map { it.count } shouldBe listOf(0, 0, 0, 0, 4, 0, 0)
+        trends.getValue(TrendMetric.ACTIONS_FAILED).map { it.count } shouldBe listOf(0, 0, 0, 3, 0, 0, 0)
     }
 
     @Test
@@ -115,7 +151,7 @@ class InsightsRepositoryImplTest {
         val sinceSlot = mutableListOf<Long>()
         every { ruleExecutionDao.observeDailyCountsSince(capture(sinceSlot)) } returns flowOf(emptyList())
 
-        val trend = summary(InsightsPeriod.DAYS_30).trend
+        val trend = summary(InsightsPeriod.DAYS_30).trends.getValue(TrendMetric.RULE_RUNS)
 
         trend.size shouldBe 30
         trend.first().date shouldBe "2026-02-14"
@@ -192,7 +228,7 @@ class InsightsRepositoryImplTest {
     @Test
     fun `given top rules and apps, when observing, then the DAOs are capped at 5 and results pass through`() = runTest {
         val rules = (1..5).map { RuleActivity("r$it", "Rule $it", 10 - it) }
-        val apps = (1..5).map { CountBucket("App $it", 10 - it) }
+        val apps = (1..5).map { AppActivity("com.app$it", "App $it", 10 - it) }
         stubDaos(topRules = rules, topApps = apps)
 
         val result = summary()
@@ -263,6 +299,57 @@ class InsightsRepositoryImplTest {
         stubDaos(dailyFlow = flow { throw IllegalStateException("db exploded") })
 
         val result = repository().observeSummary(InsightsPeriod.DAYS_7).first()
+
+        result.isFailure shouldBe true
+        result.exceptionOrNull().shouldBeInstanceOf<Failure.ApplicationException>()
+    }
+
+    @Test
+    fun `given outcomes across rules, when observing the breakdown, then rows group per type and rule with failures first`() = runTest {
+        stubDaos(
+            actionTypes = listOf(
+                ActionTypeRow("a1", ActionType.SEND_WEBHOOK.name),
+                ActionTypeRow("a2", ActionType.DISMISS_NOTIFICATION.name),
+            ),
+            ruleOutcomes = listOf(
+                RuleOutcomesRow("r1", "Alpha", """{"a1":"SUCCESS","a2":"FAILED"}"""),
+                RuleOutcomesRow("r1", "Alpha", """{"a1":"SUPPRESSED","gone":"FAILED"}"""),
+                RuleOutcomesRow("r2", "Beta", """{"a1":"FAILED"}"""),
+                RuleOutcomesRow(null, "Deleted", """{"a1":"SUCCESS"}"""),
+            ),
+        )
+
+        val rows = repository().observeActionBreakdown(null, InsightsPeriod.DAYS_7).first().getOrThrow()
+
+        rows shouldBe listOf(
+            ActionBreakdownRow(ActionType.DISMISS_NOTIFICATION, "r1", "Alpha", OutcomeCounts(failed = 1)),
+            ActionBreakdownRow(ActionType.SEND_WEBHOOK, "r2", "Beta", OutcomeCounts(failed = 1)),
+            ActionBreakdownRow(ActionType.SEND_WEBHOOK, "r1", "Alpha", OutcomeCounts(success = 1, skipped = 1)),
+            ActionBreakdownRow(ActionType.SEND_WEBHOOK, null, "Deleted", OutcomeCounts(success = 1)),
+        )
+    }
+
+    @Test
+    fun `given a type filter, when observing the breakdown, then only that type is kept and the window starts at the period start`() = runTest {
+        stubDaos(
+            actionTypes = listOf(ActionTypeRow("a1", ActionType.SEND_WEBHOOK.name), ActionTypeRow("a2", ActionType.DISMISS_NOTIFICATION.name)),
+            ruleOutcomes = listOf(RuleOutcomesRow("r1", "Alpha", """{"a1":"SUCCESS","a2":"FAILED"}""")),
+        )
+        val sinceSlot = mutableListOf<Long>()
+        every { ruleExecutionDao.observeRuleActionOutcomesSince(capture(sinceSlot)) } returns flowOf(listOf(RuleOutcomesRow("r1", "Alpha", """{"a1":"SUCCESS","a2":"FAILED"}""")))
+
+        val rows = repository().observeActionBreakdown(ActionType.SEND_WEBHOOK, InsightsPeriod.DAYS_7).first().getOrThrow()
+
+        rows shouldBe listOf(ActionBreakdownRow(ActionType.SEND_WEBHOOK, "r1", "Alpha", OutcomeCounts(success = 1)))
+        sinceSlot.single() shouldBe LocalDate.of(2026, 3, 9).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+
+    @Test
+    fun `given a failing DAO flow, when observing the breakdown, then a mapped Failure result is emitted`() = runTest {
+        stubDaos()
+        every { ruleExecutionDao.observeRuleActionOutcomesSince(any()) } returns flow { throw IllegalStateException("db exploded") }
+
+        val result = repository().observeActionBreakdown(null, InsightsPeriod.DAYS_7).first()
 
         result.isFailure shouldBe true
         result.exceptionOrNull().shouldBeInstanceOf<Failure.ApplicationException>()

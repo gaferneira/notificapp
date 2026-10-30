@@ -1,6 +1,9 @@
 package dev.gaferneira.notificapp.features.insights.ui
 
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CheckCircle
@@ -22,6 +26,7 @@ import androidx.compose.material.icons.outlined.DataObject
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,17 +35,24 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import dev.gaferneira.notificapp.R
+import dev.gaferneira.notificapp.core.ui.components.AppIcon
 import dev.gaferneira.notificapp.core.ui.components.BarChart
 import dev.gaferneira.notificapp.core.ui.components.SectionHeader
 import dev.gaferneira.notificapp.core.ui.components.StatTile
@@ -52,13 +64,14 @@ import dev.gaferneira.notificapp.core.ui.text.currentLocale
 import dev.gaferneira.notificapp.core.ui.text.formatCount
 import dev.gaferneira.notificapp.core.ui.text.rememberIntegerFormat
 import dev.gaferneira.notificapp.domain.model.ActionType
-import dev.gaferneira.notificapp.domain.model.CountBucket
+import dev.gaferneira.notificapp.domain.model.AppActivity
 import dev.gaferneira.notificapp.domain.model.FieldTotal
 import dev.gaferneira.notificapp.domain.model.InsightsPeriod
 import dev.gaferneira.notificapp.domain.model.InsightsSummary
 import dev.gaferneira.notificapp.domain.model.OutcomeCounts
 import dev.gaferneira.notificapp.domain.model.RuleActivity
 import dev.gaferneira.notificapp.domain.model.RuleRef
+import dev.gaferneira.notificapp.domain.model.TrendMetric
 import dev.gaferneira.notificapp.domain.model.WebhookDeliveryStatus
 import dev.gaferneira.notificapp.domain.model.WebhookHealth
 import dev.gaferneira.notificapp.features.insights.contract.InsightsEvent
@@ -66,6 +79,7 @@ import dev.gaferneira.notificapp.features.insights.contract.InsightsUiState
 import dev.gaferneira.notificapp.util.timeAgo
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
+import java.text.NumberFormat
 import java.util.Date
 
 /** All dashboard sections in display order; each one hides itself when it has nothing to show. */
@@ -73,16 +87,20 @@ import java.util.Date
 internal fun InsightsContent(uiState: InsightsUiState, summary: InsightsSummary, onEvent: (InsightsEvent) -> Unit) {
     PeriodToggle(selected = uiState.period, onSelect = { onEvent(InsightsEvent.OnPeriodChange(it)) })
     OverviewTiles(summary = summary, onEvent = onEvent)
-    ActivitySection(summary = summary)
+    ActivitySection(
+        summary = summary,
+        metric = uiState.chartMetric,
+        onMetricChange = { onEvent(InsightsEvent.OnChartMetricChange(it)) },
+    )
+    TopAppsSection(apps = summary.topApps, onAppClick = { onEvent(InsightsEvent.OnTopAppClick(it)) })
     FieldTotalsSection(totals = summary.fieldTotals, onClick = { onEvent(InsightsEvent.OnFieldTotalClick(it)) })
     RulesSection(
         topRules = summary.topRules,
         quietRules = summary.quietRules,
         onRuleClick = { onEvent(InsightsEvent.OnRuleClick(it)) },
     )
-    ActionsSection(outcomes = summary.actionOutcomes)
+    ActionsSection(outcomes = summary.actionOutcomes, onActionClick = { onEvent(InsightsEvent.OnActionClick(it)) })
     WebhooksSection(webhooks = summary.webhooks, onClick = { onEvent(InsightsEvent.OnWebhooksClick) })
-    TopAppsSection(apps = summary.topApps)
     Button(
         onClick = { onEvent(InsightsEvent.OnBrowseDataClick) },
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
@@ -138,6 +156,11 @@ internal fun OverviewTiles(summary: InsightsSummary, onEvent: (InsightsEvent) ->
                 value = formatCount(summary.actionsRunCount, countFormat),
                 label = stringResource(R.string.insights_tile_actions_run),
                 icon = Icons.Outlined.Bolt,
+                onClick = if (summary.actionsRunCount > 0) {
+                    { onEvent(InsightsEvent.OnActionsRunTileClick) }
+                } else {
+                    null
+                },
                 supportingText = if (failed > 0) pluralStringResource(R.plurals.insights_tile_actions_failed, failed, failed) else null,
                 supportingTone = StatTileTone.Error,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -153,22 +176,133 @@ internal fun OverviewTiles(summary: InsightsSummary, onEvent: (InsightsEvent) ->
     }
 }
 
+/**
+ * The wording that depends on what the chart counts. Kept apart from [ActivitySection] so another
+ * metric only needs its own instance.
+ */
+private data class ChartTexts(
+    @StringRes val chipLabel: Int,
+    @StringRes val subtitle: Int,
+    @StringRes val summaryEmpty: Int,
+    @StringRes val description: Int,
+    @StringRes val descriptionEmpty: Int,
+    @PluralsRes val selection: Int,
+)
+
+private val NotificationsChartTexts = ChartTexts(
+    chipLabel = R.string.insights_chart_metric_notifications,
+    subtitle = R.string.insights_chart_subtitle_notifications,
+    summaryEmpty = R.string.insights_chart_summary_empty_notifications,
+    description = R.string.insights_chart_description_notifications,
+    descriptionEmpty = R.string.insights_chart_description_empty_notifications,
+    selection = R.plurals.insights_chart_selection_notifications,
+)
+
+private val HandledChartTexts = ChartTexts(
+    chipLabel = R.string.insights_chart_metric_handled,
+    subtitle = R.string.insights_chart_subtitle_handled,
+    summaryEmpty = R.string.insights_chart_summary_empty_handled,
+    description = R.string.insights_chart_description_handled,
+    descriptionEmpty = R.string.insights_chart_description_empty_handled,
+    selection = R.plurals.insights_chart_selection_handled,
+)
+
+private val RuleRunsChartTexts = ChartTexts(
+    chipLabel = R.string.insights_chart_metric_rule_runs,
+    subtitle = R.string.insights_chart_subtitle_rule_runs,
+    summaryEmpty = R.string.insights_chart_summary_empty,
+    description = R.string.insights_chart_description,
+    descriptionEmpty = R.string.insights_chart_description_empty,
+    selection = R.plurals.insights_chart_selection_rule_runs,
+)
+
+private val ActionsFailedChartTexts = ChartTexts(
+    chipLabel = R.string.insights_chart_metric_actions_failed,
+    subtitle = R.string.insights_chart_subtitle_actions_failed,
+    summaryEmpty = R.string.insights_chart_summary_empty_actions_failed,
+    description = R.string.insights_chart_description_actions_failed,
+    descriptionEmpty = R.string.insights_chart_description_empty_actions_failed,
+    selection = R.plurals.insights_chart_selection_actions_failed,
+)
+
+private fun TrendMetric.texts(): ChartTexts = when (this) {
+    TrendMetric.NOTIFICATIONS -> NotificationsChartTexts
+    TrendMetric.HANDLED -> HandledChartTexts
+    TrendMetric.RULE_RUNS -> RuleRunsChartTexts
+    TrendMetric.ACTIONS_FAILED -> ActionsFailedChartTexts
+}
+
 @Composable
-internal fun ActivitySection(summary: InsightsSummary, modifier: Modifier = Modifier) {
-    if (summary.trend.isEmpty()) return
+internal fun ActivitySection(
+    summary: InsightsSummary,
+    metric: TrendMetric,
+    onMetricChange: (TrendMetric) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val trend = summary.trends[metric]
+    if (trend.isNullOrEmpty()) return
     // Labels and chart come from the period the data was computed for, which can lag the toggle while a switch loads.
     val period = summary.period
     val locale = currentLocale()
-    val chart = remember(summary.trend, period, locale) { buildTrendChart(summary.trend, period, locale) }
+    val resources = LocalContext.current.resources
+    val texts = metric.texts()
+    val chart = remember(trend, period, locale) { buildTrendChart(trend, period, locale) }
+    val averageFormat = remember(locale) { NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 1 } }
+    val countFormat = rememberIntegerFormat()
     val description = if (chart.peakDayLabel == null) {
-        stringResource(R.string.insights_chart_description_empty, period.days)
+        stringResource(texts.descriptionEmpty, period.days)
     } else {
-        stringResource(R.string.insights_chart_description, period.days, chart.total, chart.peakCount, chart.peakDayLabel)
+        stringResource(texts.description, period.days, chart.total, chart.peakCount, chart.peakDayLabel)
+    }
+    val summaryLine = if (chart.peakDayLabel == null) {
+        stringResource(texts.summaryEmpty)
+    } else {
+        stringResource(
+            R.string.insights_chart_summary,
+            formatCount(chart.total, countFormat),
+            averageFormat.format(chart.average),
+            formatCount(chart.peakCount, countFormat),
+            chart.peakDayLabel,
+        )
     }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader(title = stringResource(R.string.insights_section_activity))
+        SectionHeader(title = stringResource(R.string.insights_section_activity), subtitle = stringResource(texts.subtitle))
+        MetricChips(selected = metric, onSelect = onMetricChange)
         TonalCard {
-            BarChart(entries = chart.entries, contentDescription = description, highlightLast = true)
+            Text(
+                text = summaryLine,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+            // Keyed on the metric so a bar selected on one series is not carried over to the next.
+            key(metric) {
+                BarChart(
+                    entries = chart.entries,
+                    contentDescription = description,
+                    maxLabel = if (chart.peakCount > 0) stringResource(R.string.insights_chart_max, formatCount(chart.peakCount, countFormat)) else null,
+                    selectionLabel = { entry ->
+                        resources.getQuantityString(texts.selection, entry.value, entry.value, entry.description)
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** One chip per [TrendMetric]; scrolls sideways because four labels can overflow narrow screens or large fonts. */
+@Composable
+private fun MetricChips(selected: TrendMetric, onSelect: (TrendMetric) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        TrendMetric.entries.forEach { metric ->
+            FilterChip(
+                selected = metric == selected,
+                onClick = { onSelect(metric) },
+                label = { Text(stringResource(metric.texts().chipLabel), maxLines = 1) },
+            )
         }
     }
 }
@@ -235,7 +369,11 @@ internal fun RulesSection(
 }
 
 @Composable
-internal fun ActionsSection(outcomes: ImmutableMap<ActionType, OutcomeCounts>, modifier: Modifier = Modifier) {
+internal fun ActionsSection(
+    outcomes: ImmutableMap<ActionType, OutcomeCounts>,
+    onActionClick: (ActionType) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     if (outcomes.isEmpty()) return
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(title = stringResource(R.string.insights_section_actions))
@@ -245,9 +383,30 @@ internal fun ActionsSection(outcomes: ImmutableMap<ActionType, OutcomeCounts>, m
                 val typeUi = type.ui()
                 InsightsRow(
                     title = stringResource(typeUi.labelRes),
-                    subtitle = stringResource(R.string.insights_action_outcomes, counts.success, counts.failed, counts.skipped),
+                    annotatedSubtitle = outcomeCountsText(counts),
                     icon = typeUi.icon,
+                    onClick = { onActionClick(type) },
                 )
+            }
+        }
+    }
+}
+
+/** Only the non-zero outcome counts, joined with a dot; the failed count is highlighted in the error color. */
+@Composable
+internal fun outcomeCountsText(counts: OutcomeCounts, prefix: String? = null): AnnotatedString {
+    val errorColor = MaterialTheme.colorScheme.error
+    val succeeded = if (counts.success > 0) pluralStringResource(R.plurals.insights_outcome_succeeded, counts.success, counts.success) else null
+    val failed = if (counts.failed > 0) pluralStringResource(R.plurals.insights_tile_actions_failed, counts.failed, counts.failed) else null
+    val skipped = if (counts.skipped > 0) pluralStringResource(R.plurals.insights_outcome_skipped, counts.skipped, counts.skipped) else null
+    return buildAnnotatedString {
+        val parts = listOfNotNull(prefix, succeeded, failed, skipped)
+        parts.forEachIndexed { index, part ->
+            if (index > 0) append(" · ")
+            if (part == failed) {
+                withStyle(SpanStyle(color = errorColor, fontWeight = FontWeight.SemiBold)) { append(part) }
+            } else {
+                append(part)
             }
         }
     }
@@ -318,7 +477,7 @@ private fun webhookStatusPill(status: WebhookDeliveryStatus): Pair<ImageVector, 
 }
 
 @Composable
-internal fun TopAppsSection(apps: ImmutableList<CountBucket>, modifier: Modifier = Modifier) {
+internal fun TopAppsSection(apps: ImmutableList<AppActivity>, onAppClick: (String) -> Unit, modifier: Modifier = Modifier) {
     if (apps.isEmpty()) return
     val countFormat = rememberIntegerFormat()
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -326,20 +485,27 @@ internal fun TopAppsSection(apps: ImmutableList<CountBucket>, modifier: Modifier
         TonalCard {
             apps.forEachIndexed { index, app ->
                 if (index > 0) HorizontalDivider()
-                InsightsRow(title = app.label, trailing = formatCount(app.count, countFormat))
+                InsightsRow(
+                    title = app.appName,
+                    trailing = formatCount(app.count, countFormat),
+                    leading = { AppIcon(packageName = app.packageName, appName = app.appName, size = 32.dp) },
+                    onClick = { onAppClick(app.packageName) },
+                )
             }
         }
     }
 }
 
-/** A title (+ optional subtitle) row with an optional leading icon and trailing value; clickable when [onClick] is set. */
+/** A title (+ optional subtitle, plain or [annotatedSubtitle]) row with an optional leading icon (or custom [leading] content) and trailing value; clickable when [onClick] is set. */
 @Composable
-private fun InsightsRow(
+internal fun InsightsRow(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    annotatedSubtitle: AnnotatedString? = null,
     trailing: String? = null,
     icon: ImageVector? = null,
+    leading: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
 ) {
     val clickable = if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier
@@ -352,7 +518,9 @@ private fun InsightsRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (icon != null) {
+        if (leading != null) {
+            leading()
+        } else if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
@@ -362,9 +530,10 @@ private fun InsightsRow(
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (subtitle != null) {
+            val supporting = annotatedSubtitle ?: subtitle?.let { AnnotatedString(it) }
+            if (supporting != null) {
                 Text(
-                    text = subtitle,
+                    text = supporting,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
